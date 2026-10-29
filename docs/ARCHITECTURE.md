@@ -20,6 +20,7 @@
 1. App shell, library, recording detail: done
 2. AI model connections (Claude, ChatGPT, Grok, Kimi K3): done
 3. Supabase auth, schema, RLS, storage bucket; pages on real data: done
-4. Next: recording capture and upload to Storage, then transcription jobs
-5. Then: summary generation with templates, AutoFlow rules, agents
-6. Then: Twilio calls/SMS, Resend email, MCP access and API keys, super admin dashboard, billing
+4. Next: Echo MCP connector (docs/MCP_CONNECTOR.md); backlog + audit + search schema is ready
+5. Then: recording capture and upload to Storage, transcription jobs
+6. Then: summary generation with templates, AutoFlow rules, agents
+7. Then: Twilio calls/SMS, Resend email, MCP access and API keys, super admin dashboard, billing
