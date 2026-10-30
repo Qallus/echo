@@ -10,6 +10,11 @@
 - `folders`, `recordings` (source, status, duration, storage path, soft delete via `deleted_at`).
 - AI output per recording: `transcript_segments`, `highlights`, `summaries` (one per recording), `action_items`.
 - Storage bucket `recordings` (private). Object path: `<workspace_id>/<recording_id>/<file>`.
+- Developer backlog: `dev_requests`, `dev_request_comments`. `mcp_audit_log` records every MCP tool call (clients can insert and read their own rows, never update or delete).
+- `search_recordings(query, ws?, max_results?)`: full-text search over titles, transcripts and summaries; runs as the caller, so RLS applies.
+
+## MCP connector
+`/api/mcp` (Streamable HTTP, stateless, `@modelcontextprotocol/server`). Callers send a Supabase OAuth access token; every query runs with that token, so RLS is the boundary. Consent screen: `/oauth/consent`. Spec: `docs/MCP_CONNECTOR.md`.
 
 ## Access rules
 - A row is visible when the user is a member of its workspace. Child tables follow their recording.

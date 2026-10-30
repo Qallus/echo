@@ -21,11 +21,18 @@ Record, transcribe and act on every call and meeting. Next.js 16 · React 19 · 
 2. **Keys:** Project Settings > API Keys. Copy the **Publishable key** into
    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 3. **Redirect URLs:** Authentication > URL Configuration.
-   - Site URL: your production URL (or `http://localhost:3000` for now)
-   - Redirect URLs: add `http://localhost:3000/auth/callback` and `https://YOUR-DOMAIN/auth/callback`
+   - Site URL: `https://echo.redial.si`
+   - Redirect URLs: add `http://localhost:3000/auth/callback` and `https://echo.redial.si/auth/callback`
 4. **Google sign-in (optional):** Authentication > Sign In / Providers > Google. Paste a Google OAuth
    client ID and secret. In Google Cloud, the authorized redirect URI is
    `https://wcsejeuqqeepgrprcrde.supabase.co/auth/v1/callback`.
+
+5. **Branded emails:** create a personal access token at supabase.com/dashboard/account/tokens, add it to
+   `.env.local` as `SUPABASE_ACCESS_TOKEN`, then run `npm run email:push`. This uploads the Echo versions of
+   all 13 templates under Authentication > Emails: the 6 **Authentication** emails and the 7 **Security**
+   emails. On the free plan this needs custom SMTP first. Edit them in `scripts/email-templates.mjs`;
+   `npm run email:build` regenerates `supabase/templates/authentication/` and `security/` (named like the
+   dashboard rows, listed in `index.json`) without uploading.
 
 Email magic links work with no extra setup. After signing in, click **Load sample recordings** on Home to explore.
 
@@ -35,7 +42,7 @@ Email magic links work with no extra setup. After signing in, click **Load sampl
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase | `https://wcsejeuqqeepgrprcrde.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase > API Keys | starts with `sb_publishable_` |
-| `NEXT_PUBLIC_SITE_URL` | you | `http://localhost:3000` locally, your domain in production |
+| `NEXT_PUBLIC_SITE_URL` | you | `http://localhost:3000` locally, `https://echo.redial.si` in production |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `MOONSHOT_API_KEY` | each provider | any missing model shows "no key" |
 
 ## Deploy on Coolify

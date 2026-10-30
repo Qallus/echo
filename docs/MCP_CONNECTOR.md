@@ -9,7 +9,7 @@
 ## 1. How it works
 
 ```
-Claude app (phone/web) ──HTTPS──▶ https://ECHO_DOMAIN/api/mcp  (Next.js route, Streamable HTTP)
+Claude app (phone/web) ──HTTPS──▶ https://echo.redial.si/api/mcp  (Next.js route, Streamable HTTP)
         │                                   │
         │ OAuth 2.1 + PKCE (auto-registers) │ Bearer <Supabase access token>
         ▼                                   ▼
@@ -34,8 +34,8 @@ Supabase Auth OAuth server ──▶ /oauth/consent (Echo page: "Allow Claude?")
 | 2 | Supabase SQL Editor | Run `supabase/migrations/20261029230000_dev_backlog_and_mcp.sql`, after the initial schema. |
 | 3 | Supabase > Project Settings > JWT Keys | Switch to **asymmetric signing keys** (ES256/RS256). Tokens can then be verified locally against JWKS. |
 | 4 | Supabase > Authentication > OAuth Server | Enable the OAuth 2.1 server. Authorization path: `/oauth/consent`. Turn on **dynamic client registration**. |
-| 5 | Supabase > Authentication > URL Configuration | Site URL = `https://ECHO_DOMAIN`. Add `https://ECHO_DOMAIN/auth/callback` to the redirect URLs. |
-| 6 | Coolify env | `NEXT_PUBLIC_SITE_URL=https://ECHO_DOMAIN` (build-time). |
+| 5 | Supabase > Authentication > URL Configuration | Site URL = `https://echo.redial.si`. Add `https://echo.redial.si/auth/callback` to the redirect URLs. |
+| 6 | Coolify env | `NEXT_PUBLIC_SITE_URL=https://echo.redial.si` (build-time). |
 
 Discovery URL Claude will use (served by Supabase):
 `https://wcsejeuqqeepgrprcrde.supabase.co/.well-known/oauth-authorization-server/auth/v1`
@@ -54,11 +54,11 @@ Discovery URL Claude will use (served by Supabase):
 - Route: `src/app/api/mcp/route.ts` handling `POST` (and `GET`/`DELETE` if the chosen transport needs them), **Streamable HTTP**, stateless.
 - Use the official TypeScript SDK `@modelcontextprotocol/sdk` (web-standard Streamable HTTP transport) or Vercel's `mcp-handler`, whichever has current Next.js App Router support. Pin the version.
 - **Protected resource metadata:** `src/app/.well-known/oauth-protected-resource/route.ts` returns
-  `{ "resource": "https://ECHO_DOMAIN/api/mcp", "authorization_servers": ["https://wcsejeuqqeepgrprcrde.supabase.co/auth/v1"], "bearer_methods_supported": ["header"] }`.
+  `{ "resource": "https://echo.redial.si/api/mcp", "authorization_servers": ["https://wcsejeuqqeepgrprcrde.supabase.co/auth/v1"], "bearer_methods_supported": ["header"] }`.
   Also serve it at `/.well-known/oauth-protected-resource/api/mcp` (path-suffixed form). Exclude `/.well-known` and `/api/mcp` from the login redirect in `proxy.ts`.
 - **Auth on every request:**
   1. Missing or invalid `Authorization: Bearer` → `401` with header
-     `WWW-Authenticate: Bearer resource_metadata="https://ECHO_DOMAIN/.well-known/oauth-protected-resource"`.
+     `WWW-Authenticate: Bearer resource_metadata="https://echo.redial.si/.well-known/oauth-protected-resource"`.
   2. Verify with `supabase.auth.getClaims(token)` (JWKS, local).
   3. Build a per-request client: `createClient(URL, PUBLISHABLE_KEY, { global: { headers: { Authorization: \`Bearer ${token}\` } }, auth: { persistSession: false } })`.
   4. Resolve the workspace: the user's personal workspace, or the `workspace_id` argument if given and the user is a member.
@@ -171,7 +171,7 @@ Later phases add tools as features land (uploads and signed audio URLs, transcri
 
 **Claude (do this once on claude.ai in a browser; it then appears on your phone):**
 1. Go to Customize > Connectors > **+ Add** > **Add custom connector**.
-2. Name: `Echo`. URL: `https://ECHO_DOMAIN/api/mcp`.
+2. Name: `Echo`. URL: `https://echo.redial.si/api/mcp`.
 3. Authentication: **Sign in when needed**. OAuth client: **Register automatically**.
 4. Click Add, then Connect. Sign in to Echo, then click **Allow** on the consent page.
 5. On your phone, open the Claude app. In a chat, tap **+** > Connectors and turn on **Echo**.
@@ -181,7 +181,7 @@ Claude's OAuth callback URLs (needed only if you ever pre-register a client inst
 
 **Claude Code (VS Code terminal):**
 ```
-claude mcp add --transport http echo https://ECHO_DOMAIN/api/mcp
+claude mcp add --transport http echo https://echo.redial.si/api/mcp
 ```
 Then run `/mcp` in Claude Code and authenticate.
 
@@ -209,7 +209,7 @@ Then run `/mcp` in Claude Code and authenticate.
 
 ## 7. Test checklist
 
-- [ ] `npx @modelcontextprotocol/inspector` connects to `https://ECHO_DOMAIN/api/mcp`, completes OAuth, lists tools.
+- [ ] `npx @modelcontextprotocol/inspector` connects to `https://echo.redial.si/api/mcp`, completes OAuth, lists tools.
 - [ ] 401 without a token includes `WWW-Authenticate` with `resource_metadata`.
 - [ ] CRUD round-trip for each area (folders, recordings, transcript, highlights, summary, action items, backlog).
 - [ ] Second test user cannot read or change the first user's data through any tool.

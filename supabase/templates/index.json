@@ -1,0 +1,93 @@
+[
+  {
+    "section": "Authentication",
+    "template": "Confirm sign up",
+    "subject": "Confirm your sign up to Echo",
+    "file": "authentication/confirm-sign-up.html",
+    "api": "confirmation"
+  },
+  {
+    "section": "Authentication",
+    "template": "Invite user",
+    "subject": "You've been invited to create an Echo account",
+    "file": "authentication/invite-user.html",
+    "api": "invite"
+  },
+  {
+    "section": "Authentication",
+    "template": "Magic link or OTP",
+    "subject": "Your Echo sign-in link",
+    "file": "authentication/magic-link-or-otp.html",
+    "api": "magic_link"
+  },
+  {
+    "section": "Authentication",
+    "template": "Change email address",
+    "subject": "Confirm your new Echo email address",
+    "file": "authentication/change-email-address.html",
+    "api": "email_change"
+  },
+  {
+    "section": "Authentication",
+    "template": "Reset password",
+    "subject": "Reset your Echo password",
+    "file": "authentication/reset-password.html",
+    "api": "recovery"
+  },
+  {
+    "section": "Authentication",
+    "template": "Reauthentication",
+    "subject": "Your Echo reauthentication code",
+    "file": "authentication/reauthentication.html",
+    "api": "reauthentication"
+  },
+  {
+    "section": "Security",
+    "template": "Password changed",
+    "subject": "Your Echo password was changed",
+    "file": "security/password-changed.html",
+    "api": "password_changed_notification"
+  },
+  {
+    "section": "Security",
+    "template": "Email address changed",
+    "subject": "Your Echo email address was changed",
+    "file": "security/email-address-changed.html",
+    "api": "email_changed_notification"
+  },
+  {
+    "section": "Security",
+    "template": "Phone number changed",
+    "subject": "Your Echo phone number was changed",
+    "file": "security/phone-number-changed.html",
+    "api": "phone_changed_notification"
+  },
+  {
+    "section": "Security",
+    "template": "Sign-in method linked",
+    "subject": "A sign-in method was linked to your Echo account",
+    "file": "security/sign-in-method-linked.html",
+    "api": "identity_linked_notification"
+  },
+  {
+    "section": "Security",
+    "template": "Sign-in method removed",
+    "subject": "A sign-in method was removed from your Echo account",
+    "file": "security/sign-in-method-removed.html",
+    "api": "identity_unlinked_notification"
+  },
+  {
+    "section": "Security",
+    "template": "MFA method added",
+    "subject": "An MFA method was added to your Echo account",
+    "file": "security/mfa-method-added.html",
+    "api": "mfa_factor_enrolled_notification"
+  },
+  {
+    "section": "Security",
+    "template": "MFA method removed",
+    "subject": "An MFA method was removed from your Echo account",
+    "file": "security/mfa-method-removed.html",
+    "api": "mfa_factor_unenrolled_notification"
+  }
+]

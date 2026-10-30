@@ -1,7 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeNext } from "@/lib/safe-next";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /.well-known: OAuth discovery for the MCP connector (fetched without a session).
+const PUBLIC_PATHS = ["/login", "/auth", "/.well-known"];
 
 // Refreshes the auth session cookie on every request and sends signed-out
 // visitors to /login. API routes check auth themselves and return 401.
@@ -35,14 +37,13 @@ export async function updateSession(request: NextRequest) {
   if (!signedIn && !isPublic && !path.startsWith("/api/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = path === "/" ? "" : `?next=${encodeURIComponent(path)}`;
+    // Keep the query: /oauth/consent needs its authorization_id after sign-in.
+    const back = path + request.nextUrl.search;
+    url.search = back === "/" ? "" : `?next=${encodeURIComponent(back)}`;
     return NextResponse.redirect(url);
   }
   if (signedIn && path === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next")), request.url));
   }
   return response;
 }
