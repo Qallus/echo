@@ -6,6 +6,8 @@ import type {
   ActionGroup, Folder, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
 } from "@/lib/types";
 
+export const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
 // All reads go through the signed-in user's client, so RLS decides access.
 // cache() dedupes calls within one request (layout + page).
 
@@ -22,52 +24,79 @@ export async function requireUser() {
   return user;
 }
 
-// The user's current workspace: their personal one for now (picker comes later).
-export const getWorkspace = cache(async (): Promise<Workspace> => {
+// Every workspace the user belongs to: Business ones (A–Z), then Personal.
+export const listWorkspaces = cache(async (): Promise<Workspace[]> => {
   const user = await requireUser();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("workspace_members")
     .select("role, workspaces!inner(id, name, is_personal)")
-    .eq("user_id", user.id)
-    .order("is_personal", { referencedTable: "workspaces", ascending: false })
-    .order("created_at")
-    .limit(1)
-    .single();
-  if (error || !data) throw new Error(`No workspace for user: ${error?.message ?? "none found"}`);
-  const ws = data.workspaces as unknown as { id: string; name: string; is_personal: boolean };
-  return { id: ws.id, name: ws.name, isPersonal: ws.is_personal, role: data.role as WorkspaceRole };
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+  return data
+    .map((m) => {
+      const ws = m.workspaces as unknown as { id: string; name: string; is_personal: boolean };
+      return { id: ws.id, name: ws.name, isPersonal: ws.is_personal, role: m.role as WorkspaceRole };
+    })
+    .sort((a, b) => Number(a.isPersonal) - Number(b.isPersonal) || a.name.localeCompare(b.name));
+});
+
+// The user's private workspace (created at sign-up).
+export const getPersonalWorkspace = cache(async (): Promise<Workspace> => {
+  const ws = (await listWorkspaces()).find((w) => w.isPersonal);
+  if (!ws) throw new Error("No personal workspace for user");
+  return ws;
 });
 
 type RecordingRow = {
-  id: string; title: string; source: Recording["source"]; status: Recording["status"];
-  duration_sec: number; created_at: string; folder_id: string | null; deleted_at: string | null;
+  id: string; workspace_id: string; created_by: string | null; title: string; source: Recording["source"];
+  status: Recording["status"]; duration_sec: number; created_at: string; folder_id: string | null; deleted_at: string | null;
 };
-const RECORDING_COLS = "id, title, source, status, duration_sec, created_at, folder_id, deleted_at";
+const RECORDING_COLS = "id, workspace_id, created_by, title, source, status, duration_sec, created_at, folder_id, deleted_at";
 const toRecording = (r: RecordingRow): Recording => ({
-  id: r.id, title: r.title, source: r.source, status: r.status, durationSec: r.duration_sec,
-  createdAt: r.created_at, folderId: r.folder_id, deletedAt: r.deleted_at,
+  id: r.id, workspaceId: r.workspace_id, createdBy: r.created_by, title: r.title, source: r.source, status: r.status,
+  durationSec: r.duration_sec, createdAt: r.created_at, folderId: r.folder_id, deletedAt: r.deleted_at,
 });
 
-// Every recording in the workspace, trash included (sidebar counts need both).
+// Every recording in every workspace the user belongs to (RLS limits the rows),
+// trash included (sidebar counts need both).
 export const listRecordings = cache(async (): Promise<Recording[]> => {
-  const ws = await getWorkspace();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("recordings").select(RECORDING_COLS)
-    .eq("workspace_id", ws.id)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data as RecordingRow[]).map(toRecording);
 });
 
 export const listFolders = cache(async (): Promise<Folder[]> => {
-  const ws = await getWorkspace();
   const supabase = await createClient();
-  const { data, error } = await supabase.from("folders").select("id, name").eq("workspace_id", ws.id).order("name");
+  const { data, error } = await supabase.from("folders").select("id, workspace_id, name").order("name");
   if (error) throw new Error(error.message);
-  return data;
+  return data.map((f) => ({ id: f.id, workspaceId: f.workspace_id, name: f.name }));
 });
+
+export type Member = { userId: string; email: string; fullName: string | null; role: WorkspaceRole; joinedAt: string };
+export type Invite = { id: string; email: string; role: WorkspaceRole; token: string; expiresAt: string };
+
+export async function listMembers(workspaceId: string): Promise<Member[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_workspace_members", { ws: workspaceId });
+  if (error) throw new Error(error.message);
+  return (data as { user_id: string; email: string; full_name: string | null; role: WorkspaceRole; joined_at: string }[])
+    .map((m) => ({ userId: m.user_id, email: m.email, fullName: m.full_name, role: m.role, joinedAt: m.joined_at }));
+}
+
+// Open invites (owners/admins only; RLS returns nothing to members).
+export async function listInvites(workspaceId: string): Promise<Invite[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workspace_invites").select("id, email, role, token, expires_at")
+    .eq("workspace_id", workspaceId).is("accepted_at", null).gt("expires_at", new Date().toISOString())
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return data.map((i) => ({ id: i.id, email: i.email, role: i.role as WorkspaceRole, token: i.token, expiresAt: i.expires_at }));
+}
 
 export async function getRecordingDetail(id: string): Promise<RecordingDetail | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;

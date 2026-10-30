@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
-  AudioLines, ChevronDown, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
-  LayoutTemplate, LogOut, Mic, Monitor, Phone, Plus, Search, Settings, Sparkles, Trash2, Upload, Users, Video,
+  AudioLines, Briefcase, ChevronDown, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
+  LayoutTemplate, Lock, LogOut, Mic, Monitor, Phone, Plus, Search, Settings, Sparkles, Trash2, Upload, Users, Video,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
@@ -16,8 +16,10 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { createFolder } from "@/lib/actions";
+import { createFolder, fileRecordings, moveRecordings, type BulkResult } from "@/lib/actions";
+import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const main = [
   { href: "/search", label: "Search", icon: Search },
@@ -27,20 +29,31 @@ const main = [
   { href: "/explore", label: "Explore", icon: Compass },
 ];
 
-type Props = { email: string; workspace: Workspace; recordings: Recording[]; folders: FolderT[] };
+type DropHandlers = Pick<React.HTMLAttributes<HTMLElement>, "onDragOver" | "onDragLeave" | "onDrop">;
+type NavProps = { href: string; label: string; icon: typeof Home; n?: number; exact?: boolean; drop?: DropHandlers; highlight?: boolean };
 
-export function AppSidebar({ email, workspace, recordings, folders }: Props) {
+// Module-level so its identity is stable across renders (drag-over re-renders the sidebar).
+function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProps) {
   const pathname = usePathname();
+  const active = exact || href === "/" ? pathname === href : pathname.startsWith(href);
+  return (
+    <SidebarMenuItem {...drop} className={cn(highlight && "rounded-md bg-sidebar-accent ring-2 ring-sidebar-ring")}>
+      <SidebarMenuButton isActive={active} render={<Link href={href} />}>
+        <Icon />
+        <span>{label}</span>
+      </SidebarMenuButton>
+      {n !== undefined && <SidebarMenuBadge>{n}</SidebarMenuBadge>}
+    </SidebarMenuItem>
+  );
+}
+
+type Props = { email: string; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[] };
+
+export function AppSidebar({ email, workspaces, recordings, folders }: Props) {
   const [pending, startTransition] = useTransition();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   const active = recordings.filter((r) => !r.deletedAt);
   const bySource = (s: Recording["source"]) => active.filter((r) => r.source === s).length;
-  const library = [
-    { href: "/library/all", label: "All files", icon: Files, n: active.length },
-    { href: "/library/unfiled", label: "Unfiled", icon: Inbox, n: active.filter((r) => !r.folderId).length },
-    { href: "/library/trash", label: "Trash", icon: Trash2, n: recordings.length - active.length },
-  ];
   const sources = [
     { href: "/library/source/calls", label: "Phone calls", icon: Phone, n: bySource("phone_call") },
     { href: "/library/source/meetings", label: "Meetings", icon: Video, n: bySource("meeting") },
@@ -48,20 +61,40 @@ export function AppSidebar({ email, workspace, recordings, folders }: Props) {
     { href: "/library/source/desktop", label: "Desktop", icon: Monitor, n: bySource("desktop") },
   ];
 
-  const newFolder = () => {
-    const name = window.prompt("Folder name");
-    if (name?.trim()) startTransition(() => createFolder(name));
-  };
+  // Drag recordings from a list onto a workspace section or a folder.
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; error?: boolean }>();
+  const dropProps = (key: string, act: (ids: string[]) => Promise<BulkResult>, label: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (!isRecordingDrag(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = "move";
+      if (dropTarget !== key) setDropTarget(key);
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(null);
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDropTarget(null);
+      const ids = readDraggedIds(e);
+      if (!ids.length) return;
+      startTransition(async () => {
+        const res = await act(ids);
+        const ok = res.done ? `Moved ${res.done} to ${label}.` : "";
+        setNotice({ text: [ok, ...res.errors].filter(Boolean).join(" "), error: res.errors.length > 0 });
+        setTimeout(() => setNotice(undefined), 6000);
+      });
+    },
+  });
+  const dropRing = (key: string) => dropTarget === key && "rounded-md bg-sidebar-accent ring-2 ring-sidebar-ring";
 
-  const NavItem = ({ href, label, icon: Icon, n }: { href: string; label: string; icon: typeof Home; n?: number }) => (
-    <SidebarMenuItem>
-      <SidebarMenuButton isActive={isActive(href)} render={<Link href={href} />}>
-        <Icon />
-        <span>{label}</span>
-      </SidebarMenuButton>
-      {n !== undefined && <SidebarMenuBadge>{n}</SidebarMenuBadge>}
-    </SidebarMenuItem>
-  );
+  const newFolder = (ws: Workspace) => {
+    const name = window.prompt(`New folder in ${ws.isPersonal ? "Personal" : ws.name}`);
+    if (name?.trim()) startTransition(() => createFolder(name, ws.id));
+  };
 
   return (
     <Sidebar>
@@ -77,7 +110,7 @@ export function AppSidebar({ email, workspace, recordings, folders }: Props) {
               <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-medium uppercase">
                 {(email || "?")[0]}
               </span>
-              <span className="truncate">{workspace.name}</span>
+              <span className="truncate">{email}</span>
             </span>
             <ChevronDown className="opacity-60" />
           </DropdownMenuTrigger>
@@ -85,7 +118,7 @@ export function AppSidebar({ email, workspace, recordings, folders }: Props) {
             <DropdownMenuGroup>
               <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
               <DropdownMenuItem><Settings /> Settings</DropdownMenuItem>
-              <DropdownMenuItem><Users /> Create a team workspace</DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/team" />}><Users /> Business workspaces &amp; team</DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem><CreditCard /> Billing &amp; plan</DropdownMenuItem>
@@ -110,24 +143,43 @@ export function AppSidebar({ email, workspace, recordings, folders }: Props) {
       </SidebarHeader>
 
       <SidebarContent>
+        {notice && (
+          <p role="status" className={cn("mx-3 mt-2 rounded-md border px-2 py-1.5 text-xs", notice.error ? "border-destructive/40 text-destructive" : "text-muted-foreground")}>
+            {notice.text}
+          </p>
+        )}
         <SidebarGroup>
           <SidebarMenu>{main.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>
         </SidebarGroup>
+        {workspaces.map((ws) => {
+          const mine = recordings.filter((r) => r.workspaceId === ws.id);
+          const live = mine.filter((r) => !r.deletedAt);
+          const base = `/library/space/${ws.id}`;
+          return (
+            <div key={ws.id}>
+              <SidebarSeparator />
+              <SidebarGroup {...dropProps(ws.id, (ids) => moveRecordings(ids, ws.id), ws.isPersonal ? "Personal" : ws.name)}
+                className={cn("transition-colors", dropRing(ws.id))}>
+                <SidebarGroupLabel className="gap-1.5">
+                  {ws.isPersonal ? <Lock className="size-3" /> : <Briefcase className="size-3" />}
+                  <span className="truncate">{ws.isPersonal ? "Personal" : `Business · ${ws.name}`}</span>
+                </SidebarGroupLabel>
+                <SidebarGroupAction title="New folder" onClick={() => newFolder(ws)} disabled={pending}><FolderPlus /></SidebarGroupAction>
+                <SidebarMenu>
+                  <NavItem href={base} exact label="All files" icon={Files} n={live.length} />
+                  <NavItem href={`${base}/unfiled`} label="Unfiled" icon={Inbox} n={live.filter((r) => !r.folderId).length} />
+                  {folders.filter((f) => f.workspaceId === ws.id).map((f) => (
+                    <NavItem key={f.id} href={`/library/folder/${f.id}`} label={f.name} icon={Folder}
+                      n={live.filter((r) => r.folderId === f.id).length}
+                      drop={dropProps(f.id, (ids) => fileRecordings(ids, f.id), f.name)} highlight={dropTarget === f.id} />
+                  ))}
+                  <NavItem href={`${base}/trash`} label="Trash" icon={Trash2} n={mine.length - live.length} />
+                </SidebarMenu>
+              </SidebarGroup>
+            </div>
+          );
+        })}
         <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarMenu>{library.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Folders</SidebarGroupLabel>
-          <SidebarGroupAction title="New folder" onClick={newFolder} disabled={pending}><FolderPlus /></SidebarGroupAction>
-          <SidebarMenu>
-            {folders.map((f) => (
-              <NavItem key={f.id} href={`/library/folder/${f.id}`} label={f.name} icon={Folder}
-                n={active.filter((r) => r.folderId === f.id).length} />
-            ))}
-            {!folders.length && <p className="px-2 text-xs text-muted-foreground">No folders yet</p>}
-          </SidebarMenu>
-        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>Sources</SidebarGroupLabel>
           <SidebarMenu>{sources.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>
@@ -140,7 +192,7 @@ export function AppSidebar({ email, workspace, recordings, folders }: Props) {
           <div className="mt-2 h-1 rounded-full bg-primary/80" />
           <div className="mt-2 text-xs text-muted-foreground">∞ Unlimited minutes</div>
         </Link>
-        <Button variant="outline" className="w-full"><Users /> Invite teammates</Button>
+        <Button variant="outline" className="w-full" nativeButton={false} render={<Link href="/team" />}><Users /> Invite teammates</Button>
       </SidebarFooter>
     </Sidebar>
   );

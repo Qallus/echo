@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { getRecordingDetail, listRecordings } from "@/lib/data";
+import { getRecordingDetail, listRecordings, listWorkspaces } from "@/lib/data";
 import { formatClock, formatDuration } from "@/lib/format";
 
 // Builds the system prompt from the user's own data (RLS-scoped reads).
@@ -37,14 +37,16 @@ ${summary}
 }
 
 export async function buildLibraryPrompt(): Promise<string> {
-  const recordings = (await listRecordings()).filter((r) => !r.deletedAt).slice(0, MAX_LIBRARY_ITEMS);
+  const [all, workspaces] = await Promise.all([listRecordings(), listWorkspaces()]);
+  const recordings = all.filter((r) => !r.deletedAt).slice(0, MAX_LIBRARY_ITEMS);
+  const space = new Map(workspaces.map((w) => [w.id, w.isPersonal ? "Personal" : `Business: ${w.name}`]));
   const supabase = await createClient();
   const { data: sums } = recordings.length
     ? await supabase.from("summaries").select("recording_id, overview").in("recording_id", recordings.map((r) => r.id))
     : { data: [] };
   const overview = new Map((sums ?? []).map((s) => [s.recording_id, s.overview]));
   const library = recordings
-    .map((r) => `- "${r.title}" (${r.createdAt}, ${formatDuration(r.durationSec)})${overview.get(r.id) ? `: ${overview.get(r.id)}` : ""}`)
+    .map((r) => `- "${r.title}" (${space.get(r.workspaceId)}, ${r.createdAt}, ${formatDuration(r.durationSec)})${overview.get(r.id) ? `: ${overview.get(r.id)}` : ""}`)
     .join("\n");
   return `${BASE}
 

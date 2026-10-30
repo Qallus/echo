@@ -3,7 +3,7 @@ import { AudioLines, Bot, Plug, Workflow } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadSampleButton } from "@/components/load-sample-button";
 import { RecordingsTable } from "@/components/recordings-table";
-import { listRecordings } from "@/lib/data";
+import { listFolders, listRecordings, listWorkspaces } from "@/lib/data";
 
 const highlights = [
   { icon: Bot, title: "AI Agents", desc: "Agents that act on every call: follow-ups, tasks, CRM updates.", href: "/explore" },
@@ -12,7 +12,7 @@ const highlights = [
 ];
 
 export default async function HomePage() {
-  const all = await listRecordings();
+  const [all, workspaces, folders] = await Promise.all([listRecordings(), listWorkspaces(), listFolders()]);
   const recent = all.filter((r) => !r.deletedAt).slice(0, 5);
 
   return (
@@ -23,7 +23,7 @@ export default async function HomePage() {
           {recent.length > 0 && <Link href="/library/all" className="text-sm text-muted-foreground hover:text-foreground">View all ›</Link>}
         </div>
         {recent.length ? (
-          <RecordingsTable rows={recent} />
+          <RecordingsTable rows={recent} workspaces={workspaces} folders={folders} showSpace={workspaces.length > 1} />
         ) : (
           <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-16 text-center">
             <AudioLines className="size-8 text-muted-foreground" />

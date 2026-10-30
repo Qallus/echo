@@ -1,16 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-next";
+import { siteOrigin } from "@/lib/site";
 
 export type LoginState = { sent?: string; error?: string };
-
-async function siteOrigin() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  const h = await headers();
-  return h.get("origin") ?? `https://${h.get("host")}`;
-}
 
 export async function sendMagicLink(_: LoginState, form: FormData): Promise<LoginState> {
   const email = String(form.get("email") ?? "").trim();

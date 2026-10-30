@@ -5,7 +5,7 @@ import type { Highlight, Recording, Segment, Summary } from "@/lib/types";
 type Content = { segments: Segment[]; highlights: Highlight[]; summary: Summary | null };
 
 // folderId holds a folder NAME here; the loader maps it to a real folder id.
-const RECORDINGS: (Omit<Recording, "id"> & { key: string })[] = [
+const RECORDINGS: (Omit<Recording, "id" | "workspaceId" | "createdBy"> & { key: string })[] = [
   { key: "r1", title: "Stealth EQ Mode Workflow: Single-Tap Capture vs. Disclosure", source: "phone_call", status: "generated", durationSec: 16, createdAt: "2026-10-28T13:49:49-07:00", folderId: null, deletedAt: null },
   { key: "r2", title: "Planning: MJG, Steward, and Forge Life Group Systems", source: "meeting", status: "generated", durationSec: 6032, createdAt: "2026-10-27T15:57:24-07:00", folderId: "Clients", deletedAt: null },
   { key: "r3", title: "SIG In-Office Time", source: "meeting", status: "none", durationSec: 5, createdAt: "2026-10-27T14:03:10-07:00", folderId: null, deletedAt: null },
@@ -83,7 +83,7 @@ const planning: Content = {
   },
 };
 
-function generic(r: Omit<Recording, "id"> & { key: string }): Content {
+function generic(r: Omit<Recording, "id" | "workspaceId" | "createdBy"> & { key: string }): Content {
   const done = r.status === "generated";
   return {
     segments: done

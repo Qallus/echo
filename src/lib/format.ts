@@ -20,3 +20,6 @@ export function formatDateTime(iso: string, timeZone?: string) {
   const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
   return `${p.year}-${p.month}-${p.day} ${p.hour === "24" ? "00" : p.hour}:${p.minute}`;
 }
+
+// "Personal", or the Business workspace's name.
+export const spaceLabel = (ws: { name: string; isPersonal: boolean }) => (ws.isPersonal ? "Personal" : ws.name);

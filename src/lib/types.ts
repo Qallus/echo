@@ -4,10 +4,13 @@ export type RecordingSource = "phone_call" | "meeting" | "upload" | "desktop";
 export type RecordingStatus = "none" | "processing" | "generated" | "failed";
 export type WorkspaceRole = "owner" | "admin" | "member";
 
+// Personal: private to one user. Business: shared with invited teammates.
 export type Workspace = { id: string; name: string; role: WorkspaceRole; isPersonal: boolean };
 
 export type Recording = {
   id: string;
+  workspaceId: string;
+  createdBy: string | null;
   title: string;
   source: RecordingSource;
   status: RecordingStatus;
@@ -17,7 +20,7 @@ export type Recording = {
   deletedAt: string | null;
 };
 
-export type Folder = { id: string; name: string };
+export type Folder = { id: string; workspaceId: string; name: string };
 
 export type Segment = { speaker: string; startSec: number; text: string };
 export type Highlight = { startSec: number; text: string };

@@ -28,5 +28,7 @@ Jeremy adds items from his phone through the Echo connector (`dev_requests` tabl
 2. Ask which to take on. When starting one, set it to `in_progress` and comment. When done, set `review` and comment with a summary and the commit hash.
 
 ## Current next steps
-1. Echo MCP connector: see `docs/MCP_CONNECTOR.md` (phases 1–5).
-2. Recording capture and upload to Supabase Storage (`recordings` bucket, path `<workspace_id>/<recording_id>/<file>`), then transcription jobs.
+The full ordered list is in `docs/ARCHITECTURE.md` (Build status). In short:
+1. Echo MCP connector: see `docs/MCP_CONNECTOR.md` (phases 1–2 done; 3–5 next).
+2. Recording capture with the in-call panel and drag-and-drop upload to Supabase Storage (`recordings` bucket, path `<workspace_id>/<recording_id>/<file>`), then transcription jobs.
+3. Share (link + invite), then the remaining app pages, then the public marketing site.

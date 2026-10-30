@@ -1,28 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
-  ChevronRight, Download, FileText, MoreHorizontal, Share2, Sparkles, ThumbsDown, ThumbsUp, Wand2,
+  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Lock, MoreHorizontal, Share2, Sparkles, ThumbsDown, ThumbsUp, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StatusTag } from "@/components/recordings-table";
 import { AskPanel } from "@/components/recording/ask-panel";
 import { AudioBar } from "@/components/recording/audio-bar";
 import { MindMap } from "@/components/recording/mind-map";
 import { LocalDate } from "@/components/local-date";
-import { toggleActionItem } from "@/lib/actions";
-import { formatClock, formatDuration } from "@/lib/format";
-import type { Recording, RecordingDetail } from "@/lib/types";
+import { moveRecordings, toggleActionItem } from "@/lib/actions";
+import { formatClock, formatDuration, spaceLabel } from "@/lib/format";
+import type { Recording, RecordingDetail, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function RecordingView({ detail, list }: { detail: RecordingDetail; list: Recording[] }) {
+type Props = { detail: RecordingDetail; list: Recording[]; space: Workspace; moveTargets: Workspace[] };
+
+export function RecordingView({ detail, list, space, moveTargets }: Props) {
   const { recording: r, segments, highlights, summary } = detail;
+  const [moving, startMove] = useTransition();
+  const [moveError, setMoveError] = useState<string>();
+  const move = (to: Workspace) =>
+    startMove(async () => {
+      const res = await moveRecordings([r.id], to.id);
+      setMoveError(res.errors[0]);
+    });
   const [askOpen, setAskOpen] = useState(true);
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [vote, setVote] = useState<"up" | "down" | null>(null);
@@ -44,10 +53,32 @@ export function RecordingView({ detail, list }: { detail: RecordingDetail; list:
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-2 border-b px-4 py-2.5 text-sm">
-          <Link href="/library/all" className="text-muted-foreground hover:text-foreground">All files</Link>
+          <Link href={`/library/space/${space.id}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+            {space.isPersonal ? <Lock className="size-3.5" /> : <Briefcase className="size-3.5" />}
+            {spaceLabel(space)}
+          </Link>
           <ChevronRight className="size-4 text-muted-foreground" />
           <span className="truncate font-medium">{r.title}</span>
           <div className="ml-auto flex items-center gap-1">
+            {moveError && <span className="mr-2 text-xs text-destructive">{moveError}</span>}
+            {moveTargets.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="ghost" size="sm" disabled={moving} />}>
+                  <ArrowRightLeft /> {moving ? "Moving…" : "Move"}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Move to</DropdownMenuLabel>
+                    {moveTargets.map((w) => (
+                      <DropdownMenuItem key={w.id} onClick={() => move(w)}>
+                        {w.isPersonal ? <Lock /> : <Briefcase />}
+                        <span className="truncate">{w.isPersonal ? "Personal (only you)" : `${w.name} (team)`}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button variant="outline" size="sm"><Share2 /> Share</Button>
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Export" />}><Download /></DropdownMenuTrigger>
