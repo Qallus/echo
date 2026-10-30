@@ -96,6 +96,8 @@ Implement the catalog in section 4. Rules for every tool:
 
 Prefix all names with `echo_` (for example `echo_recording_list`) so they're easy to spot among other connectors. Workspace-scoped tools accept an optional `workspace_id`.
 
+**Business and Personal (built):** list and search tools cover all of the user's workspaces unless `workspace_id` is passed (each row includes its `workspace_id`). Create tools default to the Personal workspace, so nothing becomes visible to the team by accident. `recording_update` with `workspace_id` moves a recording between them (creator or owner/admin only). Status: Phase 3 tools are implemented in `src/lib/mcp/tools/`; `npm run mcp:smoke` runs the create → read → update → delete check.
+
 ### Account
 | Tool | Does | Key inputs |
 |---|---|---|
