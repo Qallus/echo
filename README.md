@@ -34,6 +34,12 @@ Record, transcribe and act on every call and meeting. Next.js 16 · React 19 · 
    `npm run email:build` regenerates `supabase/templates/authentication/` and `security/` (named like the
    dashboard rows, listed in `index.json`) without uploading.
 
+6. **Sign-in options:** email + password and emailed sign-in links work out of the box. For Google, enable it in
+   Authentication > Sign In / Providers, then set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` (build-time).
+   Recommended: Authentication > Providers > Email: minimum password length 8 and **Secure password change** on.
+7. **Super Admin:** in the SQL editor, run
+   `insert into public.platform_admins (user_id) select id from auth.users where email = 'you@example.com';`
+
 Email magic links work with no extra setup. After signing in, click **Load sample recordings** on Home to explore.
 
 ## Environment variables
@@ -43,12 +49,13 @@ Email magic links work with no extra setup. After signing in, click **Load sampl
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase | `https://wcsejeuqqeepgrprcrde.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase > API Keys | starts with `sb_publishable_` |
 | `NEXT_PUBLIC_SITE_URL` | you | `http://localhost:3000` locally, `https://echo.redial.si` in production |
+| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | you | `true` once Google is enabled in Supabase; otherwise the Google button is hidden |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `MOONSHOT_API_KEY` | each provider | any missing model shows "no key" |
 
 ## Deploy on Coolify
 
 New resource > this GitHub repo > build pack **Dockerfile**, port **3000**.
-Add every variable above. Mark the three `NEXT_PUBLIC_*` ones as **build-time** (they're baked into the browser bundle).
+Add every variable above. Mark the `NEXT_PUBLIC_*` ones as **build-time** (they're baked into the browser bundle).
 
 ## Project layout
 

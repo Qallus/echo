@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   AudioLines, Briefcase, ChevronDown, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
-  LayoutTemplate, Lock, LogOut, Mic, Monitor, Phone, Plus, Search, Settings, Sparkles, Trash2, Upload, Users, Video,
+  LayoutTemplate, Lock, LogOut, Mic, Monitor, Phone, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, Users, Video,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
@@ -47,9 +47,9 @@ function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProp
   );
 }
 
-type Props = { email: string; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[] };
+type Props = { email: string; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean };
 
-export function AppSidebar({ email, workspaces, recordings, folders }: Props) {
+export function AppSidebar({ email, workspaces, recordings, folders, superAdmin }: Props) {
   const [pending, startTransition] = useTransition();
 
   const active = recordings.filter((r) => !r.deletedAt);
@@ -117,7 +117,8 @@ export function AppSidebar({ email, workspaces, recordings, folders }: Props) {
           <DropdownMenuContent className="w-60" align="start">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
-              <DropdownMenuItem><Settings /> Settings</DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/settings" />}><Settings /> Settings</DropdownMenuItem>
+              {superAdmin && <DropdownMenuItem render={<Link href="/admin" />}><ShieldCheck /> Admin</DropdownMenuItem>}
               <DropdownMenuItem render={<Link href="/team" />}><Users /> Business workspaces &amp; team</DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

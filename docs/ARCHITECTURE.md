@@ -16,6 +16,10 @@
 ## MCP connector
 `/api/mcp` (Streamable HTTP, stateless, `@modelcontextprotocol/server`). Callers send a Supabase OAuth access token; every query runs with that token, so RLS is the boundary. Consent screen: `/oauth/consent`. Spec: `docs/MCP_CONNECTOR.md`.
 
+## Account types and auth
+- **Personal**: everyone's private space. **Business**: chosen at sign-up (`/signup`); the sign-up trigger also creates the company's Business workspace with the user as owner. **Team**: people invited into a Business (admin or member). **Super Admin**: app-wide, listed in `platform_admins` (add rows in the SQL editor only); sees `/admin` (read-only users and workspaces via `admin_list_users` / `admin_list_workspaces`).
+- Sign in with email + password or an emailed link; Google when `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`. `/forgot-password` → email → `/reset-password`. `/settings`: name, email change (confirmed by email), password (asks for an emailed code when Supabase requires reauthentication), sign-in methods, sign out of all devices.
+
 ## Access rules
 - Two kinds of workspace: **Personal** (one per user, created at sign-up, never has other members) and **Business** (`create_team_workspace`, shared with invited teammates). Business recordings are visible to every member; Personal ones only to their owner.
 - Invites (`workspace_invites`): owners/admins of a Business workspace create an email-bound link (`/invite/<token>`, 14 days). `accept_workspace_invite` joins only if the signed-in email matches.

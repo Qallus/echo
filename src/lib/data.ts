@@ -41,6 +41,14 @@ export const listWorkspaces = cache(async (): Promise<Workspace[]> => {
     .sort((a, b) => Number(a.isPersonal) - Number(b.isPersonal) || a.name.localeCompare(b.name));
 });
 
+// App-wide Super Admin (platform_admins); separate from workspace roles.
+export const isSuperAdmin = cache(async (): Promise<boolean> => {
+  await requireUser();
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("am_i_super_admin");
+  return data === true;
+});
+
 // The user's private workspace (created at sign-up).
 export const getPersonalWorkspace = cache(async (): Promise<Workspace> => {
   const ws = (await listWorkspaces()).find((w) => w.isPersonal);
