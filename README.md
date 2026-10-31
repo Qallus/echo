@@ -50,7 +50,8 @@ Email magic links work with no extra setup. After signing in, click **Load sampl
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase > API Keys | starts with `sb_publishable_` |
 | `NEXT_PUBLIC_SITE_URL` | you | `http://localhost:3000` locally, `https://echo.redial.si` in production |
 | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | you | `true` once Google is enabled in Supabase; otherwise the Google button is hidden |
-| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `MOONSHOT_API_KEY` | each provider | any missing model shows "no key" |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `MOONSHOT_API_KEY` | each provider | any missing model shows "no key". `OPENAI_API_KEY` also powers transcription |
+| `GEMINI_API_KEY`, `OPENROUTER_API_KEY` | each provider | optional; Gemini is planned as a transcription option |
 
 ## Deploy on Coolify
 

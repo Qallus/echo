@@ -14,6 +14,7 @@ import {
 import { StatusTag } from "@/components/recordings-table";
 import { AskPanel } from "@/components/recording/ask-panel";
 import { AudioBar } from "@/components/recording/audio-bar";
+import { TranscribeButton, Transcribing, TranscriptionFailed } from "@/components/recording/transcribe";
 import { MindMap } from "@/components/recording/mind-map";
 import { LocalDate } from "@/components/local-date";
 import { moveRecordings, toggleActionItem } from "@/lib/actions";
@@ -21,9 +22,12 @@ import { formatClock, formatDuration, spaceLabel } from "@/lib/format";
 import type { Recording, RecordingDetail, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Props = { detail: RecordingDetail; list: Recording[]; space: Workspace; moveTargets: Workspace[]; audioSrc: string | null };
+type Props = {
+  detail: RecordingDetail; list: Recording[]; space: Workspace; moveTargets: Workspace[];
+  audioSrc: string | null; processingError: string | null;
+};
 
-export function RecordingView({ detail, list, space, moveTargets, audioSrc }: Props) {
+export function RecordingView({ detail, list, space, moveTargets, audioSrc, processingError }: Props) {
   const { recording: r, segments, highlights, summary } = detail;
   const [moving, startMove] = useTransition();
   const [moveError, setMoveError] = useState<string>();
@@ -93,7 +97,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc }: Pr
           </div>
         </header>
 
-        <Tabs defaultValue={summary ? "summary" : "transcript"} className="min-h-0 flex-1 gap-0">
+        <Tabs defaultValue={summary && r.status !== "processing" ? "summary" : "transcript"} className="min-h-0 flex-1 gap-0">
           <div className="border-b px-6 py-2">
             <TabsList variant="line">
               <TabsTrigger value="transcript">Transcript</TabsTrigger>
@@ -105,7 +109,9 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc }: Pr
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl px-6 py-8">
               <TabsContent value="transcript" className="space-y-5">
-                {segments.length ? segments.map((s, i) => (
+                {r.status === "processing" ? <Transcribing /> : r.status === "failed" && !segments.length ? (
+                  <TranscriptionFailed recordingId={r.id} message={processingError} />
+                ) : segments.length ? segments.map((s, i) => (
                   <div key={i} className="grid grid-cols-[56px_1fr] gap-3">
                     <span className="pt-0.5 text-xs tabular-nums text-muted-foreground">{formatClock(s.startSec)}</span>
                     <div>
@@ -113,7 +119,12 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc }: Pr
                       <p className="text-sm leading-relaxed text-foreground/90">{s.text}</p>
                     </div>
                   </div>
-                )) : <Empty label="No transcript yet" action="Transcribe" />}
+                )) : audioSrc ? (
+                  <div className="flex flex-col items-center gap-3 py-20 text-sm text-muted-foreground">
+                    No transcript yet
+                    <TranscribeButton recordingId={r.id} />
+                  </div>
+                ) : <Empty label="No transcript yet. This recording has no audio to transcribe." />}
               </TabsContent>
 
               <TabsContent value="highlights" className="space-y-3">

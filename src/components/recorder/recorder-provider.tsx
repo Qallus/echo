@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { RecordingSource, Workspace } from "@/lib/types";
 import { extensionFor, pickMimeType, startCapture, type Capture, type CaptureMode } from "@/lib/recorder/media";
 import { saveRecording } from "@/lib/recorder/save";
+import { requestTranscription } from "@/components/recording/transcribe";
 import { RecorderPanel } from "./recorder-panel";
 import { StartDialog } from "./start-dialog";
 import { UploadDialog, UploadDropZone } from "./upload-dialog";
@@ -138,6 +139,7 @@ export function RecorderProvider({ workspaces, userId, children }: { workspaces:
         title: s.title, source: s.source, durationSec: Math.round(seconds()), createdAt: s.startedAt,
         highlights: notesRef.current.map((n) => ({ startSec: n.startSec, text: n.flag && !n.text ? "Flagged moment" : n.text })),
       });
+      await requestTranscription(id); // starts in the background; the page shows progress
       reset();
       router.push(`/recordings/${id}`);
       router.refresh();
@@ -151,7 +153,8 @@ export function RecorderProvider({ workspaces, userId, children }: { workspaces:
     const mimeType = pickMimeType();
     if (!mimeType) throw new Error("This browser can't record audio. Try Chrome, Edge, Firefox or Safari.");
     const cap = await startCapture(mode); // throws on denied permission
-    const rec = new MediaRecorder(cap.stream, { mimeType, audioBitsPerSecond: 64_000 });
+    // 32 kbps Opus is clear for speech and keeps ~1h40m under the 25 MB transcription limit.
+    const rec = new MediaRecorder(cap.stream, { mimeType, audioBitsPerSecond: 32_000 });
     chunks.current = [];
     rec.ondataavailable = (e) => { if (e.data.size) chunks.current.push(e.data); };
     rec.start(1000);

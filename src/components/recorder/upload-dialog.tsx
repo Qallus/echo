@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { fileDuration } from "@/lib/recorder/media";
 import { ACCEPTED, isAcceptedFile, MAX_UPLOAD_BYTES, saveRecording } from "@/lib/recorder/save";
+import { requestTranscription } from "@/components/recording/transcribe";
 import { useRecorder } from "./recorder-provider";
 import { WorkspacePicker } from "./workspace-picker";
 
@@ -57,6 +58,8 @@ function UploadForm({ initial, userId, onClose }: { initial: File[]; userId: str
           file: it.file, fileName: it.file.name, workspaceId, userId, title: it.title,
           source: "upload", durationSec: await fileDuration(it.file),
         });
+        // Wait for the job to be marked as started, so the recording opens in "Transcribing…".
+        await requestTranscription(id);
         update(i, { state: "done", id });
       } catch (e) {
         update(i, { state: "error", message: e instanceof Error ? e.message : "Upload failed." });

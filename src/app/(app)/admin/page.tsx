@@ -5,6 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { LocalDate } from "@/components/local-date";
 import { isSuperAdmin } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
+import { getTranscriptionSetting } from "@/lib/transcription/run";
+import { TranscriptionSettingForm } from "./transcription-setting";
 
 export const metadata = { title: "Admin · Echo" };
 
@@ -23,7 +25,11 @@ const TYPE_LABEL = { personal: "Personal", business: "Business", team: "Team", s
 export default async function AdminPage() {
   if (!(await isSuperAdmin())) notFound();
   const supabase = await createClient();
-  const [users, workspaces] = await Promise.all([supabase.rpc("admin_list_users"), supabase.rpc("admin_list_workspaces")]);
+  const [users, workspaces, transcription] = await Promise.all([
+    supabase.rpc("admin_list_users"), supabase.rpc("admin_list_workspaces"), getTranscriptionSetting(supabase),
+  ]);
+  // Which providers have a key configured (names only; values never leave the server).
+  const keys = { openai: Boolean(process.env.OPENAI_API_KEY), gemini: Boolean(process.env.GEMINI_API_KEY) };
   if (users.error || workspaces.error) throw new Error(users.error?.message ?? workspaces.error?.message);
   const u = users.data as UserRow[];
   const w = workspaces.data as WorkspaceRow[];
@@ -38,6 +44,14 @@ export default async function AdminPage() {
           {counts.users} users · {counts.business} business workspaces · {counts.recordings} recordings
         </p>
       </div>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-xl font-semibold">Transcription</h2>
+          <p className="text-sm text-muted-foreground">Which service turns recordings into transcripts, for every workspace.</p>
+        </div>
+        <TranscriptionSettingForm current={transcription} keys={keys} />
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Users</h2>
