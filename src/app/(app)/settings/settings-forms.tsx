@@ -5,25 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { MIN_PASSWORD } from "@/lib/auth-rules";
-import { changeEmail, changePassword, signOutEverywhere, updateName, type SettingsState } from "./actions";
+import { changeEmail, changePassword, signOutEverywhere, type SettingsState } from "./actions";
 
-function Status({ state }: { state: SettingsState }) {
+export function Status({ state }: { state: SettingsState }) {
   if (state.error) return <p className="text-sm text-destructive">{state.error}</p>;
   if (state.ok) return <p className="text-sm text-muted-foreground">{state.ok}</p>;
   return null;
-}
-
-export function NameForm({ fullName }: { fullName: string }) {
-  const [state, action, pending] = useActionState<SettingsState, FormData>(updateName, {});
-  return (
-    <form action={action} className="space-y-2">
-      <div className="flex gap-2">
-        <Input name="full_name" defaultValue={fullName} placeholder="Your name" maxLength={120} required />
-        <Button type="submit" variant="outline" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-      </div>
-      <Status state={state} />
-    </form>
-  );
 }
 
 export function EmailForm({ email, pending: pendingEmail }: { email: string; pending: string | null }) {

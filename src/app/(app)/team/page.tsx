@@ -5,6 +5,8 @@ import {
   CopyLink, CreateWorkspaceForm, InviteForm, RemoveMemberButton, RevokeInviteButton,
 } from "@/components/team/team-forms";
 import { LocalDate } from "@/components/local-date";
+import { ProfileHoverCard } from "@/components/profile/profile-card";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { listInvites, listMembers, listWorkspaces, requireUser } from "@/lib/data";
 import { siteOrigin } from "@/lib/site";
 
@@ -45,16 +47,22 @@ export default async function TeamPage() {
             <CardContent className="space-y-6">
               <ul className="divide-y rounded-lg border">
                 {members.map((m) => {
-                  const self = m.userId === user.id;
+                  const self = m.id === user.id;
                   const canRemove = self ? !(m.role === "owner" && owners === 1) : ws.role === "owner";
+                  const role = [m.jobTitle, m.company].filter(Boolean).join(" · ");
                   return (
-                    <li key={m.userId} className="flex items-center gap-3 px-3 py-2.5 text-sm">
+                    <li key={m.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
+                      <ProfileHoverCard person={m}>
+                        <UserAvatar name={m.fullName} email={m.email} src={m.avatarUrl} size="md" />
+                      </ProfileHoverCard>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{m.fullName || m.email}{self && " (you)"}</div>
-                        {m.fullName && <div className="truncate text-xs text-muted-foreground">{m.email}</div>}
+                        <ProfileHoverCard person={m}>
+                          <span className="block truncate font-medium hover:underline">{m.fullName || m.email}{self && " (you)"}</span>
+                        </ProfileHoverCard>
+                        <div className="truncate text-xs text-muted-foreground">{role || m.email}</div>
                       </div>
                       <Badge variant="outline" className="capitalize">{m.role}</Badge>
-                      {canRemove && <RemoveMemberButton workspaceId={ws.id} userId={m.userId} self={self} />}
+                      {canRemove && <RemoveMemberButton workspaceId={ws.id} userId={m.id} self={self} />}
                     </li>
                   );
                 })}

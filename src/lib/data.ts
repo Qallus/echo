@@ -3,7 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type {
-  ActionGroup, Folder, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
+  ActionGroup, Folder, PersonCard, Profile, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
 } from "@/lib/types";
 
 export const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -84,16 +84,49 @@ export const listFolders = cache(async (): Promise<Folder[]> => {
   return data.map((f) => ({ id: f.id, workspaceId: f.workspace_id, name: f.name }));
 });
 
-export type Member = { userId: string; email: string; fullName: string | null; role: WorkspaceRole; joinedAt: string };
+export type Member = PersonCard & { role: WorkspaceRole; joinedAt: string };
 export type Invite = { id: string; email: string; role: WorkspaceRole; token: string; expiresAt: string };
+
+type MemberRow = {
+  user_id: string; email: string; full_name: string | null; role: WorkspaceRole; joined_at: string;
+  avatar_url: string | null; job_title: string | null; company: string | null; phone: string | null;
+  timezone: string | null; location: string | null;
+};
 
 export async function listMembers(workspaceId: string): Promise<Member[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("list_workspace_members", { ws: workspaceId });
   if (error) throw new Error(error.message);
-  return (data as { user_id: string; email: string; full_name: string | null; role: WorkspaceRole; joined_at: string }[])
-    .map((m) => ({ userId: m.user_id, email: m.email, fullName: m.full_name, role: m.role, joinedAt: m.joined_at }));
+  return (data as MemberRow[]).map((m) => ({
+    id: m.user_id, email: m.email, fullName: m.full_name, role: m.role, joinedAt: m.joined_at,
+    avatarUrl: m.avatar_url, jobTitle: m.job_title, company: m.company, phone: m.phone,
+    timezone: m.timezone, location: m.location,
+  }));
 }
+
+type ProfileRow = {
+  full_name: string | null; avatar_url: string | null; job_title: string | null; company: string | null;
+  phone: string | null; phone_visible: boolean; timezone: string | null; location: string | null;
+  bio: string | null; website: string | null; linkedin: string | null; pronouns: string | null;
+};
+
+// Your own profile, phone included. The phone column isn't readable through
+// the table, so this goes through get_my_profile().
+export const getMyProfile = cache(async (): Promise<Profile> => {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_my_profile").maybeSingle<ProfileRow>();
+  if (error) throw new Error(error.message);
+  return {
+    id: user.id, email: user.email,
+    fullName: data?.full_name ?? null, avatarUrl: data?.avatar_url ?? null,
+    jobTitle: data?.job_title ?? null, company: data?.company ?? null,
+    phone: data?.phone ?? null, phoneVisible: data?.phone_visible ?? false,
+    timezone: data?.timezone ?? null, location: data?.location ?? null,
+    bio: data?.bio ?? null, website: data?.website ?? null,
+    linkedin: data?.linkedin ?? null, pronouns: data?.pronouns ?? null,
+  };
+});
 
 // Open invites (owners/admins only; RLS returns nothing to members).
 export async function listInvites(workspaceId: string): Promise<Invite[]> {

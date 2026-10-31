@@ -7,6 +7,28 @@ export type WorkspaceRole = "owner" | "admin" | "member";
 // Personal: private to one user. Business: shared with invited teammates.
 export type Workspace = { id: string; name: string; role: WorkspaceRole; isPersonal: boolean };
 
+// A person as teammates see them (phone only when they share it).
+export type PersonCard = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  jobTitle: string | null;
+  company: string | null;
+  phone: string | null;
+  timezone: string | null;
+  location: string | null;
+};
+
+// Your own profile (settings page).
+export type Profile = PersonCard & {
+  phoneVisible: boolean;
+  bio: string | null;
+  website: string | null;
+  linkedin: string | null;
+  pronouns: string | null;
+};
+
 export type Recording = {
   id: string;
   workspaceId: string;

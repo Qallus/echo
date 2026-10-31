@@ -4,9 +4,10 @@ import Link from "next/link";
 import { AudioLines, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import { UserAvatar } from "@/components/profile/user-avatar";
 
 // Sticky top bar on phones: the menu button opens the full sidebar as a drawer.
-export function MobileHeader({ email }: { email: string }) {
+export function MobileHeader({ me }: { me: { name: string | null; email: string; avatarUrl: string | null } }) {
   const { toggleSidebar } = useSidebar();
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
@@ -19,7 +20,7 @@ export function MobileHeader({ email }: { email: string }) {
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="icon" nativeButton={false} render={<Link href="/search" aria-label="Search" />}><Search className="size-5" /></Button>
           <Link href="/settings" aria-label="Account settings" className="flex size-9 items-center justify-center">
-            <span className="flex size-7 items-center justify-center rounded-full bg-muted text-xs font-medium uppercase">{(email || "?")[0]}</span>
+            <UserAvatar name={me.name} email={me.email} src={me.avatarUrl} size="sm" />
           </Link>
         </div>
       </div>

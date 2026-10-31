@@ -9,18 +9,88 @@ import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState = { ok?: string; error?: string; needCode?: boolean };
 
-export async function updateName(_: SettingsState, form: FormData): Promise<SettingsState> {
+const text = (form: FormData, key: string, max: number) => String(form.get(key) ?? "").trim().slice(0, max) || null;
+
+// "linkedin.com/in/x" or "https://..." -> https URL; anything else is rejected.
+function link(value: string | null): string | null | false {
+  if (!value) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+    return url.hostname.includes(".") ? url.toString() : false;
+  } catch {
+    return false;
+  }
+}
+
+function validTimeZone(tz: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function updateProfile(_: SettingsState, form: FormData): Promise<SettingsState> {
   const user = await requireUser();
-  const fullName = String(form.get("full_name") ?? "").trim().slice(0, 120);
+  const fullName = text(form, "full_name", 100);
   if (!fullName) return { error: "Enter your name." };
+
+  const phone = text(form, "phone", 32);
+  if (phone && !/^\+?[\d\s().-]{7,25}$/.test(phone)) return { error: "Enter a phone number with digits only (and +, spaces or dashes)." };
+  const timezone = text(form, "timezone", 64);
+  if (timezone && !validTimeZone(timezone)) return { error: "Choose a time zone from the list." };
+  const website = link(text(form, "website", 200));
+  const linkedin = link(text(form, "linkedin", 200));
+  if (website === false) return { error: "The website doesn't look like a web address." };
+  if (linkedin === false) return { error: "The LinkedIn link doesn't look like a web address." };
+
   const supabase = await createClient();
   const [profile, auth] = await Promise.all([
-    supabase.from("profiles").update({ full_name: fullName }).eq("id", user.id),
+    supabase.from("profiles").update({
+      full_name: fullName,
+      pronouns: text(form, "pronouns", 30),
+      job_title: text(form, "job_title", 100),
+      company: text(form, "company", 120),
+      phone,
+      phone_visible: form.get("phone_visible") === "on",
+      timezone,
+      location: text(form, "location", 100),
+      bio: text(form, "bio", 500),
+      website,
+      linkedin,
+    }).eq("id", user.id),
     supabase.auth.updateUser({ data: { full_name: fullName } }), // used by the email templates
   ]);
   if (profile.error || auth.error) return { error: profile.error?.message ?? auth.error?.message };
   revalidatePath("/", "layout");
-  return { ok: "Name saved." };
+  return { ok: "Profile saved." };
+}
+
+// Photos live at avatars/<user_id>/<file>; the browser uploads, then we point
+// the profile at it and delete the previous ones.
+async function setAvatarUrl(url: string | null) {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+  if (error) return { error: error.message };
+  const keep = url?.split(`/avatars/${user.id}/`)[1];
+  const { data: files } = await supabase.storage.from("avatars").list(user.id);
+  const old = (files ?? []).filter((f) => f.name !== keep).map((f) => `${user.id}/${f.name}`);
+  if (old.length) await supabase.storage.from("avatars").remove(old);
+  revalidatePath("/", "layout");
+  return {};
+}
+
+export async function setAvatar(url: string): Promise<{ error?: string }> {
+  const user = await requireUser();
+  const prefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${user.id}/`;
+  if (!url.startsWith(prefix)) return { error: "That photo isn't in your folder." };
+  return setAvatarUrl(url);
+}
+
+export async function removeAvatar(): Promise<{ error?: string }> {
+  return setAvatarUrl(null);
 }
 
 // Supabase emails a confirmation link to the new address (and the old one,
@@ -33,7 +103,7 @@ export async function changeEmail(_: SettingsState, form: FormData): Promise<Set
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser(
     { email },
-    { emailRedirectTo: `${await siteOrigin()}/auth/callback?next=/settings` },
+    { emailRedirectTo: `${await siteOrigin()}/auth/callback?next=/settings/account` },
   );
   if (error) return { error: error.message };
   return { ok: `Check ${email} (and your current inbox) for a link to confirm the change.` };

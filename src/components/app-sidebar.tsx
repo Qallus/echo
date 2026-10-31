@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   AudioLines, Briefcase, ChevronDown, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
-  LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, Users, Video,
+  LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, UserRound, Users, Video,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { createFolder, fileRecordings, moveRecordings, type BulkResult } from "@/lib/actions";
 import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
 import { useRecorder } from "@/components/recorder/recorder-provider";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -52,9 +53,11 @@ function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProp
   );
 }
 
-type Props = { email: string; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean };
+type Me = { name: string | null; email: string; avatarUrl: string | null };
+type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean };
 
-export function AppSidebar({ email, workspaces, recordings, folders, superAdmin }: Props) {
+export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: Props) {
+  const { email } = me;
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
 
@@ -111,19 +114,21 @@ export function AppSidebar({ email, workspaces, recordings, folders, superAdmin 
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger render={<SidebarMenuButton className="justify-between" />}>
+          <DropdownMenuTrigger render={<SidebarMenuButton size="lg" className="justify-between" />}>
             <span className="flex min-w-0 items-center gap-2">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-medium uppercase">
-                {(email || "?")[0]}
+              <UserAvatar name={me.name} email={email} src={me.avatarUrl} size="sm" />
+              <span className="min-w-0 text-left leading-tight">
+                <span className="block truncate font-medium">{me.name || email}</span>
+                {me.name && <span className="block truncate text-xs text-muted-foreground">{email}</span>}
               </span>
-              <span className="truncate">{email}</span>
             </span>
             <ChevronDown className="opacity-60" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-60" align="start">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
-              <DropdownMenuItem render={<Link href="/settings" />}><Settings /> Settings</DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/settings" />}><UserRound /> Profile</DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/settings/account" />}><Settings /> Account settings</DropdownMenuItem>
               {superAdmin && <DropdownMenuItem render={<Link href="/admin" />}><ShieldCheck /> Admin</DropdownMenuItem>}
               <DropdownMenuItem render={<Link href="/team" />}><Users /> Business workspaces &amp; team</DropdownMenuItem>
             </DropdownMenuGroup>
