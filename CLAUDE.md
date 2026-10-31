@@ -12,7 +12,8 @@ Echo records calls and meetings and turns them into transcripts, summaries, acti
 ## Stack and conventions
 - Next.js 16 App Router under `src/`, React 19, Tailwind 4, shadcn/ui on **Base UI**. Components use the `render` prop, not `asChild`.
 - Supabase via `@supabase/ssr`: `src/lib/supabase/{server,client,proxy}.ts`. Session refresh and the login redirect live in `src/proxy.ts`.
-- Reads go through `src/lib/data.ts`; writes through server actions in `src/lib/actions.ts`. Both use the signed-in user's client, so **RLS is the security boundary**. Don't use the service-role key in request paths.
+- Reads go through `src/lib/data.ts`; writes through server actions in `src/lib/actions.ts`. Both use the signed-in user's client, so **RLS is the security boundary**. Don't use the service-role key in request paths. The one exception is `src/lib/supabase/admin.ts`, for routes with no user session that verify a shared secret (e.g. `/api/notifications/deliver`, called by the database).
+- After any `npm install`/`uninstall`, run `npm run lock:linux` (needs Docker). npm on Windows drops Linux-only packages from the lock file and the Coolify build (`npm ci`) then fails.
 - AI chat: `src/app/api/chat/route.ts` with `src/lib/ai/*` (Claude, ChatGPT, Grok, Kimi K3 via the AI SDK).
 - Build with `npm run build` (webpack). Type-check with `npx tsc --noEmit`.
 
