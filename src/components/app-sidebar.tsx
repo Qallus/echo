@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { createFolder, fileRecordings, moveRecordings, type BulkResult } from "@/lib/actions";
 import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
+import { useRecorder } from "@/components/recorder/recorder-provider";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +52,7 @@ type Props = { email: string; workspaces: Workspace[]; recordings: Recording[]; 
 
 export function AppSidebar({ email, workspaces, recordings, folders, superAdmin }: Props) {
   const [pending, startTransition] = useTransition();
+  const recorder = useRecorder();
 
   const active = recordings.filter((r) => !r.deletedAt);
   const bySource = (s: Recording["source"]) => active.filter((r) => r.source === s).length;
@@ -136,9 +138,9 @@ export function AppSidebar({ email, workspaces, recordings, folders, superAdmin 
             <Plus /> New recording
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-60" align="start">
-            <DropdownMenuItem><Mic /> Record a meeting</DropdownMenuItem>
-            <DropdownMenuItem><Phone /> Record a call</DropdownMenuItem>
-            <DropdownMenuItem><Upload /> Upload audio</DropdownMenuItem>
+            <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("meeting")}><Mic /> Record a meeting</DropdownMenuItem>
+            <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("phone_call")}><Phone /> Record a call</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => recorder.openUpload()}><Upload /> Upload audio</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarHeader>

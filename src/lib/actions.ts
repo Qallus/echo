@@ -7,6 +7,7 @@ import { getPersonalWorkspace, getRecordingDetail, isUuid, requireUser } from "@
 import { formatClock, formatDuration } from "@/lib/format";
 import { SAMPLE, SAMPLE_FOLDERS } from "@/lib/sample-data";
 import { siteOrigin } from "@/lib/site";
+import { relocateAudio } from "@/lib/storage";
 
 // Server actions. Each uses the signed-in user's client, so RLS still applies.
 // Database guards raise plain-English messages, so those are shown as-is.
@@ -106,19 +107,20 @@ const MAX_BULK = 200;
 const cleanIds = (ids: string[]) => [...new Set(ids)].filter(isUuid).slice(0, MAX_BULK);
 
 // Runs one update per recording so a single refusal doesn't block the rest.
+// Workspace changes also move the audio file into the new workspace's folder.
 async function eachRecording(ids: string[], update: Record<string, unknown>): Promise<BulkResult> {
   const supabase = await createClient();
-  const results = await Promise.all(
-    cleanIds(ids).map((id) => supabase.from("recordings").update(update, { count: "exact" }).eq("id", id)),
-  );
-  const errors = new Set<string>();
-  let done = 0;
-  for (const r of results) {
-    if (r.error) errors.add(r.error.message);
-    else if (!r.count) errors.add("Recording not found or you don't have access.");
-    else done++;
-  }
-  return { done, errors: [...errors] };
+  const results = await Promise.all(cleanIds(ids).map(async (id): Promise<string | null> => {
+    const r = await supabase.from("recordings").update(update, { count: "exact" }).eq("id", id);
+    if (r.error) return r.error.message;
+    if (!r.count) return "Recording not found or you don't have access.";
+    if ("workspace_id" in update) {
+      try { await relocateAudio(supabase, id); } catch (e) { return e instanceof Error ? e.message : String(e); }
+    }
+    return null;
+  }));
+  const errors = new Set(results.filter((e): e is string => e !== null));
+  return { done: results.filter((e) => e === null).length, errors: [...errors] };
 }
 
 // Business <-> Personal. The database allows it only for the recording's

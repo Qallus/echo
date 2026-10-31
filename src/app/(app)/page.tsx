@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AudioLines, Bot, Plug, Workflow } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadSampleButton } from "@/components/load-sample-button";
+import { QuickStart } from "@/components/recorder/quick-start";
 import { RecordingsTable } from "@/components/recordings-table";
 import { listFolders, listRecordings, listWorkspaces } from "@/lib/data";
 
@@ -29,8 +30,9 @@ export default async function HomePage() {
             <AudioLines className="size-8 text-muted-foreground" />
             <div className="space-y-1">
               <p className="font-medium">No recordings yet</p>
-              <p className="text-sm text-muted-foreground">Recording and upload arrive in the next step. Load samples to explore Echo now.</p>
+              <p className="text-sm text-muted-foreground">Record a meeting or call, or drop audio files anywhere on this page.</p>
             </div>
+            <QuickStart />
             {all.length === 0 && <LoadSampleButton />}
           </div>
         )}

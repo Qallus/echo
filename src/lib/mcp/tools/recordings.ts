@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/server";
 import type { McpContext } from "../auth";
 import { defineTool, ToolError } from "../audit";
+import { relocateAudio } from "@/lib/storage";
 import { resolveWorkspace, workspaceArg } from "../workspace";
 import {
   check, confirmArg, cursorArg, cursorFilter, decodeCursor, found, id, limitArg, nextCursor, SOURCES, STATUSES,
@@ -158,6 +159,7 @@ export function registerRecordingTools(server: McpServer, ctx: McpContext) {
     if (workspace_id && workspace_id !== before.workspace_id) {
       const { error } = await ctx.supabase.from("recordings").update({ workspace_id }).eq("id", recording_id);
       check(error);
+      try { await relocateAudio(ctx.supabase, recording_id); } catch (e) { throw new ToolError(e instanceof Error ? e.message : String(e)); }
     }
     const changes = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
     if (Object.keys(changes).length) {

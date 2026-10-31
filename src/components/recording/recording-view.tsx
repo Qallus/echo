@@ -21,9 +21,9 @@ import { formatClock, formatDuration, spaceLabel } from "@/lib/format";
 import type { Recording, RecordingDetail, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Props = { detail: RecordingDetail; list: Recording[]; space: Workspace; moveTargets: Workspace[] };
+type Props = { detail: RecordingDetail; list: Recording[]; space: Workspace; moveTargets: Workspace[]; audioSrc: string | null };
 
-export function RecordingView({ detail, list, space, moveTargets }: Props) {
+export function RecordingView({ detail, list, space, moveTargets, audioSrc }: Props) {
   const { recording: r, segments, highlights, summary } = detail;
   const [moving, startMove] = useTransition();
   const [moveError, setMoveError] = useState<string>();
@@ -168,7 +168,7 @@ export function RecordingView({ detail, list, space, moveTargets }: Props) {
           </div>
         </Tabs>
 
-        <AudioBar duration={r.durationSec} />
+        <AudioBar duration={r.durationSec} src={audioSrc} />
       </div>
 
       {askOpen && <AskPanel recordingId={r.id} onClose={() => setAskOpen(false)} />}

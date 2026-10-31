@@ -10,7 +10,7 @@ export function LoadSampleButton() {
   const [error, setError] = useState<string>();
   return (
     <div className="space-y-2">
-      <Button onClick={() => start(async () => {
+      <Button variant="ghost" onClick={() => start(async () => {
         try { await loadSampleData(); } catch (e) { setError((e as Error).message); }
       })} disabled={pending}>
         <Sparkles /> {pending ? "Loading…" : "Load sample recordings"}

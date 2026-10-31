@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { RecorderProvider } from "@/components/recorder/recorder-provider";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { isSuperAdmin, listFolders, listRecordings, listWorkspaces, requireUser } from "@/lib/data";
 
@@ -7,6 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [workspaces, recordings, folders, superAdmin] = await Promise.all([listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin()]);
 
   return (
+    <RecorderProvider workspaces={workspaces} userId={user.id}>
     <SidebarProvider>
       <AppSidebar email={user.email} workspaces={workspaces} recordings={recordings} folders={folders} superAdmin={superAdmin} />
       <SidebarInset>
@@ -16,5 +18,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="flex-1">{children}</main>
       </SidebarInset>
     </SidebarProvider>
+    </RecorderProvider>
   );
 }
