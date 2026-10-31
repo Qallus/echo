@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   AudioLines, Briefcase, ChevronDown, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
-  LayoutTemplate, Lock, LogOut, Mic, Monitor, Phone, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, Users, Video,
+  LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, Users, Video,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
@@ -29,6 +29,10 @@ const main = [
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/explore", label: "Explore", icon: Compass },
 ];
+const build = [
+  { href: "/backlog", label: "Backlog", icon: ListTodo },
+  { href: "/developer", label: "Developer", icon: Plug },
+];
 
 type DropHandlers = Pick<React.HTMLAttributes<HTMLElement>, "onDragOver" | "onDragLeave" | "onDrop">;
 type NavProps = { href: string; label: string; icon: typeof Home; n?: number; exact?: boolean; drop?: DropHandlers; highlight?: boolean };
@@ -36,7 +40,7 @@ type NavProps = { href: string; label: string; icon: typeof Home; n?: number; ex
 // Module-level so its identity is stable across renders (drag-over re-renders the sidebar).
 function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProps) {
   const pathname = usePathname();
-  const active = exact || href === "/" ? pathname === href : pathname.startsWith(href);
+  const active = href === "/" ? pathname === "/" || pathname === "/home" : exact ? pathname === href : pathname.startsWith(href);
   return (
     <SidebarMenuItem {...drop} className={cn(highlight && "rounded-md bg-sidebar-accent ring-2 ring-sidebar-ring")}>
       <SidebarMenuButton isActive={active} render={<Link href={href} />}>
@@ -124,7 +128,7 @@ export function AppSidebar({ email, workspaces, recordings, folders, superAdmin 
               <DropdownMenuItem render={<Link href="/team" />}><Users /> Business workspaces &amp; team</DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem><CreditCard /> Billing &amp; plan</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/billing" />}><CreditCard /> Billing &amp; plan</DropdownMenuItem>
             <DropdownMenuItem><CircleHelp /> Support</DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action="/auth/signout" method="post">
@@ -183,6 +187,10 @@ export function AppSidebar({ email, workspaces, recordings, folders, superAdmin 
           );
         })}
         <SidebarSeparator />
+        <SidebarGroup>
+          <SidebarGroupLabel>Build</SidebarGroupLabel>
+          <SidebarMenu>{build.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>Sources</SidebarGroupLabel>
           <SidebarMenu>{sources.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>

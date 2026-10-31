@@ -5,14 +5,15 @@ import { SignupForm } from "./signup-form";
 
 export const metadata = { title: "Create account · Echo" };
 
-export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const next = safeNext((await searchParams).next);
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string; type?: string }> }) {
+  const sp = await searchParams;
+  const next = safeNext(sp.next);
   return (
     <AuthShell
       title="Create your Echo account"
       footer={<>Already have an account? <Link href={`/login${next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-foreground hover:underline">Sign in</Link></>}
     >
-      <SignupForm next={next} />
+      <SignupForm next={next} initialType={sp.type === "business" ? "business" : "personal"} />
     </AuthShell>
   );
 }

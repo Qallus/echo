@@ -75,7 +75,7 @@ Implement the catalog in section 4. Rules for every tool:
 - Errors: return `isError: true` with a plain sentence such as "Recording not found or you don't have access". Don't leak SQL.
 - **Done when:** every tool passes a scripted Inspector run (create → read → update → delete) and RLS isolation is checked with a second test user.
 
-### Phase 4: Dashboard pages
+### Phase 4: Dashboard pages (built)
 - **`/developer`** (sidebar: "Developer"):
   - Connector card: MCP URL with a copy button, and setup steps from section 5.
   - Recent MCP activity: the last 50 `mcp_audit_log` rows (time, app, tool, ok).

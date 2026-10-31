@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/copy-button";
 import { Input } from "@/components/ui/input";
 import {
   acceptInvite, createTeamWorkspace, inviteMember, removeMember, revokeInvite,
@@ -23,17 +23,7 @@ export function CreateWorkspaceForm({ first }: { first: boolean }) {
 }
 
 export function CopyLink({ link }: { link: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <Button type="button" variant="outline" size="sm" onClick={copy}>
-      {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy link"}
-    </Button>
-  );
+  return <CopyButton value={link} label="Copy link" />;
 }
 
 export function InviteForm({ workspaceId }: { workspaceId: string }) {

@@ -7,12 +7,7 @@ import { resolveWorkspace, workspaceArg } from "../workspace";
 import { check, confirmArg, cursorArg, cursorFilter, decodeCursor, found, id, limitArg, nextCursor } from "./shared";
 
 // Allowed values are enforced by the database (enums / check constraint).
-const KINDS = ["feature", "bug", "content", "design", "question", "task"] as const;
-const AREAS = ["frontend", "dashboard", "admin", "api", "mcp", "database", "other"] as const;
-const PRIORITIES = ["low", "normal", "high", "urgent"] as const;
-const STATUSES = ["new", "planned", "in_progress", "review", "done", "wont_do"] as const;
-const OPEN = ["new", "planned", "in_progress", "review"] as const;
-const SOURCES = ["claude", "claude_code", "mcp", "dashboard"] as const;
+import { AREAS, KINDS, OPEN_STATUSES as OPEN, PRIORITIES, SOURCES, STATUSES } from "@/lib/backlog";
 
 const COLS = "id, workspace_id, title, kind, area, priority, status, source, created_at, updated_at";
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;

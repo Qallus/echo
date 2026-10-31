@@ -16,9 +16,9 @@ const TYPES = [
   { value: "business", icon: Briefcase, title: "Business", desc: "My company and team." },
 ] as const;
 
-export function SignupForm({ next }: { next: string }) {
+export function SignupForm({ next, initialType = "personal" }: { next: string; initialType?: "personal" | "business" }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(signUp, {});
-  const [type, setType] = useState<"personal" | "business">("personal");
+  const [type, setType] = useState<"personal" | "business">(initialType);
 
   if (state.sent) return <CheckEmail email={state.sent} what="a link to confirm your account" />;
 
