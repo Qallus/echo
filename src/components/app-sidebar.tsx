@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarSeparator,
+  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarSeparator, useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
@@ -20,6 +20,7 @@ import { createFolder, fileRecordings, moveRecordings, type BulkResult } from "@
 import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
 import { useRecorder } from "@/components/recorder/recorder-provider";
 import { UserAvatar } from "@/components/profile/user-avatar";
+import { NotificationBell } from "@/components/notifications/bell";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -53,13 +54,14 @@ function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProp
   );
 }
 
-type Me = { name: string | null; email: string; avatarUrl: string | null };
+export type Me = { id: string; name: string | null; email: string; avatarUrl: string | null; unread: number };
 type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean };
 
 export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: Props) {
   const { email } = me;
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
+  const { isMobile } = useSidebar();
 
   const active = recordings.filter((r) => !r.deletedAt);
   const bySource = (s: Recording["source"]) => active.filter((r) => r.source === s).length;
@@ -108,9 +110,11 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
   return (
     <Sidebar>
       <SidebarHeader className="gap-3">
-        <div className="flex items-center gap-2 px-2 pt-1">
+        <div className="flex items-center gap-2 pt-1 pl-2">
           <AudioLines className="size-5" />
           <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
+          {/* Phones show the bell in the top header instead. */}
+          {!isMobile && <NotificationBell userId={me.id} initialUnread={me.unread} className="ml-auto" />}
         </div>
 
         <DropdownMenu>

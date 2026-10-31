@@ -1,0 +1,24 @@
+// Notification events. The SQL triggers in
+// supabase/migrations/20261031120000_notifications.sql create these types.
+
+export const NOTIFICATION_TYPES = [
+  { type: "transcript_ready", label: "Transcript ready", desc: "A recording you made has been transcribed." },
+  { type: "transcript_failed", label: "Transcription failed", desc: "A recording couldn't be transcribed." },
+  { type: "summary_ready", label: "Summary added", desc: "A summary was written for one of your recordings." },
+  { type: "member_joined", label: "Teammate joined", desc: "Someone joined a Business workspace you manage." },
+] as const;
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number]["type"] | "test";
+export type Channel = "in_app" | "email" | "sms" | "push";
+
+export const CHANNELS: { key: Channel; label: string }[] = [
+  { key: "in_app", label: "In-app" },
+  { key: "email", label: "Email" },
+  { key: "sms", label: "SMS" },
+  { key: "push", label: "Push" },
+];
+
+// A missing preference row means these.
+export const DEFAULT_PREFS: Record<Channel, boolean> = { in_app: true, email: true, sms: false, push: false };
+
+export type Preference = Record<Channel, boolean>;

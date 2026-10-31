@@ -104,6 +104,13 @@ export async function listMembers(workspaceId: string): Promise<Member[]> {
   }));
 }
 
+export async function countUnreadNotifications(): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true })
+    .is("read_at", null).eq("show_in_app", true);
+  return count ?? 0;
+}
+
 type ProfileRow = {
   full_name: string | null; avatar_url: string | null; job_title: string | null; company: string | null;
   phone: string | null; phone_visible: boolean; timezone: string | null; location: string | null;

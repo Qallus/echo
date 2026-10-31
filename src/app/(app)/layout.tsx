@@ -3,12 +3,14 @@ import { BottomNav } from "@/components/mobile/bottom-nav";
 import { MobileHeader } from "@/components/mobile/mobile-header";
 import { RecorderProvider } from "@/components/recorder/recorder-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { getMyProfile, isSuperAdmin, listFolders, listRecordings, listWorkspaces, requireUser } from "@/lib/data";
+import { countUnreadNotifications, getMyProfile, isSuperAdmin, listFolders, listRecordings, listWorkspaces, requireUser } from "@/lib/data";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [workspaces, recordings, folders, superAdmin, profile] = await Promise.all([listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile()]);
-  const me = { name: profile.fullName, email: user.email, avatarUrl: profile.avatarUrl };
+  const [workspaces, recordings, folders, superAdmin, profile, unread] = await Promise.all([
+    listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile(), countUnreadNotifications(),
+  ]);
+  const me = { id: user.id, name: profile.fullName, email: user.email, avatarUrl: profile.avatarUrl, unread };
 
   return (
     <RecorderProvider workspaces={workspaces} userId={user.id}>
