@@ -3,7 +3,7 @@ import {
   Briefcase, FileAudio, Lock, MessageSquareText, Mic, PictureInPicture2, Plug, Search, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProductPreview } from "@/components/marketing/product-preview";
+import { HeroDemo } from "@/components/marketing/hero-demo/hero-demo";
 
 export const metadata = {
   title: "Echo · Record, transcribe and search every call and meeting",
@@ -52,7 +52,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="px-4 pb-20 sm:px-6"><ProductPreview /></section>
+      <section className="px-4 pb-20 sm:px-6"><HeroDemo /></section>
 
       <section id="features" className="scroll-mt-20 border-t bg-muted/30">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
