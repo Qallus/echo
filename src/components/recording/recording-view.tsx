@@ -36,12 +36,15 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
       const res = await moveRecordings([r.id], to.id);
       setMoveError(res.errors[0]);
     });
+  // Ask Echo: a side panel open by default from lg up; below lg a full-screen
+  // overlay opened on demand (separate state, so server and client markup match).
   const [askOpen, setAskOpen] = useState(true);
+  const [mobileAsk, setMobileAsk] = useState(false);
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [vote, setVote] = useState<"up" | "down" | null>(null);
 
   return (
-    <div className="flex h-[calc(100svh-3rem)] md:h-svh">
+    <div className="flex h-[calc(100svh-3rem-var(--bottom-nav))] md:h-svh">
       {/* File list column */}
       <nav className="hidden w-64 shrink-0 overflow-y-auto border-r xl:block">
         {list.map((f) => (
@@ -56,19 +59,19 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b px-4 py-2.5 text-sm">
-          <Link href={`/library/space/${space.id}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+        <header className="flex items-center gap-2 border-b px-3 py-2.5 text-sm sm:px-4">
+          <Link href={`/library/space/${space.id}`} aria-label={spaceLabel(space)} className="flex shrink-0 items-center gap-1.5 text-muted-foreground hover:text-foreground">
             {space.isPersonal ? <Lock className="size-3.5" /> : <Briefcase className="size-3.5" />}
-            {spaceLabel(space)}
+            <span className="hidden sm:inline">{spaceLabel(space)}</span>
           </Link>
-          <ChevronRight className="size-4 text-muted-foreground" />
-          <span className="truncate font-medium">{r.title}</span>
-          <div className="ml-auto flex items-center gap-1">
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 truncate font-medium">{r.title}</span>
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             {moveError && <span className="mr-2 text-xs text-destructive">{moveError}</span>}
             {moveTargets.length > 0 && (
               <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="ghost" size="sm" disabled={moving} />}>
-                  <ArrowRightLeft /> {moving ? "Moving…" : "Move"}
+                <DropdownMenuTrigger render={<Button variant="ghost" size="sm" disabled={moving} aria-label="Move" />}>
+                  <ArrowRightLeft /> <span className="hidden sm:inline">{moving ? "Moving…" : "Move"}</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
                   <DropdownMenuGroup>
@@ -83,7 +86,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Button variant="outline" size="sm"><Share2 /> Share</Button>
+            <Button variant="outline" size="sm" aria-label="Share"><Share2 /> <span className="hidden sm:inline">Share</span></Button>
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Export" />}><Download /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -92,13 +95,14 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                 <DropdownMenuItem><FileText /> Publish as web page</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon-sm" aria-label="More"><MoreHorizontal /></Button>
-            {!askOpen && <Button variant="ghost" size="sm" onClick={() => setAskOpen(true)}><Sparkles /> Ask Echo</Button>}
+            <Button variant="ghost" size="icon-sm" aria-label="More" className="hidden sm:inline-flex"><MoreHorizontal /></Button>
+            <Button variant="ghost" size="icon-sm" aria-label="Ask Echo" className="lg:hidden" onClick={() => setMobileAsk(true)}><Sparkles /></Button>
+            {!askOpen && <Button variant="ghost" size="sm" className="hidden lg:inline-flex" onClick={() => setAskOpen(true)}><Sparkles /> Ask Echo</Button>}
           </div>
         </header>
 
         <Tabs defaultValue={summary && r.status !== "processing" ? "summary" : "transcript"} className="min-h-0 flex-1 gap-0">
-          <div className="border-b px-6 py-2">
+          <div className="border-b px-4 py-2 sm:px-6">
             <TabsList variant="line">
               <TabsTrigger value="transcript">Transcript</TabsTrigger>
               <TabsTrigger value="highlights">Highlights</TabsTrigger>
@@ -107,7 +111,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-3xl px-6 py-8">
+            <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
               <TabsContent value="transcript" className="space-y-5">
                 {r.status === "processing" ? <Transcribing /> : r.status === "failed" && !segments.length ? (
                   <TranscriptionFailed recordingId={r.id} message={processingError} />
@@ -182,7 +186,13 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
         <AudioBar duration={r.durationSec} src={audioSrc} />
       </div>
 
-      {askOpen && <AskPanel recordingId={r.id} onClose={() => setAskOpen(false)} />}
+      {(askOpen || mobileAsk) && (
+        <AskPanel
+          recordingId={r.id}
+          onClose={() => { setAskOpen(false); setMobileAsk(false); }}
+          className={mobileAsk ? "fixed inset-0 z-50 w-full border-l-0 lg:static lg:z-auto lg:w-96 lg:border-l" : "hidden lg:flex"}
+        />
+      )}
     </div>
   );
 }

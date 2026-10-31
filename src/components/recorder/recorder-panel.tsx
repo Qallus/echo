@@ -39,7 +39,7 @@ export function RecorderPanel({ inPip = false }: { inPip?: boolean }) {
 
   if (!inPip && r.inPip) {
     return (
-      <div className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm shadow-lg">
+      <div className="fixed right-4 bottom-[calc(var(--bottom-nav)+1rem)] z-40 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm shadow-lg">
         <span className="size-2 animate-pulse rounded-full bg-red-500" /> Recording in the pop-out window · {formatClock(r.elapsed)}
       </div>
     );
@@ -48,7 +48,7 @@ export function RecorderPanel({ inPip = false }: { inPip?: boolean }) {
   if (!inPip && minimized) {
     return (
       <button onClick={() => setMinimized(false)}
-        className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm shadow-lg hover:bg-muted">
+        className="fixed right-4 bottom-[calc(var(--bottom-nav)+1rem)] z-40 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm shadow-lg hover:bg-muted">
         <span className={cn("size-2 rounded-full bg-red-500", r.status === "recording" && "animate-pulse")} />
         {r.status === "paused" ? "Paused" : "Recording"} · {formatClock(r.elapsed)}
         <Maximize2 className="size-3.5 text-muted-foreground" />
@@ -58,7 +58,7 @@ export function RecorderPanel({ inPip = false }: { inPip?: boolean }) {
 
   return (
     <div className={cn("flex flex-col bg-background text-foreground",
-      inPip ? "h-svh" : "fixed right-4 bottom-4 z-40 h-[30rem] w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border shadow-xl")}>
+      inPip ? "h-svh" : "fixed right-4 bottom-[calc(var(--bottom-nav)+1rem)] z-40 h-[30rem] max-h-[calc(100svh-var(--bottom-nav)-5rem)] w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border shadow-xl")}>
       {/* Header: where this recording will be saved */}
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <AudioLines className="size-4" />

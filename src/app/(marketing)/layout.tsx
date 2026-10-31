@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
 import { getUser } from "@/lib/data";
 
 // Public site: header and footer around the landing and pricing pages.
@@ -8,7 +9,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
   const user = await getUser();
   return (
     <div className="flex min-h-svh flex-col bg-background">
-      <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
             <AudioLines className="size-5" />
@@ -24,10 +25,11 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <Button nativeButton={false} render={<Link href="/" />}>Open Echo</Button>
             ) : (
               <>
-                <Button variant="ghost" nativeButton={false} render={<Link href="/login" />}>Sign in</Button>
+                <Button variant="ghost" className="hidden sm:inline-flex" nativeButton={false} render={<Link href="/login" />}>Sign in</Button>
                 <Button nativeButton={false} render={<Link href="/signup" />}>Get started</Button>
               </>
             )}
+            <MarketingMobileMenu signedIn={!!user} />
           </div>
         </div>
       </header>

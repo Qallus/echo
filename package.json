@@ -9,7 +9,8 @@
     "lint": "eslint",
     "email:build": "node scripts/email-templates.mjs",
     "email:push": "node --env-file=.env.local scripts/email-templates.mjs --push",
-    "mcp:smoke": "node --env-file-if-exists=.env.local scripts/mcp-smoke.mjs"
+    "mcp:smoke": "node --env-file-if-exists=.env.local scripts/mcp-smoke.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.92",

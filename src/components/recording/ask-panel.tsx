@@ -4,15 +4,16 @@ import { RotateCcw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatError, Composer, MessageList } from "@/components/chat/chat-parts";
 import { useEchoChat } from "@/hooks/use-echo-chat";
+import { cn } from "@/lib/utils";
 
 const SUGGESTIONS = ["Draft a follow-up email", "Turn action items into tasks", "What decisions were made?"];
 
 // Chat grounded in one recording's transcript and summary.
-export function AskPanel({ recordingId, onClose }: { recordingId: string; onClose: () => void }) {
+export function AskPanel({ recordingId, onClose, className }: { recordingId: string; onClose: () => void; className?: string }) {
   const chat = useEchoChat({ recordingId });
 
   return (
-    <aside className="flex h-full w-96 shrink-0 flex-col border-l bg-background">
+    <aside className={cn("flex h-full w-96 shrink-0 flex-col border-l bg-background pt-[env(safe-area-inset-top)] lg:pt-0", className)}>
       <div className="flex items-center justify-between border-b px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4" /> Ask Echo</span>
         <div className="flex">

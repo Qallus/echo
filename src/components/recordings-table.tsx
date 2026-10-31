@@ -155,8 +155,8 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
                 onCheckedChange={(v) => setSelected(v ? new Set(rows.map((r) => r.id)) : new Set())} />
             </TableHead>
             <TableHead>Name</TableHead>
-            <TableHead className="w-28">Duration</TableHead>
-            <TableHead className="w-48">Date created</TableHead>
+            <TableHead className="w-16 sm:w-28">Duration</TableHead>
+            <TableHead className="hidden w-48 sm:table-cell">Date created</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -180,9 +180,11 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
                 <TableCell className="py-3">
                   <Link href={`/recordings/${r.id}`} draggable={false} className="flex items-start gap-3">
                     <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <span className="space-y-1">
-                      <span className="block max-w-xl truncate font-medium">{r.title}</span>
-                      <span className="flex items-center gap-2">
+                    <span className="min-w-0 space-y-1">
+                      <span className="block max-w-[55vw] truncate font-medium sm:max-w-xl">{r.title}</span>
+                      {/* Phones: the date column is hidden, so show it here. */}
+                      <span className="block text-xs text-muted-foreground sm:hidden"><LocalDate iso={r.createdAt} /></span>
+                      <span className="flex flex-wrap items-center gap-2">
                         {ws && (
                           <Badge variant="outline" className="text-muted-foreground">
                             {ws.isPersonal ? <Lock /> : <Briefcase />} {spaceLabel(ws)}
@@ -194,7 +196,7 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
                   </Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{formatDuration(r.durationSec)}</TableCell>
-                <TableCell className="text-muted-foreground"><LocalDate iso={r.createdAt} /></TableCell>
+                <TableCell className="hidden text-muted-foreground sm:table-cell"><LocalDate iso={r.createdAt} /></TableCell>
               </TableRow>
             );
           })}

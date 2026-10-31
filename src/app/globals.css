@@ -152,3 +152,8 @@
 @media (prefers-reduced-motion: reduce) {
   .hero-in, .hero-bar, .hero-dot, .hero-click { animation: none; }
 }
+
+/* Height of the phone bottom app bar (src/components/mobile/bottom-nav.tsx);
+   0 from md up, where the sidebar takes over. */
+:root { --bottom-nav: calc(4rem + env(safe-area-inset-bottom)); }
+@media (min-width: 48rem) { :root { --bottom-nav: 0px; } }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: "Echo",
   description: "Record, transcribe and act on every call and meeting.",
 };
+
+// viewportFit cover: lets the sticky bars use the safe-area insets on notched phones.
+export const viewport: Viewport = { viewportFit: "cover", themeColor: "#ffffff" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
