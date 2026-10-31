@@ -32,16 +32,26 @@ export function NotificationBell({ userId, initialUnread, className }: { userId:
 
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel(channelName)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => {
-        const n = payload.new as Item & { show_in_app: boolean };
-        if (!n.show_in_app) return;
-        setUnread((u) => u + 1);
-        setItems((list) => (list ? [n, ...list].slice(0, 20) : list));
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    let channel: ReturnType<typeof supabase.channel> | undefined;
+    let cancelled = false;
+    // Give Realtime the user's token first; otherwise it subscribes as anon and
+    // RLS filters every row out.
+    supabase.realtime.setAuth().then(() => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(channelName)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => {
+          const n = payload.new as Item & { show_in_app: boolean };
+          if (!n.show_in_app) return;
+          setUnread((u) => u + 1);
+          setItems((list) => (list ? [n, ...list].slice(0, 20) : list));
+        })
+        .subscribe();
+    });
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [userId, channelName]);
 
   const load = async () => {
