@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Lock } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AudioLines, BatteryFull, Lock, Signal, Wifi } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ClaudeScene, ConnectScene, EmailScene, PdfScene, RecordScene, SaveScene, TranscribeScene, WebReportScene,
@@ -53,6 +53,8 @@ export function HeroDemo() {
   const [{ scene, t }, setPos] = useState({ scene: 0, t: 0 });
   const stageRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (reduced) return;
@@ -78,39 +80,91 @@ export function HeroDemo() {
       el.style.transform = `translate(${stage.clientWidth * 0.7}px, ${stage.clientHeight * 0.9}px)`;
       return;
     }
+    // The canvas is scaled to fit its device frame, so convert screen pixels
+    // back into canvas pixels.
     const s = stage.getBoundingClientRect();
     const r = target.getBoundingClientRect();
+    const k = s.width / stage.offsetWidth || 1;
     el.style.opacity = "1";
-    el.style.transform = `translate(${r.left - s.left + r.width * 0.6}px, ${r.top - s.top + r.height * 0.6}px)`;
+    el.style.transform = `translate(${(r.left - s.left + r.width * 0.6) / k}px, ${(r.top - s.top + r.height * 0.6) / k}px)`;
   }, [scene, step]);
 
+  // The demo is laid out on a fixed canvas (a 375×812 phone screen, or an
+  // 840×525 desktop screen from md up) and scaled to fill the frame's screen,
+  // so it keeps its proportions at every size.
+  useLayoutEffect(() => {
+    const screen = screenRef.current;
+    const canvas = canvasRef.current;
+    if (!screen || !canvas) return;
+    const fit = () => { canvas.style.transform = `scale(${screen.clientWidth / canvas.offsetWidth})`; };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(screen);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <div className="overflow-hidden rounded-2xl border bg-background shadow-2xl shadow-black/5">
-        <div className="flex items-center gap-1.5 border-b bg-muted/40 px-4 py-2.5">
-          <span className="size-2.5 rounded-full bg-muted-foreground/20" />
-          <span className="size-2.5 rounded-full bg-muted-foreground/20" />
-          <span className="size-2.5 rounded-full bg-muted-foreground/20" />
-          <span className="ml-3 flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground"><Lock className="size-3 shrink-0" /> Personal · Launch plan review</span>
-          <span className="ml-auto text-xs font-medium">{label}</span>
-        </div>
-        <div ref={stageRef} aria-hidden className="relative h-[430px] overflow-hidden sm:h-[460px]">
-          <div key={scene} className="hero-in h-full">
-            <Scene t={shownT} />
+    <div className="mx-auto w-full max-w-6xl">
+      {/* Device body: a phone below md, a monitor from md up. */}
+      <div className="relative mx-auto w-full max-w-[420px] rounded-[3.25rem] bg-neutral-900 p-[3%] shadow-2xl shadow-black/20 ring-1 ring-black/10 md:max-w-[min(72rem,calc((100svh-9rem)*1.5))] md:rounded-[1.25rem] md:p-[1.1%] md:pb-[2.8%]">
+        <span className="absolute top-[18%] -left-[3px] h-[7%] w-[3px] rounded-l bg-neutral-700 md:hidden" />
+        <span className="absolute top-[28%] -left-[3px] h-[11%] w-[3px] rounded-l bg-neutral-700 md:hidden" />
+        <span className="absolute top-[24%] -right-[3px] h-[14%] w-[3px] rounded-r bg-neutral-700 md:hidden" />
+
+        <div ref={screenRef} className="relative aspect-[375/812] overflow-hidden rounded-[2.6rem] bg-background md:aspect-[16/10] md:rounded-md">
+          <div ref={canvasRef} className="absolute top-0 left-0 flex h-[812px] w-[375px] origin-top-left flex-col md:h-[525px] md:w-[840px]">
+            {/* Phone: status bar and app header. */}
+            <div className="flex h-12 shrink-0 items-end justify-between px-8 pb-1.5 text-[13px] font-semibold md:hidden">
+              <span>9:41</span>
+              <span className="flex items-center gap-1.5"><Signal className="size-3.5" /><Wifi className="size-3.5" /><BatteryFull className="size-4" /></span>
+            </div>
+            <div className="flex h-11 shrink-0 items-center gap-2 border-b px-4 md:hidden">
+              <AudioLines className="size-4" />
+              <span className="min-w-0 truncate text-sm font-medium">Launch plan review</span>
+              <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{label}</span>
+            </div>
+            {/* Desktop: browser bar. */}
+            <div className="hidden h-9 shrink-0 items-center gap-1.5 border-b bg-muted/40 px-4 md:flex">
+              <span className="size-2.5 rounded-full bg-muted-foreground/20" />
+              <span className="size-2.5 rounded-full bg-muted-foreground/20" />
+              <span className="size-2.5 rounded-full bg-muted-foreground/20" />
+              <span className="ml-3 flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground"><Lock className="size-3 shrink-0" /> Personal · Launch plan review</span>
+              <span className="ml-auto text-xs font-medium">{label}</span>
+            </div>
+
+            <div ref={stageRef} aria-hidden className="relative min-h-0 flex-1 overflow-hidden">
+              <div key={scene} className="hero-in h-full">
+                <Scene t={shownT} />
+              </div>
+              <div
+                ref={cursorRef}
+                className="pointer-events-none absolute top-0 left-0 opacity-0 transition-[transform,opacity] duration-700 ease-out"
+              >
+                {clicking && <span key={`${scene}-${step?.at}`} className="hero-click absolute -top-3 -left-3 size-6 rounded-full bg-foreground/30" />}
+                <svg viewBox="0 0 24 24" className="relative size-5 drop-shadow" aria-hidden>
+                  <path d="M5 3l14 8-6.5 1.5L9 19z" className="fill-foreground stroke-background" strokeWidth="1.5" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Phone: home indicator. */}
+            <div className="flex h-7 shrink-0 items-center justify-center md:hidden"><span className="h-1.5 w-32 rounded-full bg-foreground/80" /></div>
           </div>
-          <div
-            ref={cursorRef}
-            className="pointer-events-none absolute top-0 left-0 opacity-0 transition-[transform,opacity] duration-700 ease-out"
-          >
-            {clicking && <span key={`${scene}-${step?.at}`} className="hero-click absolute -top-3 -left-3 size-6 rounded-full bg-foreground/30" />}
-            <svg viewBox="0 0 24 24" className="relative size-5 drop-shadow" aria-hidden>
-              <path d="M5 3l14 8-6.5 1.5L9 19z" className="fill-foreground stroke-background" strokeWidth="1.5" strokeLinejoin="round" />
-            </svg>
-          </div>
+          {/* Phone: Dynamic Island. */}
+          <span className="absolute top-[1.4%] left-1/2 h-[3.4%] w-[30%] -translate-x-1/2 rounded-full bg-neutral-900 md:hidden" />
         </div>
+
+        {/* Monitor: logo on the chin. */}
+        <AudioLines className="absolute bottom-[0.7%] left-1/2 hidden size-[1.6%] min-h-3 min-w-3 -translate-x-1/2 text-neutral-500 md:block" />
       </div>
 
-      <nav aria-label="Demo steps" className="mt-4 flex flex-wrap justify-center gap-2">
+      {/* Monitor: stand. */}
+      <div aria-hidden className="hidden md:block">
+        <div className="mx-auto h-[clamp(28px,4vw,56px)] w-[14%] bg-gradient-to-b from-neutral-400 to-neutral-300 [clip-path:polygon(14%_0,86%_0,100%_100%,0_100%)]" />
+        <div className="mx-auto h-3 w-[30%] rounded-t-sm rounded-b-xl bg-gradient-to-b from-neutral-300 to-neutral-400 shadow-md" />
+      </div>
+
+      <nav aria-label="Demo steps" className="mt-6 flex flex-wrap justify-center gap-2">
         {SCENES.map((s, i) => (
           <button
             key={s.label}
