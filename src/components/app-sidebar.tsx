@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  AudioLines, Briefcase, ChevronDown, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
+  AudioLines, Briefcase, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
   LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, UserRound, Users, Video,
 } from "lucide-react";
 import {
@@ -138,6 +138,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem render={<Link href="/billing" />}><CreditCard /> Billing &amp; plan</DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/orders" />}><Receipt /> Orders &amp; receipts</DropdownMenuItem>
             <DropdownMenuItem><CircleHelp /> Support</DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action="/auth/signout" method="post">

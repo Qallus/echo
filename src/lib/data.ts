@@ -184,3 +184,54 @@ export async function getRecordingDetail(id: string): Promise<RecordingDetail | 
     summary,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Billing (written by the Stripe webhook; RLS: your own rows)
+// ---------------------------------------------------------------------------
+export type OrderItem = { id: string; description: string; quantity: number; unitAmount: number | null; amount: number; interval: string | null; priceKey: string | null };
+export type Order = {
+  id: string; number: number; status: string; kind: string; email: string | null; currency: string;
+  subtotal: number; discount: number; tax: number; total: number; receiptUrl: string | null; invoicePdf: string | null;
+  createdAt: string; items: OrderItem[];
+};
+export type Subscription = { id: string; status: string; items: { price_key: string | null; quantity: number }[]; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean };
+
+const ORDER_COLUMNS = "id, number, status, kind, email, currency, subtotal, discount, tax, total, receipt_url, invoice_pdf, created_at, order_items(id, description, quantity, unit_amount, amount, interval, price_key)";
+
+type OrderRow = {
+  id: string; number: number; status: string; kind: string; email: string | null; currency: string;
+  subtotal: number; discount: number; tax: number; total: number; receipt_url: string | null; invoice_pdf: string | null; created_at: string;
+  order_items: { id: string; description: string; quantity: number; unit_amount: number | null; amount: number; interval: string | null; price_key: string | null }[];
+};
+
+const toOrder = (o: OrderRow): Order => ({
+  id: o.id, number: o.number, status: o.status, kind: o.kind, email: o.email, currency: o.currency,
+  subtotal: o.subtotal, discount: o.discount, tax: o.tax, total: o.total, receiptUrl: o.receipt_url, invoicePdf: o.invoice_pdf, createdAt: o.created_at,
+  items: o.order_items.map((i) => ({ id: i.id, description: i.description, quantity: i.quantity, unitAmount: i.unit_amount, amount: i.amount, interval: i.interval, priceKey: i.price_key })),
+});
+
+export async function listOrders(limit = 50): Promise<Order[]> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("orders").select(ORDER_COLUMNS).eq("user_id", user.id)
+    .order("created_at", { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return (data as unknown as OrderRow[]).map(toOrder);
+}
+
+export async function getOrder(id: string): Promise<Order | null> {
+  if (!isUuid(id)) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("orders").select(ORDER_COLUMNS).eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? toOrder(data as unknown as OrderRow) : null;
+}
+
+export async function listSubscriptions(): Promise<Subscription[]> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("subscriptions").select("id, status, items, current_period_end, cancel_at_period_end")
+    .eq("user_id", user.id).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data.map((s) => ({ id: s.id, status: s.status, items: s.items, currentPeriodEnd: s.current_period_end, cancelAtPeriodEnd: s.cancel_at_period_end }));
+}

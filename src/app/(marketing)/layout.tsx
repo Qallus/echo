@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
+import { CartButton } from "@/components/store/store";
 import { getUser } from "@/lib/data";
 
 // Public site: header and footer around the landing and pricing pages.
@@ -22,6 +23,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
             <Link href="/developers" className="hover:text-foreground">Developers</Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <CartButton />
             {user ? (
               <Button nativeButton={false} render={<Link href="/" />}>Open Echo</Button>
             ) : (

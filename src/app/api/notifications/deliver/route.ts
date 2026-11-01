@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
 
   const jobs: Promise<void>[] = [];
 
-  if (!want.email) skip("email", "Turned off for this event");
+  if (n.type === "order_paid") skip("email", "Receipt email sent with the order");
+  else if (!want.email) skip("email", "Turned off for this event");
   else for (const to of emails) {
     jobs.push(sendEmail(to, n.title, emailHtml({ title: n.title, body: n.body, url: link }), `${n.title}\n\n${n.body ?? ""}\n\n${link}`).then((r) => record("email", to, r)));
   }

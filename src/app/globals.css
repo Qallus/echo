@@ -157,3 +157,8 @@
    0 from md up, where the sidebar takes over. */
 :root { --bottom-nav: calc(4rem + env(safe-area-inset-bottom)); }
 @media (min-width: 48rem) { :root { --bottom-nav: 0px; } }
+
+/* Printing (receipts): only the page content. */
+@media print {
+  [data-slot="sidebar"], [data-slot="sidebar-gap"], header.sticky, nav[aria-label="App"] { display: none !important; }
+}

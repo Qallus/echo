@@ -1,47 +1,65 @@
-import Link from "next/link";
-import { Briefcase, Check, Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PlanSection, ProductGrid } from "@/components/store/store";
 
 export const metadata = {
-  title: "Pricing · Echo",
-  description: "Echo is free during the trial, for Personal and Business accounts.",
+  title: "Pricing and plans · Echo",
+  description: "Echo plans for individuals and teams, monthly or annual, plus bolt-ons like the API, CRM sync and a meeting bot, minute packs and setup services.",
+  alternates: { canonical: "/pricing" },
 };
 
-const PLANS = [
-  {
-    icon: Lock, name: "Personal", who: "For your own calls and meetings.",
-    features: ["Unlimited recordings during the trial", "Browser recording with notes and flags", "Automatic transcripts with speakers", "Search and Ask Echo", "Claude connector"],
-  },
-  {
-    icon: Briefcase, name: "Business", who: "For a company or team that shares recordings.",
-    features: ["Everything in Personal", "A shared Business workspace", "Invite teammates as admins or members", "Move recordings between Business and Personal", "Each person keeps a private Personal space"],
-  },
+const FAQ = [
+  { q: "Can I change or cancel my plan?", a: "Yes. Switch plans, change seats, update your card or cancel any time from Billing. Cancelling keeps your plan until the end of the period you've paid for." },
+  { q: "How does Business pricing work?", a: "You pay per seat, and the price per seat drops as your team grows: seats 1–5, 6–20 and 21+ are each billed at a lower rate. Add seats any time; they're charged pro rata." },
+  { q: "What happens to unused minutes?", a: "Plan minutes reset each month. Minute packs stay valid for 12 months and are used after your plan's minutes run out." },
+  { q: "Do you offer refunds?", a: "If something isn't right, write to us within 30 days of a charge and we'll make it right. See the Terms of Service for details." },
 ];
 
 export default function PricingPage() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
-      <div className="text-center">
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Free during the trial</h1>
-        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-          Every feature is unlocked with unlimited minutes while Echo is in its trial. Paid plans will be announced
-          ahead of time, and nothing is charged without your agreement.
-        </p>
-      </div>
-      <div className="mt-12 grid gap-6 md:grid-cols-2">
-        {PLANS.map(({ icon: Icon, name, who, features }) => (
-          <div key={name} className="flex flex-col rounded-2xl border p-6">
-            <Icon className="mb-3 size-5" />
-            <h2 className="text-xl font-semibold">{name}</h2>
-            <p className="text-sm text-muted-foreground">{who}</p>
-            <p className="mt-4 text-3xl font-semibold">$0 <span className="text-base font-normal text-muted-foreground">during the trial</span></p>
-            <ul className="mt-6 flex-1 space-y-2 text-sm">
-              {features.map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0" /> {f}</li>)}
-            </ul>
-            <Button className="mt-6" nativeButton={false} render={<Link href={name === "Business" ? "/signup?type=business" : "/signup"} />}>Start with {name}</Button>
-          </div>
-        ))}
-      </div>
+    <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+      <header className="text-center">
+        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Simple plans that grow with your team</h1>
+        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Start free. Upgrade when you need more minutes, a shared workspace or to plug Echo into the rest of your stack.</p>
+      </header>
+
+      <section className="mt-12"><PlanSection /></section>
+
+      <section className="mt-24 space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bolt-ons</h2>
+          <p className="mt-1 text-muted-foreground">Add to any paid plan. Billed monthly, cancel any time.</p>
+        </div>
+        <ProductGrid kind="bolt_on" />
+      </section>
+
+      <section className="mt-20 space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Minute packs</h2>
+          <p className="mt-1 text-muted-foreground">One-time top-ups for busy months.</p>
+        </div>
+        <ProductGrid kind="pack" />
+      </section>
+
+      <section className="mt-20 space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Services</h2>
+          <p className="mt-1 text-muted-foreground">Hands-on help from the Echo team.</p>
+        </div>
+        <ProductGrid kind="service" />
+      </section>
+
+      <section className="mx-auto mt-24 max-w-3xl">
+        <h2 className="text-2xl font-semibold tracking-tight">Questions</h2>
+        <div className="mt-6 divide-y rounded-xl border">
+          {FAQ.map((f) => (
+            <details key={f.q} className="group px-5 py-4">
+              <summary className="cursor-pointer list-none font-medium marker:hidden">
+                <span className="flex items-center justify-between gap-4">{f.q}<span className="text-muted-foreground transition-transform group-open:rotate-45">+</span></span>
+              </summary>
+              <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
