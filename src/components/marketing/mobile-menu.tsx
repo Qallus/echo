@@ -13,13 +13,13 @@ const LINKS = [
   { href: "/developers", label: "Developers" },
 ];
 
-// Phone menu for the public site header (the inline links are hidden below sm).
+// Phone and tablet menu for the public site header (the inline links are hidden below lg).
 export function MarketingMobileMenu({ signedIn }: { signedIn: boolean }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button variant="ghost" size="icon" className="sm:hidden" aria-label="Open menu" />}>
+      <SheetTrigger render={<Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu" />}>
         <Menu className="size-5" />
       </SheetTrigger>
       <SheetContent side="right" className="w-72 gap-0 p-0 pt-[env(safe-area-inset-top)]">

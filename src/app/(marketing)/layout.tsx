@@ -18,14 +18,15 @@ export default async function MarketingLayout({ children }: { children: React.Re
             <AudioLines className="size-5" />
             <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
           </Link>
-          <nav className="hidden items-center gap-5 text-sm text-muted-foreground sm:flex">
-            <Link href="/#features" className="hover:text-foreground">Features</Link>
-            <Link href="/#how" className="hover:text-foreground">How it works</Link>
-            <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
-            <Link href="/developers" className="hover:text-foreground">Developers</Link>
-          </nav>
+          {/* Right side, left to right: navigation, cart, Sign in, Get started, theme
+              (the phone menu replaces the navigation below lg). */}
           <div className="ml-auto flex items-center gap-2">
-            <ThemeToggle />
+            <nav className="mr-3 hidden items-center gap-5 text-sm text-muted-foreground lg:flex">
+              <Link href="/#features" className="hover:text-foreground">Features</Link>
+              <Link href="/#how" className="hover:text-foreground">How it works</Link>
+              <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
+              <Link href="/developers" className="hover:text-foreground">Developers</Link>
+            </nav>
             <CartButton />
             {user ? (
               <Button nativeButton={false} render={<Link href="/" />}>Open Echo</Button>
@@ -35,6 +36,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
                 <Button nativeButton={false} render={<Link href="/signup" />}>Get started</Button>
               </>
             )}
+            <ThemeToggle />
             <MarketingMobileMenu signedIn={!!user} />
           </div>
         </div>
