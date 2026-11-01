@@ -8,7 +8,7 @@ const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/.well-
 const SIGNED_OUT_ONLY = ["/login", "/signup", "/forgot-password"];
 // Marketing pages (exact paths). "/" is the marketing site when signed out and
 // the app Home (/home) when signed in.
-const MARKETING = ["/", "/pricing"];
+const MARKETING = ["/", "/pricing", "/terms", "/privacy", "/developers"];
 
 // Refreshes the auth session cookie on every request and sends signed-out
 // visitors to /login. API routes check auth themselves and return 401.

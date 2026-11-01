@@ -19,6 +19,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
             <Link href="/#features" className="hover:text-foreground">Features</Link>
             <Link href="/#how" className="hover:text-foreground">How it works</Link>
             <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
+            <Link href="/developers" className="hover:text-foreground">Developers</Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">
             {user ? (
@@ -45,11 +46,17 @@ export default async function MarketingLayout({ children }: { children: React.Re
             </div>
             <p className="max-w-xs text-muted-foreground">Recordings, transcripts and summaries in one place.</p>
           </div>
-          <nav className="flex gap-10 sm:ml-auto">
+          <nav className="grid grid-cols-2 gap-x-10 gap-y-6 sm:ml-auto sm:flex">
             <div className="space-y-2">
               <p className="font-medium">Product</p>
               <Link href="/#features" className="block text-muted-foreground hover:text-foreground">Features</Link>
               <Link href="/pricing" className="block text-muted-foreground hover:text-foreground">Pricing</Link>
+              <Link href="/developers" className="block text-muted-foreground hover:text-foreground">Developers</Link>
+            </div>
+            <div className="space-y-2">
+              <p className="font-medium">Legal</p>
+              <Link href="/terms" className="block text-muted-foreground hover:text-foreground">Terms of Service</Link>
+              <Link href="/privacy" className="block text-muted-foreground hover:text-foreground">Privacy Policy</Link>
             </div>
             <div className="space-y-2">
               <p className="font-medium">Account</p>
@@ -58,7 +65,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
             </div>
           </nav>
         </div>
-        <div className="mx-auto w-full max-w-6xl px-4 pb-8 text-xs text-muted-foreground sm:px-6">© {new Date().getFullYear()} Echo</div>
+        <div className="mx-auto w-full max-w-6xl px-4 pb-8 text-xs text-muted-foreground sm:px-6">© {new Date().getFullYear()} Qallus LLC. Echo is a product of Qallus LLC.</div>
       </footer>
     </div>
   );

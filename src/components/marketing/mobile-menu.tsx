@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/#features", label: "Features" },
   { href: "/#how", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/developers", label: "Developers" },
 ];
 
 // Phone menu for the public site header (the inline links are hidden below sm).
