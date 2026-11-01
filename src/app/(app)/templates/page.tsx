@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { LayoutTemplate, Palette, Plus } from "lucide-react";
+import { Palette, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TemplateGallery } from "@/components/templates/template-gallery";
 import { listDesigns } from "@/lib/data";
 import { normalizeDesign } from "@/lib/designs/schema";
-import { TEMPLATE_CATEGORIES, TEMPLATES } from "@/lib/templates";
 import { DesignActions } from "./design-actions";
 
 export const metadata = { title: "Templates · Echo" };
@@ -68,33 +67,7 @@ export default async function TemplatesPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Summary templates</h2>
           <p className="text-sm text-muted-foreground">What a summary covers for each kind of conversation. Pick one with the + next to a recording&apos;s tabs; every new recording starts with Adaptive.</p>
         </div>
-        {TEMPLATE_CATEGORIES.map((cat) => {
-          const list = TEMPLATES.filter((t) => t.category === cat);
-          if (!list.length) return null;
-          return (
-            <div key={cat} className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground">{cat}</h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {list.map((t) => (
-                  <Card key={t.id}>
-                    <CardHeader>
-                      <LayoutTemplate className="mb-1 size-4 text-muted-foreground" />
-                      <CardTitle className="flex items-center gap-2">{t.name}{t.recommended && <Badge variant="outline">Recommended</Badge>}</CardTitle>
-                      <CardDescription>{t.bestFor}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ol className="space-y-1 text-sm">
-                        {t.sections.map((s, i) => (
-                          <li key={s} className="flex gap-2"><span className="w-4 text-muted-foreground tabular-nums">{i + 1}</span> {s}</li>
-                        ))}
-                      </ol>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        <TemplateGallery />
       </section>
     </div>
   );
