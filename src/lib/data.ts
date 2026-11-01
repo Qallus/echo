@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { readDetails } from "@/lib/profile-details";
 import type {
   ActionGroup, Folder, PersonCard, SummarySection, Profile, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
 } from "@/lib/types";
@@ -90,7 +91,7 @@ export type Invite = { id: string; email: string; role: WorkspaceRole; token: st
 type MemberRow = {
   user_id: string; email: string; full_name: string | null; role: WorkspaceRole; joined_at: string;
   avatar_url: string | null; job_title: string | null; company: string | null; phone: string | null;
-  timezone: string | null; location: string | null;
+  timezone: string | null; location: string | null; details: unknown;
 };
 
 export async function listMembers(workspaceId: string): Promise<Member[]> {
@@ -100,7 +101,7 @@ export async function listMembers(workspaceId: string): Promise<Member[]> {
   return (data as MemberRow[]).map((m) => ({
     id: m.user_id, email: m.email, fullName: m.full_name, role: m.role, joinedAt: m.joined_at,
     avatarUrl: m.avatar_url, jobTitle: m.job_title, company: m.company, phone: m.phone,
-    timezone: m.timezone, location: m.location,
+    timezone: m.timezone, location: m.location, details: readDetails(m.details),
   }));
 }
 
@@ -114,7 +115,7 @@ export async function countUnreadNotifications(): Promise<number> {
 type ProfileRow = {
   full_name: string | null; avatar_url: string | null; job_title: string | null; company: string | null;
   phone: string | null; phone_visible: boolean; timezone: string | null; location: string | null;
-  bio: string | null; website: string | null; linkedin: string | null; pronouns: string | null;
+  bio: string | null; website: string | null; linkedin: string | null; details: unknown;
 };
 
 // Your own profile, phone included. The phone column isn't readable through
@@ -131,7 +132,7 @@ export const getMyProfile = cache(async (): Promise<Profile> => {
     phone: data?.phone ?? null, phoneVisible: data?.phone_visible ?? false,
     timezone: data?.timezone ?? null, location: data?.location ?? null,
     bio: data?.bio ?? null, website: data?.website ?? null,
-    linkedin: data?.linkedin ?? null, pronouns: data?.pronouns ?? null,
+    linkedin: data?.linkedin ?? null, details: readDetails(data?.details),
   };
 });
 

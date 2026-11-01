@@ -1,5 +1,7 @@
 // App-level shapes. Mapped from Supabase rows in src/lib/data.ts.
 
+import type { ProfileDetail } from "@/lib/profile-details";
+
 export type RecordingSource = "phone_call" | "meeting" | "upload" | "desktop";
 export type RecordingStatus = "none" | "processing" | "generated" | "failed";
 export type WorkspaceRole = "owner" | "admin" | "member";
@@ -18,6 +20,7 @@ export type PersonCard = {
   phone: string | null;
   timezone: string | null;
   location: string | null;
+  details: ProfileDetail[]; // shared extra fields (all of them on your own profile)
 };
 
 // Your own profile (settings page).
@@ -26,7 +29,6 @@ export type Profile = PersonCard & {
   bio: string | null;
   website: string | null;
   linkedin: string | null;
-  pronouns: string | null;
 };
 
 export type Recording = {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/data";
 import { MIN_PASSWORD } from "@/lib/auth-rules";
+import { DETAIL_KINDS, MAX_DETAILS, MAX_VALUE, PREFIXES, readDetails, type ProfileDetail } from "@/lib/profile-details";
 import { siteOrigin } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,6 +21,36 @@ function link(value: string | null): string | null | false {
   } catch {
     return false;
   }
+}
+
+// The "Additional information" rows, sent as JSON. Empty rows are dropped.
+function parseDetails(raw: FormDataEntryValue | null): ProfileDetail[] | string {
+  let rows: ProfileDetail[];
+  try {
+    rows = readDetails(JSON.parse(String(raw ?? "[]")));
+  } catch {
+    return "Couldn't read the additional information. Reload and try again.";
+  }
+  const out: ProfileDetail[] = [];
+  for (const d of rows) {
+    const kind = DETAIL_KINDS.find((k) => k.kind === d.kind)!;
+    let value = d.value.trim().slice(0, MAX_VALUE[d.kind] ?? 120);
+    const label = d.label.trim().slice(0, 40);
+    if (!value) continue;
+    if (kind.single && out.some((o) => o.kind === d.kind)) return `Add only one ${kind.label.toLowerCase()}.`;
+    if (d.kind === "prefix" && !PREFIXES.includes(value)) return "Choose a prefix from the list.";
+    if (d.kind === "phone" && !/^\+?[\d\s().-]{7,25}$/.test(value)) return `“${value}” doesn't look like a phone number.`;
+    if (d.kind === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `“${value}” doesn't look like an email address.`;
+    if (d.kind === "birthday" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "Enter the birthday as a date.";
+    if (d.kind === "website") {
+      const url = link(value);
+      if (!url) return `“${value}” doesn't look like a web address.`;
+      value = url;
+    }
+    if (d.kind === "other" && !label) return "Give each custom field a name.";
+    out.push({ kind: d.kind, label, value, shared: d.shared });
+  }
+  return out.length > MAX_DETAILS ? `Add up to ${MAX_DETAILS} extra fields.` : out;
 }
 
 function validTimeZone(tz: string) {
@@ -44,12 +75,13 @@ export async function updateProfile(_: SettingsState, form: FormData): Promise<S
   const linkedin = link(text(form, "linkedin", 200));
   if (website === false) return { error: "The website doesn't look like a web address." };
   if (linkedin === false) return { error: "The LinkedIn link doesn't look like a web address." };
+  const details = parseDetails(form.get("details"));
+  if (typeof details === "string") return { error: details };
 
   const supabase = await createClient();
   const [profile, auth] = await Promise.all([
     supabase.from("profiles").update({
       full_name: fullName,
-      pronouns: text(form, "pronouns", 30),
       job_title: text(form, "job_title", 100),
       company: text(form, "company", 120),
       phone,
@@ -59,6 +91,7 @@ export async function updateProfile(_: SettingsState, form: FormData): Promise<S
       bio: text(form, "bio", 500),
       website,
       linkedin,
+      details,
     }).eq("id", user.id),
     supabase.auth.updateUser({ data: { full_name: fullName } }), // used by the email templates
   ]);

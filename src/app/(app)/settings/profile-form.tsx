@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { Profile } from "@/lib/types";
 import { updateProfile, type SettingsState } from "./actions";
+import { DetailsEditor } from "./details-editor";
 import { Status } from "./settings-forms";
 
 function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
@@ -41,12 +42,11 @@ export function ProfileForm({ profile, timeZones }: { profile: Profile; timeZone
       }}
     >
       <section className="grid gap-4 sm:grid-cols-2">
-        <Field id="full_name" label="Full name">
-          <Input id="full_name" name="full_name" defaultValue={profile.fullName ?? ""} maxLength={100} required autoComplete="name" />
-        </Field>
-        <Field id="pronouns" label="Pronouns" hint="Optional, e.g. she/her">
-          <Input id="pronouns" name="pronouns" defaultValue={profile.pronouns ?? ""} maxLength={30} />
-        </Field>
+        <div className="sm:col-span-2">
+          <Field id="full_name" label="Full name">
+            <Input id="full_name" name="full_name" defaultValue={profile.fullName ?? ""} maxLength={100} required autoComplete="name" />
+          </Field>
+        </div>
         <Field id="job_title" label="Job title">
           <Input id="job_title" name="job_title" defaultValue={profile.jobTitle ?? ""} maxLength={100} autoComplete="organization-title" />
         </Field>
@@ -96,6 +96,14 @@ export function ProfileForm({ profile, timeZones }: { profile: Profile; timeZone
             <Textarea id="bio" name="bio" defaultValue={profile.bio ?? ""} maxLength={500} rows={3} />
           </Field>
         </div>
+      </section>
+
+      <section className="space-y-3 border-t pt-6">
+        <div>
+          <h3 className="text-sm font-medium">Additional information</h3>
+          <p className="text-sm text-muted-foreground">Only you see these unless you turn on Teammates for a field.</p>
+        </div>
+        <DetailsEditor initial={profile.details} />
       </section>
 
       <div className="flex items-center gap-3">

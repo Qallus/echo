@@ -25,7 +25,7 @@ export default async function ProfileSettingsPage() {
 
       <div className="space-y-2 lg:sticky lg:top-6 lg:self-start">
         <p className="text-xs font-medium text-muted-foreground">Preview</p>
-        <Card><CardContent><ProfileSummary person={{ ...profile, phone: profile.phoneVisible ? profile.phone : null }} /></CardContent></Card>
+        <Card><CardContent><ProfileSummary person={{ ...profile, phone: profile.phoneVisible ? profile.phone : null, details: profile.details.filter((d) => d.shared) }} /></CardContent></Card>
         <p className="text-xs text-muted-foreground">What teammates see when they hover your name.</p>
       </div>
     </div>
