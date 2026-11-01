@@ -132,9 +132,9 @@ export function CartButton() {
   const cart = useCart();
   const count = cart.length;
   return (
-    <Button variant="ghost" size="icon" className="relative" aria-label={count ? `Cart, ${count} items` : "Cart"} nativeButton={false} render={<Link href="/cart" />}>
+    <Button variant="ghost" size="icon" className={cn("relative", count > 0 && "mr-1.5")} aria-label={count ? `Cart, ${count} items` : "Cart"} nativeButton={false} render={<Link href="/cart" />}>
       <ShoppingCart className="size-5" />
-      {count > 0 && <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold text-background tabular-nums">{count}</span>}
+      {count > 0 && <span className="pointer-events-none absolute -top-1 -right-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-foreground px-1 text-[10px] leading-none font-semibold text-background tabular-nums ring-2 ring-background">{count}</span>}
     </Button>
   );
 }
