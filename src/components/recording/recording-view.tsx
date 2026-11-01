@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
-  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Flag, Lock, MoreHorizontal, Plus, Share2, Sparkles, StickyNote, ThumbsDown, ThumbsUp, Wand2,
+  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Flag, Lock, MoreHorizontal, Palette, Plus, Share2, Sparkles, StickyNote, ThumbsDown, ThumbsUp, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -92,7 +92,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Export" />}><Download /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem><FileText /> Export PDF</DropdownMenuItem>
+                <DropdownMenuItem render={<Link href={`/recordings/${r.id}/report`} />}><FileText /> Branded summary (PDF)</DropdownMenuItem>
                 <DropdownMenuItem><FileText /> Export transcript (.txt)</DropdownMenuItem>
                 <DropdownMenuItem><FileText /> Publish as web page</DropdownMenuItem>
               </DropdownMenuContent>
@@ -167,7 +167,10 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                   <div className="space-y-10">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground">{summary.template}{summary.model && ` · ${summary.model}`}{summary.language && summary.language !== "English" && ` · ${summary.language}`}</p>
-                      <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}><Wand2 /> Change template</Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/recordings/${r.id}/report`} />}><Palette /> Branded summary</Button>
+                        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}><Wand2 /> Change template</Button>
+                      </div>
                     </div>
                     <Section title="Overview"><p className="leading-relaxed">{summary.overview}</p></Section>
                     {summary.sections?.filter((s) => s.bullets.length).map((s) => (

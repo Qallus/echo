@@ -6,7 +6,7 @@ import { getMyProfile, getOrder } from "@/lib/data";
 import { money } from "@/lib/billing/catalog";
 import { COMPANY } from "@/lib/company";
 import { OrderStatusBadge } from "@/components/billing/status-badge";
-import { PrintButton } from "./print-button";
+import { PrintButton } from "@/components/print-button";
 
 export const metadata = { title: "Receipt · Echo" };
 

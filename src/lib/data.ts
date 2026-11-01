@@ -239,3 +239,23 @@ export async function listSubscriptions(): Promise<Subscription[]> {
   if (error) throw new Error(error.message);
   return data.map((s) => ({ id: s.id, status: s.status, items: s.items, currentPeriodEnd: s.current_period_end, cancelAtPeriodEnd: s.cancel_at_period_end }));
 }
+
+// ---------------------------------------------------------------------------
+// Summary designs (Summary Builder). RLS: yours, plus ones shared with a
+// Business workspace you belong to.
+// ---------------------------------------------------------------------------
+export type DesignRow = { id: string; name: string; config: unknown; isDefault: boolean; workspaceId: string | null; mine: boolean; updatedAt: string };
+
+export async function listDesigns(): Promise<DesignRow[]> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("summary_designs").select("id, name, config, is_default, workspace_id, user_id, updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data.map((d) => ({ id: d.id, name: d.name, config: d.config, isDefault: d.is_default && d.user_id === user.id, workspaceId: d.workspace_id, mine: d.user_id === user.id, updatedAt: d.updated_at }));
+}
+
+export async function getDesign(id: string): Promise<DesignRow | null> {
+  if (!isUuid(id)) return null;
+  return (await listDesigns()).find((d) => d.id === id) ?? null;
+}

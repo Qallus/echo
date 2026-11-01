@@ -8,6 +8,7 @@ import { registerFolderTools } from "./tools/folders";
 import { registerRecordingTools } from "./tools/recordings";
 import { registerSummaryTools } from "./tools/summaries";
 import { registerTranscriptTools } from "./tools/transcript";
+import { registerDesignTools } from "./tools/designs";
 
 const INSTRUCTIONS = `Echo stores call and meeting recordings with transcripts, summaries, highlights, action items and a developer backlog.
 Every tool acts as the signed-in user and can only reach what they can reach in the Echo dashboard.
@@ -26,6 +27,7 @@ export function createEchoServer(ctx: McpContext) {
   registerRecordingTools(server, ctx);
   registerTranscriptTools(server, ctx);
   registerSummaryTools(server, ctx);
+  registerDesignTools(server, ctx);
   registerBacklogTools(server, ctx);
   registerActivityTools(server, ctx);
   return server;
