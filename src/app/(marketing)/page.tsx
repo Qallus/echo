@@ -16,7 +16,7 @@ const FEATURES = [
   { icon: PictureInPicture2, title: "Notes that stay on top", desc: "Pop the recorder out over your meeting. Notes and flags are saved at the exact moment they happened." },
   { icon: MessageSquareText, title: "Transcripts with speakers", desc: "Every recording is transcribed automatically, labelled by speaker and time." },
   { icon: Search, title: "Search everything", desc: "Find any word across titles, transcripts and summaries, and jump straight to the recording." },
-  { icon: Sparkles, title: "Ask Echo", desc: "Ask Claude, ChatGPT or Grok about one recording or your whole library." },
+  { icon: Sparkles, title: "Ask Echo", desc: "Ask Claude, ChatGPT, Gemini or Grok about one recording or your whole library." },
   { icon: FileAudio, title: "Bring your audio", desc: "Drag audio files from your computer anywhere onto Echo. MP3, M4A, WAV and more." },
 ];
 

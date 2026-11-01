@@ -20,6 +20,12 @@ const PROVIDERS: Record<ModelId, { keyEnv: string; modelEnv: string; defaultMode
     keyEnv: "OPENAI_API_KEY", modelEnv: "OPENAI_MODEL", defaultModel: "gpt-6.1-sol",
     build: (apiKey, model) => createOpenAI({ apiKey })(model),
   },
+  gemini: {
+    // Google's OpenAI-compatible endpoint (no trailing slash: it 404s).
+    keyEnv: "GEMINI_API_KEY", modelEnv: "GEMINI_MODEL", defaultModel: "gemini-flash-latest",
+    build: (apiKey, model) =>
+      createOpenAI({ apiKey, baseURL: "https://generativelanguage.googleapis.com/v1beta/openai" }).chat(model),
+  },
   grok: {
     keyEnv: "XAI_API_KEY", modelEnv: "XAI_MODEL", defaultModel: "grok-4.7",
     build: (apiKey, model) => createXai({ apiKey })(model),
@@ -30,13 +36,22 @@ const PROVIDERS: Record<ModelId, { keyEnv: string; modelEnv: string; defaultMode
     build: (apiKey, model) =>
       createOpenAI({ apiKey, baseURL: process.env.MOONSHOT_BASE_URL || "https://api.moonshot.ai/v1" }).chat(model),
   },
+  openrouter: {
+    // One key, many models. "openrouter/auto" picks one per request; set
+    // OPENROUTER_MODEL (e.g. "anthropic/claude-sonnet-5-5") to pin one.
+    keyEnv: "OPENROUTER_API_KEY", modelEnv: "OPENROUTER_MODEL", defaultModel: "openrouter/auto",
+    build: (apiKey, model) => createOpenAI({
+      apiKey, baseURL: "https://openrouter.ai/api/v1",
+      headers: { "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "https://echo.redial.si", "X-Title": "Echo" },
+    }).chat(model),
+  },
 };
 
 export function isConfigured(id: ModelId) {
   return Boolean(process.env[PROVIDERS[id].keyEnv]);
 }
 
-const LABELS: Record<ModelId, string> = { claude: "Claude", gpt: "ChatGPT", grok: "Grok", kimi: "Kimi" };
+const LABELS: Record<ModelId, string> = { claude: "Claude", gpt: "ChatGPT", gemini: "Gemini", grok: "Grok", kimi: "Kimi", openrouter: "OpenRouter" };
 
 export function getLanguageModel(id: ModelId): { model: LanguageModel; label: string } | { error: string } {
   const p = PROVIDERS[id];

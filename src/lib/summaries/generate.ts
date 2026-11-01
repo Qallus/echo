@@ -35,9 +35,9 @@ const schema = z.object({
 
 export type GenerateOptions = { templateId: string; modelId?: ModelId; language?: string };
 
-// Claude first, then ChatGPT, then Grok: whichever answers.
+// Claude first, then ChatGPT, Gemini, Grok and OpenRouter: whichever answers.
 function candidates(preferred?: ModelId): ModelId[] {
-  const order: ModelId[] = [preferred, "claude", "gpt", "grok"].filter((m, i, a): m is ModelId => !!m && a.indexOf(m) === i);
+  const order: ModelId[] = [preferred, "claude", "gpt", "gemini", "grok", "openrouter"].filter((m, i, a): m is ModelId => !!m && a.indexOf(m) === i);
   return order.filter((m) => isConfigured(m));
 }
 

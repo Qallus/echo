@@ -7,13 +7,16 @@ export const metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "October 31, 2026";
+const UPDATED = "November 1, 2026";
 
 const PROVIDERS = [
   { name: "Supabase", purpose: "Database, sign-in and file storage (your audio, transcripts and account data)" },
-  { name: "OpenAI", purpose: "Transcription, and Ask Echo answers when you choose ChatGPT" },
   { name: "Anthropic", purpose: "Summaries, and Ask Echo answers when you choose Claude" },
-  { name: "xAI", purpose: "Ask Echo answers when you choose Grok" },
+  { name: "OpenAI", purpose: "Transcription, backup summaries, and Ask Echo answers when you choose ChatGPT" },
+  { name: "Google", purpose: "Backup summaries, and Ask Echo answers when you choose Gemini" },
+  { name: "xAI", purpose: "Backup summaries, and Ask Echo answers when you choose Grok" },
+  { name: "Moonshot AI", purpose: "Ask Echo answers when you choose Kimi" },
+  { name: "OpenRouter", purpose: "Backup summaries, and Ask Echo answers when you choose OpenRouter (it routes the request to a model provider)" },
   { name: "Stripe", purpose: "Payments, invoices and receipts" },
   { name: "Resend", purpose: "Account and notification emails" },
   { name: "Twilio", purpose: "SMS notifications and verification codes" },
