@@ -3,7 +3,9 @@ import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
 import { CartButton } from "@/components/store/store";
+import { ThemeToggle } from "@/components/theme";
 import { getUser } from "@/lib/data";
+import { COMPANY } from "@/lib/company";
 
 // Public site: header and footer around the landing and pricing pages.
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +25,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
             <Link href="/developers" className="hover:text-foreground">Developers</Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <CartButton />
             {user ? (
               <Button nativeButton={false} render={<Link href="/" />}>Open Echo</Button>
@@ -64,6 +67,12 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <p className="font-medium">Account</p>
               <Link href="/login" className="block text-muted-foreground hover:text-foreground">Sign in</Link>
               <Link href="/signup" className="block text-muted-foreground hover:text-foreground">Create account</Link>
+            </div>
+            <div className="space-y-2">
+              <p className="font-medium">Contact</p>
+              <a href={`mailto:${COMPANY.email}`} className="block text-muted-foreground hover:text-foreground">{COMPANY.email}</a>
+              <a href={COMPANY.phoneHref} className="block text-muted-foreground hover:text-foreground">{COMPANY.phone}</a>
+              <p className="max-w-[12rem] text-muted-foreground">{COMPANY.address}</p>
             </div>
           </nav>
         </div>

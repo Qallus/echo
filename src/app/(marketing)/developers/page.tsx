@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Bot, Braces, Gauge, KeyRound, Plug, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
+import { COMPANY } from "@/lib/company";
 
 export const metadata = {
   title: "Developers · Echo API, webhooks and Claude connector",
@@ -226,7 +227,7 @@ export default function DevelopersPage() {
             <div key={t} className="rounded-xl border p-4"><div className="font-medium">{t}</div><div className="text-sm text-muted-foreground">{d}</div></div>
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">Over the limit you get <code>429 Too Many Requests</code> with a <code>Retry-After</code> header. Questions or higher limits: <a href="mailto:jwaters@qallus.co" className="underline">jwaters@qallus.co</a>.</p>
+        <p className="text-sm text-muted-foreground">Over the limit you get <code>429 Too Many Requests</code> with a <code>Retry-After</code> header. Questions or higher limits: <a href={`mailto:${COMPANY.email}`} className="underline">{COMPANY.email}</a>.</p>
       </Section>
     </div>
   );

@@ -3,15 +3,7 @@
 
 export type LegalSection = { id: string; title: string; body: React.ReactNode };
 
-export const COMPANY = {
-  name: "Qallus LLC",
-  product: "Echo",
-  state: "Arizona",
-  email: "jwaters@qallus.co",
-  site: "https://echo.redial.si",
-  // TODO(Jeremy): add a mailing address before launch.
-  address: "[Mailing address to be added]",
-};
+export { COMPANY } from "@/lib/company";
 
 export function LegalDoc({ title, updated, intro, sections }: { title: string; updated: string; intro: React.ReactNode; sections: LegalSection[] }) {
   return (

@@ -21,6 +21,7 @@ import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
 import { useRecorder } from "@/components/recorder/recorder-provider";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { NotificationBell } from "@/components/notifications/bell";
+import { ThemeToggle } from "@/components/theme";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -114,7 +115,10 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
           <AudioLines className="size-5" />
           <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
           {/* Phones show the bell in the top header instead. */}
-          {!isMobile && <NotificationBell userId={me.id} initialUnread={me.unread} className="ml-auto" />}
+          <span className="ml-auto flex items-center">
+            <ThemeToggle />
+            {!isMobile && <NotificationBell userId={me.id} initialUnread={me.unread} />}
+          </span>
         </div>
 
         <DropdownMenu>

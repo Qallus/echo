@@ -1,5 +1,6 @@
 import "server-only";
 import { money } from "./catalog";
+import { COMPANY } from "@/lib/company";
 import { sendEmail, siteUrl } from "@/lib/notify/senders";
 
 type Order = { id: string; number: number; email: string | null; currency: string; subtotal: number; discount: number; tax: number; total: number; kind: string; created_at: string; receipt_url: string | null };
@@ -30,7 +31,7 @@ export async function sendOrderEmail(order: Order, lines: Line[]) {
 ${sum("Subtotal", order.subtotal)}${order.discount ? sum("Discount", -order.discount) : ""}${sum("Tax", order.tax)}${sum("Total paid", order.total, true)}
 </table></td></tr>
 <tr><td style="padding:24px 32px 0"><a href="${esc(url)}" style="display:inline-block;background:#0a0a0a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 20px;border-radius:10px">View receipt</a></td></tr>
-<tr><td style="padding:28px 32px;font-size:12px;color:#737373">Questions about this charge? Reply to this email or write to jwaters@qallus.co. Manage your plan any time from Billing in Echo.<br>Qallus LLC · Echo</td></tr>
+<tr><td style="padding:28px 32px;font-size:12px;color:#737373">Questions about this charge? Reply to this email or write to ${COMPANY.email}. Manage your plan any time from Billing in Echo.<br>${COMPANY.name} · ${COMPANY.address} · ${COMPANY.phone}</td></tr>
 </table></td></tr></table></body></html>`;
 
   const text = [title, `Order #${order.number} · ${date}`, "", ...lines.map((l) => `${l.description}${l.quantity > 1 ? ` × ${l.quantity}` : ""}  ${m(l.amount)}`), "", `Total paid: ${m(order.total)}`, "", `Receipt: ${url}`].join("\n");

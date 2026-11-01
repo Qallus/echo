@@ -45,5 +45,32 @@ export async function POST(req: Request) {
     abortSignal: req.signal,
     onError: ({ error }) => console.error(`[chat:${body.modelId}]`, error),
   });
-  return result.toTextStreamResponse();
+
+  // Wait for the first text (or failure) before answering, so a provider error
+  // (bad key, unknown model) reaches the user instead of an empty reply.
+  const parts = result.fullStream[Symbol.asyncIterator]();
+  const encoder = new TextEncoder();
+  let first: string | null = null;
+  for (;;) {
+    const { done, value } = await parts.next();
+    if (done) break;
+    if (value.type === "error") {
+      const message = value.error instanceof Error ? value.error.message : String(value.error);
+      return Response.json({ error: `${picked.label} couldn't answer: ${message}` }, { status: 502 });
+    }
+    if (value.type === "text-delta") { first = value.text; break; }
+  }
+  if (first === null) return Response.json({ error: `${picked.label} returned no text.` }, { status: 502 });
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) { controller.enqueue(encoder.encode(first!)); },
+    async pull(controller) {
+      const { done, value } = await parts.next();
+      if (done) return controller.close();
+      if (value.type === "text-delta") controller.enqueue(encoder.encode(value.text));
+      else if (value.type === "error") controller.close();
+    },
+    cancel() { parts.return?.(); },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }

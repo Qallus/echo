@@ -4,6 +4,7 @@ import { ArrowLeft, AudioLines, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getMyProfile, getOrder } from "@/lib/data";
 import { money } from "@/lib/billing/catalog";
+import { COMPANY } from "@/lib/company";
 import { OrderStatusBadge } from "@/components/billing/status-badge";
 import { PrintButton } from "./print-button";
 
@@ -44,7 +45,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
               <dt className="text-muted-foreground">Billed to</dt><dd>{me.fullName || order.email}</dd>
               {me.company && <><dt className="text-muted-foreground">Company</dt><dd>{me.company}</dd></>}
               <dt className="text-muted-foreground">Email</dt><dd>{order.email ?? me.email}</dd>
-              <dt className="text-muted-foreground">From</dt><dd>Qallus LLC (Echo)</dd>
+              <dt className="text-muted-foreground">From</dt><dd>{COMPANY.name} (Echo)<br /><span className="text-muted-foreground">{COMPANY.address}</span></dd>
             </dl>
           </div>
 
@@ -77,7 +78,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           </dl>
 
           <p className="border-t pt-6 text-xs text-muted-foreground">
-            Questions about this charge? Email jwaters@qallus.co with your order number. Payments are processed securely by Stripe.
+            Questions about this charge? Email {COMPANY.email} or call {COMPANY.phone} with your order number. Payments are processed securely by Stripe.
           </p>
         </div>
       </article>

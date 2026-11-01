@@ -148,7 +148,7 @@ const sections: LegalSection[] = [
   {
     id: "contact",
     title: "Contact",
-    body: <p>{COMPANY.name} · {COMPANY.address} · <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a></p>,
+    body: <p>{COMPANY.name} · {COMPANY.address} · <a href={COMPANY.phoneHref}>{COMPANY.phone}</a> · <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a></p>,
   },
 ];
 

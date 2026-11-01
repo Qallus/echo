@@ -106,7 +106,7 @@ export function HeroDemo() {
   return (
     <div className="mx-auto w-full max-w-6xl">
       {/* Device body: a phone below md, a monitor from md up. */}
-      <div className="relative mx-auto w-full max-w-[420px] rounded-[3.25rem] bg-neutral-900 p-[3%] shadow-2xl shadow-black/20 ring-1 ring-black/10 md:max-w-[min(72rem,calc((100svh-9rem)*1.5))] md:rounded-[1.25rem] md:p-[1.1%] md:pb-[2.8%]">
+      <div className="relative mx-auto w-full max-w-[420px] rounded-[3.25rem] bg-neutral-900 p-[3%] shadow-2xl shadow-black/20 ring-1 ring-black/10 dark:ring-white/15 md:max-w-[min(72rem,calc((100svh-9rem)*1.5))] md:rounded-[1.25rem] md:p-[1.1%] md:pb-[2.8%]">
         <span className="absolute top-[18%] -left-[3px] h-[7%] w-[3px] rounded-l bg-neutral-700 md:hidden" />
         <span className="absolute top-[28%] -left-[3px] h-[11%] w-[3px] rounded-l bg-neutral-700 md:hidden" />
         <span className="absolute top-[24%] -right-[3px] h-[14%] w-[3px] rounded-r bg-neutral-700 md:hidden" />
