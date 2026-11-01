@@ -5,6 +5,8 @@ import type { McpContext } from "../auth";
 import { defineTool, ToolError } from "../audit";
 import { resolveWorkspace, workspaceArg } from "../workspace";
 import { check, confirmArg, found, id, limitArg, recordingWorkspace } from "./shared";
+import { generateSummary } from "@/lib/summaries/generate";
+import { TEMPLATES } from "@/lib/templates";
 
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 
@@ -30,6 +32,24 @@ export function registerSummaryTools(server: McpServer, ctx: McpContext) {
     }).select("recording_id, template, model, overview, key_points, mind_map, updated_at").single();
     check(error);
     check((await ctx.supabase.from("recordings").update({ status: "generated" }).eq("id", recording_id)).error);
+    return { workspaceId: ws, targetId: recording_id, data: { summary: data } };
+  });
+
+  defineTool(server, ctx, "summary_generate", {
+    title: "Generate summary from a template",
+    description:
+      `Have Echo write the summary, action items and highlights for a recording using one of its templates. Replaces the current summary and AI highlights (your own notes and flags are kept). Templates: ${TEMPLATES.map((t) => `${t.id} (${t.name})`).join(", ")}.`,
+    inputSchema: z.object({
+      recording_id: id("Recording"),
+      template_id: z.enum(TEMPLATES.map((t) => t.id) as [string, ...string[]]).default("adaptive"),
+      language: z.string().trim().max(40).optional().describe("Output language, e.g. Spanish. Defaults to English."),
+    }),
+    annotations: { ...WRITE, idempotentHint: false },
+  }, async ({ recording_id, template_id, language }) => {
+    const ws = await recordingWorkspace(ctx, recording_id);
+    const res = await generateSummary(ctx.supabase, recording_id, { templateId: template_id, language });
+    if (res.error) throw new ToolError(res.error);
+    const { data } = await ctx.supabase.from("summaries").select("template, model, title, overview, sections").eq("recording_id", recording_id).maybeSingle();
     return { workspaceId: ws, targetId: recording_id, data: { summary: data } };
   });
 

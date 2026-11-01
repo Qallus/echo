@@ -1,0 +1,104 @@
+import "server-only";
+import { generateText, Output } from "ai";
+import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getLanguageModel, isConfigured } from "@/lib/ai/providers";
+import type { ModelId } from "@/lib/ai/models";
+import { formatClock } from "@/lib/format";
+import { findTemplate } from "@/lib/templates";
+
+// Turns a transcript into a summary for a template: sections, key points,
+// action items, timestamped highlights and a mind map. Writes with the
+// caller's client, so RLS applies.
+
+const MAX_TRANSCRIPT_CHARS = 180_000;
+
+const schema = z.object({
+  title: z.string().describe("A short, specific title for this recording (max 80 characters)."),
+  overview: z.string().describe("2-4 sentence overview of the whole conversation."),
+  sections: z.array(z.object({
+    heading: z.string(),
+    bullets: z.array(z.string()).describe("Specific, factual bullets. Empty if the topic didn't come up."),
+  })).describe("One entry per template section, in the given order, with the given headings."),
+  keyPoints: z.array(z.string()).describe("3-7 most important points."),
+  actionItems: z.array(z.object({
+    owner: z.string().describe("Name or speaker label of the person responsible; 'Unassigned' if unclear."),
+    text: z.string(),
+  })),
+  highlights: z.array(z.object({
+    startSec: z.number().int().describe("Seconds from the start, taken from the transcript timestamps."),
+    title: z.string().describe("One sentence stating what happened."),
+    bullets: z.array(z.string()).describe("2-4 supporting details."),
+  })).describe("3-8 moments worth jumping back to, in time order."),
+  mindMap: z.object({ root: z.string(), branches: z.array(z.string()).describe("4-7 short branch labels.") }),
+});
+
+export type GenerateOptions = { templateId: string; modelId?: ModelId; language?: string };
+
+// Claude first, then ChatGPT, then Grok: whichever answers.
+function candidates(preferred?: ModelId): ModelId[] {
+  const order: ModelId[] = [preferred, "claude", "gpt", "grok"].filter((m, i, a): m is ModelId => !!m && a.indexOf(m) === i);
+  return order.filter((m) => isConfigured(m));
+}
+
+export async function generateSummary(supabase: SupabaseClient, recordingId: string, opts: GenerateOptions): Promise<{ error?: string }> {
+  const template = findTemplate(opts.templateId);
+  const [{ data: rec }, { data: segs }] = await Promise.all([
+    supabase.from("recordings").select("id, title").eq("id", recordingId).maybeSingle(),
+    supabase.from("transcript_segments").select("speaker, start_sec, text").eq("recording_id", recordingId).order("position"),
+  ]);
+  if (!rec) return { error: "Recording not found." };
+  if (!segs?.length) return { error: "There's no transcript to summarize yet." };
+
+  const transcript = segs.map((s) => `[${s.start_sec}s ${formatClock(s.start_sec)}] ${s.speaker}: ${s.text}`).join("\n").slice(0, MAX_TRANSCRIPT_CHARS);
+  const language = opts.language || "English";
+  const system = `You write meeting and call summaries for Echo. Use only what is in the transcript; never invent names, numbers or decisions.
+Write in ${language}. Be specific and concise. Refer to people by name when the transcript gives one, otherwise by speaker label.
+Template: "${template.name}". Sections, in order: ${template.sections.map((s) => `"${s}"`).join(", ")}.${template.guidance ? `\n${template.guidance}` : ""}
+Highlight timestamps must come from the [Ns] markers in the transcript.`;
+
+  let lastError = "No AI model is configured.";
+  for (const id of candidates(opts.modelId)) {
+    const picked = getLanguageModel(id);
+    if ("error" in picked) continue;
+    try {
+      const { output } = await generateText({
+        model: picked.model, system, prompt: `Recording: "${rec.title}"\n\nTranscript:\n${transcript}`, output: Output.object({ schema }),
+      });
+      await save(supabase, recordingId, output, template.name, picked.label, language, rec.title);
+      return {};
+    } catch (e) {
+      lastError = `${picked.label}: ${e instanceof Error ? e.message : String(e)}`;
+      console.error(`[summary] ${recordingId}`, lastError);
+    }
+  }
+  return { error: lastError.slice(0, 400) };
+}
+
+async function save(supabase: SupabaseClient, recordingId: string, s: z.infer<typeof schema>, template: string, model: string, language: string, currentTitle: string) {
+  const { error } = await supabase.from("summaries").upsert({
+    recording_id: recordingId,
+    template, model, language,
+    title: s.title.slice(0, 200),
+    overview: s.overview,
+    key_points: s.keyPoints,
+    sections: s.sections,
+    mind_map: s.mindMap,
+  });
+  if (error) throw new Error(error.message);
+
+  await supabase.from("action_items").delete().eq("recording_id", recordingId);
+  if (s.actionItems.length) {
+    await supabase.from("action_items").insert(s.actionItems.map((a, i) => ({ recording_id: recordingId, position: i, owner_name: a.owner, text: a.text })));
+  }
+  await supabase.from("highlights").delete().eq("recording_id", recordingId).eq("kind", "ai");
+  if (s.highlights.length) {
+    await supabase.from("highlights").insert(s.highlights.map((h) => ({
+      recording_id: recordingId, kind: "ai", start_sec: Math.max(0, h.startSec), text: h.title, title: h.title.slice(0, 300), bullets: h.bullets,
+    })));
+  }
+  // Only the recorder's default titles ("Meeting Oct 30, 5:24 PM") and
+  // "Untitled recording" are replaced; titles people typed are kept.
+  const generic = /^untitled\b/i.test(currentTitle) || /^\w[\w ]* [A-Z][a-z]{2} \d{1,2}, \d{1,2}:\d{2}\s?(AM|PM)?$/i.test(currentTitle);
+  await supabase.from("recordings").update({ status: "generated", ...(generic ? { title: s.title.slice(0, 200) } : {}) }).eq("id", recordingId);
+}

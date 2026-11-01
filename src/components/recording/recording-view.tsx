@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
-  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Lock, MoreHorizontal, Share2, Sparkles, ThumbsDown, ThumbsUp, Wand2,
+  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Flag, Lock, MoreHorizontal, Plus, Share2, Sparkles, StickyNote, ThumbsDown, ThumbsUp, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +16,7 @@ import { AskPanel } from "@/components/recording/ask-panel";
 import { AudioBar } from "@/components/recording/audio-bar";
 import { TranscribeButton, Transcribing, TranscriptionFailed } from "@/components/recording/transcribe";
 import { MindMap } from "@/components/recording/mind-map";
+import { TemplatePicker } from "@/components/recording/template-picker";
 import { LocalDate } from "@/components/local-date";
 import { moveRecordings, toggleActionItem } from "@/lib/actions";
 import { formatClock, formatDuration, spaceLabel } from "@/lib/format";
@@ -40,6 +41,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
   // overlay opened on demand (separate state, so server and client markup match).
   const [askOpen, setAskOpen] = useState(true);
   const [mobileAsk, setMobileAsk] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [vote, setVote] = useState<"up" | "down" | null>(null);
 
@@ -102,12 +104,16 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
         </header>
 
         <Tabs defaultValue={summary && r.status !== "processing" ? "summary" : "transcript"} className="min-h-0 flex-1 gap-0">
-          <div className="border-b px-4 py-2 sm:px-6">
+          <div className="flex items-center gap-2 border-b px-4 py-2 sm:px-6">
             <TabsList variant="line">
               <TabsTrigger value="transcript">Transcript</TabsTrigger>
               <TabsTrigger value="highlights">Highlights</TabsTrigger>
               <TabsTrigger value="summary">Summary</TabsTrigger>
             </TabsList>
+            {segments.length > 0 && (
+              <Button variant="secondary" size="icon-sm" aria-label="Choose a template" title="Choose a template"
+                onClick={() => setPickerOpen(true)}><Plus /></Button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -131,23 +137,49 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                 ) : <Empty label="No transcript yet. This recording has no audio to transcribe." />}
               </TabsContent>
 
-              <TabsContent value="highlights" className="space-y-3">
-                {highlights.length ? highlights.map((h, i) => (
-                  <div key={i} className="flex gap-3 rounded-lg border p-3 text-sm">
-                    <span className="tabular-nums text-muted-foreground">{formatClock(h.startSec)}</span>
-                    <span>{h.text}</span>
-                  </div>
-                )) : <Empty label="No highlights yet" />}
+              <TabsContent value="highlights" className="space-y-8">
+                {highlights.length ? (
+                  <>
+                    <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Recording highlights</h2>
+                    {highlights.map((h, i) => (
+                      <article key={h.id ?? i} className="grid grid-cols-[4.5rem_1fr] gap-3 sm:grid-cols-[5.5rem_1fr] sm:gap-5">
+                        <span className="flex items-start gap-1.5 pt-1 text-sm tabular-nums text-muted-foreground">
+                          {h.kind === "ai" ? <Sparkles className="mt-0.5 size-3.5 shrink-0" /> : h.kind === "flag" ? <Flag className="mt-0.5 size-3.5 shrink-0" /> : <StickyNote className="mt-0.5 size-3.5 shrink-0" />}
+                          {formatClock(h.startSec)}
+                        </span>
+                        <div className="space-y-2">
+                          <p className={cn(h.kind === "ai" ? "text-lg leading-snug font-medium" : "text-base")}>{h.title || h.text}</p>
+                          {!!h.bullets?.length && (
+                            <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed text-foreground/85">{h.bullets.map((b) => <li key={b}>{b}</li>)}</ul>
+                          )}
+                          {h.kind !== "ai" && <p className="text-xs text-muted-foreground">{h.kind === "flag" ? "Flagged during the recording" : "Your note"}</p>}
+                        </div>
+                      </article>
+                    ))}
+                  </>
+                ) : segments.length ? (
+                  <Empty label="No highlights yet. Pick a template to generate them." action="Generate highlights" onAction={() => setPickerOpen(true)} />
+                ) : <Empty label="No highlights yet" />}
               </TabsContent>
 
               <TabsContent value="summary">
                 {summary ? (
                   <div className="space-y-10">
-                    <p className="text-xs text-muted-foreground">{summary.template} · generated with {summary.model}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">{summary.template}{summary.model && ` · ${summary.model}`}{summary.language && summary.language !== "English" && ` · ${summary.language}`}</p>
+                      <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}><Wand2 /> Change template</Button>
+                    </div>
                     <Section title="Overview"><p className="leading-relaxed">{summary.overview}</p></Section>
-                    <Section title="Key points">
-                      <ul className="list-disc space-y-1.5 pl-5">{summary.keyPoints.map((k) => <li key={k}>{k}</li>)}</ul>
-                    </Section>
+                    {summary.sections?.filter((s) => s.bullets.length).map((s) => (
+                      <Section key={s.heading} title={s.heading}>
+                        <ul className="list-disc space-y-1.5 pl-5">{s.bullets.map((b) => <li key={b}>{b}</li>)}</ul>
+                      </Section>
+                    ))}
+                    {!summary.sections?.length && (
+                      <Section title="Key points">
+                        <ul className="list-disc space-y-1.5 pl-5">{summary.keyPoints.map((k) => <li key={k}>{k}</li>)}</ul>
+                      </Section>
+                    )}
                     <Section title="Action items">
                       <div className="space-y-6">
                         {summary.actionGroups.map((g) => (
@@ -177,7 +209,9 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                       <Button variant={vote === "down" ? "secondary" : "outline"} size="sm" onClick={() => setVote("down")}><ThumbsDown /> Bad</Button>
                     </div>
                   </div>
-                ) : <Empty label="No summary yet" action="Generate summary" />}
+                ) : segments.length ? (
+                  <Empty label="No summary yet" action="Generate summary" onAction={() => setPickerOpen(true)} />
+                ) : <Empty label="No summary yet. Transcribe the recording first." />}
               </TabsContent>
             </div>
           </div>
@@ -185,6 +219,8 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
 
         <AudioBar duration={r.durationSec} src={audioSrc} />
       </div>
+
+      <TemplatePicker recordingId={r.id} open={pickerOpen} onOpenChange={setPickerOpen} current={summary?.template} />
 
       {(askOpen || mobileAsk) && (
         <AskPanel
@@ -206,11 +242,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Empty({ label, action }: { label: string; action?: string }) {
+function Empty({ label, action, onAction }: { label: string; action?: string; onAction?: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-3 py-20 text-sm text-muted-foreground">
+    <div className="flex flex-col items-center gap-3 py-20 text-center text-sm text-muted-foreground">
       {label}
-      {action && <Button size="sm"><Wand2 /> {action}</Button>}
+      {action && <Button size="sm" onClick={onAction}><Wand2 /> {action}</Button>}
     </div>
   );
 }

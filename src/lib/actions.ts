@@ -8,6 +8,8 @@ import { formatClock, formatDuration } from "@/lib/format";
 import { SAMPLE, SAMPLE_FOLDERS } from "@/lib/sample-data";
 import { siteOrigin } from "@/lib/site";
 import { relocateAudio } from "@/lib/storage";
+import { generateSummary } from "@/lib/summaries/generate";
+import { isModelId } from "@/lib/ai/models";
 
 // Server actions. Each uses the signed-in user's client, so RLS still applies.
 // Database guards raise plain-English messages, so those are shown as-is.
@@ -234,4 +236,18 @@ export async function loadSampleData() {
     if (failed?.error) throw new Error(failed.error.message);
   }
   revalidatePath("/", "layout");
+}
+
+// Generate (or regenerate) a summary, action items and highlights from a
+// template. Takes 20-60 seconds; the page shows progress meanwhile.
+export async function generateRecordingSummary(recordingId: string, templateId: string, modelId?: string, language?: string): Promise<{ error?: string }> {
+  await requireUser();
+  const supabase = await createClient();
+  const res = await generateSummary(supabase, recordingId, {
+    templateId,
+    modelId: isModelId(modelId) ? modelId : undefined,
+    language: language?.slice(0, 40),
+  });
+  revalidatePath(`/recordings/${recordingId}`);
+  return res;
 }

@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MAX_TRANSCRIBE_BYTES, parseSetting, type TranscriptionSetting } from "./models";
 import { transcribeWithOpenAI } from "./openai";
+import { generateSummary } from "@/lib/summaries/generate";
 
 export async function getTranscriptionSetting(supabase: SupabaseClient): Promise<TranscriptionSetting> {
   const { data } = await supabase.from("platform_settings").select("value").eq("key", "transcription").maybeSingle();
@@ -53,6 +54,13 @@ export async function runTranscription(supabase: SupabaseClient, recordingId: st
       if (insErr) throw new Error(insErr.message);
     }
     if (base > 0) await supabase.from("transcript_segments").delete().eq("recording_id", recordingId).lt("position", base);
+
+    if (result.durationSec && !rec.duration_sec) await supabase.from("recordings").update({ duration_sec: result.durationSec }).eq("id", recordingId);
+
+    // Summary, action items and highlights (Adaptive template). A failed
+    // summary doesn't fail the transcript; it can be generated from the page.
+    const gen = await generateSummary(supabase, recordingId, { templateId: "adaptive" });
+    if (gen.error) console.error(`[transcribe] summary for ${recordingId}:`, gen.error);
 
     const { data: summary } = await supabase.from("summaries").select("recording_id").eq("recording_id", recordingId).maybeSingle();
     await supabase.from("recordings").update({

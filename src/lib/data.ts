@@ -3,7 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type {
-  ActionGroup, Folder, PersonCard, Profile, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
+  ActionGroup, Folder, PersonCard, SummarySection, Profile, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
 } from "@/lib/types";
 
 export const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -152,8 +152,8 @@ export async function getRecordingDetail(id: string): Promise<RecordingDetail | 
   const [rec, segs, hls, sum, items] = await Promise.all([
     supabase.from("recordings").select(RECORDING_COLS).eq("id", id).maybeSingle(),
     supabase.from("transcript_segments").select("speaker, start_sec, text").eq("recording_id", id).order("position"),
-    supabase.from("highlights").select("start_sec, text").eq("recording_id", id).order("start_sec"),
-    supabase.from("summaries").select("template, model, overview, key_points, mind_map").eq("recording_id", id).maybeSingle(),
+    supabase.from("highlights").select("id, start_sec, text, kind, title, bullets").eq("recording_id", id).order("start_sec"),
+    supabase.from("summaries").select("template, model, overview, key_points, mind_map, title, sections, language, updated_at").eq("recording_id", id).maybeSingle(),
     supabase.from("action_items").select("id, owner_name, owner_role, text, done").eq("recording_id", id).order("position"),
   ]);
   if (!rec.data) return null;
@@ -174,13 +174,17 @@ export async function getRecordingDetail(id: string): Promise<RecordingDetail | 
       keyPoints: (sum.data.key_points ?? []) as string[],
       actionGroups: [...groups.values()],
       mindMap: { root: mm.root ?? rec.data.title, branches: mm.branches ?? [] },
+      title: sum.data.title,
+      sections: (sum.data.sections ?? []) as SummarySection[],
+      language: sum.data.language,
+      updatedAt: sum.data.updated_at,
     };
   }
 
   return {
     recording: toRecording(rec.data as RecordingRow),
     segments: (segs.data ?? []).map((s) => ({ speaker: s.speaker, startSec: s.start_sec, text: s.text })),
-    highlights: (hls.data ?? []).map((h) => ({ startSec: h.start_sec, text: h.text })),
+    highlights: (hls.data ?? []).map((h) => ({ id: h.id, startSec: h.start_sec, text: h.text, kind: h.kind, title: h.title, bullets: (h.bullets ?? []) as string[] })),
     summary,
   };
 }

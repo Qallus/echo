@@ -61,7 +61,7 @@ export async function saveRecording(r: NewRecording): Promise<string> {
   if (linked.error) throw new Error(linked.error.message);
   if (r.highlights?.length) {
     const { error: hErr } = await supabase.from("highlights").insert(
-      r.highlights.map((h) => ({ recording_id: rec.id, start_sec: Math.max(0, Math.round(h.startSec)), text: h.text.slice(0, 2000) })),
+      r.highlights.map((h) => ({ recording_id: rec.id, start_sec: Math.max(0, Math.round(h.startSec)), text: h.text.slice(0, 2000), kind: h.text === "Flagged moment" ? "flag" : "note" })),
     );
     // The recording and audio are saved; don't fail (and risk a duplicate on retry) over the notes.
     if (hErr) console.error("[recorder] highlights not saved:", hErr.message);

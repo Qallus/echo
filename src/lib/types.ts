@@ -45,7 +45,8 @@ export type Recording = {
 export type Folder = { id: string; workspaceId: string; name: string };
 
 export type Segment = { speaker: string; startSec: number; text: string };
-export type Highlight = { startSec: number; text: string };
+export type Highlight = { id?: string; startSec: number; text: string; kind?: "note" | "flag" | "ai"; title?: string | null; bullets?: string[] };
+export type SummarySection = { heading: string; bullets: string[] };
 export type ActionItem = { id: string; text: string; done: boolean };
 export type ActionGroup = { owner: string; role: string | null; items: ActionItem[] };
 
@@ -56,6 +57,10 @@ export type Summary = {
   keyPoints: string[];
   actionGroups: ActionGroup[];
   mindMap: { root: string; branches: string[] };
+  title?: string | null;
+  sections?: SummarySection[];
+  language?: string | null;
+  updatedAt?: string;
 };
 
 export type RecordingDetail = {
