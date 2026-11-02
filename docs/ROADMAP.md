@@ -1,174 +1,199 @@
 # Echo roadmap: from recorder to platform
 
-Draft game plan for review (Oct 30, 2026). Nothing here is built yet. Each phase ends with something usable, and each step still goes through the usual approve → build → review loop.
+Updated Nov 2, 2026. Each step still goes through the usual approve → build → review loop.
 
-**Goal:** a feature-rich, paid platform. People record and understand conversations, share them in any format, and pipe the data into the tools they already use. Echo is sold through plans, seats, bolt-ons and partners, and found through search.
+**Goal:** a feature-rich, paid platform. People record and understand conversations, including phone calls, share them in any format, and pipe the data into the tools they already use. Echo is sold through plans, seats, bolt-ons, minute packs and partners.
+
+| Phase | What | Status |
+|---|---|---|
+| 1 | Core product: profiles, notifications, store, templates, Summary Builder | **Done** |
+| 2 | Super Admin control center (S1–S5) | **Next** |
+| 3 | Customers' own AI keys (ships with S3) | Planned |
+| 4 | Echo call line + Redial module | Planned |
+| 5 | Native app (Capacitor), Android first | Planned |
+| 6 | Connectors | Planned |
+| 7 | Business and client integrations | Waiting on the detailed list |
+| 8 | AI-ready exports | Planned |
+| 9 | Share, affiliates, API and webhooks, blog and SEO | Planned |
 
 ---
 
-## Phase 1: People, notifications and sharing (core product)
+## Phase 1: Core product (done)
+- **Profiles:**
+  - photo, name, title, company, phone with a privacy switch, time zone, bio and links
+  - additional fields (prefix, more phones and emails, address, custom fields), each private or shared with teammates
+  - hover cards wherever a person appears
+- **Notifications:**
+  - live bell (Realtime)
+  - email (Resend), SMS (Twilio, verified numbers), web push
+  - preferences grid and quiet hours
+  - delivery log
+- **Store (Stripe):**
+  - plans (Pro, plus Business per seat with graduated tiers), bolt-ons, minute packs and services
+  - cart, checkout, thank-you page, orders and receipts, order emails
+  - Terms, Privacy and Developers pages
+- **AI:**
+  - Ask Echo with Claude, ChatGPT, Gemini, Grok, Kimi and OpenRouter
+  - summaries and highlights from 86 templates in 17 categories
+  - Summary Builder (branded summary designs), also available to Claude through the MCP connector
+- **Recording:**
+  - in-browser recorder with a pop-out panel, notes and flags
+  - silence warning
+  - upload, transcription with timestamped segments, "Transcribe again"
 
-### 1.1 Profiles (shadcn-style)
-- **Profile fields:** photo, full name, job title, company, work email, phone, time zone, location, short bio, LinkedIn/website, pronouns (optional) and preferred language for summaries.
-- **Photo upload:** goes to a new `avatars` storage bucket (public read, owner write), cropped to a square. Initials are the fallback.
-- **Where profiles appear:** profile cards with a hover preview everywhere a person shows up (team list, shared-with, comments, speakers, backlog), a team directory on `/team`, and `/settings/profile` for editing.
-- **Speaker linking:** "Speaker A" can be linked to a real profile, so transcripts show names and photos.
-- **Data:** extend `profiles`, with RLS so teammates see each other's work fields, and phone numbers only when the person allows it.
+**Still open from Phase 1:** verify the `redial.si` sending domain in Resend; rotate `NOTIFY_SECRET` before launch.
 
-### 1.2 Notifications
-- **Bell icon:** in the header (desktop and phone) with an unread count. It updates live (Supabase Realtime), and the dropdown lists recent items with "mark all read."
-- **Events:**
-  - transcript ready, summary ready, transcription failed
-  - shared with you, comment or @mention, action item assigned or due
-  - team invite accepted
-  - billing events: payment failed, trial ending, plan changed
-- **Channels:**
-  - **In-app:** the bell.
-  - **Email:** through Resend. A person can add more addresses, each verified by a link.
-  - **SMS:** through Twilio. The phone number is verified with Twilio Verify.
-  - **Desktop and phone push:** Web Push with a service worker. It works on desktop browsers, on Android, and on iPhone once Echo is installed to the Home Screen; the manifest and icons are already in place.
-- **Settings page** (`/settings/notifications`): a grid of event × channel switches, quiet hours, and a daily digest option.
-- **Data:** `notifications`, `notification_preferences` and `notification_channels` (verified email, phone and push subscriptions), plus a small server-side dispatcher.
-- **SMS compliance:** US business texting needs **A2P 10DLC registration** in Twilio, and STOP/HELP handling is mandatory. Plan a week or two for carrier approval.
+---
 
-### 1.3 Share
-- **Dialog step 1, what you're sharing:**
-  - Audio, Transcript, Highlights, Summary, Action items
-  - Full report (any mix of the above)
-- **Step 2, the format:**
-  - **Link:** a public web report, like the one in the hero demo.
-  - **PDF:** Echo-branded, with a QR/link to the audio, because a PDF can't reliably play audio itself.
-  - **Embed:** an `<iframe>` snippet with a player and transcript.
-  - **HTML file:** a self-contained download.
-  - **Text formats:** DOCX, TXT, SRT/VTT captions, Markdown.
-- **Step 3, how you're sharing it:**
+## Phase 2: Super Admin control center
+Modelled on the Channel-Cast-OS admin layout: nav groups **Main** (Dashboard, Analytics, Communications, Bookings, Contacts, Pipeline, Projects, Plans, Workspace, Reports), **Operations** (Clients, Business Cards, Billing, Documents, Automation, AI) and **Account** (Profile, User Management, Team, Settings, Logout).
+- Reuse Channel-Cast-OS's UI patterns and record shapes, **not** its data layer: it uses the service role everywhere, decides admins by an email list, and runs on mock data.
+- In Echo, everything goes through security-definer functions guarded by staff permissions, and every action is written to an audit log.
+
+**Decisions:**
+- **Staff roles:** owner, admin, support, finance, marketing, analyst. Two-step sign-in (MFA) is required.
+- The CRM and ERP sections are an **internal back office**: Qallus runs the Echo business with them, and customers don't see them. They could become a paid customer bolt-on later.
+- **Local models:** any OpenAI-compatible endpoint, such as Ollama, vLLM or LM Studio on Jeremy's server, is added as a custom provider. Super Admin compares quality, speed and cost to find what gives the best results.
+- **Auth-admin operations** (invite, suspend, sign out everywhere, delete) may use the service-role client, but only inside Super Admin actions, after a staff permission check plus MFA, and each one is audited.
+
+**Build steps:**
+
+| Step | Builds |
+|---|---|
+| **S1. Foundation** | Admin shell and navigation; `platform_staff` roles and permissions; MFA; `admin_audit_log`; dashboard with real KPIs and a "Needs attention" list |
+| **S2. Users and workspaces** | Search and filters; Customer 360 (profile, workspaces, plan, orders, usage, audit trail; no transcript content); invite, suspend/restore, sign out everywhere, staff roles, workspace ownership |
+| **S3. AI models and keys** | Enabled providers and models, defaults and fallback order; custom and local providers; transcription settings; usage and cost per workspace, model and feature; customer key status; MCP usage |
+| **S4. Pricing and billing** | Catalog moves from code into the database (products, prices, entitlements, pricing rules); price edits create new Stripe Prices; discount for customers' own keys; bolt-ons; coupons; orders and refunds; subscriptions; MRR, ARR and churn; failed payments; per-minute metering against plan minutes and packs |
+| **S5. CRM back office** | Contacts, Clients, Pipeline → Bookings, Projects, Plans → Documents and Workspace → Business Cards → Automation and Communications → Analytics, Reports, Team and Settings |
+
+Later admin sections:
+- **Marketing and web content:** blog and pages CMS (Phase 9)
+- **Notifications:** templates and provider health
+- **Affiliates**
+- **API:** keys and webhook deliveries
+- **Feature flags, rate limits and maintenance banner**
+
+---
+
+## Phase 3: Customers' own AI keys
+- **Where:** Settings → AI models. Customers add keys for Claude, ChatGPT, Gemini, Grok, Kimi or OpenRouter, test them, and choose models.
+- **Scope:** the workspace owner chooses **workspace** (one set of keys for the team) or **per person**.
+- **Fallback:** if a customer's key fails, Echo **falls back to its own keys**. The fallback is logged, and the owner is notified once a day.
+- **Transcription:** a customer's own OpenAI key also covers transcription.
+- **Model choice:** customers choose in their dashboard when they've added their own keys. Super Admin sets the defaults and which models are available.
+- **Pricing:** customers using their own keys can get a discount, set in Super Admin (S4).
+- **Security:**
+  - keys are encrypted on the server (AES-256-GCM, with `AI_KEYS_SECRET` held in Coolify)
+  - the database stores only scrambled text and the last 4 characters
+  - full keys are never shown again
+- **Usage:** every AI call records provider, model, tokens or audio seconds, estimated cost, and whose key was used.
+- **"Running off their AI subscriptions":** ChatGPT and Claude plans can't be used by other apps. They work the other way round: users connect Echo to their Claude through the **Echo MCP connector**, which is already live.
+
+---
+
+## Phase 4: Echo call line + Redial module
+Redial (the AI call-screening product in `docs/REDIAL_COMPLETE_PROJECT_HANDOFF_v1.1.zip`) is **built inside Echo**: same users, security model and Super Admin. It uses **Stripe**, not the kit's Square, so the kit's Square sections don't apply.
+
+### 4a. Call line (Twilio, on Jeremy's spare Echo number)
+- **Outbound "Call & record":**
+  1. Tap a contact in the app or dashboard.
+  2. Twilio rings your phone first, then connects the other person.
+  3. They see **your own cell number** (Twilio verified caller ID; each user verifies their number once).
+  4. Each side is recorded on its own channel.
+- **Inbound and any other call:** answer on your normal number, then tap **Record this call**. The Echo line is merged in. No new number to hand out.
+- **Workspace:** recordings go to the user's default workspace from Settings. Outbound calls can also offer "press 1 for Personal, 2 for Business"; only the user hears it.
+- **No automated announcements.** Announcing is the user's responsibility, verbally or with an optional announcement users can turn on from the dashboard. Arizona needs only one person's consent; the Terms say users must follow the law where they and the other person are.
+- **After the call:** saved, transcribed and summarized automatically. Twilio's copy is deleted, and minutes are logged.
+- **Who can use the line:** only users with a verified cell number.
+- **Billing:** per minute, counted against plan minutes, with minute packs.
+
+### 4b. Redial AI screening
+- Twilio Media Streams through a separate `voice-gateway` container on Coolify, with xAI realtime voice.
+- Screening modes (spam only, unknown callers, all), VIP override, rules with a simulator, a callback inbox and block/allow lists.
+- Built on the kit's conference-first call setup (kit docs `06`, `21`).
+
+### 4c. Live call controls
+**Insider** (listen silently), then **Gavel** (take over from the AI), then **Audible** (private guidance to the AI), then **Directory** (transfers). Specs are in kit docs `19` and `20`. Each control has its own permission, feature flag and kill switch.
+
+---
+
+## Phase 5: Native app (Capacitor)
+- **Approach:** wraps the Echo web app, so new features ship to web and mobile together. Native plugins add:
+  - **Record this call:** on Android, with Echo set as the default phone app, it merges the call itself in one tap. On iPhone it's one tap, then **Merge Calls**, the most Apple allows.
+  - recording in the background for meetings
+  - push notifications
+  - "Share to Echo" for audio files and voice memos
+- **Order:** Google Play first; Jeremy is opening the developer account. The App Store follows once the Apple Developer account is active later this month.
+- Calls rely on the Phase 4a call line.
+
+---
+
+## Phase 6: Connectors
+- **Google:** Gmail, Drive, Docs, Sheets, Slides, Chat, Meet, Calendar.
+- **Microsoft 365:** Teams, Outlook, OneDrive, Word, Excel.
+- **Apple:** Calendar, Contacts, Notes, where Apple allows.
+- **Collaboration:** Slack, Zoom, Notion.
+- **CRMs:** Salesforce, HubSpot, Pipedrive, GoHighLevel. Summaries, action items and call logs land on the contact or deal.
+- **Meeting bot:** joins Zoom, Meet and Teams from the calendar and records automatically, through a provider such as Recall.ai.
+- **No-code:** Zapier, Make, n8n.
+
+## Phase 7: Business and client integrations
+- **Jeremy's businesses:** Channel Cast, Control-P, Qallus, Redial, Smarty Kiddo.
+- **Clients:** Strategic Income Group, MJG, Constructed Matters, CFS, Paramount Painting.
+- **What connects:** shared sign-in, data both ways, cross-sell. Defined per business once Jeremy's detailed list arrives.
+
+## Phase 8: AI-ready exports
+- **AI-ready Markdown:**
+  - a clean structure with headings, timestamps, speakers, decisions and action items
+  - made to drop into VS Code, Cursor or any AI coding editor
+- **Code-ready exports:** HTML, CSS, JavaScript, React and Next.js versions of a summary or report, so a frontier model can turn them into designs, pages or code.
+
+---
+
+## Phase 9: Share, affiliates, API, blog and SEO
+### Share
+- **What:** audio, transcript, highlights, summary, action items, or a full report.
+- **Formats:** public link, branded PDF (with a QR code linking to the audio), embed, HTML file, DOCX, TXT, SRT/VTT captions, Markdown.
+- **How:**
   - copy a link
   - invite people (Echo users get access; others get a link)
-  - send by email or SMS
-  - send to an integration (Slack, Google Drive, Notion…)
-- **Link options:** expiry date, password, allow download, hide speaker names, and view count and analytics.
-- **Data:** `share_links` (token, what, format, options) and `share_recipients`. Public pages at `/s/[token]` are served through a security-definer lookup that returns only the shared parts.
+  - email or SMS
+  - send to an integration
+- **Link options:** expiry date, password, allow download, hide speaker names, view analytics.
 
-### 1.4 Referrals and affiliates
-- **Referrals (everyone):** a personal invite link. Both sides get a reward, for example one month free or extra minutes, applied as a Stripe coupon.
-- **Affiliate program (partners):**
-  - partners apply and an admin approves them
-  - each partner gets a code and link, with a commission rate (for example 20–30% recurring for 12 months)
-  - a dashboard shows clicks, sign-ups, paid conversions and earnings
-  - payouts start out manual (an exported report), with Stripe Connect later
-- **Build or buy:** building it fits the Super Admin plan. Rewardful or FirstPromoter would be faster to start and plug into Stripe. **Decision needed.**
+### Referrals and affiliates
+- Personal invite links with rewards for both sides, applied as Stripe coupons.
+- **Partner program:** applications approved in Super Admin, a code and link per partner, commission rates, a dashboard, and payouts (manual first, Stripe Connect later).
 
----
+### Echo API and webhooks
+- **REST API:** workspace API keys with scopes, covering recordings, transcripts, summaries, action items, search and upload.
+- **Webhooks:** signed, with retries and a delivery log. Events: `recording.created`, `transcript.ready`, `summary.ready`, `action_item.created`, `share.viewed`.
+- **For developers:** an OpenAPI spec, docs, a JavaScript SDK, and rate limits per plan. The Developers page already documents the planned API.
+- **Other paid bolt-ons:** translation, custom vocabulary and speaker recognition, white-label, a compliance pack (HIPAA BAA, data retention rules), and hardware import (Plaud and voice memos).
 
-## Phase 2: Billing (Stripe)
-
-- **Plans** (prices are placeholders, to set in the Stripe dashboard):
-
-  | Plan | Who | Monthly | Annual (about 2 months free) | Includes |
-  |---|---|---|---|---|
-  | Free | Try it | $0 | $0 | 300 min/month, 30-day history, basic summaries |
-  | Pro | Individuals | $15 | $144/yr | 2,000 min, unlimited history, all AI models, PDF/web reports |
-  | Business | Teams | $20/seat | $192/seat/yr | Pro + shared workspace, admin roles, SSO-ready, priority support |
-  | Enterprise | Large orgs | Custom | Custom | SLA, data residency, custom limits, invoicing |
-
-- **Team discounts:** Business uses Stripe **graduated per-seat pricing**, so the price per seat drops as seats are added. For example: seats 1–5 at $20, 6–20 at $17, 21+ at $14. Seat count syncs from workspace membership.
-- **Usage beyond the plan:** extra transcription minutes are billed through **Stripe usage metering**, or bought as a pack.
-- **Flows:**
-  - Stripe Checkout, plus the Customer Portal for card changes, invoices and cancelling
-  - trials, coupons and promo codes
-  - Stripe Tax
-- **Behind the scenes:**
-  - Stripe webhooks keep `subscriptions` and `entitlements` tables in sync.
-  - Every limit (minutes, storage, features) is checked on the server against `entitlements`.
-  - The `/billing` page shows the plan, usage bars and an upgrade path.
-- **Security decision:** Stripe webhooks need trusted writes with no user signed in. That conflicts with "no service-role key in request paths." Proposal: a dedicated webhook route that verifies Stripe's signature and calls narrow security-definer functions (for example `private.apply_stripe_event`). No broad service-role client. **Needs your approval.**
+### Marketing site, blog and SEO
+- **Blog:** edited in Super Admin, with scheduled publishing and preview links.
+- **SEO:** sitemap, robots.txt, canonical URLs, Open Graph images, structured data, RSS, Core Web Vitals.
+- **Search pages built from data:** use cases, integrations, the public template gallery, comparisons.
+- **Before launch:** About, Contact/Support and Security pages, plus the launch safeguards Jeremy will call for.
 
 ---
 
-## Phase 3: Bolt-ons and the Echo API (expanding the market)
+## Decisions log
+- **Billing:** Stripe, for Echo and the Redial module.
+- **Customers' own AI keys:** workspace or per person, chosen by the owner. Falls back to Echo's keys. A customer's OpenAI key covers transcription. Customers choose models when they use their own keys; Super Admin sets defaults.
+- **Call line:**
+  - inbound and outbound, on a spare Twilio number
+  - outbound shows the user's own cell number
+  - no automated announcements
+  - default workspace, or press 1 or 2
+  - billed per minute, with packs
+- **Native app:** Capacitor, Android first.
+- **Super Admin:** staff roles with MFA; the CRM is an internal back office; any OpenAI-compatible local model can be added.
 
-### 3.1 Echo API (the core bolt-on)
-- **REST API** with API keys per workspace (created and revoked in `/developer`) and scoped permissions. Endpoints cover recordings, transcripts, summaries, action items, search and upload.
-- **Webhooks:** `recording.created`, `transcript.ready`, `summary.ready`, `action_item.created`, `share.viewed`. Signed, with retries and a delivery log.
-- **For developers:** an OpenAPI spec, public docs at `/docs/api`, a JavaScript SDK, and per-plan rate limits.
-- **The existing MCP connector** becomes the "AI bolt-on" (Claude, ChatGPT and others).
-
-### 3.2 Paid bolt-ons (add to any plan)
-- **API & webhooks:** pipe Echo data into any platform.
-- **CRM sync:** HubSpot, Salesforce, Pipedrive, GoHighLevel. Summaries, action items and call logs land on the contact or deal.
-- **Meeting bot:** joins Zoom, Meet and Teams from your calendar and records automatically. Built on a bot provider such as Recall.ai, so no one has to keep a browser tab open.
-- **Phone line:** a Twilio number that records and transcribes inbound and outbound calls, plus call forwarding.
-- **AI agents:** automatic follow-up emails, CRM updates, task creation in Asana/ClickUp/Linear, and coaching scorecards.
-- **Extra minutes and storage packs.**
-- **Translation and multilingual summaries.**
-- **Custom vocabulary and speaker recognition.**
-- **White-label:** custom domain, logo and colors on share pages and emails, for agencies and resellers.
-- **Compliance pack:** HIPAA BAA, data retention rules, audit export, regional storage.
-- **Hardware import:** Plaud and other voice recorders, plus voice memos from your phone by email or share sheet.
-
-### 3.3 Market expansion ideas
-- **Vertical editions:** template packs, landing pages and onboarding for sales, recruiting, real estate, legal intake, healthcare (with the compliance pack), coaching and therapy notes, churches and ministries, and podcasting and journalism.
-- **Agency and reseller program:** resell Echo white-labelled with wholesale seat pricing, managed from Super Admin.
-- **No-code marketplace apps:** Zapier, Make and n8n, to reach thousands of tools without building each integration.
-- **Template marketplace:** public summary templates, such as Discovery call, Board meeting and Sermon notes. They double as SEO pages.
-- **Free tools as lead magnets:** a free audio-to-text converter (with limits), a meeting-notes generator, and a podcast show-notes generator.
-- **Your other services:** connect Echo to the services you already run (**which ones? see the questions below**). Shared sign-in, cross-sell in-app, and data flowing both ways.
-
----
-
-## Phase 4: Super Admin control center
-
-Reuses as much as possible from the GitHub project you'll share. Everything is behind `private.is_super_admin()`, and every action goes to the audit log.
-
-- **Users and workspaces:** search, profiles, plan, usage, suspend or restore, and read-only "view as user" for support.
-- **Billing:** subscriptions mirrored from Stripe, MRR/ARR and churn, failed payments, refunds through Stripe, and coupons and promo codes.
-- **Plans and bolt-ons:** which features each plan or bolt-on unlocks (an entitlements editor), mapped to Stripe prices.
-- **Affiliates:** applications, commission rates, payouts and fraud flags.
-- **Notifications:** email and SMS templates, delivery logs, Twilio and Resend health.
-- **Platform settings:** AI and transcription providers (already started), feature flags, rate limits, maintenance banner.
-- **Costs:** AI and transcription spend per user and per plan, so margins stay visible.
-- **Content:** blog and SEO page editor (Phase 5).
-- **API:** keys, webhook deliveries and usage per workspace.
-
----
-
-## Phase 5: Marketing site, blog and SEO
-
-- **Blog:**
-  - posts with authors, categories and tags, edited in Super Admin
-  - Markdown with images, scheduled publishing, and draft preview links
-- **SEO basics:**
-  - `sitemap.xml` and `robots.txt`
-  - canonical URLs and per-page titles/descriptions
-  - auto-generated Open Graph images (`next/og`)
-  - structured data: Organization, SoftwareApplication, Article, FAQ and Breadcrumb
-  - RSS feed
-  - Core Web Vitals kept green
-- **Pages built from data, for search:**
-  - use-case pages ("Meeting notes for real estate agents")
-  - integration pages ("Echo + HubSpot")
-  - the public template gallery
-  - honest comparison pages
-- **Content plan:** about 2–4 posts a month aimed at buyer searches ("best way to record sales calls," "how to transcribe a Zoom meeting"), each linking to a free tool or template.
-- **Pages still needed before launch:** Privacy Policy, Terms, Contact/Support, About, Security/Trust. The "safeguards" you mentioned go in at launch time, including "coming soon" labels where needed.
-
----
-
-## Suggested order
-
-1. **Phase 1.1 Profiles**, then **1.2 Notifications**: everything else uses people and alerts.
-2. **Phase 1.3 Share**: high user value; reuses the web report and PDF design.
-3. **Phase 2 Billing**: turn on revenue before the bigger bolt-ons.
-4. **Phase 4 Super Admin**, built up alongside each phase (start once the GitHub project is in).
-5. **Phase 5 Blog and SEO**: can start in parallel, since SEO takes months to compound.
-6. **Phase 3 API and bolt-ons**: the API and webhooks first, then CRM sync and the meeting bot.
-7. **Phase 1.4 Affiliates**: once billing is live.
-
-## Decisions needed from you
-1. **The GitHub project** with the Super Admin features: link and access.
-2. **"Other services I'm already offering":** which ones (for example Channel Cast, LayeredFX, MJG), and what should connect: shared sign-in, data, cross-sell?
-3. **Plan prices** and the seat discount tiers (the table above is a placeholder).
-4. **Affiliates:** build in-house, or use Rewardful/FirstPromoter?
-5. **Stripe webhook security** approach (Phase 2 note).
-6. **Twilio:** is there a sending number and A2P 10DLC registration already, or start one?
-7. **Meeting bot provider** (Recall.ai or similar): the pricing affects plan margins.
+## Open items
+1. Jeremy's detailed list of businesses, clients and integrations (Phase 7).
+2. Final plan prices and limits (the store has placeholders).
+3. The Twilio number for the call line, and A2P 10DLC registration status for SMS.
+4. Affiliates: build in-house (the default, in Super Admin) or use Rewardful/FirstPromoter.
+5. Meeting bot provider (Recall.ai or similar).

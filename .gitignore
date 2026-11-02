@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# Extracted copy of the Redial handoff kit (the zip in docs/ is the source)
+/docs/REDIAL_COMPLETE_PROJECT_HANDOFF_v1.1/
