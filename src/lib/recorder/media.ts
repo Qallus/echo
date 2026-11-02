@@ -73,6 +73,15 @@ export function readLevel(analyser: AnalyserNode, buf: Uint8Array<ArrayBuffer>):
   return Math.min(1, Math.sqrt(Math.sqrt(sum / buf.length)) * 2.2);
 }
 
+// Raw RMS loudness (0..1), from float samples: byte samples are too coarse to
+// tell a quiet room from a dead microphone. A muted or taken-over mic reads ~0.
+export function readRms(analyser: AnalyserNode, buf: Float32Array<ArrayBuffer>): number {
+  analyser.getFloatTimeDomainData(buf);
+  let sum = 0;
+  for (const v of buf) sum += v * v;
+  return Math.sqrt(sum / buf.length);
+}
+
 // Duration in seconds of an audio/video file, read from its metadata.
 export function fileDuration(file: Blob): Promise<number> {
   return new Promise((resolve) => {

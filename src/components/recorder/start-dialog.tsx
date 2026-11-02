@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mic, MonitorSpeaker } from "lucide-react";
+import { Mic, MonitorSpeaker, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,8 @@ function StartForm({ source, onClose }: { source: RecordingSource; onClose: () =
   const [error, setError] = useState<string>();
   const [starting, setStarting] = useState(false);
   const canShareTab = typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+  // Phones and small tablets: a touch screen and no desktop-style screen sharing.
+  const onPhone = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches && !canShareTab;
 
   const go = async () => {
     const workspace = workspaces.find((w) => w.id === workspaceId);
@@ -56,6 +58,19 @@ function StartForm({ source, onClose }: { source: RecordingSource; onClose: () =
   return (
     <DialogContent title={source === "phone_call" ? "Record a call" : "Record a meeting"}
       description="Choose where it's saved. You can take notes and flag moments while it records.">
+      {source === "phone_call" && (
+        <div className="flex gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm">
+          <Smartphone className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <div className="space-y-1">
+            <p className="font-medium">Recording a regular phone call?</p>
+            <p className="text-muted-foreground">
+              Echo records what your microphone hears, and a phone gives its microphone to the call. Put the call on
+              <strong className="font-medium text-foreground"> speaker</strong> and record here on your computer or tablet, next to the phone.
+              {onPhone && " Recording on the same phone as the call will capture silence."}
+            </p>
+          </div>
+        </div>
+      )}
       <WorkspacePicker workspaces={workspaces} value={workspaceId} onChange={setWorkspaceId} />
       <label className="block space-y-1.5">
         <span className="text-sm font-medium">Title</span>

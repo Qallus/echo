@@ -13,6 +13,7 @@ export function AudioBar({ duration, src }: { duration: number; src: string | nu
   const [rate, setRate] = useState(1);
   const [length, setLength] = useState(duration);
   const [failed, setFailed] = useState(false);
+  const [playError, setPlayError] = useState<string>();
 
   if (!src || failed) {
     return (
@@ -29,7 +30,9 @@ export function AudioBar({ duration, src }: { duration: number; src: string | nu
   const toggle = () => {
     const a = audio.current;
     if (!a) return;
-    if (a.paused) void a.play();
+    if (a.paused) a.play().catch((e: unknown) => setPlayError(e instanceof DOMException && e.name === "NotSupportedError"
+      ? "This browser can't play this recording's format. Try Chrome, or download the audio."
+      : "Playback didn't start. Check your volume and that this tab isn't muted, then try again."));
     else a.pause();
   };
   const cycleRate = () => {
@@ -39,9 +42,10 @@ export function AudioBar({ duration, src }: { duration: number; src: string | nu
   };
 
   return (
-    <div className="flex items-center gap-3 border-t bg-background px-4 py-2">
+    <div className="flex flex-wrap items-center gap-3 border-t bg-background px-4 py-2">
+      {playError && <p className="w-full text-center text-xs text-destructive">{playError}</p>}
       <audio ref={audio} src={src} preload="metadata"
-        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
+        onPlay={() => { setPlaying(true); setPlayError(undefined); }} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
         onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => { if (Number.isFinite(e.currentTarget.duration)) setLength(Math.round(e.currentTarget.duration)); }}
         onError={() => setFailed(true)} />

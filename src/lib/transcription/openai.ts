@@ -43,13 +43,17 @@ export async function transcribeWithOpenAI(audio: Blob, fileName: string, model:
   return { segments: estimateSegments(data.text ?? "", durationSec), durationSec: null };
 }
 
-// Join consecutive segments from the same speaker into one paragraph.
+// Join short consecutive segments from the same speaker, but keep paragraphs
+// short: each one keeps only its first timestamp, and highlights, the
+// transcript and seeking all depend on those times.
+const MAX_PARAGRAPH = 300;
+
 function mergeTurns(segments: Segment[]): Segment[] {
   const out: Segment[] = [];
   for (const s of segments) {
     if (!s.text) continue;
     const last = out.at(-1);
-    if (last && last.speaker === s.speaker && last.text.length < 1200) last.text = `${last.text} ${s.text}`;
+    if (last && last.speaker === s.speaker && last.text.length + s.text.length < MAX_PARAGRAPH) last.text = `${last.text} ${s.text}`;
     else out.push({ ...s });
   }
   return out;
@@ -63,7 +67,7 @@ function estimateSegments(text: string, durationSec: number): Segment[] {
   let current = "";
   for (const s of sentences) {
     current += s;
-    if (current.length > 400) { paragraphs.push(current.trim()); current = ""; }
+    if (current.length > MAX_PARAGRAPH) { paragraphs.push(current.trim()); current = ""; }
   }
   if (current.trim()) paragraphs.push(current.trim());
   const total = text.length || 1;

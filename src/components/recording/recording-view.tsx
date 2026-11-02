@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Flag, Lock, MoreHorizontal, Palette, Plus, Share2, Sparkles, StickyNote, ThumbsDown, ThumbsUp, Wand2,
+  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Flag, Lock, MoreHorizontal, Palette, Plus, RotateCcw, Share2, Sparkles, StickyNote, ThumbsDown, ThumbsUp, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,7 +15,7 @@ import {
 import { StatusTag } from "@/components/recordings-table";
 import { AskPanel } from "@/components/recording/ask-panel";
 import { AudioBar } from "@/components/recording/audio-bar";
-import { TranscribeButton, Transcribing, TranscriptionFailed } from "@/components/recording/transcribe";
+import { requestTranscription, TranscribeButton, Transcribing, TranscriptionFailed } from "@/components/recording/transcribe";
 import { MindMap } from "@/components/recording/mind-map";
 import { TemplatePicker } from "@/components/recording/template-picker";
 import { LocalDate } from "@/components/local-date";
@@ -32,6 +33,16 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
   const { recording: r, segments, highlights, summary } = detail;
   const [moving, startMove] = useTransition();
   const [moveError, setMoveError] = useState<string>();
+  const router = useRouter();
+  const [retranscribing, startRetranscribe] = useTransition();
+  const transcribeAgain = () => {
+    if (!confirm("Transcribe this recording again? The transcript, AI highlights, action items and summary are replaced (the summary uses Adaptive). Your own notes and flags are kept.")) return;
+    startRetranscribe(async () => {
+      const err = await requestTranscription(r.id);
+      setMoveError(err ?? undefined);
+      if (!err) router.refresh();
+    });
+  };
   const move = (to: Workspace) =>
     startMove(async () => {
       const res = await moveRecordings([r.id], to.id);
@@ -97,7 +108,14 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                 <DropdownMenuItem><FileText /> Publish as web page</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon-sm" aria-label="More" className="hidden sm:inline-flex"><MoreHorizontal /></Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="More" />}><MoreHorizontal /></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled={!audioSrc || r.status === "processing" || retranscribing} onClick={transcribeAgain}>
+                  <RotateCcw /> {retranscribing ? "Starting…" : "Transcribe again"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="ghost" size="icon-sm" aria-label="Ask Echo" className="lg:hidden" onClick={() => setMobileAsk(true)}><Sparkles /></Button>
             {!askOpen && <Button variant="ghost" size="sm" className="hidden lg:inline-flex" onClick={() => setAskOpen(true)}><Sparkles /> Ask Echo</Button>}
           </div>

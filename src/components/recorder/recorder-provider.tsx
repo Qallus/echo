@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { RecordingSource, Workspace } from "@/lib/types";
-import { extensionFor, pickMimeType, startCapture, type Capture, type CaptureMode } from "@/lib/recorder/media";
+import { extensionFor, pickMimeType, readRms, startCapture, type Capture, type CaptureMode } from "@/lib/recorder/media";
 import { saveRecording } from "@/lib/recorder/save";
 import { requestTranscription } from "@/components/recording/transcribe";
 import { RecorderPanel } from "./recorder-panel";
@@ -23,6 +23,7 @@ type Ctx = {
   elapsed: number;
   error: string | null;
   analyser: AnalyserNode | null;
+  silent: boolean; // nothing heard for 15 seconds while recording
   pipSupported: boolean;
   inPip: boolean;
   openStart: (source: RecordingSource) => void;
@@ -38,6 +39,9 @@ type Ctx = {
   downloadAudio: () => void;
   discard: () => void;
 };
+
+const SILENCE_RMS = 0.0005; // below this the mic is hearing nothing at all
+const SILENCE_MS = 15_000;
 
 const RecorderContext = createContext<Ctx | null>(null);
 export const useRecorder = () => {
@@ -82,6 +86,7 @@ export function RecorderProvider({ workspaces, userId, children }: { workspaces:
   const [uploadFiles, setUploadFiles] = useState<File[] | null>(null);
   const [pip, setPip] = useState<PipWindow | null>(null);
   const [pipSupported, setPipSupported] = useState(false);
+  const [silent, setSilent] = useState(false);
 
   const recorder = useRef<MediaRecorder | null>(null);
   const capture = useRef<Capture | null>(null);
@@ -103,6 +108,24 @@ export function RecorderProvider({ workspaces, userId, children }: { workspaces:
     const t = setInterval(() => setElapsed(Math.floor(seconds())), 250);
     return () => clearInterval(t);
   }, [status, seconds]);
+
+  // Silence watch: if the microphone hears nothing for SILENCE_MS (muted,
+  // unplugged, or taken over by a phone call), warn in the panel and the tab
+  // title. Interval rather than animation frames so it keeps running in a
+  // background tab (browsers slow it to about once a second, which is enough).
+  useEffect(() => {
+    if (status !== "recording" || !analyser) return;
+    const buf = new Float32Array(analyser.fftSize);
+    let lastHeard = Date.now();
+    const title = document.title;
+    const t = setInterval(() => {
+      if (readRms(analyser, buf) > SILENCE_RMS) lastHeard = Date.now();
+      const quiet = Date.now() - lastHeard > SILENCE_MS;
+      setSilent(quiet);
+      document.title = quiet ? "No sound · Echo is recording" : title;
+    }, 500);
+    return () => { clearInterval(t); setSilent(false); document.title = title; };
+  }, [status, analyser]);
 
   // Don't lose a recording to an accidental tab close.
   useEffect(() => {
@@ -221,7 +244,7 @@ export function RecorderProvider({ workspaces, userId, children }: { workspaces:
   };
 
   const ctx: Ctx = {
-    workspaces, status, session, notes, elapsed, error, analyser, pipSupported, inPip: Boolean(pip),
+    workspaces, status, session, notes, elapsed, error, analyser, silent, pipSupported, inPip: Boolean(pip),
     openStart: (source) => { if (status === "idle") setStartSource(source); },
     openUpload: (files) => setUploadFiles(files ?? []),
     start, pause, resume, stop, addNote, flag, popOut,

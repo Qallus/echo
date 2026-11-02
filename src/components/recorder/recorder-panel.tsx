@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  AudioLines, Briefcase, ChevronLeft, ChevronRight, Download, Flag, Loader2, Lock, Maximize2, Minus, Pause,
+  AudioLines, Briefcase, ChevronLeft, ChevronRight, Download, Flag, Loader2, Lock, Maximize2, MicOff, Minus, Pause,
   PictureInPicture2, Play, RotateCcw, Square, SquarePen, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ export function RecorderPanel({ inPip = false }: { inPip?: boolean }) {
         className="fixed right-4 bottom-[calc(var(--bottom-nav)+1rem)] z-40 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm shadow-lg hover:bg-muted">
         <span className={cn("size-2 rounded-full bg-red-500", r.status === "recording" && "animate-pulse")} />
         {r.status === "paused" ? "Paused" : "Recording"} · {formatClock(r.elapsed)}
+        {r.silent && <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400"><MicOff className="size-3.5" /> No sound</span>}
         <Maximize2 className="size-3.5 text-muted-foreground" />
       </button>
     );
@@ -80,6 +81,16 @@ export function RecorderPanel({ inPip = false }: { inPip?: boolean }) {
           <h2 className="text-lg text-muted-foreground">Meeting highlights</h2>
           <p className="truncate text-xs text-muted-foreground">{r.session.title}</p>
         </div>
+
+        {r.silent && (
+          <div role="alert" className="flex gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2.5 text-sm">
+            <MicOff className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="space-y-1">
+              <p className="font-medium">Echo hasn&apos;t heard anything for 15 seconds</p>
+              <p className="text-xs text-muted-foreground">If people are talking, check that your microphone is on and not muted. On a phone call, your phone gives the microphone to the call: put it on speaker next to another device running Echo.</p>
+            </div>
+          </div>
+        )}
 
         {recording && (
           <form className={cn("flex items-center gap-2 rounded-lg border bg-muted/40 px-2.5", tip === 0 && "ring-2 ring-primary")}
