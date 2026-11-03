@@ -1,7 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MAX_TRANSCRIBE_BYTES, parseSetting, type TranscriptionSetting } from "./models";
-import { transcribeWithOpenAI } from "./openai";
+import { TranscriptionAuthError, transcribeWithOpenAI } from "./openai";
+import { customerKeys, logUsage, reportKeyFailure } from "@/lib/ai/providers";
+import { decryptKey } from "@/lib/ai/keys";
 import { generateSummary } from "@/lib/summaries/generate";
 
 export async function getTranscriptionSetting(supabase: SupabaseClient): Promise<TranscriptionSetting> {
@@ -28,7 +30,7 @@ export async function startTranscription(supabase: SupabaseClient, recordingId: 
 export async function runTranscription(supabase: SupabaseClient, recordingId: string): Promise<void> {
   try {
     const { data: rec, error } = await supabase
-      .from("recordings").select("storage_path, duration_sec").eq("id", recordingId).single();
+      .from("recordings").select("storage_path, duration_sec, workspace_id").eq("id", recordingId).single();
     if (error || !rec?.storage_path) throw new Error("This recording has no audio to transcribe.");
 
     const { data: audio, error: dlErr } = await supabase.storage.from("recordings").download(rec.storage_path);
@@ -39,7 +41,7 @@ export async function runTranscription(supabase: SupabaseClient, recordingId: st
 
     const setting = await getTranscriptionSetting(supabase);
     const fileName = rec.storage_path.split("/").pop() ?? "audio.webm";
-    const result = await transcribeWithOpenAI(audio, fileName, setting.model, rec.duration_sec);
+    const result = await transcribe(supabase, audio, fileName, setting.model, rec.duration_sec, rec.workspace_id);
     if (!result.segments.length) throw new Error("No speech was found in this recording.");
 
     // New segments go after the old ones, then the old ones are removed, so a
@@ -73,4 +75,31 @@ export async function runTranscription(supabase: SupabaseClient, recordingId: st
     console.error(`[transcribe] ${recordingId}:`, message);
     await supabase.from("recordings").update({ status: "failed", processing_error: message }).eq("id", recordingId);
   }
+}
+
+// The customer's own OpenAI key first (if they've added one), then Echo's.
+// Each attempt is logged in ai_usage.
+async function transcribe(supabase: SupabaseClient, audio: Blob, fileName: string, model: TranscriptionSetting["model"], durationSec: number, workspaceId: string) {
+  const own = (await customerKeys(supabase, workspaceId)).find((k) => k.provider === "gpt");
+  const attempts: { key: string; keyId?: string; source: "own" | "echo" }[] = [];
+  if (own) {
+    try { attempts.push({ key: decryptKey(own.ciphertext), keyId: own.id, source: "own" }); } catch { /* unreadable key: use Echo's */ }
+  }
+  if (process.env.OPENAI_API_KEY) attempts.push({ key: process.env.OPENAI_API_KEY, source: "echo" });
+  if (!attempts.length) throw new Error("Transcription isn't set up: OPENAI_API_KEY is missing.");
+
+  for (const [i, a] of attempts.entries()) {
+    const started = Date.now();
+    const usage = { workspaceId, feature: "transcription", fallback: i > 0, resolved: { provider: "gpt", modelName: model, keySource: a.source } } as const;
+    try {
+      const result = await transcribeWithOpenAI(audio, fileName, model, durationSec, a.key);
+      void logUsage(supabase, { ...usage, audioSeconds: result.durationSec ?? durationSec, latencyMs: Date.now() - started });
+      return result;
+    } catch (e) {
+      void logUsage(supabase, { ...usage, ok: false, error: e instanceof Error ? e.message : String(e), latencyMs: Date.now() - started });
+      if (!(e instanceof TranscriptionAuthError) || !a.keyId || i === attempts.length - 1) throw e;
+      await reportKeyFailure(supabase, a.keyId, e);
+    }
+  }
+  throw new Error("Transcription failed.");
 }

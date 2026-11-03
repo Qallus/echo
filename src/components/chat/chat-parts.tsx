@@ -7,19 +7,19 @@ import { ArrowUp, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MODELS, type ModelId } from "@/lib/ai/models";
+import { MODELS } from "@/lib/ai/models";
 import type { ChatMessage, ModelStatus } from "@/hooks/use-echo-chat";
 import { cn } from "@/lib/utils";
 
-export function ModelSelect({ value, onChange, models }: { value: ModelId; onChange: (m: ModelId) => void; models: ModelStatus[] }) {
-  const list = models.length ? models : MODELS.map((m) => ({ ...m, available: true }));
+export function ModelSelect({ value, onChange, models }: { value: string; onChange: (m: string) => void; models: ModelStatus[] }) {
+  const list: ModelStatus[] = models.length ? models : MODELS.map((m) => ({ ...m, available: true }));
   return (
-    <Select items={list.map((m) => ({ value: m.id, label: m.label }))} value={value} onValueChange={(v) => v && onChange(v as ModelId)}>
+    <Select items={list.map((m) => ({ value: m.id, label: m.label }))} value={value} onValueChange={(v) => v && onChange(v as string)}>
       <SelectTrigger size="sm" className="w-32"><SelectValue /></SelectTrigger>
       <SelectContent>
         {list.map((m) => (
           <SelectItem key={m.id} value={m.id} disabled={!m.available}>
-            {m.label}{!m.available && <span className="text-xs text-muted-foreground"> · no key</span>}
+            {m.label}{m.ownKey && <span className="text-xs text-muted-foreground"> · your key</span>}{!m.available && <span className="text-xs text-muted-foreground"> · no key</span>}
           </SelectItem>
         ))}
       </SelectContent>
@@ -35,7 +35,7 @@ export function Markdown({ children }: { children: string }) {
   );
 }
 
-export function MessageList({ messages, streaming, className }: { messages: ChatMessage[]; streaming: boolean; className?: string }) {
+export function MessageList({ messages, streaming, className, models = [] }: { messages: ChatMessage[]; streaming: boolean; className?: string; models?: ModelStatus[] }) {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [messages]);
   return (
@@ -45,7 +45,7 @@ export function MessageList({ messages, streaming, className }: { messages: Chat
           <div key={i} className="ml-8 whitespace-pre-wrap rounded-lg bg-muted px-3 py-2 text-sm">{m.content}</div>
         ) : (
           <div key={i} className="space-y-1">
-            <div className="text-xs text-muted-foreground">{MODELS.find((x) => x.id === m.model)?.label ?? "Echo"}</div>
+            <div className="text-xs text-muted-foreground">{[...models, ...MODELS].find((x) => x.id === m.model)?.label ?? "Echo"}</div>
             {m.content ? <Markdown>{m.content}</Markdown> : streaming && <div className="text-sm text-muted-foreground animate-pulse">Thinking…</div>}
           </div>
         ),
@@ -59,7 +59,7 @@ export function Composer({
   onSend, onStop, streaming, placeholder, model, onModelChange, models, rows = 2,
 }: {
   onSend: (text: string) => void; onStop: () => void; streaming: boolean; placeholder: string;
-  model: ModelId; onModelChange: (m: ModelId) => void; models: ModelStatus[]; rows?: number;
+  model: string; onModelChange: (m: string) => void; models: ModelStatus[]; rows?: number;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const submit = () => {

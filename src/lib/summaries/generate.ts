@@ -2,8 +2,8 @@ import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getLanguageModel, isConfigured } from "@/lib/ai/providers";
-import type { ModelId } from "@/lib/ai/models";
+import { customerKeys, logUsage, reportKeyFailure, resolveCandidates, type ModelChoice, type Resolved } from "@/lib/ai/providers";
+import { getAiSettings } from "@/lib/ai/settings";
 import { formatClock } from "@/lib/format";
 import { findTemplate } from "@/lib/templates";
 
@@ -33,18 +33,12 @@ const schema = z.object({
   mindMap: z.object({ root: z.string(), branches: z.array(z.string()).describe("4-7 short branch labels.") }),
 });
 
-export type GenerateOptions = { templateId: string; modelId?: ModelId; language?: string };
-
-// Claude first, then ChatGPT, Gemini, Grok and OpenRouter: whichever answers.
-function candidates(preferred?: ModelId): ModelId[] {
-  const order: ModelId[] = [preferred, "claude", "gpt", "gemini", "grok", "openrouter"].filter((m, i, a): m is ModelId => !!m && a.indexOf(m) === i);
-  return order.filter((m) => isConfigured(m));
-}
+export type GenerateOptions = { templateId: string; modelId?: ModelChoice; language?: string; feature?: "summary" | "mcp" };
 
 export async function generateSummary(supabase: SupabaseClient, recordingId: string, opts: GenerateOptions): Promise<{ error?: string }> {
   const template = findTemplate(opts.templateId);
   const [{ data: rec }, { data: segs }] = await Promise.all([
-    supabase.from("recordings").select("id, title").eq("id", recordingId).maybeSingle(),
+    supabase.from("recordings").select("id, title, workspace_id").eq("id", recordingId).maybeSingle(),
     supabase.from("transcript_segments").select("speaker, start_sec, text").eq("recording_id", recordingId).order("position"),
   ]);
   if (!rec) return { error: "Recording not found." };
@@ -57,19 +51,30 @@ Write in ${language}. Be specific and concise. Refer to people by name when the 
 Template: "${template.name}". Sections, in order: ${template.sections.map((s) => `"${s}"`).join(", ")}.${template.guidance ? `\n${template.guidance}` : ""}
 Highlight timestamps must come from the [Ns] markers in the transcript.`;
 
+  // The picked model first, then the Super Admin fallback order. For each,
+  // the customer's own key (if any) is tried before Echo's.
+  const settings = await getAiSettings(supabase);
+  const keys = await customerKeys(supabase, rec.workspace_id);
+  const order = [opts.modelId, ...settings.summaryOrder].filter((m, i, a): m is ModelChoice => !!m && a.indexOf(m) === i);
+  const attempts: Resolved[] = [];
+  for (const choice of order) attempts.push(...(await resolveCandidates(supabase, choice, { workspaceId: rec.workspace_id, settings, keys })));
+
   let lastError = "No AI model is configured.";
-  for (const id of candidates(opts.modelId)) {
-    const picked = getLanguageModel(id);
-    if ("error" in picked) continue;
+  for (const [i, picked] of attempts.entries()) {
+    const started = Date.now();
+    const usage = { workspaceId: rec.workspace_id, feature: opts.feature ?? "summary", resolved: picked, fallback: i > 0, settings } as const;
     try {
-      const { output } = await generateText({
+      const { output, usage: tokens } = await generateText({
         model: picked.model, system, prompt: `Recording: "${rec.title}"\n\nTranscript:\n${transcript}`, output: Output.object({ schema }),
       });
+      void logUsage(supabase, { ...usage, inputTokens: tokens.inputTokens, outputTokens: tokens.outputTokens, latencyMs: Date.now() - started });
       await save(supabase, recordingId, output, template.name, picked.label, language, rec.title);
       return {};
     } catch (e) {
       lastError = `${picked.label}: ${e instanceof Error ? e.message : String(e)}`;
       console.error(`[summary] ${recordingId}`, lastError);
+      if (picked.keyId) await reportKeyFailure(supabase, picked.keyId, e);
+      void logUsage(supabase, { ...usage, ok: false, error: lastError, latencyMs: Date.now() - started });
     }
   }
   return { error: lastError.slice(0, 400) };

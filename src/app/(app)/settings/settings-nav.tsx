@@ -8,6 +8,7 @@ const TABS = [
   { href: "/settings", label: "Profile" },
   { href: "/settings/account", label: "Account" },
   { href: "/settings/notifications", label: "Notifications" },
+  { href: "/settings/ai", label: "AI models" },
 ];
 
 export function SettingsNav() {

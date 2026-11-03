@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DEFAULT_MODEL, type ModelId, type ModelOption } from "@/lib/ai/models";
+import { DEFAULT_MODEL, type ModelOption } from "@/lib/ai/models";
 
-export type ChatMessage = { role: "user" | "assistant"; content: string; model?: ModelId };
-export type ModelStatus = ModelOption & { available: boolean };
+export type ChatMessage = { role: "user" | "assistant"; content: string; model?: string };
+export type ModelStatus = ModelOption & { available: boolean; ownKey?: boolean };
 
 // Streams replies from /api/chat. One hook instance = one conversation.
 export function useEchoChat({ recordingId }: { recordingId?: string } = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [model, setModel] = useState<ModelId>(DEFAULT_MODEL);
+  const [model, setModel] = useState<string>(DEFAULT_MODEL);
   const [models, setModels] = useState<ModelStatus[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,8 @@ export function useEchoChat({ recordingId }: { recordingId?: string } = {}) {
       .then((r) => r.json())
       .then((list: ModelStatus[]) => {
         setModels(list);
-        setModel((cur) => (list.find((m) => m.id === cur)?.available ? cur : list.find((m) => m.available)?.id ?? cur));
+        // The first available model is the Super Admin default (the list is sorted).
+        setModel((cur) => (cur !== DEFAULT_MODEL && list.find((m) => m.id === cur)?.available ? cur : list.find((m) => m.available)?.id ?? cur));
       })
       .catch(() => {});
   }, []);

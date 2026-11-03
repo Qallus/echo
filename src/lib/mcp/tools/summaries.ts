@@ -47,7 +47,7 @@ export function registerSummaryTools(server: McpServer, ctx: McpContext) {
     annotations: { ...WRITE, idempotentHint: false },
   }, async ({ recording_id, template_id, language }) => {
     const ws = await recordingWorkspace(ctx, recording_id);
-    const res = await generateSummary(ctx.supabase, recording_id, { templateId: template_id, language });
+    const res = await generateSummary(ctx.supabase, recording_id, { templateId: template_id, language, feature: "mcp" });
     if (res.error) throw new ToolError(res.error);
     const { data } = await ctx.supabase.from("summaries").select("template, model, title, overview, sections").eq("recording_id", recording_id).maybeSingle();
     return { workspaceId: ws, targetId: recording_id, data: { summary: data } };

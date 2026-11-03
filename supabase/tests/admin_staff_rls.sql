@@ -8,8 +8,10 @@ do $$
 declare
   a uuid; b uuid; b_email text; a_email text; ws uuid; r text := E'\n'; n int; j jsonb;
 begin
-  select user_id into a from public.platform_staff where role = 'owner' limit 1;
+  select user_id into a from public.platform_staff where role = 'owner' order by created_at limit 1;
   select id into b from public.profiles where id <> a order by created_at limit 1;
+  -- B plays a customer: take them off staff for this (rolled-back) run.
+  delete from public.platform_staff where user_id = b;
   select email into a_email from auth.users where id = a;
   select email into b_email from auth.users where id = b;
 

@@ -9,7 +9,7 @@ import { SAMPLE, SAMPLE_FOLDERS } from "@/lib/sample-data";
 import { siteOrigin } from "@/lib/site";
 import { relocateAudio } from "@/lib/storage";
 import { generateSummary } from "@/lib/summaries/generate";
-import { isModelId } from "@/lib/ai/models";
+import { isModelChoice } from "@/lib/ai/providers";
 
 // Server actions. Each uses the signed-in user's client, so RLS still applies.
 // Database guards raise plain-English messages, so those are shown as-is.
@@ -245,7 +245,7 @@ export async function generateRecordingSummary(recordingId: string, templateId: 
   const supabase = await createClient();
   const res = await generateSummary(supabase, recordingId, {
     templateId,
-    modelId: isModelId(modelId) ? modelId : undefined,
+    modelId: isModelChoice(modelId) ? modelId : undefined,
     language: language?.slice(0, 40),
   });
   revalidatePath(`/recordings/${recordingId}`);

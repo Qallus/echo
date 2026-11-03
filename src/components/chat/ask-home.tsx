@@ -41,7 +41,7 @@ export function AskHome() {
         <Button variant="ghost" size="sm" onClick={chat.reset}><RotateCcw /> New chat</Button>
       </div>
       <div className="flex-1 overflow-y-auto pb-6">
-        <MessageList messages={chat.messages} streaming={chat.streaming} />
+        <MessageList messages={chat.messages} streaming={chat.streaming} models={chat.models} />
         <div className="mt-4"><ChatError error={chat.error} /></div>
       </div>
       <div className="pb-6">{composer}</div>

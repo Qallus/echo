@@ -1,19 +1,23 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import type { LanguageModel } from "ai";
-import type { ModelId } from "@/lib/ai/models";
+import { MODELS, type ModelId } from "@/lib/ai/models";
+import { decryptKey } from "./keys";
+import { estimateCost, getAiSettings, type AiSettings } from "./settings";
 
-// Each provider: which env var holds the key, which model it runs by default
-// (override with the *_MODEL env var), and how to build the SDK model.
+// Each provider: which env var holds Echo's key, its default model (override
+// with the *_MODEL env var or Super Admin), and how to build the SDK model.
 const PROVIDERS: Record<ModelId, { keyEnv: string; modelEnv: string; defaultModel: string; build: (key: string, model: string) => LanguageModel }> = {
   claude: {
     keyEnv: "ANTHROPIC_API_KEY", modelEnv: "ANTHROPIC_MODEL", defaultModel: "claude-sonnet-5-5",
-    // Keys not scoped to a workspace must name one (ANTHROPIC_WORKSPACE_ID).
+    // Echo's key isn't scoped to a workspace, so it names one (ANTHROPIC_WORKSPACE_ID).
     build: (apiKey, model) => createAnthropic({
       apiKey,
-      headers: process.env.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": process.env.ANTHROPIC_WORKSPACE_ID } : undefined,
+      headers: apiKey === process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_WORKSPACE_ID
+        ? { "anthropic-workspace-id": process.env.ANTHROPIC_WORKSPACE_ID } : undefined,
     })(model),
   },
   gpt: {
@@ -47,15 +51,108 @@ const PROVIDERS: Record<ModelId, { keyEnv: string; modelEnv: string; defaultMode
   },
 };
 
+const LABELS = Object.fromEntries(MODELS.map((m) => [m.id, m.label])) as Record<ModelId, string>;
+const isBuiltIn = (id: string): id is ModelId => id in PROVIDERS;
+
+// A model choice: a built-in provider, or "custom:<id>" for a Super Admin custom provider.
+export type ModelChoice = ModelId | `custom:${string}`;
+export const isModelChoice = (v: unknown): v is ModelChoice =>
+  typeof v === "string" && (isBuiltIn(v) || /^custom:[0-9a-f-]{36}$/i.test(v));
+
+export type KeySource = "own" | "echo" | "custom";
+export type Resolved = { model: LanguageModel; label: string; provider: string; modelName: string; keySource: KeySource; keyId?: string };
+
+// Echo's own key is configured for this provider (env var set).
 export function isConfigured(id: ModelId) {
   return Boolean(process.env[PROVIDERS[id].keyEnv]);
 }
 
-const LABELS: Record<ModelId, string> = { claude: "Claude", gpt: "ChatGPT", gemini: "Gemini", grok: "Grok", kimi: "Kimi", openrouter: "OpenRouter" };
+export const echoModelName = (id: ModelId, settings: AiSettings) =>
+  settings.models[id] || process.env[PROVIDERS[id].modelEnv] || PROVIDERS[id].defaultModel;
 
-export function getLanguageModel(id: ModelId): { model: LanguageModel; label: string } | { error: string } {
+export type CustomerKey = { id: string; provider: ModelId; ciphertext: string; model: string | null; status: string };
+
+// The keys this user's requests should use in this workspace (or their own
+// keys when no workspace applies). Empty if the server can't decrypt.
+export async function customerKeys(supabase: SupabaseClient, workspaceId?: string | null): Promise<CustomerKey[]> {
+  const { data } = await supabase.rpc("resolve_ai_keys", { p_workspace: workspaceId ?? null });
+  return (data ?? []) as CustomerKey[];
+}
+
+// What to try, in order, for one choice: the customer's own key (if they have
+// one), then Echo's key. A custom provider is used on its own.
+export async function resolveCandidates(
+  supabase: SupabaseClient,
+  choice: ModelChoice,
+  opts: { workspaceId?: string | null; settings?: AiSettings; keys?: CustomerKey[] } = {},
+): Promise<Resolved[]> {
+  const settings = opts.settings ?? (await getAiSettings(supabase));
+  if (choice.startsWith("custom:")) {
+    const { data } = await supabase.rpc("resolve_custom_provider", { p_id: choice.slice(7) })
+      .maybeSingle<{ id: string; name: string; base_url: string; ciphertext: string | null; model: string }>();
+    if (!data) return [];
+    const apiKey = data.ciphertext ? decryptKey(data.ciphertext) : "not-needed";
+    return [{ model: createOpenAI({ apiKey, baseURL: data.base_url }).chat(data.model), label: data.name, provider: `custom:${data.id}`, modelName: data.model, keySource: "custom" }];
+  }
+
+  const id = choice as ModelId;
   const p = PROVIDERS[id];
-  const key = process.env[p.keyEnv];
-  if (!key) return { error: `${p.keyEnv} is not set on the server.` };
-  return { model: p.build(key, process.env[p.modelEnv] || p.defaultModel), label: LABELS[id] };
+  const out: Resolved[] = [];
+  const own = (opts.keys ?? (await customerKeys(supabase, opts.workspaceId))).find((k) => k.provider === id);
+  if (own) {
+    try {
+      const modelName = own.model || echoModelName(id, settings);
+      out.push({ model: p.build(decryptKey(own.ciphertext), modelName), label: LABELS[id], provider: id, modelName, keySource: "own", keyId: own.id });
+    } catch (e) {
+      console.error(`[ai] couldn't decrypt ${id} key ${own.id}:`, e instanceof Error ? e.message : e);
+    }
+  }
+  const echoKey = process.env[p.keyEnv];
+  if (echoKey && settings.enabled.includes(id)) {
+    const modelName = echoModelName(id, settings);
+    out.push({ model: p.build(echoKey, modelName), label: LABELS[id], provider: id, modelName, keySource: "echo" });
+  }
+  return out;
+}
+
+// A customer key failed: mark it and notify its owner (at most once a day).
+export async function reportKeyFailure(supabase: SupabaseClient, keyId: string, error: unknown) {
+  const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+  await supabase.rpc("report_ai_key_failure", { p_key: keyId, p_error: message });
+}
+
+export type UsageRow = {
+  workspaceId?: string | null; feature: "chat" | "summary" | "transcription" | "mcp" | "test";
+  resolved: Pick<Resolved, "provider" | "modelName" | "keySource">; fallback?: boolean;
+  inputTokens?: number; outputTokens?: number; audioSeconds?: number; ok?: boolean; latencyMs?: number; error?: string;
+  settings?: AiSettings;
+};
+
+// One ai_usage row per AI call (never throws: usage logging mustn't break a request).
+export async function logUsage(supabase: SupabaseClient, u: UsageRow) {
+  try {
+    const settings = u.settings ?? (await getAiSettings(supabase));
+    const cost = u.audioSeconds != null
+      ? (u.audioSeconds / 60) * settings.transcriptionCentsPerMinute
+      : estimateCost(settings, u.resolved.modelName, u.inputTokens, u.outputTokens);
+    const { error } = await supabase.from("ai_usage").insert({
+      workspace_id: u.workspaceId ?? null, feature: u.feature, provider: u.resolved.provider, model: u.resolved.modelName,
+      key_source: u.resolved.keySource, fallback: u.fallback ?? false,
+      input_tokens: u.inputTokens ?? null, output_tokens: u.outputTokens ?? null, audio_seconds: u.audioSeconds ?? null,
+      cost_cents: cost, ok: u.ok ?? true, latency_ms: u.latencyMs ?? null, error: u.error?.slice(0, 500) ?? null,
+    });
+    if (error) console.error("[ai usage]", error.message);
+  } catch (e) {
+    console.error("[ai usage]", e instanceof Error ? e.message : e);
+  }
+}
+
+// For the settings "Test" button: builds a model from a raw key.
+export function buildWithKey(id: ModelId, apiKey: string, modelName?: string | null) {
+  const p = PROVIDERS[id];
+  return p.build(apiKey, modelName || p.defaultModel);
+}
+
+export function buildCustom(baseURL: string, apiKey: string | null, model: string) {
+  return createOpenAI({ apiKey: apiKey || "not-needed", baseURL }).chat(model);
 }

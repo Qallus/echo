@@ -2,9 +2,10 @@
 
 export type ModelId = "claude" | "gpt" | "gemini" | "grok" | "kimi" | "openrouter";
 
-export type ModelOption = { id: ModelId; label: string; vendor: string };
+// id is a ModelId, or "custom:<id>" for a Super Admin custom provider.
+export type ModelOption = { id: string; label: string; vendor: string };
 
-export const MODELS: ModelOption[] = [
+export const MODELS: (ModelOption & { id: ModelId })[] = [
   { id: "claude", label: "Claude", vendor: "Anthropic" },
   { id: "gpt", label: "ChatGPT", vendor: "OpenAI" },
   { id: "gemini", label: "Gemini", vendor: "Google" },

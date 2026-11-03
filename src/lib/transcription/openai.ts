@@ -9,12 +9,13 @@ const ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 type Diarized = { duration?: number; segments?: { speaker: string; start: number; end: number; text: string }[] };
 type Plain = { text?: string };
 
-// POST /v1/audio/transcriptions. The diarize model returns speaker-labelled,
-// timestamped segments; gpt-transcribe returns text only.
-export async function transcribeWithOpenAI(audio: Blob, fileName: string, model: OpenAIModel, durationSec: number): Promise<TranscriptResult> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("Transcription isn't set up: OPENAI_API_KEY is missing.");
+// A rejected key (401/402/403/429), so the caller can fall back to Echo's key.
+export class TranscriptionAuthError extends Error {}
 
+// POST /v1/audio/transcriptions with the customer's own OpenAI key or Echo's.
+// The diarize model returns speaker-labelled, timestamped segments;
+// gpt-transcribe returns text only.
+export async function transcribeWithOpenAI(audio: Blob, fileName: string, model: OpenAIModel, durationSec: number, key: string): Promise<TranscriptResult> {
   const form = new FormData();
   form.append("file", audio, fileName);
   form.append("model", model);
@@ -28,7 +29,8 @@ export async function transcribeWithOpenAI(audio: Blob, fileName: string, model:
   const res = await fetch(ENDPOINT, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-    throw new Error(`OpenAI couldn't transcribe this (${res.status}): ${body?.error?.message ?? res.statusText}`);
+    const message = `OpenAI couldn't transcribe this (${res.status}): ${body?.error?.message ?? res.statusText}`;
+    throw [401, 402, 403, 429].includes(res.status) ? new TranscriptionAuthError(message) : new Error(message);
   }
 
   if (model === "gpt-4o-transcribe-diarize") {

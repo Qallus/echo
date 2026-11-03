@@ -31,7 +31,7 @@ export function AskPanel({ recordingId, onClose, className }: { recordingId: str
             ))}
           </div>
         )}
-        <MessageList messages={chat.messages} streaming={chat.streaming} />
+        <MessageList messages={chat.messages} streaming={chat.streaming} models={chat.models} />
         <ChatError error={chat.error} />
       </div>
 
