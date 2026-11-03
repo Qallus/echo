@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Bot, Braces, Gauge, KeyRound, Plug, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
+import { DevTabs } from "@/components/marketing/dev-tabs";
 import { COMPANY } from "@/lib/company";
 
 export const metadata = {
@@ -90,16 +91,17 @@ function Code({ code, label }: { code: string; label?: string }) {
     <div className="overflow-hidden rounded-xl border bg-neutral-950 text-neutral-100">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5">
         <span className="text-xs text-neutral-400">{label}</span>
-        <CopyButton value={code} />
+        {/* Dark variant: the default outline button is near-white on this panel. */}
+        <CopyButton value={code} className="border-white/15 bg-white/10 text-neutral-100 hover:bg-white/20 hover:text-white dark:border-white/15 dark:bg-white/10" />
       </div>
       <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed"><code>{code}</code></pre>
     </div>
   );
 }
 
-function Section({ id, icon: Icon, title, intro, children }: { id: string; icon: typeof Plug; title: string; intro: string; children: React.ReactNode }) {
+function Section({ id, icon: Icon, title, intro, children, className = "border-t py-14" }: { id: string; icon: typeof Plug; title: string; intro: string; children: React.ReactNode; className?: string }) {
   return (
-    <section id={id} className="scroll-mt-24 space-y-5 border-t py-14">
+    <section id={id} className={`scroll-mt-24 space-y-5 ${className}`}>
       <div className="max-w-2xl space-y-2">
         <Icon className="size-5" />
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
@@ -123,23 +125,11 @@ export default function DevelopersPage() {
           <Button size="lg" nativeButton={false} render={<Link href="/developer" />}><KeyRound /> Get an API key</Button>
           <Button size="lg" variant="outline" nativeButton={false} render={<Link href="#api" />}>Read the API reference</Button>
         </div>
-        <nav className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { href: "#mcp", icon: Bot, title: "Claude connector", desc: "MCP server with OAuth" },
-            { href: "#api", icon: Braces, title: "REST API", desc: "JSON over HTTPS" },
-            { href: "#webhooks", icon: Webhook, title: "Webhooks", desc: "Signed, retried events" },
-            { href: "#limits", icon: Gauge, title: "Limits", desc: "Rate limits and errors" },
-          ].map(({ href, icon: Icon, title, desc }) => (
-            <a key={href} href={href} className="rounded-xl border p-4 hover:bg-muted/40">
-              <Icon className="mb-2 size-5" />
-              <div className="font-medium">{title}</div>
-              <div className="text-sm text-muted-foreground">{desc}</div>
-            </a>
-          ))}
-        </nav>
       </header>
 
-      <Section id="mcp" icon={Bot} title="Claude connector (MCP)" intro="Give Claude on the web, desktop and phone, and Claude Code, the same access you have in Echo. Every tool call is checked against your permissions and logged.">
+      <DevTabs tabs={[
+        { id: "mcp", label: "Claude connector (MCP)", icon: <Bot />, content: (
+      <Section id="mcp" icon={Bot} title="Claude connector (MCP)" className="pt-8 pb-14" intro="Give Claude on the web, desktop and phone, and Claude Code, the same access you have in Echo. Every tool call is checked against your permissions and logged.">
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-3">
           <code className="flex-1 truncate text-sm">{MCP_URL}</code>
           <CopyButton value={MCP_URL} label="Copy URL" />
@@ -174,8 +164,9 @@ export default function DevelopersPage() {
           ))}
         </div>
       </Section>
-
-      <Section id="api" icon={Braces} title="REST API" intro="A JSON API for syncing Echo data into CRMs, data warehouses, help desks and internal tools. Keys are created per workspace and can be limited to read-only.">
+        ) },
+        { id: "api", label: "REST API", icon: <Braces />, content: (
+      <Section id="api" icon={Braces} title="REST API" className="pt-8 pb-14" intro="A JSON API for syncing Echo data into CRMs, data warehouses, help desks and internal tools. Keys are created per workspace and can be limited to read-only.">
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3 text-sm">
             <p><span className="font-medium">Base URL</span> <code>{API_BASE}</code></p>
@@ -199,8 +190,9 @@ export default function DevelopersPage() {
           </table>
         </div>
       </Section>
-
-      <Section id="webhooks" icon={Webhook} title="Webhooks" intro="Get an HTTPS POST the moment something happens, instead of polling. Deliveries are signed, retried with backoff for up to 24 hours, and logged so you can replay them.">
+        ) },
+        { id: "webhooks", label: "Webhooks", icon: <Webhook />, content: (
+      <Section id="webhooks" icon={Webhook} title="Webhooks" className="pt-8 pb-14" intro="Get an HTTPS POST the moment something happens, instead of polling. Deliveries are signed, retried with backoff for up to 24 hours, and logged so you can replay them.">
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="overflow-hidden rounded-xl border">
             <table className="w-full text-sm">
@@ -216,6 +208,8 @@ export default function DevelopersPage() {
           </div>
         </div>
       </Section>
+        ) },
+      ]} />
 
       <Section id="limits" icon={Gauge} title="Limits" intro="Generous by default, and higher on Business plans. Responses include RateLimit headers so clients can slow down before they're throttled.">
         <div className="grid gap-4 sm:grid-cols-3">
