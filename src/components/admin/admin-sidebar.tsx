@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bot, LayoutDashboard, LogOut, Settings, ShieldCheck, UserRound, Users } from "lucide-react";
+import { ArrowLeft, Bot, Building2, Contact, CreditCard, LayoutDashboard, LogOut, Settings, ShieldCheck, SquareKanban, UserRound, Users } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, useSidebar,
@@ -16,8 +16,22 @@ type Item = { href: string; label: string; icon: typeof Users; permission?: Perm
 // Super Admin navigation (Channel-Cast-OS layout: Main, Operations, Account).
 // Sections join their group as they're built.
 const GROUPS: { label: string; items: Item[] }[] = [
-  { label: "Main", items: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view", exact: true }] },
-  { label: "Operations", items: [{ href: "/admin/ai", label: "AI", icon: Bot, permission: "ai.view" }] },
+  {
+    label: "Main",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view", exact: true },
+      { href: "/admin/contacts", label: "Contacts", icon: Contact, permission: "crm.view" },
+      { href: "/admin/pipeline", label: "Pipeline", icon: SquareKanban, permission: "crm.view" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/admin/clients", label: "Clients", icon: Building2, permission: "crm.view" },
+      { href: "/admin/billing", label: "Billing", icon: CreditCard, permission: "billing.view" },
+      { href: "/admin/ai", label: "AI", icon: Bot, permission: "ai.view" },
+    ],
+  },
   {
     label: "Account",
     items: [
