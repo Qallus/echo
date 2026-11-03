@@ -1,3 +1,5 @@
+import type { SpeakerInfo, SpeakerMap } from "./speakers";
+import type { MentionedDate, VisualItem, VisualKind } from "./visuals";
 // App-level shapes. Mapped from Supabase rows in src/lib/data.ts.
 
 import type { ProfileDetail } from "@/lib/profile-details";
@@ -58,15 +60,26 @@ export type Summary = {
   overview: string;
   keyPoints: string[];
   actionGroups: ActionGroup[];
-  mindMap: { root: string; branches: string[] };
+  mindMap: { root: string; branches: string[]; items?: VisualItem[] };
+  dates?: MentionedDate[];
+  visual?: VisualKind | null;
   title?: string | null;
   sections?: SummarySection[];
   language?: string | null;
   updatedAt?: string;
 };
 
+export type CalendarEvent = {
+  id: string; workspaceId: string; recordingId: string | null; kind: MentionedDate["kind"]; title: string; startsAt: string; endsAt: string;
+  allDay: boolean; location: string | null; notes: string | null; attendees: string[]; createdBy: string | null;
+};
+
 export type RecordingDetail = {
   recording: Recording;
+  speakers: SpeakerMap;
+  /** The recorder, assumed to be the voice that talks most. */
+  owner: SpeakerInfo | null;
+  events: CalendarEvent[];
   segments: Segment[];
   highlights: Highlight[];
   summary: Summary | null;

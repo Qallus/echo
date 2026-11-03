@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  AudioLines, Briefcase, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
+  AudioLines, Briefcase, CalendarDays, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
   LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, UserRound, Users, Video,
 } from "lucide-react";
 import {
@@ -29,6 +29,7 @@ const main = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/", label: "Home", icon: Home },
   { href: "/ask", label: "Ask Echo", icon: Sparkles },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/explore", label: "Explore", icon: Compass },
 ];

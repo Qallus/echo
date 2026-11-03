@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getRecordingDetail, listRecordings, listWorkspaces } from "@/lib/data";
 import { formatClock, formatDuration } from "@/lib/format";
+import { namedLines } from "@/lib/speakers";
 
 // Builds the system prompt from the user's own data (RLS-scoped reads).
 
@@ -16,7 +17,7 @@ export async function buildRecordingPrompt(recordingId: string): Promise<string 
   const d = await getRecordingDetail(recordingId);
   if (!d) return null;
   const r = d.recording;
-  const transcript = d.segments.map((s) => `[${formatClock(s.startSec)}] ${s.speaker}: ${s.text}`).join("\n");
+  const transcript = namedLines(d, formatClock).join("\n");
   const summary = d.summary
     ? [
         `Overview: ${d.summary.overview}`,

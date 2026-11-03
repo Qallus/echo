@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPersonalWorkspace, getRecordingDetail, isUuid, requireUser } from "@/lib/data";
+import { namedLines, readSpeakers, type SpeakerInfo } from "@/lib/speakers";
+import { isVisual, type VisualKind } from "@/lib/visuals";
+import type { CalendarEvent } from "@/lib/types";
 import { formatClock, formatDuration } from "@/lib/format";
 import { SAMPLE, SAMPLE_FOLDERS } from "@/lib/sample-data";
 import { siteOrigin } from "@/lib/site";
@@ -166,7 +169,8 @@ export async function exportRecordings(ids: string[]): Promise<{ filename: strin
   await requireUser();
   const details = (await Promise.all(cleanIds(ids).map(getRecordingDetail))).filter((d) => d !== null);
   const text = details
-    .map(({ recording: r, segments, summary }) => {
+    .map((d) => {
+      const { recording: r, segments, summary } = d;
       const lines = [r.title, `${new Date(r.createdAt).toLocaleString("en-US")} · ${formatDuration(r.durationSec)}`, ""];
       if (summary) {
         lines.push("SUMMARY", summary.overview, "");
@@ -174,7 +178,7 @@ export async function exportRecordings(ids: string[]): Promise<{ filename: strin
         const items = summary.actionGroups.flatMap((g) => g.items.map((i) => `- [${i.done ? "x" : " "}] ${i.text} (${g.owner})`));
         if (items.length) lines.push("ACTION ITEMS", ...items, "");
       }
-      lines.push("TRANSCRIPT", ...(segments.length ? segments.map((s) => `[${formatClock(s.startSec)}] ${s.speaker}: ${s.text}`) : ["No transcript yet."]));
+      lines.push("TRANSCRIPT", ...(segments.length ? namedLines(d, formatClock) : ["No transcript yet."]));
       return lines.join("\n");
     })
     .join("\n\n" + "=".repeat(60) + "\n\n");
@@ -250,4 +254,74 @@ export async function generateRecordingSummary(recordingId: string, templateId: 
   });
   revalidatePath(`/recordings/${recordingId}`);
   return res;
+}
+
+// ---------------------------------------------------------------------------
+// Speakers, summary charts, calendar
+// ---------------------------------------------------------------------------
+
+// Who a speaker label is (null resets it to "Speaker B" etc.). Any member of
+// the recording's workspace can set it.
+export async function setSpeaker(recordingId: string, label: string, info: SpeakerInfo | null): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(recordingId) || !label || label.length > 40) return { error: "Not found." };
+  const supabase = await createClient();
+  const { data: rec } = await supabase.from("recordings").select("speakers").eq("id", recordingId).maybeSingle();
+  if (!rec) return { error: "Not found." };
+  const map = readSpeakers(rec.speakers);
+  const name = info?.name?.trim().slice(0, 80);
+  if (name) map[label] = { name, email: info?.email?.slice(0, 200) ?? null, avatarUrl: info?.avatarUrl?.slice(0, 1000) ?? null, userId: info?.userId && isUuid(info.userId) ? info.userId : null };
+  else delete map[label];
+  const { error } = await supabase.from("recordings").update({ speakers: map }).eq("id", recordingId);
+  if (error) return { error: error.message };
+  revalidatePath(`/recordings/${recordingId}`);
+  return {};
+}
+
+export async function setSummaryVisual(recordingId: string, visual: VisualKind): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(recordingId) || !isVisual(visual)) return { error: "Not found." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("summaries").update({ visual }).eq("recording_id", recordingId);
+  return error ? { error: error.message } : {};
+}
+
+export type EventInput = {
+  id?: string; workspaceId: string; recordingId?: string | null; kind: CalendarEvent["kind"]; title: string;
+  startsAt: string; endsAt: string; allDay: boolean; location?: string | null; notes?: string | null; attendees?: string[];
+};
+
+export async function saveCalendarEvent(input: EventInput): Promise<ActionResult & { id?: string }> {
+  await requireUser();
+  const title = input.title?.trim().slice(0, 200);
+  if (!title) return { error: "Give it a title." };
+  if (!isUuid(input.workspaceId)) return { error: "Pick a workspace." };
+  const starts = Date.parse(input.startsAt), ends = Date.parse(input.endsAt);
+  if (Number.isNaN(starts) || Number.isNaN(ends)) return { error: "Pick a date and time." };
+  if (ends < starts) return { error: "The end is before the start." };
+  const row = {
+    workspace_id: input.workspaceId, recording_id: input.recordingId && isUuid(input.recordingId) ? input.recordingId : null,
+    kind: ["appointment", "event", "deadline"].includes(input.kind) ? input.kind : "appointment", title,
+    starts_at: new Date(starts).toISOString(), ends_at: new Date(ends).toISOString(), all_day: Boolean(input.allDay),
+    location: input.location?.trim().slice(0, 300) || null, notes: input.notes?.trim().slice(0, 5000) || null,
+    attendees: (input.attendees ?? []).map((a) => a.trim().slice(0, 120)).filter(Boolean).slice(0, 30),
+  };
+  const supabase = await createClient();
+  const res = input.id && isUuid(input.id)
+    ? await supabase.from("calendar_events").update(row).eq("id", input.id).select("id").single()
+    : await supabase.from("calendar_events").insert(row).select("id").single();
+  if (res.error) return { error: res.error.message };
+  revalidatePath("/calendar");
+  if (row.recording_id) revalidatePath(`/recordings/${row.recording_id}`);
+  return { id: res.data.id };
+}
+
+export async function deleteCalendarEvent(id: string): Promise<ActionResult> {
+  await requireUser();
+  if (!isUuid(id)) return { error: "Not found." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/calendar");
+  return {};
 }

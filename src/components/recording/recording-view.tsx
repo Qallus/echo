@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  ArrowRightLeft, Briefcase, ChevronRight, Download, FileText, Flag, Lock, MoreHorizontal, Palette, Plus, RotateCcw, Share2, Sparkles, StickyNote, ThumbsDown, ThumbsUp, Wand2,
+  ArrowRightLeft, Briefcase, CalendarPlus, ChevronRight, Download, FileText, Flag, Lock, MoreHorizontal, Palette, Plus, RotateCcw, Share2, Sparkles, StickyNote, ThumbsDown, ThumbsUp, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,21 +16,26 @@ import { StatusTag } from "@/components/recordings-table";
 import { AskPanel } from "@/components/recording/ask-panel";
 import { AudioBar } from "@/components/recording/audio-bar";
 import { requestTranscription, TranscribeButton, Transcribing, TranscriptionFailed } from "@/components/recording/transcribe";
-import { MindMap } from "@/components/recording/mind-map";
+import { DatesCard } from "@/components/recording/dates-card";
+import { SummaryVisual } from "@/components/recording/summary-visual";
+import { Transcript } from "@/components/recording/transcript";
+import { EventDialog, blankDraft, type EventDraft } from "@/components/calendar/event-dialog";
+import { itemsFor } from "@/lib/visuals";
 import { TemplatePicker } from "@/components/recording/template-picker";
 import { LocalDate } from "@/components/local-date";
 import { moveRecordings, toggleActionItem } from "@/lib/actions";
 import { formatClock, formatDuration, spaceLabel } from "@/lib/format";
-import type { Recording, RecordingDetail, Workspace } from "@/lib/types";
+import type { PersonCard, Recording, RecordingDetail, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
   detail: RecordingDetail; list: Recording[]; space: Workspace; moveTargets: Workspace[];
-  audioSrc: string | null; processingError: string | null;
+  audioSrc: string | null; processingError: string | null; people: PersonCard[];
 };
 
-export function RecordingView({ detail, list, space, moveTargets, audioSrc, processingError }: Props) {
+export function RecordingView({ detail, list, space, moveTargets, audioSrc, processingError, people }: Props) {
   const { recording: r, segments, highlights, summary } = detail;
+  const [eventDraft, setEventDraft] = useState<EventDraft | null>(null);
   const [moving, startMove] = useTransition();
   const [moveError, setMoveError] = useState<string>();
   const router = useRouter();
@@ -139,15 +144,9 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
               <TabsContent value="transcript" className="space-y-5">
                 {r.status === "processing" ? <Transcribing /> : r.status === "failed" && !segments.length ? (
                   <TranscriptionFailed recordingId={r.id} message={processingError} />
-                ) : segments.length ? segments.map((s, i) => (
-                  <div key={i} className="grid grid-cols-[56px_1fr] gap-3">
-                    <span className="pt-0.5 text-xs tabular-nums text-muted-foreground">{formatClock(s.startSec)}</span>
-                    <div>
-                      <div className="text-sm font-medium">{s.speaker}</div>
-                      <p className="text-sm leading-relaxed text-foreground/90">{s.text}</p>
-                    </div>
-                  </div>
-                )) : audioSrc ? (
+                ) : segments.length ? (
+                  <Transcript recordingId={r.id} segments={segments} speakers={detail.speakers} owner={detail.owner} people={people} />
+                ) : audioSrc ? (
                   <div className="flex flex-col items-center gap-3 py-20 text-sm text-muted-foreground">
                     No transcript yet
                     <TranscribeButton recordingId={r.id} />
@@ -156,6 +155,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
               </TabsContent>
 
               <TabsContent value="highlights" className="space-y-8">
+                <DatesCard dates={summary?.dates ?? []} events={detail.events} recordingId={r.id} workspace={space} />
                 {highlights.length ? (
                   <>
                     <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Recording highlights</h2>
@@ -171,6 +171,9 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                             <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed text-foreground/85">{h.bullets.map((b) => <li key={b}>{b}</li>)}</ul>
                           )}
                           {h.kind !== "ai" && <p className="text-xs text-muted-foreground">{h.kind === "flag" ? "Flagged during the recording" : "Your note"}</p>}
+                          <Button variant="ghost" size="xs" className="-ml-2 text-muted-foreground" onClick={() => setEventDraft({ ...blankDraft(space.id), recordingId: r.id, title: (h.title || h.text).slice(0, 200), notes: h.bullets?.join("\n") ?? "" })}>
+                            <CalendarPlus /> Add to calendar
+                          </Button>
                         </div>
                       </article>
                     ))}
@@ -222,8 +225,10 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                         ))}
                       </div>
                     </Section>
-                    <Section title="Mind map">
-                      <div className="rounded-xl border p-4"><MindMap {...summary.mindMap} /></div>
+                    <DatesCard dates={summary.dates ?? []} events={detail.events} recordingId={r.id} workspace={space} />
+                    <Section title="Visual">
+                      <SummaryVisual recordingId={r.id} initial={summary.visual ?? null} root={summary.mindMap.root} branches={summary.mindMap.branches}
+                        items={itemsFor(summary.mindMap.items ?? [], summary.mindMap.branches, summary.actionGroups.flatMap((g) => g.items.map((i) => ({ text: i.text, done: i.done, owner: g.owner }))))} />
                     </Section>
                     <div className="flex gap-2 border-t pt-6">
                       <Button variant={vote === "up" ? "secondary" : "outline"} size="sm" onClick={() => setVote("up")}><ThumbsUp /> Good</Button>
@@ -241,6 +246,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
         <AudioBar duration={r.durationSec} src={audioSrc} />
       </div>
 
+      {eventDraft && <EventDialog draft={eventDraft} workspaces={[space]} onClose={() => setEventDraft(null)} />}
       <TemplatePicker recordingId={r.id} open={pickerOpen} onOpenChange={setPickerOpen} current={summary?.template} />
 
       {(askOpen || mobileAsk) && (

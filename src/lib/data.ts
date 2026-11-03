@@ -3,8 +3,10 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { readDetails } from "@/lib/profile-details";
+import { readSpeakers } from "@/lib/speakers";
+import { isVisual, readDates, readItems } from "@/lib/visuals";
 import type {
-  ActionGroup, Folder, PersonCard, SummarySection, Profile, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
+  ActionGroup, CalendarEvent, Folder, PersonCard, SummarySection, Profile, Recording, RecordingDetail, Summary, Workspace, WorkspaceRole,
 } from "@/lib/types";
 
 export const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -68,6 +70,23 @@ type RecordingRow = {
   id: string; workspace_id: string; created_by: string | null; title: string; source: Recording["source"];
   status: Recording["status"]; duration_sec: number; created_at: string; folder_id: string | null; deleted_at: string | null;
 };
+export const EVENT_COLS = "id, workspace_id, recording_id, kind, title, starts_at, ends_at, all_day, location, notes, attendees, created_by";
+type EventRow = { id: string; workspace_id: string; recording_id: string | null; kind: CalendarEvent["kind"]; title: string; starts_at: string; ends_at: string;
+  all_day: boolean; location: string | null; notes: string | null; attendees: unknown; created_by: string | null };
+export const toEvent = (e: EventRow): CalendarEvent => ({
+  id: e.id, workspaceId: e.workspace_id, recordingId: e.recording_id, kind: e.kind, title: e.title, startsAt: e.starts_at, endsAt: e.ends_at,
+  allDay: e.all_day, location: e.location, notes: e.notes, attendees: Array.isArray(e.attendees) ? e.attendees.filter((a): a is string => typeof a === "string") : [],
+  createdBy: e.created_by,
+});
+
+// Calendar events in every workspace the user belongs to (RLS).
+export async function listCalendarEvents(from: string, to: string): Promise<CalendarEvent[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("calendar_events").select(EVENT_COLS).lt("starts_at", to).gte("ends_at", from).order("starts_at").limit(2000);
+  if (error) throw new Error(error.message);
+  return (data as EventRow[]).map(toEvent);
+}
+
 const RECORDING_COLS = "id, workspace_id, created_by, title, source, status, duration_sec, created_at, folder_id, deleted_at";
 const toRecording = (r: RecordingRow): Recording => ({
   id: r.id, workspaceId: r.workspace_id, createdBy: r.created_by, title: r.title, source: r.source, status: r.status,
@@ -159,14 +178,17 @@ export async function listInvites(workspaceId: string): Promise<Invite[]> {
 export async function getRecordingDetail(id: string): Promise<RecordingDetail | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const supabase = await createClient();
-  const [rec, segs, hls, sum, items] = await Promise.all([
-    supabase.from("recordings").select(RECORDING_COLS).eq("id", id).maybeSingle(),
+  const [rec, segs, hls, sum, items, evs] = await Promise.all([
+    supabase.from("recordings").select(`${RECORDING_COLS}, speakers`).eq("id", id).maybeSingle(),
     supabase.from("transcript_segments").select("speaker, start_sec, text").eq("recording_id", id).order("position"),
     supabase.from("highlights").select("id, start_sec, text, kind, title, bullets").eq("recording_id", id).order("start_sec"),
-    supabase.from("summaries").select("template, model, overview, key_points, mind_map, title, sections, language, updated_at").eq("recording_id", id).maybeSingle(),
+    supabase.from("summaries").select("template, model, overview, key_points, mind_map, title, sections, language, updated_at, dates, visual").eq("recording_id", id).maybeSingle(),
     supabase.from("action_items").select("id, owner_name, owner_role, text, done").eq("recording_id", id).order("position"),
+    supabase.from("calendar_events").select(EVENT_COLS).eq("recording_id", id).order("starts_at"),
   ]);
   if (!rec.data) return null;
+  const createdBy = (rec.data as RecordingRow).created_by;
+  const { data: prof } = createdBy ? await supabase.from("profiles").select("full_name, avatar_url").eq("id", createdBy).maybeSingle() : { data: null };
 
   let summary: Summary | null = null;
   if (sum.data) {
@@ -176,14 +198,16 @@ export async function getRecordingDetail(id: string): Promise<RecordingDetail | 
       if (!groups.has(owner)) groups.set(owner, { owner, role: it.owner_role, items: [] });
       groups.get(owner)!.items.push({ id: it.id, text: it.text, done: it.done });
     }
-    const mm = (sum.data.mind_map ?? {}) as { root?: string; branches?: string[] };
+    const mm = (sum.data.mind_map ?? {}) as { root?: string; branches?: string[]; items?: unknown };
     summary = {
       template: sum.data.template,
       model: sum.data.model,
       overview: sum.data.overview,
       keyPoints: (sum.data.key_points ?? []) as string[],
       actionGroups: [...groups.values()],
-      mindMap: { root: mm.root ?? rec.data.title, branches: mm.branches ?? [] },
+      mindMap: { root: mm.root ?? rec.data.title, branches: mm.branches ?? [], items: readItems(mm.items) },
+      dates: readDates(sum.data.dates),
+      visual: isVisual(sum.data.visual) ? sum.data.visual : null,
       title: sum.data.title,
       sections: (sum.data.sections ?? []) as SummarySection[],
       language: sum.data.language,
@@ -193,6 +217,9 @@ export async function getRecordingDetail(id: string): Promise<RecordingDetail | 
 
   return {
     recording: toRecording(rec.data as RecordingRow),
+    speakers: readSpeakers((rec.data as { speakers?: unknown }).speakers),
+    owner: prof?.full_name ? { name: prof.full_name, avatarUrl: prof.avatar_url, userId: createdBy } : null,
+    events: (evs.data ?? []).map(toEvent),
     segments: (segs.data ?? []).map((s) => ({ speaker: s.speaker, startSec: s.start_sec, text: s.text })),
     highlights: (hls.data ?? []).map((h) => ({ id: h.id, startSec: h.start_sec, text: h.text, kind: h.kind, title: h.title, bullets: (h.bullets ?? []) as string[] })),
     summary,

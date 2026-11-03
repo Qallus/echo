@@ -5,7 +5,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { customerKeys, logUsage, reportKeyFailure, resolveCandidates, type ModelChoice, type Resolved } from "@/lib/ai/providers";
 import { getAiSettings } from "@/lib/ai/settings";
 import { formatClock } from "@/lib/format";
+import { readSpeakers, resolveSpeakers, speakerName } from "@/lib/speakers";
 import { findTemplate } from "@/lib/templates";
+import { readDates, readItems } from "@/lib/visuals";
 
 // Turns a transcript into a summary for a template: sections, key points,
 // action items, timestamped highlights and a mind map. Writes with the
@@ -31,6 +33,25 @@ const schema = z.object({
     bullets: z.array(z.string()).describe("2-4 supporting details."),
   })).describe("3-8 moments worth jumping back to, in time order."),
   mindMap: z.object({ root: z.string(), branches: z.array(z.string()).describe("4-7 short branch labels.") }),
+  visualItems: z.array(z.object({
+    label: z.string().describe("Short name of a topic, feature, task or decision (max 6 words)."),
+    group: z.string().describe("A category it belongs to, e.g. a person, area or phase."),
+    status: z.enum(["idea", "planned", "in_progress", "blocked", "done"]).describe("Its state as discussed."),
+    weight: z.number().int().describe("1-100: how much attention or priority it got in the conversation."),
+    start: z.string().nullable().describe("YYYY-MM-DD if a start date was discussed, else null."),
+    end: z.string().nullable().describe("YYYY-MM-DD if a due or end date was discussed, else null."),
+  })).describe("4-10 items behind the summary charts (bars, timeline, kanban, pie, table)."),
+  dates: z.array(z.object({
+    kind: z.enum(["appointment", "event", "deadline"]).describe("appointment: a meeting or call with specific people; event: something people attend; deadline: a due date."),
+    title: z.string().describe("What it is, e.g. 'Site visit with Dana'."),
+    date: z.string().describe("YYYY-MM-DD, worked out from the recording date for words like 'next Tuesday'."),
+    endDate: z.string().nullable().describe("YYYY-MM-DD for multi-day events, else null."),
+    start: z.string().nullable().describe("HH:MM 24-hour if a time was given, else null."),
+    end: z.string().nullable().describe("HH:MM 24-hour if an end time or length was given, else null."),
+    location: z.string().nullable(),
+    people: z.array(z.string()).describe("Names of people involved."),
+    quote: z.string().describe("The words from the transcript that mention it (max 25 words)."),
+  })).describe("Future appointments, events and deadlines that were mentioned. Empty if none."),
 });
 
 export type GenerateOptions = { templateId: string; modelId?: ModelChoice; language?: string; feature?: "summary" | "mcp" };
@@ -38,18 +59,24 @@ export type GenerateOptions = { templateId: string; modelId?: ModelChoice; langu
 export async function generateSummary(supabase: SupabaseClient, recordingId: string, opts: GenerateOptions): Promise<{ error?: string }> {
   const template = findTemplate(opts.templateId);
   const [{ data: rec }, { data: segs }] = await Promise.all([
-    supabase.from("recordings").select("id, title, workspace_id").eq("id", recordingId).maybeSingle(),
+    supabase.from("recordings").select("id, title, workspace_id, created_at, created_by, speakers").eq("id", recordingId).maybeSingle(),
     supabase.from("transcript_segments").select("speaker, start_sec, text").eq("recording_id", recordingId).order("position"),
   ]);
   if (!rec) return { error: "Recording not found." };
   if (!segs?.length) return { error: "There's no transcript to summarize yet." };
 
-  const transcript = segs.map((s) => `[${s.start_sec}s ${formatClock(s.start_sec)}] ${s.speaker}: ${s.text}`).join("\n").slice(0, MAX_TRANSCRIPT_CHARS);
+  // Speakers by name where people have said who they are (or the recorder,
+  // for the voice that talks most).
+  const { data: owner } = rec.created_by ? await supabase.from("profiles").select("full_name").eq("id", rec.created_by).maybeSingle() : { data: null };
+  const names = resolveSpeakers(segs, readSpeakers(rec.speakers), owner?.full_name ? { name: owner.full_name, userId: rec.created_by } : null);
+  const transcript = segs.map((s) => `[${s.start_sec}s ${formatClock(s.start_sec)}] ${speakerName(names, s.speaker)}: ${s.text}`).join("\n").slice(0, MAX_TRANSCRIPT_CHARS);
+  const recordedOn = new Date(rec.created_at).toISOString().slice(0, 10);
   const language = opts.language || "English";
   const system = `You write meeting and call summaries for Echo. Use only what is in the transcript; never invent names, numbers or decisions.
 Write in ${language}. Be specific and concise. Refer to people by name when the transcript gives one, otherwise by speaker label.
 Template: "${template.name}". Sections, in order: ${template.sections.map((s) => `"${s}"`).join(", ")}.${template.guidance ? `\n${template.guidance}` : ""}
-Highlight timestamps must come from the [Ns] markers in the transcript.`;
+Highlight timestamps must come from the [Ns] markers in the transcript.
+The recording was made on ${recordedOn} (${new Date(rec.created_at).toLocaleDateString("en-US", { weekday: "long" })}); use it to turn relative dates into real ones.`;
 
   // The picked model first, then the Super Admin fallback order. For each,
   // the customer's own key (if any) is tried before Echo's.
@@ -88,7 +115,8 @@ async function save(supabase: SupabaseClient, recordingId: string, s: z.infer<ty
     overview: s.overview,
     key_points: s.keyPoints,
     sections: s.sections,
-    mind_map: s.mindMap,
+    mind_map: { ...s.mindMap, items: readItems(s.visualItems) },
+    dates: readDates(s.dates.map((d) => ({ ...d, allDay: !d.start }))),
   });
   if (error) throw new Error(error.message);
 
