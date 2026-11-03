@@ -18,7 +18,7 @@ export default async function ClientsPage() {
       contacts: contacts.filter((x) => x.company_id === c.id).length,
       open_deals: open.length,
       open_value: open.reduce((n, d) => n + d.value_cents, 0),
-      won_value: mine.filter((d) => d.stage === "won").reduce((n, d) => n + d.value_cents, 0),
+      won_value: mine.filter((d) => d.stage === "closed_won").reduce((n, d) => n + d.value_cents, 0),
     };
   });
   return (

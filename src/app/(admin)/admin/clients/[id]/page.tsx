@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Building2, Mail, Phone } from "lucide-react";
 import { Section } from "@/components/admin/admin-ui";
-import { ActivityFeed } from "@/components/admin/crm/activity-feed";
+import { TimelinePanel } from "@/components/admin/crm/timeline";
 import { DealRows, Detail } from "@/components/admin/crm/crm-ui";
 import { AddContactButton, AddDealButton, CompanyActions } from "@/components/admin/crm/record-actions";
 import { UserAvatar } from "@/components/profile/user-avatar";
@@ -28,10 +28,6 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const contacts = allContacts.filter((c) => c.company_id === id);
   const activities = await listActivities({ companyId: id, contactIds: contacts.map((c) => c.id), dealIds: deals.map((d) => d.id) });
   const companyRefs = companies.map(({ id, name }) => ({ id, name }));
-  const related = Object.fromEntries([
-    ...deals.map((d) => [d.id, { label: d.title, href: `/admin/pipeline/${d.id}` }] as const),
-    ...contacts.map((c) => [c.id, { label: contactName(c), href: `/admin/contacts/${c.id}` }] as const),
-  ]);
   const website = safeUrl(company.website);
 
   return (
@@ -87,9 +83,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           <Section title="Deals" actions={manage && <AddDealButton companies={companyRefs} contacts={allContacts} staff={people} defaults={{ company_id: id }} />}>
             <DealRows deals={deals} />
           </Section>
-          <Section title="Activity" description="Includes activity on this client's contacts and deals.">
-            <ActivityFeed activities={activities} staff={people} target={{ company_id: id }} related={related} readOnly={!manage} />
-          </Section>
+          <TimelinePanel activities={activities} staff={people} target={{ company_id: id }} readOnly={!manage} seenKey={id} />
         </div>
       </div>
     </div>

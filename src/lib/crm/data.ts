@@ -1,7 +1,8 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { Activity, Company, Contact, Deal, StaffOption } from "./types";
+import { parseStageConfig, type StageConfig } from "./guidance";
+import type { Activity, Company, Contact, Deal, DealHistory, StaffOption } from "./types";
 
 // CRM reads for Super Admin pages. They run as the signed-in staff member, so
 // RLS (crm.view) decides what comes back.
@@ -28,10 +29,11 @@ export async function getCompany(id: string): Promise<Company | null> {
   return data as Company | null;
 }
 
-export async function listContacts(filter?: { companyId?: string }): Promise<Contact[]> {
+export async function listContacts(filter?: { companyId?: string; leads?: boolean }): Promise<Contact[]> {
   const supabase = await createClient();
   let q = supabase.from("crm_contacts").select(`*, ${COMPANY_REF}`).order("first_name").limit(5000);
   if (filter?.companyId) q = q.eq("company_id", filter.companyId);
+  if (filter?.leads) q = q.not("lead_status", "is", null);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return data as Contact[];
@@ -70,7 +72,7 @@ export async function listActivities(target: { companyId?: string; contactIds?: 
   if (!parts.length) return [];
   const supabase = await createClient();
   const { data, error } = await supabase.from("crm_activities").select("*").or(parts.join(","))
-    .order("created_at", { ascending: false }).limit(300);
+    .order("occurred_at", { ascending: false }).limit(300);
   if (error) throw new Error(error.message);
   return data as Activity[];
 }
@@ -81,4 +83,17 @@ export async function openTasks(): Promise<Activity[]> {
   const { data } = await supabase.from("crm_activities").select("*").eq("kind", "task").is("done_at", null)
     .order("due_at", { ascending: true, nullsFirst: false }).limit(50);
   return (data ?? []) as Activity[];
+}
+
+// Configure-stages overrides (empty means the built-in guidance).
+export async function getStageConfig(): Promise<StageConfig> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("platform_settings").select("value").eq("key", "crm_stages").maybeSingle();
+  return parseStageConfig(data?.value);
+}
+
+export async function dealHistory(dealId: string): Promise<DealHistory[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("crm_deal_history").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }).limit(100);
+  return (data ?? []) as DealHistory[];
 }

@@ -1,34 +1,15 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
 import { requireStaff } from "@/lib/admin/guard";
-import { isActivityKind, isCompanyStatus, isStage, type ActivityKind, type CompanyStatus, type DealStage } from "@/lib/crm/types";
+import { STAGES } from "@/lib/crm/deals";
+import { isActivityKind, isCompanyStatus, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
+import { cents, date, email, list, ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
-type Result = { ok?: string; error?: string; id?: string };
-
 // CRM writes (crm.manage). RLS checks the permission again; every change is
 // written to the admin audit log (names and fields, never note text).
-
-const text = (v: unknown, max: number) => {
-  const s = typeof v === "string" ? v.trim().slice(0, max) : "";
-  return s || null;
-};
-const ref = (v: unknown) => (typeof v === "string" && isUuid(v) ? v : null);
-const date = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
-const tags = (v: unknown) =>
-  typeof v === "string" ? [...new Set(v.split(",").map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 20) : [];
-function email(v: unknown): string | null | false {
-  const s = text(v, 200);
-  if (!s) return null;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) ? s.toLowerCase() : false;
-}
-
-function refresh() {
-  for (const p of ["/admin/clients", "/admin/contacts", "/admin/pipeline"]) revalidatePath(p, "layout");
-}
 
 // ---------------------------------------------------------------------------
 // Clients
@@ -47,7 +28,7 @@ export async function saveCompany(id: string | null, input: CompanyInput): Promi
   const row = {
     name, status: isCompanyStatus(input.status) ? input.status : "prospect",
     website: text(input.website, 300), industry: text(input.industry, 100), phone: text(input.phone, 40), email: mail,
-    address: text(input.address, 400), notes: text(input.notes, 10000), tags: tags(input.tags), owner_id: ref(input.owner_id),
+    address: text(input.address, 400), notes: text(input.notes, 10000), tags: list(input.tags), owner_id: ref(input.owner_id),
   };
   const supabase = await createClient();
   const { data, error } = id
@@ -76,7 +57,8 @@ export async function deleteCompany(id: string): Promise<Result> {
 // ---------------------------------------------------------------------------
 export type ContactInput = {
   first_name: string; last_name?: string; email?: string; phone?: string; title?: string; company_id?: string;
-  source?: string; notes?: string; tags?: string; owner_id?: string;
+  source?: string; notes?: string; tags?: string; owner_id?: string; role?: ContactRole; lead_status?: LeadStatus | "";
+  interest?: string; website?: string; city?: string; state?: string;
 };
 
 export async function saveContact(id: string | null, input: ContactInput): Promise<Result> {
@@ -87,8 +69,10 @@ export async function saveContact(id: string | null, input: ContactInput): Promi
   if (mail === false) return { error: "That email address doesn't look right." };
   const row = {
     first_name: first, last_name: text(input.last_name, 100), email: mail, phone: text(input.phone, 40), title: text(input.title, 120),
-    company_id: ref(input.company_id), source: text(input.source, 100), notes: text(input.notes, 10000), tags: tags(input.tags),
-    owner_id: ref(input.owner_id),
+    company_id: ref(input.company_id), source: text(input.source, 100), notes: text(input.notes, 10000), tags: list(input.tags),
+    owner_id: ref(input.owner_id), role: isContactRole(input.role) ? input.role : "contact",
+    lead_status: isLeadStatus(input.lead_status) ? input.lead_status : input.role === "lead" ? "new" : null,
+    interest: text(input.interest, 200), website: text(input.website, 300), city: text(input.city, 100), state: text(input.state, 100),
   };
   const supabase = await createClient();
   const { data, error } = id
@@ -120,19 +104,22 @@ export async function deleteContact(id: string): Promise<Result> {
 export type DealInput = {
   title: string; stage: DealStage; value?: string; company_id?: string; contact_id?: string; expected_close?: string;
   next_step?: string; next_step_due?: string; source?: string; lost_reason?: string; notes?: string; owner_id?: string;
+  opportunity_type?: string; products?: string;
 };
 
 export async function saveDeal(id: string | null, input: DealInput): Promise<Result> {
   await requireStaff("crm.manage");
   const title = text(input.title, 200);
   if (!title) return { error: "Give the deal a name." };
-  const dollars = Number(String(input.value ?? "").replace(/[$,\s]/g, "") || 0);
-  if (!Number.isFinite(dollars) || dollars < 0) return { error: "Enter the value in dollars, e.g. 1200." };
+  const value = cents(input.value);
+  if (value == null) return { error: "Enter the value in dollars, e.g. 1200." };
+  const stage: DealStage = isStage(input.stage) ? input.stage : "new_working";
   const row = {
-    title, stage: isStage(input.stage) ? input.stage : "lead", value_cents: Math.round(dollars * 100),
+    title, stage, value_cents: value, ...(id ? {} : { probability: STAGES[stage].prob }),
     company_id: ref(input.company_id), contact_id: ref(input.contact_id), expected_close: date(input.expected_close),
     next_step: text(input.next_step, 300), next_step_due: date(input.next_step_due), source: text(input.source, 100),
-    lost_reason: text(input.lost_reason, 500), notes: text(input.notes, 10000), owner_id: ref(input.owner_id),
+    ...("lost_reason" in input ? { lost_reason: text(input.lost_reason, 500) } : {}), notes: text(input.notes, 10000), owner_id: ref(input.owner_id),
+    opportunity_type: text(input.opportunity_type, 80), products: list(input.products, 30, 80),
   };
   const supabase = await createClient();
   const { data, error } = id
@@ -145,16 +132,21 @@ export async function saveDeal(id: string | null, input: DealInput): Promise<Res
   return { ok: id ? "Saved." : `${title} added.`, id: data.id };
 }
 
-export async function moveDeal(id: string, stage: DealStage): Promise<Result> {
+// Moves a deal and resets its probability to the stage default. Closing can
+// carry the won summary or the lost reason and notes.
+export async function moveDeal(id: string, stage: DealStage, outcome?: { won_summary?: string; lost_reason?: string; lost_notes?: string }): Promise<Result> {
   await requireStaff("crm.manage");
   if (!isUuid(id) || !isStage(stage)) return { error: "Not found." };
+  const patch: Record<string, unknown> = { stage, probability: STAGES[stage].prob };
+  if (stage === "closed_won" && outcome) patch.won_summary = text(outcome.won_summary, 2000);
+  if (stage === "closed_lost" && outcome) { patch.lost_reason = text(outcome.lost_reason, 500); patch.lost_notes = text(outcome.lost_notes, 2000); }
   const supabase = await createClient();
-  const { data, error } = await supabase.from("crm_deals").update({ stage }).eq("id", id).select("title").maybeSingle();
+  const { data, error } = await supabase.from("crm_deals").update(patch).eq("id", id).select("title").maybeSingle();
   if (error) return { error: error.message };
   if (!data) return { error: "Not found." };
   await adminAudit(supabase, "crm.deal.stage", { type: "crm_deal", id }, { title: data.title, stage });
   refresh();
-  return { ok: "Moved." };
+  return { ok: `Moved to ${STAGES[stage].label}.` };
 }
 
 export async function deleteDeal(id: string): Promise<Result> {
