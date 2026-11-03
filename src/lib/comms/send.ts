@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { money } from "@/lib/billing/catalog";
 import { STAGES, type DealStage } from "@/lib/crm/deals";
 import { sendEmail, siteUrl } from "@/lib/notify/senders";
+import { secret } from "@/lib/secrets";
 import { applyMerge, schemaToHtml, schemaToText, type EmailSchema } from "./blocks";
 import { unsubscribeUrl } from "./unsubscribe";
 
@@ -22,7 +23,7 @@ export async function sendToRecipients(supabase: SupabaseClient, msg: Message, r
   const blocked = new Set((unsubs ?? []).map((u) => u.email));
   const html = schemaToHtml(msg.schema, { preheader: msg.preheader ?? undefined, origin: siteUrl("") });
   const text = schemaToText(msg.schema);
-  const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL ?? null;
+  const from = (await secret("EMAIL_FROM")) ?? process.env.RESEND_FROM_EMAIL ?? null;
   let sent = 0, skipped = 0, failed = 0;
   const errors: string[] = [];
 

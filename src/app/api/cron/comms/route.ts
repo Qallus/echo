@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
+import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Scheduled job (a Coolify scheduled task every 5 minutes):
@@ -9,16 +10,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 300;
 
-function authorized(req: Request) {
-  const secret = process.env.CRON_SECRET;
+async function authorized(req: Request) {
+  const expected = await secret("CRON_SECRET");
   const given = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!secret || !given) return false;
-  const a = Buffer.from(secret), b = Buffer.from(given);
+  if (!expected || !given) return false;
+  const a = Buffer.from(expected), b = Buffer.from(given);
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
 async function run(req: Request) {
-  if (!authorized(req)) return Response.json({ error: "Not allowed." }, { status: 403 });
+  if (!(await authorized(req))) return Response.json({ error: "Not allowed." }, { status: 403 });
   const db = createAdminClient();
   const queued = await queueTimed(db);
   const sent = await processDueRuns(db);

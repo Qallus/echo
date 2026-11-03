@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/billing/stripe";
 import { sendOrderEmail } from "@/lib/billing/emails";
+import { secret as getSecret } from "@/lib/secrets";
 
 // Stripe -> Echo. Verified by Stripe's signature (STRIPE_WEBHOOK_SECRET); no
 // user session, so it writes with the service-role client. Every handler is
@@ -142,8 +143,8 @@ async function onRefund(db: Db, charge: Stripe.Charge) {
 }
 
 export async function POST(req: NextRequest) {
-  const s = stripe();
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const s = await stripe();
+  const secret = await getSecret("STRIPE_WEBHOOK_SECRET");
   const signature = req.headers.get("stripe-signature");
   if (!s || !secret || !signature) return new NextResponse("Not configured", { status: 400 });
 

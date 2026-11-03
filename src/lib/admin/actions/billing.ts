@@ -22,7 +22,7 @@ const done = (msg: string): Result => {
 
 // After a catalog change: push that product to Stripe when Stripe is set up.
 async function pushToStripe(productId: string): Promise<string> {
-  const s = stripe();
+  const s = await stripe();
   if (!s) return " Stripe isn't connected yet; use Sync to Stripe once the keys are in.";
   const supabase = await createClient();
   const product = (await loadFullCatalog(supabase)).find((p) => p.id === productId);
@@ -92,7 +92,7 @@ export async function addProduct(input: { id: string; kind: Kind; name: string; 
 // Creates or updates every Stripe product and price to match the catalog.
 export async function syncCatalogToStripe(): Promise<Result> {
   await requireStaff("billing.manage");
-  const s = stripe();
+  const s = await stripe();
   if (!s) return { error: "Add STRIPE_SECRET_KEY first (test mode is fine)." };
   const supabase = await createClient();
   const result: SyncResult = { created: [], updated: [], unchanged: [] };
@@ -109,7 +109,7 @@ export async function syncCatalogToStripe(): Promise<Result> {
 export async function refundOrder(orderId: string, reason: string): Promise<Result> {
   await requireStaff("billing.manage");
   if (!isUuid(orderId)) return { error: "Invalid order." };
-  const s = stripe();
+  const s = await stripe();
   if (!s) return { error: "Stripe isn't connected." };
   const supabase = await createClient();
   const { data: order } = await supabase.from("orders").select("number, total, status, stripe_payment_intent_id").eq("id", orderId).maybeSingle();
@@ -128,7 +128,7 @@ export async function refundOrder(orderId: string, reason: string): Promise<Resu
 // A promotion code customers enter at checkout.
 export async function createPromoCode(input: { code: string; percentOff?: number; amountOff?: number; duration: "once" | "repeating" | "forever"; months?: number; maxRedemptions?: number }): Promise<Result> {
   await requireStaff("billing.manage");
-  const s = stripe();
+  const s = await stripe();
   if (!s) return { error: "Stripe isn't connected." };
   const code = input.code.trim().toUpperCase();
   if (!/^[A-Z0-9_-]{3,40}$/.test(code)) return { error: "Codes use 3-40 letters, numbers, dashes or underscores." };
@@ -153,7 +153,7 @@ export async function createPromoCode(input: { code: string; percentOff?: number
 
 export async function setPromoCodeActive(id: string, active: boolean): Promise<Result> {
   await requireStaff("billing.manage");
-  const s = stripe();
+  const s = await stripe();
   if (!s) return { error: "Stripe isn't connected." };
   try {
     await s.promotionCodes.update(id, { active });

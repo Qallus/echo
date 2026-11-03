@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const p = await verifyTwilio(req);
   if (!p) return new Response("Invalid signature", { status: 403 });
   const db = createAdminClient();
-  const ours = phoneNumber() ?? "";
+  const ours = (await phoneNumber()) ?? "";
   const fromClient = (p.From ?? "").startsWith("client:");
 
   if (fromClient) {

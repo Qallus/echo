@@ -5,6 +5,7 @@ import { TranscriptionAuthError, transcribeWithOpenAI } from "./openai";
 import { customerKeys, logUsage, reportKeyFailure } from "@/lib/ai/providers";
 import { decryptKey } from "@/lib/ai/keys";
 import { generateSummary } from "@/lib/summaries/generate";
+import { secret } from "@/lib/secrets";
 
 export async function getTranscriptionSetting(supabase: SupabaseClient): Promise<TranscriptionSetting> {
   const { data } = await supabase.from("platform_settings").select("value").eq("key", "transcription").maybeSingle();
@@ -85,8 +86,9 @@ async function transcribe(supabase: SupabaseClient, audio: Blob, fileName: strin
   if (own) {
     try { attempts.push({ key: decryptKey(own.ciphertext), keyId: own.id, source: "own" }); } catch { /* unreadable key: use Echo's */ }
   }
-  if (process.env.OPENAI_API_KEY) attempts.push({ key: process.env.OPENAI_API_KEY, source: "echo" });
-  if (!attempts.length) throw new Error("Transcription isn't set up: OPENAI_API_KEY is missing.");
+  const echoKey = await secret("OPENAI_API_KEY");
+  if (echoKey) attempts.push({ key: echoKey, source: "echo" });
+  if (!attempts.length) throw new Error("Transcription isn't set up: add an OpenAI key in Admin → Settings → Integrations.");
 
   for (const [i, a] of attempts.entries()) {
     const started = Date.now();

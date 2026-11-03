@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { listAutomations, listCalls, listDeliveries, listInbox, listOptOuts, listSends, listTemplates, listTexts, listUnsubscribes } from "@/lib/comms/data";
 import { callsReady, phoneNumber, textsReady } from "@/lib/comms/twilio";
+import { secret } from "@/lib/secrets";
 import { listContacts } from "@/lib/crm/data";
 import { contactName } from "@/lib/crm/types";
 
@@ -27,6 +28,7 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
     showNotifications ? listDeliveries() : Promise.resolve([]),
     listTexts(), listCalls(), listOptOuts(), listAutomations(),
   ]);
+  const [canText, canCall, number, cronSecret] = await Promise.all([textsReady(), callsReady(), phoneNumber(), secret("CRON_SECRET")]);
   const phonePeople = contacts.map((c) => ({ id: c.id, name: contactName(c), phone: c.phone }));
   const unreadTexts = texts.filter((t) => t.direction === "inbound" && !t.read_at).length;
   const initial = TABS.includes(tab as (typeof TABS)[number]) ? tab! : "inbox";
@@ -44,10 +46,10 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
           {showNotifications && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
         </TabsList>
         <TabsContent value="inbox" className="pt-6"><InboxPanel messages={inbox} readOnly={readOnly} canCrm={can(staff, "crm.manage")} /></TabsContent>
-        <TabsContent value="texts" className="pt-6"><TextsPanel texts={texts} people={phonePeople} optOuts={optOuts} ready={textsReady()} readOnly={readOnly} /></TabsContent>
-        <TabsContent value="calls" className="pt-6"><CallsPanel calls={calls} people={phonePeople} ready={callsReady()} number={phoneNumber()} readOnly={readOnly} /></TabsContent>
+        <TabsContent value="texts" className="pt-6"><TextsPanel texts={texts} people={phonePeople} optOuts={optOuts} ready={canText} readOnly={readOnly} /></TabsContent>
+        <TabsContent value="calls" className="pt-6"><CallsPanel calls={calls} people={phonePeople} ready={canCall} number={number} readOnly={readOnly} /></TabsContent>
         <TabsContent value="email" className="pt-6">
-          <EmailPanel templates={templates} sends={sends} unsubscribes={unsubscribes} readOnly={readOnly} automations={automations} cronReady={Boolean(process.env.CRON_SECRET)}
+          <EmailPanel templates={templates} sends={sends} unsubscribes={unsubscribes} readOnly={readOnly} automations={automations} cronReady={Boolean(cronSecret)}
             people={contacts.map((c) => ({ id: c.id, name: contactName(c), email: c.email }))} />
         </TabsContent>
         {showNotifications && <TabsContent value="notifications" className="pt-6"><NotificationsPanel deliveries={deliveries} /></TabsContent>}

@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { secrets } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Resend inbound email (event "email.received") -> the admin Inbox. No user
@@ -7,8 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // The webhook has metadata only, so the body is fetched from Resend.
 // Message content is stored as text and shown as text; it's never executed.
 
-function verify(body: string, headers: Headers): boolean {
-  const secret = process.env.RESEND_WEBHOOK_SECRET;
+function verify(body: string, headers: Headers, secret: string | undefined): boolean {
   const id = headers.get("svix-id"), ts = headers.get("svix-timestamp"), sig = headers.get("svix-signature");
   if (!secret || !id || !ts || !sig) return false;
   if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
@@ -32,13 +32,14 @@ const htmlToText = (html: string) => html.replace(/<(script|style)[\s\S]*?<\/\1>
 
 export async function POST(req: Request) {
   const body = await req.text();
-  if (!verify(body, req.headers)) return new Response("Invalid signature", { status: 403 });
+  const conf = await secrets("RESEND_WEBHOOK_SECRET", "RESEND_API_KEY");
+  if (!verify(body, req.headers, conf.RESEND_WEBHOOK_SECRET)) return new Response("Invalid signature", { status: 403 });
   const event = JSON.parse(body) as { type?: string; data?: { email_id?: string; from?: string; to?: string[]; subject?: string } };
   if (event.type !== "email.received" || !event.data?.email_id) return Response.json({ ok: true, ignored: true });
 
   const emailId = event.data.email_id;
   let text = "", attachments: { filename?: string; content_type?: string; size?: number }[] = [];
-  const key = process.env.RESEND_API_KEY;
+  const key = conf.RESEND_API_KEY;
   if (key) {
     const res = await fetch(`https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}`, { headers: { Authorization: `Bearer ${key}` } });
     if (res.ok) {

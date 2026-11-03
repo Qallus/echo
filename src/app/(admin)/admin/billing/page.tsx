@@ -22,7 +22,7 @@ type SubRow = { id: string; user_id: string; user_email: string | null; status: 
 
 // Stripe promotion codes (empty until Stripe is connected).
 async function promoCodes(): Promise<PromoRow[]> {
-  const s = stripe();
+  const s = await stripe();
   if (!s) return [];
   try {
     const list = await s.promotionCodes.list({ limit: 50, expand: ["data.promotion.coupon"] });
@@ -56,11 +56,12 @@ export default async function AdminBillingPage() {
   const monthly = mrr(s);
   const churn = churn30(s);
   const { month: revenueMonth, last30: revenue30 } = revenue(o);
+  const connected = await stripeReady();
   const live = s.filter((x) => x.status === "active" || x.status === "trialing");
   const pastDue = s.filter((x) => x.status === "past_due");
 
   return (
-    <AdminPage title="Billing" description={stripeReady() ? "Revenue, catalog, orders and subscriptions, from Stripe." : "Stripe isn't connected yet: the catalog can be edited now; orders and revenue appear once checkout is live."}>
+    <AdminPage title="Billing" description={connected ? "Revenue, catalog, orders and subscriptions, from Stripe." : "Stripe isn't connected yet: the catalog can be edited now; orders and revenue appear once checkout is live."}>
       <Tabs defaultValue="overview">
         <TabsList variant="line" className="max-w-full overflow-x-auto [scrollbar-width:none]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -93,11 +94,11 @@ export default async function AdminBillingPage() {
         </TabsContent>
 
         <TabsContent value="catalog" className="pt-6">
-          <CatalogEditor products={catalog} stripeReady={stripeReady()} readOnly={!manage} />
+          <CatalogEditor products={catalog} stripeReady={connected} readOnly={!manage} />
         </TabsContent>
 
         <TabsContent value="orders" className="pt-6">
-          <OrdersTable orders={o} canRefund={manage && stripeReady()} />
+          <OrdersTable orders={o} canRefund={manage && connected} />
         </TabsContent>
 
         <TabsContent value="subscriptions" className="pt-6">
@@ -120,7 +121,7 @@ export default async function AdminBillingPage() {
         </TabsContent>
 
         <TabsContent value="codes" className="pt-6">
-          {stripeReady() ? <PromoCodes codes={codes} readOnly={!manage} /> : <p className="rounded-xl border p-4 text-sm text-muted-foreground">Promotion codes live in Stripe. Add STRIPE_SECRET_KEY to create them here.</p>}
+          {connected ? <PromoCodes codes={codes} readOnly={!manage} /> : <p className="rounded-xl border p-4 text-sm text-muted-foreground">Promotion codes live in Stripe. Add your Stripe secret key in Settings → Integrations to create them here.</p>}
         </TabsContent>
 
         <TabsContent value="settings" className="pt-6">

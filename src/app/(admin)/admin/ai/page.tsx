@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { MODELS } from "@/lib/ai/models";
-import { echoModelName, isConfigured } from "@/lib/ai/providers";
+import { configuredProviders, echoModelName } from "@/lib/ai/providers";
 import { getAiSettings } from "@/lib/ai/settings";
 import { createClient } from "@/lib/supabase/server";
 import { getTranscriptionSetting } from "@/lib/transcription/run";
@@ -41,7 +41,7 @@ export default async function AdminAiPage() {
     supabase.rpc("admin_ai_keys_overview"),
     supabase.from("ai_custom_providers").select("id, name, base_url, model, last4, enabled").order("created_at"),
   ]);
-  const configured = Object.fromEntries(MODELS.map((m) => [m.id, isConfigured(m.id)]));
+  const configured = await configuredProviders();
   const defaults = Object.fromEntries(MODELS.map((m) => [m.id, echoModelName(m.id, { ...settings, models: {} })]));
   const transcriptionKeys = { openai: configured.gpt, gemini: configured.gemini };
   const u = usage.data as Usage | null;

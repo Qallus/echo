@@ -5,19 +5,20 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import type { LanguageModel } from "ai";
 import { MODELS, type ModelId } from "@/lib/ai/models";
+import { secret, secrets } from "@/lib/secrets";
 import { decryptKey } from "./keys";
 import { estimateCost, getAiSettings, type AiSettings } from "./settings";
 
 // Each provider: which env var holds Echo's key, its default model (override
 // with the *_MODEL env var or Super Admin), and how to build the SDK model.
-const PROVIDERS: Record<ModelId, { keyEnv: string; modelEnv: string; defaultModel: string; build: (key: string, model: string) => LanguageModel }> = {
+// `extra` carries settings that go with Echo's own key (the Anthropic workspace).
+const PROVIDERS: Record<ModelId, { keyEnv: string; modelEnv: string; defaultModel: string; build: (key: string, model: string, extra?: Record<string, string | undefined>) => LanguageModel }> = {
   claude: {
     keyEnv: "ANTHROPIC_API_KEY", modelEnv: "ANTHROPIC_MODEL", defaultModel: "claude-sonnet-5-5",
     // Echo's key isn't scoped to a workspace, so it names one (ANTHROPIC_WORKSPACE_ID).
-    build: (apiKey, model) => createAnthropic({
+    build: (apiKey, model, extra) => createAnthropic({
       apiKey,
-      headers: apiKey === process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_WORKSPACE_ID
-        ? { "anthropic-workspace-id": process.env.ANTHROPIC_WORKSPACE_ID } : undefined,
+      headers: extra?.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": extra.ANTHROPIC_WORKSPACE_ID } : undefined,
     })(model),
   },
   gpt: {
@@ -62,9 +63,14 @@ export const isModelChoice = (v: unknown): v is ModelChoice =>
 export type KeySource = "own" | "echo" | "custom";
 export type Resolved = { model: LanguageModel; label: string; provider: string; modelName: string; keySource: KeySource; keyId?: string };
 
-// Echo's own key is configured for this provider (env var set).
-export function isConfigured(id: ModelId) {
-  return Boolean(process.env[PROVIDERS[id].keyEnv]);
+// Echo's own key is configured for this provider (Integrations or Coolify).
+export async function isConfigured(id: ModelId) {
+  return Boolean(await secret(PROVIDERS[id].keyEnv));
+}
+
+export async function configuredProviders(): Promise<Record<ModelId, boolean>> {
+  const keys = await secrets(...MODELS.map((m) => PROVIDERS[m.id].keyEnv));
+  return Object.fromEntries(MODELS.map((m) => [m.id, Boolean(keys[PROVIDERS[m.id].keyEnv])])) as Record<ModelId, boolean>;
 }
 
 export const echoModelName = (id: ModelId, settings: AiSettings) =>
@@ -107,10 +113,11 @@ export async function resolveCandidates(
       console.error(`[ai] couldn't decrypt ${id} key ${own.id}:`, e instanceof Error ? e.message : e);
     }
   }
-  const echoKey = process.env[p.keyEnv];
+  const conf = await secrets(p.keyEnv, "ANTHROPIC_WORKSPACE_ID");
+  const echoKey = conf[p.keyEnv];
   if (echoKey && settings.enabled.includes(id)) {
     const modelName = echoModelName(id, settings);
-    out.push({ model: p.build(echoKey, modelName), label: LABELS[id], provider: id, modelName, keySource: "echo" });
+    out.push({ model: p.build(echoKey, modelName, conf), label: LABELS[id], provider: id, modelName, keySource: "echo" });
   }
   return out;
 }

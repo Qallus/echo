@@ -2,29 +2,33 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteUrl, toE164 } from "@/lib/notify/senders";
+import { secrets } from "@/lib/secrets";
 
 // Twilio for the admin phone (Echo's notification number): REST helpers,
 // webhook signature checks and browser call tokens. No SDK on the server.
 
-const env = () => ({
-  sid: process.env.TWILIO_ACCOUNT_SID, token: process.env.TWILIO_AUTH_TOKEN,
-  from: process.env.TWILIO_FROM_NUMBER ?? process.env.TWILIO_PHONE_NUMBER,
-  keySid: process.env.TWILIO_API_KEY_SID, keySecret: process.env.TWILIO_API_KEY_SECRET, app: process.env.TWILIO_TWIML_APP_SID,
-});
+// Settings from Admin -> Settings -> Integrations, or Coolify.
+async function env() {
+  const s = await secrets("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "TWILIO_API_KEY_SID", "TWILIO_API_KEY_SECRET", "TWILIO_TWIML_APP_SID");
+  return {
+    sid: s.TWILIO_ACCOUNT_SID, token: s.TWILIO_AUTH_TOKEN, from: s.TWILIO_FROM_NUMBER ?? process.env.TWILIO_PHONE_NUMBER,
+    keySid: s.TWILIO_API_KEY_SID, keySecret: s.TWILIO_API_KEY_SECRET, app: s.TWILIO_TWIML_APP_SID,
+  };
+}
 
-export const phoneNumber = () => env().from ?? null;
-export const textsReady = () => { const e = env(); return Boolean(e.sid && e.token && e.from); };
-export const callsReady = () => { const e = env(); return Boolean(e.sid && e.token && e.from && e.keySid && e.keySecret && e.app); };
+export const phoneNumber = async () => (await env()).from ?? null;
+export const textsReady = async () => { const e = await env(); return Boolean(e.sid && e.token && e.from); };
+export const callsReady = async () => { const e = await env(); return Boolean(e.sid && e.token && e.from && e.keySid && e.keySecret && e.app); };
 
-const auth = () => { const e = env(); return `Basic ${Buffer.from(`${e.sid}:${e.token}`).toString("base64")}`; };
-const api = (path: string) => `https://api.twilio.com/2010-04-01/Accounts/${env().sid}${path}`;
+const auth = (e: { sid?: string; token?: string }) => `Basic ${Buffer.from(`${e.sid}:${e.token}`).toString("base64")}`;
+const api = (sid: string | undefined, path: string) => `https://api.twilio.com/2010-04-01/Accounts/${sid}${path}`;
 
 export async function twilioSms(to: string, body: string): Promise<{ ok: boolean; sid?: string; status?: string; error?: string }> {
-  const e = env();
-  if (!e.sid || !e.token || !e.from) return { ok: false, error: "Texting isn't set up (TWILIO_* in Coolify)." };
+  const e = await env();
+  if (!e.sid || !e.token || !e.from) return { ok: false, error: "Texting isn't set up (Admin → Settings → Integrations → Twilio)." };
   try {
-    const res = await fetch(api("/Messages.json"), {
-      method: "POST", headers: { Authorization: auth(), "Content-Type": "application/x-www-form-urlencoded" },
+    const res = await fetch(api(e.sid, "/Messages.json"), {
+      method: "POST", headers: { Authorization: auth(e), "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ To: to, From: e.from, Body: body, StatusCallback: siteUrl("/api/webhooks/twilio/sms-status") }),
     });
     const json = (await res.json().catch(() => ({}))) as { sid?: string; status?: string; message?: string };
@@ -35,18 +39,19 @@ export async function twilioSms(to: string, body: string): Promise<{ ok: boolean
 }
 
 export async function fetchRecording(recordingUrl: string): Promise<Blob | null> {
-  const res = await fetch(`${recordingUrl}.mp3`, { headers: { Authorization: auth() } });
+  const res = await fetch(`${recordingUrl}.mp3`, { headers: { Authorization: auth(await env()) } });
   return res.ok ? res.blob() : null;
 }
 
 export async function deleteRecording(recordingSid: string) {
-  await fetch(api(`/Recordings/${encodeURIComponent(recordingSid)}.json`), { method: "DELETE", headers: { Authorization: auth() } }).catch(() => {});
+  const e = await env();
+  await fetch(api(e.sid, `/Recordings/${encodeURIComponent(recordingSid)}.json`), { method: "DELETE", headers: { Authorization: auth(e) } }).catch(() => {});
 }
 
 // X-Twilio-Signature: base64 HMAC-SHA1 (auth token) of the full public URL
 // followed by each POST param name+value, sorted by name.
 export async function verifyTwilio(req: Request): Promise<Record<string, string> | null> {
-  const token = env().token;
+  const token = (await env()).token;
   const sig = req.headers.get("x-twilio-signature");
   if (!token || !sig) return null;
   const params = Object.fromEntries(new URLSearchParams(await req.text()));
@@ -61,8 +66,8 @@ export async function verifyTwilio(req: Request): Promise<Record<string, string>
 const b64url = (v: string | Buffer) => Buffer.from(v).toString("base64url");
 
 // A one-hour Voice access token for the browser phone (identity per staff member).
-export function voiceToken(identity: string): string | null {
-  const e = env();
+export async function voiceToken(identity: string): Promise<string | null> {
+  const e = await env();
   if (!e.sid || !e.keySid || !e.keySecret || !e.app) return null;
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ typ: "JWT", alg: "HS256", cty: "twilio-fpa;v=1" }));

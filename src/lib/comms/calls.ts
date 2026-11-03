@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { transcribeWithOpenAI } from "@/lib/transcription/openai";
 import { getTranscriptionSetting } from "@/lib/transcription/run";
+import { secret } from "@/lib/secrets";
 
 // Calls on the CRM timeline and their transcripts. Used by the Twilio
 // webhooks with the service-role client (no user session there).
@@ -39,7 +40,7 @@ export async function syncCallActivity(db: SupabaseClient, callId: string) {
 // Transcribes a saved recording with Echo's OpenAI key and the admin's chosen
 // model, then refreshes the timeline entry.
 export async function transcribeCall(db: SupabaseClient, callId: string, audio: Blob, seconds: number) {
-  const key = process.env.OPENAI_API_KEY;
+  const key = await secret("OPENAI_API_KEY");
   if (!key) { await db.from("phone_calls").update({ transcript_status: "failed" }).eq("id", callId); return; }
   try {
     const setting = await getTranscriptionSetting(db);

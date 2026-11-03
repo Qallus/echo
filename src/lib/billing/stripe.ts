@@ -1,12 +1,16 @@
 import "server-only";
 import Stripe from "stripe";
+import { secret } from "@/lib/secrets";
 
-// Null until STRIPE_SECRET_KEY is set, so the store can show
-// "checkout isn't available yet" instead of crashing.
-let client: Stripe | null | undefined;
-export function stripe(): Stripe | null {
-  if (client === undefined) client = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
-  return client;
+// Null until a Stripe secret key is set (Admin -> Settings -> Integrations,
+// or STRIPE_SECRET_KEY in Coolify), so the store can show "checkout isn't
+// available yet" instead of crashing. Rebuilt when the key changes.
+let client: { key: string; stripe: Stripe } | null = null;
+export async function stripe(): Promise<Stripe | null> {
+  const key = await secret("STRIPE_SECRET_KEY");
+  if (!key) return null;
+  if (client?.key !== key) client = { key, stripe: new Stripe(key) };
+  return client.stripe;
 }
 
-export const stripeReady = () => !!process.env.STRIPE_SECRET_KEY;
+export const stripeReady = async () => Boolean(await secret("STRIPE_SECRET_KEY"));

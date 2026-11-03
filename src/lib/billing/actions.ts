@@ -23,7 +23,7 @@ async function byokCoupon(): Promise<string | null> {
   ]);
   const pct = settings.byokDiscountPercent;
   if (!pct || !keys.data?.length) return null;
-  const s = stripe()!;
+  const s = (await stripe())!;
   const id = `echo-own-keys-${pct}`;
   try {
     await s.coupons.retrieve(id);
@@ -44,7 +44,7 @@ async function customerId(userId: string) {
 export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> {
   const user = await getUser();
   if (!user) return { needLogin: true };
-  const s = stripe();
+  const s = await stripe();
   if (!s) return { error: "Checkout isn't switched on yet. Please try again soon." };
 
   await loadCatalog();
@@ -85,7 +85,7 @@ export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> 
 // Stripe's hosted portal: change plan or seats, update card, cancel, invoices.
 export async function openBillingPortal() {
   const user = await requireUser();
-  const s = stripe();
+  const s = await stripe();
   const customer = await customerId(user.id);
   if (!s || !customer) redirect("/billing?portal=unavailable");
   const portal = await s.billingPortal.sessions.create({ customer, return_url: `${await siteOrigin()}/billing` });

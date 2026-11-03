@@ -13,7 +13,7 @@ export const metadata = { title: "Thank you · Echo", robots: { index: false } }
 export default async function CheckoutSuccessPage({ searchParams }: { searchParams: Promise<{ session_id?: string }> }) {
   const user = await requireUser();
   const { session_id } = await searchParams;
-  const s = stripe();
+  const s = await stripe();
   const session = s && session_id?.startsWith("cs_")
     ? await s.checkout.sessions.retrieve(session_id, { expand: ["line_items"] }).catch(() => null)
     : null;

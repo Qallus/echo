@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
 import { requireStaff } from "@/lib/admin/guard";
-import { e164, twilioSms } from "@/lib/comms/twilio";
+import { e164, phoneNumber, twilioSms } from "@/lib/comms/twilio";
 import { ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -35,7 +35,7 @@ export async function sendText(input: { to: string; body: string; contactId?: st
   }
   const res = await twilioSms(to, body);
   await supabase.from("phone_messages").insert({
-    direction: "outbound", from_number: process.env.TWILIO_FROM_NUMBER ?? "", to_number: to, body, status: res.ok ? res.status ?? "queued" : "failed",
+    direction: "outbound", from_number: (await phoneNumber()) ?? "", to_number: to, body, status: res.ok ? res.status ?? "queued" : "failed",
     error: res.error?.slice(0, 500) ?? null, twilio_sid: res.sid ?? null, contact_id: contactId, deal_id: ref(input.dealId),
   });
   if (!res.ok) return { error: res.error ?? "Couldn't send." };

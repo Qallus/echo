@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import webpush from "web-push";
+import { secrets } from "@/lib/secrets";
 
 // Email (Resend), SMS (Twilio) and push (Web Push). Each returns
 // { ok, id?, error? } and never throws, so one failed channel doesn't stop
@@ -29,9 +30,11 @@ export function siteUrl(path: string) {
 
 export async function sendEmail(to: string, subject: string, html: string, text: string,
   opts: { headers?: Record<string, string>; replyTo?: string; idempotencyKey?: string } = {}): Promise<SendResult> {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
-  if (!key || !from) return { ok: false, error: "Email isn't configured (RESEND_API_KEY / EMAIL_FROM)." };
+  const s = await secrets("RESEND_API_KEY", "EMAIL_FROM", "RESEND_REPLY_TO");
+  const key = s.RESEND_API_KEY;
+  const from = s.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
+  const replyTo = opts.replyTo ?? s.RESEND_REPLY_TO;
+  if (!key || !from) return { ok: false, error: "Email isn't set up (Admin → Settings → Integrations → Resend)." };
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -40,7 +43,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
         from: from.includes("<") ? from : `Echo <${from}>`, to: [to], subject, html, text,
         ...(opts.headers ? { headers: opts.headers } : {}),
         // Replies go to the team inbox.
-        ...(opts.replyTo ?? process.env.RESEND_REPLY_TO ? { reply_to: opts.replyTo ?? process.env.RESEND_REPLY_TO } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
@@ -61,10 +64,11 @@ export function toE164(raw: string): string | null {
 }
 
 export async function sendSms(to: string, body: string): Promise<SendResult> {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM_NUMBER ?? process.env.TWILIO_PHONE_NUMBER;
-  if (!sid || !token || !from) return { ok: false, error: "SMS isn't configured (TWILIO_* env vars)." };
+  const s = await secrets("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER");
+  const sid = s.TWILIO_ACCOUNT_SID;
+  const token = s.TWILIO_AUTH_TOKEN;
+  const from = s.TWILIO_FROM_NUMBER ?? process.env.TWILIO_PHONE_NUMBER;
+  if (!sid || !token || !from) return { ok: false, error: "SMS isn't set up (Admin → Settings → Integrations → Twilio)." };
   try {
     const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
       method: "POST",

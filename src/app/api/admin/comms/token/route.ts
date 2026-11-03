@@ -8,7 +8,7 @@ export async function GET() {
   const user = await getUser();
   const staff = user ? await getStaff() : null;
   if (!user || !staff?.mfaVerified || !can(staff, "comms.manage")) return Response.json({ error: "Not allowed." }, { status: 403 });
-  if (!callsReady()) return Response.json({ error: "Calling isn't set up." }, { status: 503 });
+  if (!(await callsReady())) return Response.json({ error: "Calling isn't set up." }, { status: 503 });
   const identity = identityFor(user.id);
-  return Response.json({ token: voiceToken(identity), identity, number: phoneNumber() }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ token: await voiceToken(identity), identity, number: await phoneNumber() }, { headers: { "cache-control": "no-store" } });
 }
