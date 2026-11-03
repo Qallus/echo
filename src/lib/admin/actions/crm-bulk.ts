@@ -1,6 +1,7 @@
 "use server";
 
 import { adminAudit } from "@/lib/admin/audit";
+import { queueAutomations } from "@/lib/comms/automations";
 import { requireStaff } from "@/lib/admin/guard";
 import { STAGES, isStage } from "@/lib/crm/deals";
 import { isCompanyStatus, isContactRole, isContactStatus, isLeadStatus } from "@/lib/crm/types";
@@ -55,6 +56,11 @@ export async function bulkUpdate(table: Table, ids: string[], change: BulkChange
     }));
     const failed = results.find((r) => r.error);
     if (failed?.error) return { error: failed.error.message };
+  }
+  if (table === "crm_deals" && typeof row.stage === "string") {
+    const stage = row.stage;
+    await queueAutomations(supabase, "stage_changed", targets.map((dealId) => ({ dealId, stage })));
+    if (stage === "closed_won" || stage === "closed_lost") await queueAutomations(supabase, stage, targets.map((dealId) => ({ dealId })));
   }
   await adminAudit(supabase, "crm.bulk.update", { type: table, id: targets[0] }, { count: targets.length, fields: [...Object.keys(row), ...(add.length ? ["add_tags"] : []), ...(remove.size ? ["remove_tags"] : [])] });
   refresh();

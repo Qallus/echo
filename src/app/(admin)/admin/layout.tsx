@@ -5,7 +5,8 @@ import { ShieldOff } from "lucide-react";
 import { AdminMobileHeader } from "@/components/admin/admin-mobile-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { getStaff } from "@/lib/admin/guard";
+import { Softphone } from "@/components/admin/comms/softphone";
+import { can, getStaff } from "@/lib/admin/guard";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Admin · Echo" };
@@ -31,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </p>
         )}
         <main className="flex-1">{children}</main>
+        {can(staff, "comms.manage") && <Softphone />}
       </SidebarInset>
     </SidebarProvider>
   );

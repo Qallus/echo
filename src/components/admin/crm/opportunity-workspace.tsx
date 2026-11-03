@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import { DetailRow, Editable, Panel, StageBadge } from "./crm-kit";
 import { AddFieldDialog, BlockedDialog, CloseDialog, NextStepDialog } from "./opportunity-dialogs";
 import { ComposeDialog } from "@/components/admin/comms/compose-dialog";
+import { startCall } from "@/components/admin/comms/softphone";
+import { TextDialog } from "@/components/admin/comms/text-dialog";
 import { StageConfigDialog } from "./stage-config-dialog";
 import { LogDialog, TimelinePanel, type LogKind } from "./timeline";
 
@@ -34,6 +36,7 @@ export function OpportunityWorkspace({ deal, contact, staff, history, activities
   const [dialog, setDialog] = useState<"next" | "field" | "stages" | null>(null);
   const [log, setLog] = useState<LogKind | null>(null);
   const [composing, setComposing] = useState(false);
+  const [texting, setTexting] = useState(false);
   const [stepLabel, setStepLabel] = useState("");
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
@@ -61,9 +64,9 @@ export function OpportunityWorkspace({ deal, contact, staff, history, activities
   };
 
   const actions: { key: string; label: string; icon: typeof Phone; run: () => void }[] = [
-    { key: "call", label: "Call", icon: Phone, run: () => { if (contact?.phone) window.open(`tel:${contact.phone}`); setLog("call"); } },
+    { key: "call", label: "Call", icon: Phone, run: () => (contact?.phone ? startCall({ number: contact.phone, name: contactName(contact), contactId: contact.id, dealId: deal.id }) : setLog("call")) },
     { key: "email", label: "Email", icon: Mail, run: () => setComposing(true) },
-    { key: "sms", label: "Text", icon: MessageSquare, run: () => { if (contact?.phone) window.open(`sms:${contact.phone}`); setLog("sms"); } },
+    { key: "sms", label: "Text", icon: MessageSquare, run: () => (contact?.phone ? setTexting(true) : setLog("sms")) },
     { key: "meeting", label: "Meeting", icon: CalendarClock, run: () => setLog("meeting") },
     { key: "note", label: "Note", icon: StickyNote, run: () => setLog("note") },
     { key: "task", label: "Task", icon: CheckSquare, run: () => setLog("task") },
@@ -280,6 +283,7 @@ export function OpportunityWorkspace({ deal, contact, staff, history, activities
       {dialog === "field" && <AddFieldDialog deal={deal} onClose={() => setDialog(null)} />}
       {dialog === "stages" && <StageConfigDialog open onOpenChange={(o) => !o && setDialog(null)} initial={stageConfig} startStage={deal.stage} />}
       {log && <LogDialog initial={log} target={target} onClose={() => setLog(null)} />}
+      {texting && contact?.phone && <TextDialog to={contact.phone} name={contactName(contact)} contactId={contact.id} dealId={deal.id} onClose={() => setTexting(false)} />}
       {composing && <ComposeDialog dealId={deal.id} initial={contact ? [{ id: contact.id, name: contactName(contact), email: contact.email }] : []} onClose={() => setComposing(false)} />}
     </div>
   );

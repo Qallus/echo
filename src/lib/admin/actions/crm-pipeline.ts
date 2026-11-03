@@ -1,6 +1,7 @@
 "use server";
 
 import { adminAudit } from "@/lib/admin/audit";
+import { queueAutomations } from "@/lib/comms/automations";
 import { requireStaff } from "@/lib/admin/guard";
 import { STAGES, isNextStepType, isStage, newId, type CustomField, type ExtraStep } from "@/lib/crm/deals";
 import { parseStageConfig, type StageConfig } from "@/lib/crm/guidance";
@@ -124,6 +125,7 @@ export async function addToPipeline(contactIds: string[]): Promise<Result & { cr
     const promote = fresh.filter((c) => c.role === "contact" || c.role === "lead").map((c) => c.id);
     await supabase.from("crm_contacts").update({ lead_status: "in_pipeline" }).in("id", fresh.map((c) => c.id));
     if (promote.length) await supabase.from("crm_contacts").update({ role: "prospect" }).in("id", promote);
+    await queueAutomations(supabase, "added_to_pipeline", dealIds.map((dealId) => ({ dealId })));
     await adminAudit(supabase, "crm.pipeline.add", { type: "crm_deal", id: dealIds[0] }, { contacts: fresh.length, deals: dealIds });
   }
   refresh();

@@ -6,17 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteTemplate, resubscribe, saveTemplate } from "@/lib/admin/actions/comms";
-import type { Send, Template } from "@/lib/comms/data";
+import type { Automation, Send, Template } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { ComposeDialog, type Person } from "./compose-dialog";
+import { AutomationsPanel } from "./automations-panel";
 import { EmailEditor } from "./email-editor";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-const SUB = ["templates", "history", "unsubscribes"] as const;
+const SUB = ["templates", "automations", "history", "unsubscribes"] as const;
 
-export function EmailPanel({ templates, sends, unsubscribes, people, readOnly }: {
+export function EmailPanel({ templates, sends, unsubscribes, people, readOnly, automations, cronReady }: {
   templates: Template[]; sends: Send[]; unsubscribes: { email: string; created_at: string }[]; people: Person[]; readOnly: boolean;
+  automations: Automation[]; cronReady: boolean;
 }) {
   const [sub, setSub] = useState<(typeof SUB)[number]>("templates");
   const [editing, setEditing] = useState<Template | "new" | null>(null);
@@ -63,6 +65,8 @@ export function EmailPanel({ templates, sends, unsubscribes, people, readOnly }:
           ))}
         </div>
       ))}
+
+      {sub === "automations" && <AutomationsPanel automations={automations} templates={templates} readOnly={readOnly} cronReady={cronReady} />}
 
       {sub === "history" && (sends.length === 0 ? <EmptyState message="Nothing sent yet." /> : (
         <div className="rounded-xl border bg-card px-2">

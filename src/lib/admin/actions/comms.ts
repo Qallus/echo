@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
+import { queueAutomations } from "@/lib/comms/automations";
 import { requireStaff } from "@/lib/admin/guard";
 import { parseSchema, plainToSchema, schemaToHtml, schemaToText, type EmailSchema } from "@/lib/comms/blocks";
 import { contactRecipients, sendToRecipients, type Recipient } from "@/lib/comms/send";
@@ -147,6 +148,7 @@ export async function convertInbox(id: string, as: "contact" | "lead" | "pipelin
     }).select("id").single();
     if (error) return { error: error.message };
     contactId = created.id;
+    if (as !== "contact") await queueAutomations(supabase, "lead_created", [{ contactId: created.id }]);
   }
   await supabase.from("inbox_messages").update({ contact_id: contactId, status: "read" }).eq("id", id);
   await supabase.from("crm_activities").insert({
@@ -186,4 +188,54 @@ export async function templateOptions(): Promise<{ id: string; name: string; sub
   const supabase = await createClient();
   const { data } = await supabase.from("email_templates").select("id, name, subject, category").order("name");
   return data ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Automations
+// ---------------------------------------------------------------------------
+const TRIGGER_IDS = ["lead_created", "added_to_pipeline", "stage_changed", "closed_won", "closed_lost", "next_step_overdue", "deal_stalled"];
+const STAGE_IDS = ["new_working", "contacted", "qualified", "opportunity", "proposal", "negotiation", "closed_won", "closed_lost", "nurture"];
+
+export async function saveAutomation(id: string | null, input: {
+  name: string; trigger: string; stage?: string | null; stalled_days?: number; template_id: string; recipient: string; delay_minutes?: number; enabled: boolean;
+}): Promise<Result> {
+  await requireStaff("comms.manage");
+  const name = text(input.name, 120);
+  if (!name) return { error: "Name the automation." };
+  if (!TRIGGER_IDS.includes(input.trigger)) return { error: "Pick a trigger." };
+  const templateId = ref(input.template_id);
+  if (!templateId) return { error: "Pick a template." };
+  const row = {
+    name, trigger: input.trigger, stage: input.trigger === "stage_changed" && STAGE_IDS.includes(input.stage ?? "") ? input.stage : null,
+    stalled_days: Math.max(1, Math.min(365, Math.round(Number(input.stalled_days) || 14))), template_id: templateId,
+    recipient: input.recipient === "owner" ? "owner" : "contact", delay_minutes: Math.max(0, Math.min(525600, Math.round(Number(input.delay_minutes) || 0))),
+    enabled: Boolean(input.enabled),
+  };
+  const supabase = await createClient();
+  const { data, error } = id && isUuid(id)
+    ? await supabase.from("email_automations").update(row).eq("id", id).select("id").single()
+    : await supabase.from("email_automations").insert(row).select("id").single();
+  if (error) return { error: error.message };
+  await adminAudit(supabase, id ? "comms.automation.update" : "comms.automation.create", { type: "email_automation", id: data.id }, { name, trigger: row.trigger, enabled: row.enabled });
+  return done({ ok: "Automation saved.", id: data.id });
+}
+
+export async function setAutomationEnabled(id: string, enabled: boolean): Promise<Result> {
+  await requireStaff("comms.manage");
+  if (!isUuid(id)) return { error: "Not found." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("email_automations").update({ enabled }).eq("id", id);
+  if (error) return { error: error.message };
+  await adminAudit(supabase, enabled ? "comms.automation.on" : "comms.automation.off", { type: "email_automation", id });
+  return done({ ok: enabled ? "On." : "Off." });
+}
+
+export async function deleteAutomation(id: string): Promise<Result> {
+  await requireStaff("comms.manage");
+  if (!isUuid(id)) return { error: "Not found." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("email_automations").delete().eq("id", id);
+  if (error) return { error: error.message };
+  await adminAudit(supabase, "comms.automation.delete", { type: "email_automation", id });
+  return done({ ok: "Deleted." });
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { adminAudit } from "@/lib/admin/audit";
+import { queueAutomations } from "@/lib/comms/automations";
 import { requireStaff } from "@/lib/admin/guard";
 import { STAGES } from "@/lib/crm/deals";
 import { isActivityKind, isCompanyStatus, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
@@ -81,6 +82,7 @@ export async function saveContact(id: string | null, input: ContactInput): Promi
   if (error) return { error: error.message };
   const name = [row.first_name, row.last_name].filter(Boolean).join(" ");
   await adminAudit(supabase, id ? "crm.contact.update" : "crm.contact.create", { type: "crm_contact", id: data.id }, { name });
+  if (!id && row.role === "lead") await queueAutomations(supabase, "lead_created", [{ contactId: data.id }]);
   refresh();
   return { ok: id ? "Saved." : `${name} added.`, id: data.id };
 }
@@ -126,6 +128,7 @@ export async function saveDeal(id: string | null, input: DealInput): Promise<Res
     ? await supabase.from("crm_deals").update(row).eq("id", id).select("id").single()
     : await supabase.from("crm_deals").insert(row).select("id").single();
   if (error) return { error: error.message };
+  if (!id) await queueAutomations(supabase, "added_to_pipeline", [{ dealId: data.id }]);
   await adminAudit(supabase, id ? "crm.deal.update" : "crm.deal.create", { type: "crm_deal", id: data.id },
     { title, stage: row.stage, value_cents: row.value_cents });
   refresh();
@@ -145,6 +148,8 @@ export async function moveDeal(id: string, stage: DealStage, outcome?: { won_sum
   if (error) return { error: error.message };
   if (!data) return { error: "Not found." };
   await adminAudit(supabase, "crm.deal.stage", { type: "crm_deal", id }, { title: data.title, stage });
+  await queueAutomations(supabase, "stage_changed", [{ dealId: id, stage }]);
+  if (stage === "closed_won" || stage === "closed_lost") await queueAutomations(supabase, stage, [{ dealId: id }]);
   refresh();
   return { ok: `Moved to ${STAGES[stage].label}.` };
 }

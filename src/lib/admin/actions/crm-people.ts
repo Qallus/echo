@@ -1,6 +1,7 @@
 "use server";
 
 import { adminAudit } from "@/lib/admin/audit";
+import { queueAutomations } from "@/lib/comms/automations";
 import { requireStaff } from "@/lib/admin/guard";
 import { isActivityKind, isContactRole, isContactStatus, isLeadStatus, type LeadStatus } from "@/lib/crm/types";
 import { email, list, ref, refresh, text, uuids, type Result } from "@/lib/crm/validate";
@@ -115,8 +116,9 @@ export async function importContacts(rows: ImportRow[], role: "contact" | "lead"
     });
   }
   if (out.length) {
-    const { error } = await supabase.from("crm_contacts").insert(out);
+    const { data: made, error } = await supabase.from("crm_contacts").insert(out).select("id");
     if (error) return { error: error.message };
+    if (role === "lead") await queueAutomations(supabase, "lead_created", (made ?? []).map((c) => ({ contactId: c.id })));
   }
   await adminAudit(supabase, "crm.contact.import", { type: "crm_contact", id: "import" }, { imported: out.length, skipped, role });
   refresh();

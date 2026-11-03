@@ -14,6 +14,8 @@ import { RoleBadge } from "./contacts-page";
 import { DetailRow, Editable, Panel } from "./crm-kit";
 import { DealRows } from "./crm-ui";
 import { ComposeDialog } from "@/components/admin/comms/compose-dialog";
+import { startCall } from "@/components/admin/comms/softphone";
+import { TextDialog } from "@/components/admin/comms/text-dialog";
 import { TimelinePanel } from "./timeline";
 
 const CATEGORIES: [string, RegExp][] = [
@@ -32,6 +34,7 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
   const router = useRouter();
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [composing, setComposing] = useState(false);
+  const [texting, setTexting] = useState(false);
   const [pending, start] = useTransition();
   const save = (patch: ContactPatch) => start(async () => setMsg(await updateContact(contact.id, patch)));
   const details = Object.entries(contact.details ?? {});
@@ -63,8 +66,10 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled={!contact.phone} nativeButton={false} render={<a href={contact.phone ? `tel:${contact.phone}` : undefined} />}><Phone /> Call</Button>
-          <Button variant="outline" size="sm" disabled={!contact.phone} nativeButton={false} render={<a href={contact.phone ? `sms:${contact.phone}` : undefined} />}><MessageSquare /> Text</Button>
+          <Button variant="outline" size="sm" disabled={!contact.phone} onClick={() => contact.phone && startCall({ number: contact.phone, name: contactName(contact), contactId: contact.id })}><Phone /> Call</Button>
+          {readOnly
+            ? <Button variant="outline" size="sm" disabled={!contact.phone} nativeButton={false} render={<a href={contact.phone ? `sms:${contact.phone}` : undefined} />}><MessageSquare /> Text</Button>
+            : <Button variant="outline" size="sm" disabled={!contact.phone} onClick={() => setTexting(true)}><MessageSquare /> Text</Button>}
           {readOnly
             ? <Button variant="outline" size="sm" disabled={!contact.email} nativeButton={false} render={<a href={contact.email ? `mailto:${contact.email}` : undefined} />}><Mail /> Email</Button>
             : <Button variant="outline" size="sm" disabled={!contact.email} onClick={() => setComposing(true)}><Mail /> Email</Button>}
@@ -75,6 +80,7 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
       </div>
       {(msg.ok || msg.error) && <p className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.error ?? msg.ok}</p>}
 
+      {texting && contact.phone && <TextDialog to={contact.phone} name={contactName(contact)} contactId={contact.id} onClose={() => setTexting(false)} />}
       {composing && <ComposeDialog initial={[{ id: contact.id, name: contactName(contact), email: contact.email }]} onClose={() => setComposing(false)} />}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
         <div className="space-y-4">
