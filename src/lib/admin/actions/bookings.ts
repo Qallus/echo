@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
 import { requireStaff } from "@/lib/admin/guard";
+import { zonedToUtc } from "@/lib/bookings/time";
 import { isBookingStatus, parseAvailability, slugify, type Availability, type BookingStatus } from "@/lib/bookings/types";
 import { email, ref, refresh, text, uuids, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
@@ -120,16 +121,75 @@ export async function deleteBookings(ids: string[]): Promise<Result> {
   return done({ ok: "Deleted." });
 }
 
-// "2026-11-05" + "14:30" in a time zone -> the UTC instant.
-function zonedToUtc(date: string, time: string, tz: string): Date | null {
-  const guess = new Date(`${date}T${time}:00Z`);
-  if (Number.isNaN(guess.getTime())) return null;
-  try {
-    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
-      .formatToParts(guess).map((p) => [p.type, p.value]));
-    const asLocal = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute);
-    return new Date(guess.getTime() - (asLocal - guess.getTime()));
-  } catch {
-    return guess;
-  }
+// ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+export async function saveEvent(id: string | null, input: {
+  title: string; slug?: string; summary?: string; description?: string; location_kind: string; location?: string; online_url?: string;
+  start_date: string; end_date?: string; start_time?: string; end_time?: string; all_day: boolean; capacity?: number | string | null;
+  status: string; registration_open: boolean; host_id?: string | null; timezone: string;
+}): Promise<Result> {
+  await requireStaff("crm.manage");
+  const title = text(input.title, 200);
+  if (!title) return { error: "Name the event." };
+  const slug = slugify(input.slug || title).slice(0, 80);
+  const endDate = input.end_date || input.start_date;
+  const start = zonedToUtc(input.start_date, input.all_day ? "00:00" : input.start_time ?? "", input.timezone);
+  let end = zonedToUtc(endDate, input.all_day ? "00:00" : input.end_time ?? "", input.timezone);
+  if (!start || !end) return { error: "Pick the dates and times." };
+  if (input.all_day) end = new Date(end.getTime() + 86400_000);
+  if (end <= start) return { error: "The event has to end after it starts." };
+  const cap = input.capacity === "" || input.capacity == null ? null : Math.round(Number(input.capacity));
+  const url = text(input.online_url, 500);
+  const row = {
+    title, slug, summary: text(input.summary, 500), description: text(input.description, 20000),
+    location_kind: ["in_person", "online", "hybrid"].includes(input.location_kind) ? input.location_kind : "in_person", location: text(input.location, 300),
+    online_url: url && /^https?:\/\//i.test(url) ? url : null, starts_at: start.toISOString(), ends_at: end.toISOString(), all_day: Boolean(input.all_day),
+    capacity: cap && cap > 0 ? Math.min(cap, 100000) : null, status: ["draft", "published", "canceled"].includes(input.status) ? input.status : "draft",
+    registration_open: Boolean(input.registration_open), host_id: ref(input.host_id),
+  };
+  const supabase = await createClient();
+  const { data, error } = id && isUuid(id)
+    ? await supabase.from("events").update(row).eq("id", id).select("id").single()
+    : await supabase.from("events").insert(row).select("id").single();
+  if (error) return { error: error.code === "23505" ? "That link name is taken. Pick another." : error.message };
+  await adminAudit(supabase, id ? "events.update" : "events.create", { type: "event", id: data.id }, { title, status: row.status });
+  return done({ ok: "Event saved.", id: data.id });
+}
+
+export async function deleteEvent(id: string): Promise<Result> {
+  await requireStaff("crm.manage");
+  if (!isUuid(id)) return { error: "Not found." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events").delete().eq("id", id).select("title").maybeSingle();
+  if (error) return { error: error.message };
+  await adminAudit(supabase, "events.delete", { type: "event", id }, { title: data?.title });
+  return done({ ok: "Event deleted." });
+}
+
+export async function setRegistrationStatus(ids: string[], status: "registered" | "canceled" | "attended" | "no_show"): Promise<Result> {
+  await requireStaff("crm.manage");
+  const targets = uuids(ids);
+  if (!targets.length || !["registered", "canceled", "attended", "no_show"].includes(status)) return { error: "Nothing to update." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("event_registrations").update({ status }).in("id", targets);
+  if (error) return { error: error.message };
+  await adminAudit(supabase, "events.registrations.status", { type: "event_registration", id: targets[0] }, { count: targets.length, status });
+  return done({ ok: "Updated." });
+}
+
+// Staff add someone to an event (phone or walk-in).
+export async function addRegistration(eventId: string, input: { name: string; email: string; phone?: string; company?: string; guests?: number }): Promise<Result> {
+  await requireStaff("crm.manage");
+  const name = text(input.name, 200);
+  const mail = email(input.email);
+  if (!isUuid(eventId) || !name || !mail) return { error: "Enter a name and a valid email." };
+  const supabase = await createClient();
+  const contactId = (await supabase.from("crm_contacts").select("id").eq("email", mail).limit(1).maybeSingle()).data?.id ?? null;
+  const { error } = await supabase.from("event_registrations").insert({
+    event_id: eventId, name, email: mail, phone: text(input.phone, 40), company: text(input.company, 200), guests: int(input.guests, 1, 20, 1), contact_id: contactId,
+  });
+  if (error) return { error: error.code === "23505" ? "They're already registered." : error.message };
+  await adminAudit(supabase, "events.registrations.add", { type: "event", id: eventId });
+  return done({ ok: `${name} added.` });
 }

@@ -11,6 +11,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { money } from "@/lib/billing/catalog";
 import { stageOf, type Deal, type DealStage } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 // Shared pieces for the CRM pages.
 
@@ -34,6 +35,8 @@ export function Field({ label, name, defaultValue, type = "text", placeholder, r
       <Label htmlFor={`f-${name}`}>{label}</Label>
       {type === "date"
         ? <DatePicker id={`f-${name}`} name={name} defaultValue={defaultValue} />
+        : type === "tel"
+        ? <PhoneInput id={`f-${name}`} name={name} defaultValue={defaultValue} placeholder={placeholder} />
         : multiline
         ? <Textarea id={`f-${name}`} name={name} defaultValue={defaultValue ?? ""} placeholder={placeholder} rows={3} />
         : <Input id={`f-${name}`} name={name} type={type} defaultValue={defaultValue ?? ""} placeholder={placeholder} required={required} />}

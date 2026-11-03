@@ -15,6 +15,7 @@ import { LOCATIONS, WEEKDAYS, slugify, type Availability, type BookingType } fro
 import { ownerName, type StaffOption } from "@/lib/crm/types";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { SELECT } from "@/components/admin/crm/crm-ui";
+import { TimePicker } from "@/components/ui/time-picker";
 
 const ZONES = ["America/Phoenix", "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "America/Anchorage", "Pacific/Honolulu", "UTC"];
 
@@ -117,9 +118,9 @@ export function AvailabilityPanel({ initial, readOnly }: { initial: Availability
               <label className="flex w-36 items-center gap-2 text-sm"><Switch checked={Boolean(hours)} disabled={readOnly} onCheckedChange={(on) => setDay(d, on ? ["09:00", "17:00"] : null)} /> {label}</label>
               {hours ? (
                 <span className="flex items-center gap-2">
-                  <Input type="time" value={hours[0]} disabled={readOnly} onChange={(e) => setDay(d, [e.target.value, hours[1]])} className="w-32" aria-label={`${label} start`} />
+                  <TimePicker value={hours[0]} disabled={readOnly} step={15} onChange={(v) => setDay(d, [v, hours[1]])} className="w-36" aria-label={`${label} start`} />
                   <span className="text-muted-foreground">to</span>
-                  <Input type="time" value={hours[1]} disabled={readOnly} onChange={(e) => setDay(d, [hours[0], e.target.value])} className="w-32" aria-label={`${label} end`} />
+                  <TimePicker value={hours[1]} disabled={readOnly} step={15} onChange={(v) => setDay(d, [hours[0], v])} className="w-36" aria-label={`${label} end`} />
                 </span>
               ) : <span className="text-sm text-muted-foreground">Unavailable</span>}
             </div>

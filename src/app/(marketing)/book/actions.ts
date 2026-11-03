@@ -37,3 +37,14 @@ export async function book(input: { slug: string; startsAt: string; name: string
   if (error) return { error: ["22023", "54000"].includes(error.code ?? "") ? error.message : "Couldn't book that. Please try again or contact us." };
   return { ok: true };
 }
+
+export async function registerForEvent(input: { slug: string; name: string; email: string; phone: string; company: string; guests: number; website?: string }): Promise<{ ok?: string; error?: string }> {
+  if (input.website) return { ok: "registered" };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("event_register", {
+    p_slug: input.slug, p_name: input.name.slice(0, 200), p_email: input.email.slice(0, 200), p_phone: input.phone.slice(0, 40),
+    p_company: input.company.slice(0, 200), p_guests: Math.max(1, Math.min(20, Math.round(input.guests) || 1)),
+  });
+  if (error) return { error: error.code === "22023" ? error.message : "Couldn't register. Please try again or contact us." };
+  return { ok: data as string };
+}

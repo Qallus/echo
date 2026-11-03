@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { book, openDays, openTimes, type PublicType } from "../actions";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const ICON = { video: Video, phone: Phone, in_person: MapPin } as const;
 const LOC = { video: "Video call", phone: "Phone call", in_person: "In person" } as const;
@@ -95,7 +96,7 @@ export function Booker({ type }: { type: PublicType }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5"><Label htmlFor="b-name">Name</Label><Input id="b-name" required autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="space-y-1.5"><Label htmlFor="b-email">Email</Label><Input id="b-email" type="email" required autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div className="space-y-1.5"><Label htmlFor="b-phone">Phone (for a text reminder)</Label><Input id="b-phone" type="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label htmlFor="b-phone">Phone (for a text reminder)</Label><PhoneInput id="b-phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} /></div>
             <div className="space-y-1.5"><Label htmlFor="b-company">Company (optional)</Label><Input id="b-company" autoComplete="organization" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
           </div>
           <div className="space-y-1.5"><Label htmlFor="b-notes">Anything we should know?</Label><Textarea id="b-notes" rows={4} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>

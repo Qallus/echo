@@ -29,3 +29,26 @@ export async function sendBookingReminders(db: SupabaseClient) {
   }
   return sent;
 }
+
+// Reminders for event registrations, the day before the event (service role).
+export async function sendEventReminders(db: SupabaseClient) {
+  const now = new Date();
+  const { data: events } = await db.from("events").select("id, title, starts_at, ends_at, all_day, location, location_kind, online_url")
+    .eq("status", "published").gt("starts_at", now.toISOString()).lte("starts_at", new Date(now.getTime() + 24 * 3600_000).toISOString());
+  if (!events?.length) return 0;
+  const { data: cfg } = await db.from("platform_settings").select("value").eq("key", "booking_availability").maybeSingle();
+  const tz = parseAvailability(cfg?.value).timezone;
+  let sent = 0;
+  for (const e of events) {
+    const { data: regs } = await db.from("event_registrations").select("id, name, email").eq("event_id", e.id).eq("status", "registered").is("reminder_sent_at", null).limit(500);
+    const when = e.all_day ? new Date(e.starts_at).toLocaleDateString("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric" }) : formatWhen(e.starts_at, tz);
+    for (const r of regs ?? []) {
+      const where = [e.location_kind !== "online" ? e.location : null, e.location_kind !== "in_person" && e.online_url ? `Join online: ${e.online_url}` : null].filter(Boolean).join(". ");
+      const body = `Hi ${r.name.split(" ")[0]}, a reminder that ${e.title} is ${when}${e.all_day ? "" : ` (${tz.replace("_", " ")} time)`}.${where ? ` ${where}.` : ""} See you there!`;
+      const res = await sendEmail(r.email, `Reminder: ${e.title}`, emailHtml({ title: e.title, body, url: siteUrl("/book"), cta: "Event details" }), body);
+      if (res.ok) sent++;
+      await db.from("event_registrations").update({ reminder_sent_at: now.toISOString() }).eq("id", r.id);
+    }
+  }
+  return sent;
+}

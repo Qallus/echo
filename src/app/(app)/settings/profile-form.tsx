@@ -11,6 +11,7 @@ import type { Profile } from "@/lib/types";
 import { updateProfile, type SettingsState } from "./actions";
 import { DetailsEditor } from "./details-editor";
 import { Status } from "./settings-forms";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -60,7 +61,7 @@ export function ProfileForm({ profile, timeZones }: { profile: Profile; timeZone
           <Input id="email" value={profile.email} disabled readOnly />
         </Field>
         <Field id="phone" label="Phone">
-          <Input id="phone" name="phone" type="tel" defaultValue={profile.phone ?? ""} maxLength={32} placeholder="+1 555 123 4567" autoComplete="tel" />
+          <PhoneInput id="phone" name="phone" defaultValue={profile.phone ?? ""} maxLength={32} placeholder="(555) 123-4567" />
         </Field>
         <label className="flex items-start gap-3 rounded-lg border p-3 sm:col-span-2">
           <Switch name="phone_visible" defaultChecked={profile.phoneVisible} className="mt-0.5" />

@@ -18,6 +18,8 @@ import { BulkBar, type BulkAction } from "@/components/admin/crm/bulk-bar";
 import { EmptyState, RecordCalendar, SearchBox, StatRow, StatTile, ViewSwitcher } from "@/components/admin/crm/crm-kit";
 import { SELECT } from "@/components/admin/crm/crm-ui";
 import { DataTable, plain, type Column } from "@/components/admin/crm/data-table";
+import { TimePicker } from "@/components/ui/time-picker";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 type View = "list" | "calendar" | "table";
 const VIEWS = [{ id: "list" as const, label: "List", icon: List }, { id: "calendar" as const, label: "Calendar", icon: CalendarDays }, { id: "table" as const, label: "Table", icon: TableIcon }];
@@ -165,10 +167,10 @@ function BookingDialog({ booking, types, staff, people, timezone, readOnly, onCl
           </div>
           <div className="space-y-1.5"><Label>Date</Label><DatePicker value={f.date} onChange={(v) => set({ date: v })} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5"><Label htmlFor="bk-time">Time</Label><Input id="bk-time" type="time" value={f.time} disabled={readOnly} onChange={(e) => set({ time: e.target.value })} /></div>
+            <div className="space-y-1.5"><Label htmlFor="bk-time">Time</Label><TimePicker id="bk-time" value={f.time} disabled={readOnly} step={15} onChange={(v) => set({ time: v })} /></div>
             <div className="space-y-1.5"><Label htmlFor="bk-min">Minutes</Label><Input id="bk-min" type="number" min={5} value={f.minutes} disabled={readOnly} onChange={(e) => set({ minutes: Number(e.target.value) })} /></div>
           </div>
-          <div className="space-y-1.5"><Label htmlFor="bk-phone">Phone</Label><Input id="bk-phone" type="tel" value={f.phone} disabled={readOnly} onChange={(e) => set({ phone: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="bk-phone">Phone</Label><PhoneInput id="bk-phone" value={f.phone} disabled={readOnly} onChange={(v) => set({ phone: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="bk-host">Host</Label>
             <select id="bk-host" className={SELECT} value={f.host_id} disabled={readOnly} onChange={(e) => set({ host_id: e.target.value })}>
               <option value="">Anyone</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}

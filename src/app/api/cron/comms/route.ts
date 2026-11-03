@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { sendBookingReminders } from "@/lib/bookings/reminders";
+import { sendBookingReminders, sendEventReminders } from "@/lib/bookings/reminders";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
 import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,7 +25,7 @@ async function run(req: Request) {
   const db = createAdminClient();
   const queued = await queueTimed(db);
   const sent = await processDueRuns(db);
-  const reminders = await sendBookingReminders(db);
+  const reminders = (await sendBookingReminders(db)) + (await sendEventReminders(db));
   return Response.json({ ok: true, queued, sent, reminders });
 }
 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { submitContact } from "./actions";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const TOPICS = ["Sales", "Support", "Partnerships", "Billing", "Other"];
 const SELECT = "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
@@ -35,7 +36,7 @@ export function ContactForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor="c-name">Name</Label><Input id="c-name" name="name" required autoComplete="name" /></div>
         <div className="space-y-1.5"><Label htmlFor="c-email">Email</Label><Input id="c-email" name="email" type="email" required autoComplete="email" /></div>
-        <div className="space-y-1.5"><Label htmlFor="c-phone">Phone (optional)</Label><Input id="c-phone" name="phone" type="tel" autoComplete="tel" /></div>
+        <div className="space-y-1.5"><Label htmlFor="c-phone">Phone (optional)</Label><PhoneInput id="c-phone" name="phone" /></div>
         <div className="space-y-1.5"><Label htmlFor="c-company">Company (optional)</Label><Input id="c-company" name="company" autoComplete="organization" /></div>
       </div>
       <div className="space-y-1.5">

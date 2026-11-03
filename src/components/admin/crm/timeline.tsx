@@ -15,6 +15,7 @@ import { formatDay, isOverdue, ownerName, today, type Activity, type StaffOption
 import { cn } from "@/lib/utils";
 import { DetailRow, EmptyState, Panel } from "./crm-kit";
 import { SELECT } from "./crm-ui";
+import { TimePicker } from "@/components/ui/time-picker";
 
 const CHANNEL: Record<string, { label: string; icon: typeof Phone; tone: string }> = {
   call: { label: "Call", icon: Phone, tone: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
@@ -217,7 +218,7 @@ export function LogDialog({ initial, target, onClose }: { initial: LogKind | nul
             <div className="space-y-1.5"><Label htmlFor="log-min">Minutes</Label><Input id="log-min" type="number" min={0} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div>
           )}
           <div className="space-y-1.5"><Label>{kind === "task" ? "Due" : "Date"}</Label><DatePicker value={day} onChange={setDay} /></div>
-          {kind !== "task" && <div className="space-y-1.5"><Label htmlFor="log-time">Time</Label><Input id="log-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>}
+          {kind !== "task" && <div className="space-y-1.5"><Label htmlFor="log-time">Time</Label><TimePicker id="log-time" value={time} onChange={setTime} /></div>}
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="log-body">{spec.body}</Label><Textarea id="log-body" rows={4} value={body} onChange={(e) => setBody(e.target.value)} /></div>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

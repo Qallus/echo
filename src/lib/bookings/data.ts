@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import type { EventRow, Registration } from "./events";
 import { parseAvailability, type Availability, type Booking, type BookingType } from "./types";
 
 // Booking reads for the admin (RLS: crm.view).
@@ -24,4 +25,16 @@ export async function getAvailability(): Promise<Availability> {
   const supabase = await createClient();
   const { data } = await supabase.from("platform_settings").select("value").eq("key", "booking_availability").maybeSingle();
   return parseAvailability(data?.value);
+}
+
+export async function listEvents(): Promise<EventRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("events").select("*").order("starts_at", { ascending: false }).limit(500);
+  return (data ?? []) as EventRow[];
+}
+
+export async function listRegistrations(): Promise<Registration[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("event_registrations").select("*").order("created_at", { ascending: false }).limit(5000);
+  return (data ?? []) as Registration[];
 }

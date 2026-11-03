@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { CHANNELS, NOTIFICATION_TYPES, type Channel, type Preference } from "@/lib/notify/types";
+import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import {
   addChannel, removeChannel, removePushSubscription, savePushSubscription, sendCode, sendTest, setPreference,
@@ -241,9 +242,9 @@ export function QuietHours({ start: s, end: e }: { start: string; end: string })
     <form className="space-y-2" onSubmit={(ev) => { ev.preventDefault(); run(async () => setResult(await setQuietHours(start, end))); }}>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span>From</span>
-        <Input type="time" value={start} onChange={(ev) => setStart(ev.target.value)} className="w-32" aria-label="Quiet hours start" />
+        <TimePicker value={start} onChange={setStart} step={15} className="w-36" aria-label="Quiet hours start" />
         <span>to</span>
-        <Input type="time" value={end} onChange={(ev) => setEnd(ev.target.value)} className="w-32" aria-label="Quiet hours end" />
+        <TimePicker value={end} onChange={setEnd} step={15} className="w-36" aria-label="Quiet hours end" />
         <Button type="submit" variant="outline" disabled={pending}>Save</Button>
         {(start || end) && (
           <Button type="button" variant="ghost" disabled={pending}
