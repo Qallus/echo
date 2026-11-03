@@ -1,150 +1,110 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ImageUp, Loader2, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft, ClipboardList, Copy, Eye, GalleryHorizontal, IdCard, Image as ImageIcon, Layers, Link as LinkIcon, ListChecks,
+  Nfc, Palette, PlayCircle, QrCode, Save, Settings, User, Wand2, Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { CardFace } from "@/components/cards/card-face";
+import { CardPreview } from "@/components/cards/card-preview";
 import { saveCard } from "@/lib/admin/actions/cards";
-import { slugify, type Card, type CardLink } from "@/lib/cards/types";
+import { cardPath, type Card, type CardDesign } from "@/lib/cards/types";
 import type { StaffOption } from "@/lib/crm/types";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { SELECT } from "@/components/admin/crm/crm-ui";
+import { PanelBody, type PanelKey } from "./card-panels";
 
-const ACCENTS = ["#18181b", "#2563eb", "#7c3aed", "#db2777", "#dc2626", "#ea580c", "#16a34a", "#0891b2"];
-type Draft = Omit<Card, "id" | "created_at" | "updated_at"> & { id?: string };
+const PANELS: { key: PanelKey; label: string; icon: typeof User }[] = [
+  { key: "sections", label: "Sections", icon: Layers },
+  { key: "content", label: "Content", icon: User },
+  { key: "links", label: "Links", icon: LinkIcon },
+  { key: "color", label: "Color modes", icon: Palette },
+  { key: "splash", label: "Splash page", icon: PlayCircle },
+  { key: "qr", label: "QR code", icon: QrCode },
+  { key: "forms", label: "Forms", icon: ClipboardList },
+  { key: "nfc", label: "NFC", icon: Nfc },
+  { key: "slideshow", label: "Slideshow", icon: GalleryHorizontal },
+  { key: "media", label: "Media", icon: ImageIcon },
+  { key: "steps", label: "Steps", icon: ListChecks },
+  { key: "automate", label: "Automations", icon: Zap },
+  { key: "settings", label: "Settings", icon: Settings },
+  { key: "wizard", label: "Setup wizard", icon: Wand2 },
+];
 
-export const blankCard = (owner: string | null): Draft => ({
-  slug: "", owner_id: owner, full_name: "", title: "", company: "", bio: "", email: "", phone: "", website: "", address: "",
-  photo_url: null, logo_url: null, accent: "#18181b", theme: "light", links: [], lead_capture: true, active: true,
-});
+export type Draft = Card;
+export type SetDraft = (fn: (d: Draft) => Draft) => void;
 
-// Create or edit a card with a live preview beside the form.
-export function CardBuilder({ card, staff, canAssign, onClose }: { card: Draft; staff: StaffOption[]; canAssign: boolean; onClose: () => void }) {
-  const [d, setD] = useState<Draft>(card);
-  const [slugTouched, setSlugTouched] = useState(Boolean(card.id));
-  const [uploading, setUploading] = useState<"photo_url" | "logo_url" | null>(null);
+// Full-page card builder: panel rail, the panel's fields, and a live preview.
+export function CardBuilder({ card, staff, canAssign, origin }: { card: Card; staff: StaffOption[]; canAssign: boolean; origin: string }) {
+  const router = useRouter();
+  const [draft, setDraftState] = useState<Draft>(card);
+  const [panel, setPanel] = useState<PanelKey>(card.id ? "content" : "wizard");
+  const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("mobile");
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
+  const [dirty, setDirty] = useState(false);
   const [pending, start] = useTransition();
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
-  const setLink = (i: number, patch: Partial<CardLink>) => set("links", d.links.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  const setDraft: SetDraft = (fn) => { setDraftState(fn); setDirty(true); };
+  const setDesign = (fn: (d: CardDesign) => CardDesign) => setDraft((d) => ({ ...d, design: fn(d.design) }));
+  const publicUrl = `${origin}${cardPath(draft.slug || "preview")}`;
 
-  async function upload(field: "photo_url" | "logo_url", file: File) {
-    if (file.size > 5 * 1024 * 1024) { setMsg({ error: "Images can be up to 5 MB." }); return; }
-    setUploading(field);
-    const supabase = createClient();
-    const ext = (file.name.split(".").pop() ?? "png").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "png";
-    const path = `${d.id ?? "new"}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("cards").upload(path, file, { contentType: file.type, upsert: false });
-    if (error) setMsg({ error: error.message });
-    else set(field, supabase.storage.from("cards").getPublicUrl(path).data.publicUrl);
-    setUploading(null);
-  }
+  const persist = (status?: Card["status"]) => start(async () => {
+    const next = status ? { ...draft, status } : draft;
+    const r = await saveCard(next);
+    setMsg(r);
+    if (r.error) return;
+    setDirty(false);
+    if (status) setDraftState(next);
+    if (!draft.id && r.id) router.replace(`/admin/cards/${r.id}`);
+    else router.refresh();
+  });
 
-  const preview = { ...d, full_name: d.full_name || "Your name", links: d.links.filter((l) => l.label && l.url) };
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-5xl">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_380px]">
-          <form className="space-y-5 p-5" onSubmit={(e) => {
-            e.preventDefault();
-            start(async () => { const r = await saveCard(d); setMsg(r); if (!r.error) onClose(); });
-          }}>
-            <SheetTitle className="pt-4">{d.id ? "Edit card" : "New business card"}</SheetTitle>
+    <div className="flex flex-col lg:h-[calc(100dvh-1px)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link href="/admin/cards" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            onClick={(e) => { if (dirty && !confirm("Leave without saving your changes?")) e.preventDefault(); }}><ArrowLeft className="size-4" /> Back</Link>
+          <span className="flex min-w-0 items-center gap-2 text-lg font-semibold"><IdCard className="size-4 shrink-0" /><span className="truncate">{draft.id ? "Edit card" : "New card"}</span></span>
+          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", draft.status === "published" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-muted text-muted-foreground")}>
+            {draft.status === "published" ? "Published" : draft.status === "archived" ? "Archived" : draft.status === "unpublished" ? "Unpublished" : "Draft"}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {msg.error ? <span className="text-xs font-medium text-destructive">{msg.error}</span> : msg.ok && !dirty ? <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{msg.ok}</span> : dirty ? <span className="text-xs text-muted-foreground">Unsaved changes</span> : null}
+          <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(publicUrl); setMsg({ ok: "Link copied." }); }}><Copy /> Copy URL</Button>
+          {draft.id && draft.status === "published" && <Button size="sm" variant="outline" render={<a href={cardPath(draft.slug)} target="_blank" rel="noopener noreferrer" />} nativeButton={false}><Eye /> Public page</Button>}
+          {draft.status !== "published" && <Button size="sm" variant="outline" disabled={pending} onClick={() => persist("published")}>Publish &amp; save</Button>}
+          <Button size="sm" disabled={pending} onClick={() => persist()}><Save /> {pending ? "Saving…" : "Save card"}</Button>
+        </div>
+      </div>
 
-            <section className="grid gap-3 sm:grid-cols-2">
-              <Field id="bc-name" label="Name"><Input id="bc-name" required value={d.full_name} onChange={(e) => { set("full_name", e.target.value); if (!slugTouched) set("slug", slugify(e.target.value)); }} /></Field>
-              <Field id="bc-slug" label="Card link" hint={`/card/${d.slug || "your-name"}`}>
-                <Input id="bc-slug" required value={d.slug} pattern="[a-z0-9][a-z0-9\-]{1,59}" onChange={(e) => { setSlugTouched(true); set("slug", slugify(e.target.value)); }} />
-              </Field>
-              <Field id="bc-title" label="Title"><Input id="bc-title" value={d.title ?? ""} onChange={(e) => set("title", e.target.value)} placeholder="Founder" /></Field>
-              <Field id="bc-company" label="Company"><Input id="bc-company" value={d.company ?? ""} onChange={(e) => set("company", e.target.value)} /></Field>
-              <Field id="bc-email" label="Email"><Input id="bc-email" type="email" value={d.email ?? ""} onChange={(e) => set("email", e.target.value)} /></Field>
-              <Field id="bc-phone" label="Phone"><PhoneInput id="bc-phone" value={d.phone ?? ""} onChange={(v) => set("phone", v)} /></Field>
-              <Field id="bc-web" label="Website"><Input id="bc-web" value={d.website ?? ""} onChange={(e) => set("website", e.target.value)} placeholder="example.com" /></Field>
-              <Field id="bc-addr" label="Address"><Input id="bc-addr" value={d.address ?? ""} onChange={(e) => set("address", e.target.value)} /></Field>
-              <div className="sm:col-span-2"><Field id="bc-bio" label="About"><Textarea id="bc-bio" rows={3} maxLength={1000} value={d.bio ?? ""} onChange={(e) => set("bio", e.target.value)} /></Field></div>
-            </section>
-
-            <section className="grid gap-3 sm:grid-cols-2">
-              {(["photo_url", "logo_url"] as const).map((f) => (
-                <div key={f} className="space-y-1.5">
-                  <Label>{f === "photo_url" ? "Photo" : "Logo"}</Label>
-                  <div className="flex items-center gap-2">
-                    <label className={cn("inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-sm hover:bg-muted", uploading === f && "pointer-events-none opacity-60")}>
-                      {uploading === f ? <Loader2 className="size-4 animate-spin" /> : <ImageUp className="size-4" />} Upload
-                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(e) => { const file = e.target.files?.[0]; if (file) void upload(f, file); e.target.value = ""; }} />
-                    </label>
-                    {d[f] && <Button type="button" size="sm" variant="ghost" onClick={() => set(f, null)}>Remove</Button>}
-                  </div>
-                </div>
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <nav aria-label="Builder panels" className="flex shrink-0 gap-1 overflow-x-auto border-b p-2 lg:w-44 lg:flex-col lg:overflow-y-auto lg:border-r lg:border-b-0">
+          {PANELS.map(({ key, label, icon: Icon }) => (
+            <button key={key} type="button" onClick={() => setPanel(key)} aria-current={panel === key ? "page" : undefined}
+              className={cn("flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition lg:w-full", panel === key ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+              <Icon className="size-4 shrink-0" /><span className="truncate">{label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="shrink-0 border-b p-4 lg:w-[400px] lg:overflow-y-auto lg:border-r lg:border-b-0">
+          <PanelBody panel={panel} draft={draft} setDraft={setDraft} setDesign={setDesign} staff={staff} canAssign={canAssign} publicUrl={publicUrl} />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col bg-muted/40 p-5 lg:overflow-y-auto">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold">Live preview</p>
+            <div className="flex items-center rounded-lg border bg-card p-0.5 text-xs">
+              {(["mobile", "tablet", "desktop"] as const).map((d) => (
+                <button key={d} type="button" onClick={() => setDevice(d)} className={cn("rounded-md px-3 py-1 font-medium capitalize", device === d ? "bg-accent text-foreground" : "text-muted-foreground")}>{d}</button>
               ))}
-            </section>
-
-            <section className="space-y-2">
-              <Label>Links</Label>
-              {d.links.map((l, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input aria-label="Link label" placeholder="LinkedIn" className="w-36" value={l.label} onChange={(e) => setLink(i, { label: e.target.value })} />
-                  <Input aria-label="Link address" placeholder="linkedin.com/in/you" value={l.url} onChange={(e) => setLink(i, { url: e.target.value })} />
-                  <Button type="button" size="icon-sm" variant="ghost" aria-label="Remove link" onClick={() => set("links", d.links.filter((_, j) => j !== i))}><Trash2 /></Button>
-                </div>
-              ))}
-              {d.links.length < 12 && <Button type="button" size="sm" variant="outline" onClick={() => set("links", [...d.links, { label: "", url: "" }])}><Plus /> Add link</Button>}
-            </section>
-
-            <section className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Accent color</Label>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {ACCENTS.map((c) => <button key={c} type="button" aria-label={c} onClick={() => set("accent", c)} className={cn("size-7 rounded-full border-2", d.accent === c ? "border-foreground" : "border-transparent")} style={{ background: c }} />)}
-                  <input type="color" aria-label="Custom color" value={d.accent} onChange={(e) => set("accent", e.target.value)} className="size-7 cursor-pointer rounded-full border bg-transparent" />
-                </div>
-              </div>
-              <Field id="bc-theme" label="Card style">
-                <select id="bc-theme" className={SELECT} value={d.theme} onChange={(e) => set("theme", e.target.value as Draft["theme"])}><option value="light">Light</option><option value="dark">Dark</option></select>
-              </Field>
-              {canAssign && (
-                <Field id="bc-owner" label="Belongs to" hint="New contacts from this card go to this person.">
-                  <select id="bc-owner" className={SELECT} value={d.owner_id ?? ""} onChange={(e) => set("owner_id", e.target.value || null)}>
-                    <option value="">No one</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}
-                  </select>
-                </Field>
-              )}
-              <div className="space-y-3 pt-1">
-                <label className="flex items-center justify-between gap-3 text-sm">Visitors can share their details<Switch checked={d.lead_capture} onCheckedChange={(v) => set("lead_capture", v)} /></label>
-                <label className="flex items-center justify-between gap-3 text-sm">Card is live<Switch checked={d.active} onCheckedChange={(v) => set("active", v)} /></label>
-              </div>
-            </section>
-
-            {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
-            <div className="flex gap-2">
-              <Button type="submit" disabled={pending || Boolean(uploading)}>{pending ? "Saving…" : d.id ? "Save card" : "Create card"}</Button>
-              <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
             </div>
-          </form>
-          <div className="border-t bg-muted/40 p-5 lg:border-t-0 lg:border-l">
-            <p className="pb-3 text-xs font-medium text-muted-foreground">Preview</p>
-            <CardFace card={preview} className="pointer-events-none" />
+          </div>
+          <div className={cn("mx-auto w-full", device === "mobile" ? "max-w-[360px]" : device === "tablet" ? "max-w-[460px]" : "max-w-[560px]")}>
+            <CardPreview card={draft} publicUrl={publicUrl} />
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {hint && <p className="truncate text-xs text-muted-foreground">{hint}</p>}
+      </div>
     </div>
   );
 }

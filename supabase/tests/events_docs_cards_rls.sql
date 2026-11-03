@@ -1,5 +1,6 @@
 -- Events, documents, workspace and business card checks. Run in the Supabase
--- SQL Editor after 20261103150000_events and 20261103160000_docs_cards.
+-- SQL Editor after 20261103150000_events, 20261103160000_docs_cards and
+-- 20261104090000_cards_v2.
 -- Ends with RAISE, so nothing is kept.
 
 do $$
@@ -28,7 +29,7 @@ begin
   begin perform public.event_register('rls-draft', 'Dee', 'dee@example.com', '', '', 1); r := r || E'1f register for a draft ALLOWED (FAIL)\n';
   exception when others then r := r || E'1f register for a draft rejected [ok]\n'; end;
   select spots_left into n from public.events_public('rls-workshop'); r := r || format(E'1g spots left=%s [1]\n', n);
-  select count(*) into n from public.card_public('rls-card'); r := r || format(E'1h visitor opens the card=%s [1]\n', n);
+  r := r || format(E'1h visitor opens the card=%s [true]\n', public.card_public('rls-card') is not null);
   perform public.card_track('rls-card', 'view', 'test');
   perform public.card_track('rls-card', 'lead', 'forged');
   perform public.card_lead('rls-card', 'Lee Lead', 'lee@example.com', '', 'Lee Co', 'Hi');
@@ -43,6 +44,13 @@ begin
   select count(*) into n from public.card_events where card_id = card and detail = 'forged'; r := r || format(E'1m forged lead event ignored=%s [0]\n', n);
   select count(*) into n from public.crm_contacts where email = 'lee@example.com' and owner_id = a; r := r || format(E'1n card lead owned by the card owner=%s [1]\n', n);
   select count(*) into n from public.notifications where type = 'card_lead' and user_id = a and created_at > now() - interval '1 minute'; r := r || format(E'1o card owner notified=%s [1]\n', n);
+
+  update public.business_cards set status = 'draft' where id = card;
+  perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  execute 'set local role anon';
+  r := r || format(E'1p visitor opens a draft card=%s [false]\n', public.card_public('rls-card') is not null);
+  execute 'reset role';
+  update public.business_cards set status = 'published' where id = card;
 
   -- Customer: nothing
   perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated', 'aal', 'aal2')::text, true);
@@ -77,6 +85,12 @@ begin
   update public.business_cards set title = 'x' where id = card; get diagnostics n = row_count; r := r || format(E'3l finance edits the owner''s card rows=%s [0]\n', n);
   begin insert into public.card_events (card_id, kind) values (card, 'view'); r := r || E'3m staff writes analytics directly ALLOWED (FAIL)\n';
   exception when insufficient_privilege then r := r || E'3m staff writes analytics directly denied [ok]\n'; end;
+  update public.card_leads set status = 'contacted' where card_id = card; get diagnostics n = row_count; r := r || format(E'3n finance works another person''s card leads rows=%s [0]\n', n);
+  execute 'reset role';
+  insert into public.card_leads (card_id, name, email) values (theirs, 'Own Lead', 'own@example.com');
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  execute 'set local role authenticated';
+  update public.card_leads set status = 'qualified' where card_id = theirs; get diagnostics n = row_count; r := r || format(E'3o finance works its own card leads rows=%s [1]\n', n);
   execute 'reset role';
 
   -- Support (crm.manage): edits team pages, events and documents; private pages stay private

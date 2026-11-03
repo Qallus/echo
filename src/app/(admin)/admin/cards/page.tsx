@@ -8,13 +8,15 @@ import { siteUrl } from "@/lib/notify/senders";
 
 export const metadata = { title: "Business Cards · Admin · Echo" };
 
-// Digital business cards: builder, QR and NFC, analytics and the leads they bring in.
-export default async function BusinessCards() {
+// Digital business cards: public pages with QR and NFC, lead capture, analytics.
+export default async function BusinessCards({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const staff = await requireStaff("crm.view");
-  const [cards, stats, leads, people, user] = await Promise.all([listCards(), cardStats(30), listCardLeads(), crmStaff(), getUser()]);
+  const { tab } = await searchParams;
+  const [cards, stats, leads, people, user] = await Promise.all([listCards(), cardStats(), listCardLeads(), crmStaff(), getUser()]);
   return (
-    <AdminPage title="Business Cards" description="Digital cards people can save to their phone, open from a QR code or an NFC tag, and use to send you their details." className="max-w-[96rem]">
-      <CardsPanel cards={cards} stats={stats} leads={leads} staff={people} me={user?.id ?? ""} origin={siteUrl("")} canManage={can(staff, "crm.manage")} />
+    <AdminPage title="Business Cards" description="Digital business cards with a public page, QR code and NFC tap, lead capture and analytics." className="max-w-[96rem]">
+      <CardsPanel cards={cards} stats={stats} leads={leads} staff={people} me={user?.id ?? ""} origin={siteUrl("")} canManage={can(staff, "crm.manage")}
+        initialTab={tab === "leads" ? "leads" : "cards"} />
     </AdminPage>
   );
 }
