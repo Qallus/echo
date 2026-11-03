@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Section } from "@/components/admin/admin-ui";
 import { ActivityFeed } from "@/components/admin/crm/activity-feed";
-import { Detail, ownerName } from "@/components/admin/crm/crm-ui";
+import { Detail } from "@/components/admin/crm/crm-ui";
 import { DealActions, StageSelect } from "@/components/admin/crm/record-actions";
 import { LocalDate } from "@/components/local-date";
 import { Button } from "@/components/ui/button";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { money } from "@/lib/billing/catalog";
 import { crmStaff, getDeal, listActivities, listCompanies, listContacts } from "@/lib/crm/data";
-import { contactName, formatDay, isOverdue } from "@/lib/crm/types";
+import { contactName, formatDay, isOverdue, ownerName } from "@/lib/crm/types";
 import { isUuid } from "@/lib/data";
 import { cn } from "@/lib/utils";
 

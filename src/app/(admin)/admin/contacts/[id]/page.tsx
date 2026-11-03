@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, Phone, UserRound } from "lucide-react";
 import { Section } from "@/components/admin/admin-ui";
 import { ActivityFeed } from "@/components/admin/crm/activity-feed";
-import { DealRows, Detail, ownerName } from "@/components/admin/crm/crm-ui";
+import { DealRows, Detail } from "@/components/admin/crm/crm-ui";
 import { AddDealButton, ContactActions } from "@/components/admin/crm/record-actions";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, getContact, listActivities, listCompanies, listContacts, listDeals } from "@/lib/crm/data";
-import { contactName } from "@/lib/crm/types";
+import { contactName, ownerName } from "@/lib/crm/types";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 

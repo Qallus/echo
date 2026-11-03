@@ -62,6 +62,8 @@ export type Activity = {
   company_id: string | null; contact_id: string | null; deal_id: string | null; created_by: string | null; created_at: string;
 };
 
+export const ownerName = (staff: StaffOption[], id: string | null) => (id ? staff.find((s) => s.user_id === id)?.name ?? "Former staff" : null);
+
 export const contactName = (c: { first_name: string; last_name: string | null }) => [c.first_name, c.last_name].filter(Boolean).join(" ");
 
 // "YYYY-MM-DD" for today in the server's or browser's local time.

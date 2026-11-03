@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { moveDeal } from "@/lib/admin/actions/crm";
 import { money } from "@/lib/billing/catalog";
-import { DEAL_STAGES, closedRecently, contactName, formatDay, isOverdue, type Contact, type Deal, type DealStage, type StaffOption } from "@/lib/crm/types";
+import { DEAL_STAGES, closedRecently, contactName, formatDay, isOverdue, ownerName, type Contact, type Deal, type DealStage, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
-import { FILTER, SELECT, StageLabel, ownerName } from "./crm-ui";
+import { FILTER, SELECT, StageLabel } from "./crm-ui";
 import { AddDealButton } from "./record-actions";
 
 

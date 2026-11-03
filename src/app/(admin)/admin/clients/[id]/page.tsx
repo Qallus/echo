@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Building2, Mail, Phone } from "lucide-react";
 import { Section } from "@/components/admin/admin-ui";
 import { ActivityFeed } from "@/components/admin/crm/activity-feed";
-import { DealRows, Detail, ownerName } from "@/components/admin/crm/crm-ui";
+import { DealRows, Detail } from "@/components/admin/crm/crm-ui";
 import { AddContactButton, AddDealButton, CompanyActions } from "@/components/admin/crm/record-actions";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, getCompany, listActivities, listCompanies, listContacts, listDeals } from "@/lib/crm/data";
-import { COMPANY_STATUSES, contactName } from "@/lib/crm/types";
+import { COMPANY_STATUSES, contactName, ownerName } from "@/lib/crm/types";
 import { isUuid } from "@/lib/data";
 
 export const metadata = { title: "Client · Admin · Echo" };

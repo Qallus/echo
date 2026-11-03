@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { money } from "@/lib/billing/catalog";
-import { COMPANY_STATUSES, type Company, type CompanyStatus, type StaffOption } from "@/lib/crm/types";
-import { FILTER, ownerName } from "./crm-ui";
+import { COMPANY_STATUSES, ownerName, type Company, type CompanyStatus, type StaffOption } from "@/lib/crm/types";
+import { FILTER } from "./crm-ui";
 import { AddCompanyButton } from "./record-actions";
 
 export type ClientRow = Company & { contacts: number; open_deals: number; open_value: number; won_value: number };

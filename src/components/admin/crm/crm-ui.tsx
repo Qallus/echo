@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { money } from "@/lib/billing/catalog";
-import { stageOf, type Deal, type DealStage, type StaffOption } from "@/lib/crm/types";
+import { stageOf, type Deal, type DealStage } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 
 // Shared pieces for the CRM pages.
@@ -24,8 +25,6 @@ export function StageLabel({ stage }: { stage: DealStage }) {
   return <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium"><StageDot stage={stage} />{stageOf(stage).label}</span>;
 }
 
-export const ownerName = (staff: StaffOption[], id: string | null) => (id ? staff.find((s) => s.user_id === id)?.name ?? "Former staff" : null);
-
 // Label + input (or textarea / select) for record forms.
 export function Field({ label, name, defaultValue, type = "text", placeholder, required, className, multiline }: {
   label: string; name: string; defaultValue?: string | null; type?: string; placeholder?: string; required?: boolean; className?: string; multiline?: boolean;
@@ -33,7 +32,9 @@ export function Field({ label, name, defaultValue, type = "text", placeholder, r
   return (
     <div className={cn("space-y-1.5", className)}>
       <Label htmlFor={`f-${name}`}>{label}</Label>
-      {multiline
+      {type === "date"
+        ? <DatePicker id={`f-${name}`} name={name} defaultValue={defaultValue} />
+        : multiline
         ? <Textarea id={`f-${name}`} name={name} defaultValue={defaultValue ?? ""} placeholder={placeholder} rows={3} />
         : <Input id={`f-${name}`} name={name} type={type} defaultValue={defaultValue ?? ""} placeholder={placeholder} required={required} />}
     </div>

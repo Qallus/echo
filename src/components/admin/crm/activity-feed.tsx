@@ -5,12 +5,11 @@ import { useState, useTransition } from "react";
 import { CalendarClock, CheckSquare, Mail, MessageSquare, Phone, Square, StickyNote, Trash2, Users } from "lucide-react";
 import { LocalDate } from "@/components/local-date";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { addActivity, deleteActivity, setActivityDone } from "@/lib/admin/actions/crm";
-import { ACTIVITY_KINDS, formatDay, isOverdue, type Activity, type ActivityKind, type StaffOption } from "@/lib/crm/types";
+import { ACTIVITY_KINDS, formatDay, isOverdue, ownerName, type Activity, type ActivityKind, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
-import { ownerName } from "./crm-ui";
 
 const ICONS: Record<ActivityKind, typeof StickyNote> = { note: StickyNote, call: Phone, email: Mail, meeting: Users, task: CheckSquare };
 
@@ -61,7 +60,7 @@ export function ActivityFeed({ activities, staff, target, related = {}, readOnly
           <div className="flex flex-wrap items-center gap-2">
             {kind === "task" && (
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                Due <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-8 w-auto" />
+                Due <DatePicker value={due} onChange={setDue} placeholder="No date" className="w-44" />
               </label>
             )}
             <Button type="submit" size="sm" className="ml-auto" disabled={pending || !body.trim()}>{pending ? "Saving…" : "Add"}</Button>

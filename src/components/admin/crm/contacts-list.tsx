@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { contactName, type Contact, type StaffOption } from "@/lib/crm/types";
-import { FILTER, ownerName } from "./crm-ui";
+import { contactName, ownerName, type Contact, type StaffOption } from "@/lib/crm/types";
+import { FILTER } from "./crm-ui";
 import { AddContactButton } from "./record-actions";
 
 
