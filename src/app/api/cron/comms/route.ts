@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { sendBookingReminders } from "@/lib/bookings/reminders";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
 import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -6,7 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Scheduled job (a Coolify scheduled task every 5 minutes):
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://echo.redial.si/api/cron/comms
 // No user session: the shared CRON_SECRET is checked, then the service role
-// queues time-based automations and sends everything that's due.
+// queues time-based automations, sends everything that's due, and sends
+// booking reminders.
 
 export const maxDuration = 300;
 
@@ -23,7 +25,8 @@ async function run(req: Request) {
   const db = createAdminClient();
   const queued = await queueTimed(db);
   const sent = await processDueRuns(db);
-  return Response.json({ ok: true, queued, sent });
+  const reminders = await sendBookingReminders(db);
+  return Response.json({ ok: true, queued, sent, reminders });
 }
 
 export const GET = run;

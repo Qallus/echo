@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Building2, Download, Flag, LayoutGrid, Mail, Table as TableIcon, Tag, Tags as TagsIcon, Trash2, UserRound } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Building2, Download, Flag, LayoutGrid, Mail, Map as MapIcon, MapPin, Table as TableIcon, Tag, Tags as TagsIcon, Trash2, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { geocodeClients } from "@/lib/admin/actions/crm";
 import { bulkDelete, bulkUpdate, type BulkChange } from "@/lib/admin/actions/crm-bulk";
 import { money } from "@/lib/billing/catalog";
 import { downloadCsv } from "@/lib/crm/csv";
@@ -17,13 +19,14 @@ import { AddCompanyButton } from "./record-actions";
 export type ClientRow = Company & { contacts: number; open_deals: number; open_value: number; won_value: number };
 
 const statusLabel = (s: CompanyStatus) => COMPANY_STATUSES.find((x) => x.id === s)?.label ?? s;
-const VIEWS = [{ id: "table" as const, label: "Table", icon: TableIcon }, { id: "cards" as const, label: "Cards", icon: LayoutGrid }];
+const VIEWS = [{ id: "table" as const, label: "Table", icon: TableIcon }, { id: "cards" as const, label: "Cards", icon: LayoutGrid }, { id: "map" as const, label: "Map", icon: MapIcon }];
+const ClientsMap = dynamic(() => import("./clients-map").then((m) => m.ClientsMap), { ssr: false, loading: () => <div className="h-96 animate-pulse rounded-xl border bg-muted/40" /> });
 
 // Clients with contact and pipeline totals; select rows for bulk changes.
 export function ClientsList({ clients, staff, readOnly }: { clients: ClientRow[]; staff: StaffOption[]; readOnly: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<"table" | "cards">("table");
+  const [view, setView] = useState<"table" | "cards" | "map">("table");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
@@ -87,6 +90,21 @@ export function ClientsList({ clients, staff, readOnly }: { clients: ClientRow[]
 
       {shown.length === 0 ? (
         <EmptyState message={clients.length ? "No clients match." : "No clients yet."} />
+      ) : view === "map" ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="size-4" /> {shown.filter((c) => c.latitude != null).length} of {shown.length} on the map.
+            {shown.some((c) => c.address && !c.geocoded_address) && !readOnly && (
+              <button type="button" className="text-primary underline-offset-2 hover:underline" disabled={pending} onClick={() => run(() => geocodeClients())}>
+                {pending ? "Placing…" : "Place clients that have addresses"}
+              </button>
+            )}
+            {shown.some((c) => !c.address) && <span>Clients without an address aren&apos;t shown.</span>}
+          </div>
+          <ClientsMap points={shown.filter((c) => c.latitude != null && c.longitude != null).map((c) => ({
+            id: c.id, name: c.name, lat: c.latitude!, lng: c.longitude!, color: c.status, sub: [statusLabel(c.status), c.address].filter(Boolean).join(" · "),
+          }))} />
+        </div>
       ) : view === "table" ? (
         <DataTable rows={shown} columns={columns} getId={(c) => c.id} selected={selected} onSelect={setSelected} onOpen={(c) => router.push(`/admin/clients/${c.id}`)} />
       ) : (

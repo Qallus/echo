@@ -63,6 +63,7 @@ export type StaffOption = { user_id: string; name: string; email: string };
 export type Company = {
   id: string; name: string; status: CompanyStatus; website: string | null; industry: string | null; phone: string | null;
   email: string | null; address: string | null; notes: string | null; tags: string[]; owner_id: string | null;
+  latitude: number | null; longitude: number | null; geocoded_address: string | null;
   created_at: string; updated_at: string;
 };
 

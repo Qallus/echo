@@ -1,7 +1,9 @@
 "use server";
 
+import { after } from "next/server";
 import { adminAudit } from "@/lib/admin/audit";
 import { queueAutomations } from "@/lib/comms/automations";
+import { geocode } from "@/lib/crm/geocode";
 import { requireStaff } from "@/lib/admin/guard";
 import { STAGES } from "@/lib/crm/deals";
 import { isActivityKind, isCompanyStatus, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
@@ -37,6 +39,11 @@ export async function saveCompany(id: string | null, input: CompanyInput): Promi
     : await supabase.from("crm_companies").insert(row).select("id").single();
   if (error) return { error: error.message };
   await adminAudit(supabase, id ? "crm.client.update" : "crm.client.create", { type: "crm_company", id: data.id }, { name, status: row.status });
+  // Place it on the clients map when the address is new or changed.
+  if (row.address) {
+    const { data: geo } = await supabase.from("crm_companies").select("geocoded_address").eq("id", data.id).maybeSingle();
+    if (geo?.geocoded_address !== row.address) after(() => placeOnMap(supabase, data.id, row.address!));
+  }
   refresh();
   return { ok: id ? "Saved." : `${name} added.`, id: data.id };
 }
@@ -211,4 +218,25 @@ export async function deleteActivity(id: string): Promise<Result> {
   await adminAudit(supabase, "crm.activity.delete", { type: "crm_activity", id }, { kind: data.kind });
   refresh();
   return { ok: "Deleted." };
+}
+
+async function placeOnMap(supabase: Awaited<ReturnType<typeof createClient>>, id: string, address: string) {
+  const hit = await geocode(address);
+  await supabase.from("crm_companies").update({ latitude: hit?.lat ?? null, longitude: hit?.lng ?? null, geocoded_address: address }).eq("id", id);
+}
+
+// Map clients that have an address but no coordinates yet (up to 20 a click,
+// about a second each: OpenStreetMap's limit).
+export async function geocodeClients(): Promise<Result> {
+  await requireStaff("crm.manage");
+  const supabase = await createClient();
+  const { data } = await supabase.from("crm_companies").select("id, address").not("address", "is", null).is("geocoded_address", null).limit(20);
+  let found = 0;
+  for (const c of data ?? []) {
+    const hit = await geocode(c.address!);
+    if (hit) found++;
+    await supabase.from("crm_companies").update({ latitude: hit?.lat ?? null, longitude: hit?.lng ?? null, geocoded_address: c.address }).eq("id", c.id);
+  }
+  refresh();
+  return { ok: data?.length ? `Placed ${found} of ${data.length} on the map.` : "Every client with an address is already mapped." };
 }
