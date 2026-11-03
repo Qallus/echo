@@ -68,10 +68,11 @@ export async function deleteContacts(ids: string[]): Promise<Result> {
   return { ok: `${data?.length ?? 0} deleted.` };
 }
 
-export type ImportRow = Partial<Record<"first_name" | "last_name" | "email" | "phone" | "title" | "company" | "source" | "city" | "state" | "website" | "notes" | "tags", string>> & { details?: Record<string, string> };
+export type ImportRow = Partial<Record<"first_name" | "last_name" | "email" | "phone" | "title" | "company" | "source" | "address" | "city" | "state" | "zip" | "website" | "notes" | "tags", string>> & { details?: Record<string, string> };
 
-// CSV import: matches clients by name (creating missing ones), skips rows
-// whose email already exists, and keeps unmapped columns in `details`.
+// CSV and phone import: matches clients by name (creating missing ones),
+// skips rows whose email or phone already exists, and keeps unmapped fields
+// in `details`.
 export async function importContacts(rows: ImportRow[], role: "contact" | "lead" = "contact"): Promise<Result> {
   await requireStaff("crm.manage");
   const input = (Array.isArray(rows) ? rows : []).slice(0, 2000);
@@ -79,6 +80,9 @@ export async function importContacts(rows: ImportRow[], role: "contact" | "lead"
   const emails = input.map((r) => email(r.email)).filter((e): e is string => Boolean(e));
   const { data: existing } = emails.length ? await supabase.from("crm_contacts").select("email").in("email", emails) : { data: [] };
   const taken = new Set((existing ?? []).map((e) => e.email));
+  const digits = (p?: string | null) => (p ?? "").replace(/\D/g, "").slice(-10);
+  const { data: phones } = await supabase.from("crm_contacts").select("phone").not("phone", "is", null).limit(10000);
+  const takenPhones = new Set((phones ?? []).map((p) => digits(p.phone)).filter((d) => d.length >= 7));
 
   const names = [...new Set(input.map((r) => text(r.company, 200)).filter((n): n is string => Boolean(n)))];
   const companyIds = new Map<string, string>();
@@ -97,14 +101,16 @@ export async function importContacts(rows: ImportRow[], role: "contact" | "lead"
   for (const r of input) {
     const first = text(r.first_name, 100) ?? (text(r.email, 200)?.split("@")[0] || null);
     const mail = email(r.email);
-    if (!first || mail === false || (mail && taken.has(mail))) { skipped++; continue; }
+    const tel = digits(r.phone);
+    if (!first || mail === false || (mail && taken.has(mail)) || (tel.length >= 7 && takenPhones.has(tel))) { skipped++; continue; }
     if (mail) taken.add(mail);
+    if (tel.length >= 7) takenPhones.add(tel);
     const company = text(r.company, 200);
     const details = Object.fromEntries(Object.entries(r.details ?? {}).slice(0, 40).map(([k, v]) => [String(k).slice(0, 60), String(v).slice(0, 300)]));
     out.push({
       first_name: first, last_name: text(r.last_name, 100), email: mail, phone: text(r.phone, 40), title: text(r.title, 120),
       company_id: company ? companyIds.get(company.toLowerCase()) ?? null : null, source: text(r.source, 100) ?? "Import",
-      city: text(r.city, 100), state: text(r.state, 100), website: text(r.website, 300), notes: text(r.notes, 10000),
+      address: text(r.address, 300), city: text(r.city, 100), state: text(r.state, 100), zip: text(r.zip, 20), website: text(r.website, 300), notes: text(r.notes, 10000),
       tags: list(r.tags), details, role, lead_status: role === "lead" ? "new" : null,
     });
   }
@@ -114,7 +120,7 @@ export async function importContacts(rows: ImportRow[], role: "contact" | "lead"
   }
   await adminAudit(supabase, "crm.contact.import", { type: "crm_contact", id: "import" }, { imported: out.length, skipped, role });
   refresh();
-  return { ok: `${out.length} imported${skipped ? `, ${skipped} skipped (duplicate email or no name)` : ""}.` };
+  return { ok: `${out.length} imported${skipped ? `, ${skipped} skipped (already in Echo, or no name)` : ""}.` };
 }
 
 // A call, email, text, meeting or note that happened outside Echo.

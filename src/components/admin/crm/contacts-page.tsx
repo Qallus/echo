@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Download, ExternalLink, Eye, GitBranchPlus, Kanban, LayoutGrid, List, Mail, MessageSquare, Pencil, Phone, Plus, Table as TableIcon, Trash2, Upload } from "lucide-react";
+import { Download, ExternalLink, Eye, GitBranchPlus, Kanban, LayoutGrid, List, Mail, MessageSquare, Pencil, Phone, Plus, Smartphone, Table as TableIcon, Trash2, Upload } from "lucide-react";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { DetailRow, EmptyState, RowActions, SearchBox, StatRow, StatTile, ViewSwitcher, type RowAction } from "./crm-kit";
 import { FILTER } from "./crm-ui";
 import { ImportDialog } from "./import-dialog";
+import { PhoneImportDialog } from "./phone-import-dialog";
 import { ContactDialog } from "./record-dialogs";
 
 type View = "list" | "table" | "cards" | "board";
@@ -34,8 +35,8 @@ export function RoleBadge({ role }: { role: ContactRole }) {
 
 // Everyone Qallus works with, Lead -> Prospect -> Client (Channel-Cast's
 // contacts page): filters, views, bulk Add to Pipeline, CSV in and out.
-export function ContactsPage({ contacts, companies, staff, readOnly }: {
-  contacts: Contact[]; companies: { id: string; name: string }[]; staff: StaffOption[]; readOnly: boolean;
+export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport }: {
+  contacts: Contact[]; companies: { id: string; name: string }[]; staff: StaffOption[]; readOnly: boolean; phoneImport?: boolean;
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("list");
@@ -48,6 +49,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly }: {
   const [drawer, setDrawer] = useState<string | null>(null);
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [importing, setImporting] = useState(false);
+  const [fromPhone, setFromPhone] = useState(Boolean(phoneImport && !readOnly));
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
 
@@ -109,7 +111,8 @@ export function ContactsPage({ contacts, companies, staff, readOnly }: {
         <div className="flex flex-wrap items-center gap-2">
           <ViewSwitcher views={VIEWS} value={view} onChange={setView} />
           <Button variant="outline" onClick={() => downloadCsv("contacts.csv", contactsToCsv(shown))}><Download /> Export</Button>
-          {!readOnly && <Button variant="outline" onClick={() => setImporting(true)}><Upload /> Import</Button>}
+          {!readOnly && <Button variant="outline" onClick={() => setFromPhone(true)}><Smartphone /> From phone</Button>}
+          {!readOnly && <Button variant="outline" onClick={() => setImporting(true)}><Upload /> Import CSV</Button>}
           {!readOnly && <Button onClick={() => setEditing("new")}><Plus /> Add contact</Button>}
         </div>
       </div>
@@ -249,6 +252,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly }: {
 
       {editing && <ContactDialog open onOpenChange={(o) => !o && setEditing(null)} contact={editing === "new" ? undefined : editing} companies={companies} staff={staff} stay={editing !== "new"} />}
       {importing && <ImportDialog onClose={() => setImporting(false)} role="contact" />}
+      {fromPhone && <PhoneImportDialog existing={contacts} onClose={() => { setFromPhone(false); if (phoneImport) router.replace("/admin/contacts"); }} />}
     </div>
   );
 }

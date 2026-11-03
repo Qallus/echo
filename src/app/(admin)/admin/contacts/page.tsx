@@ -6,12 +6,12 @@ import { crmStaff, listCompanies, listContacts } from "@/lib/crm/data";
 export const metadata = { title: "Contacts · Admin · Echo" };
 
 // Everyone Qallus works with: leads, prospects, clients and partners.
-export default async function Contacts() {
+export default async function Contacts({ searchParams }: { searchParams: Promise<{ import?: string }> }) {
   const staff = await requireStaff("crm.view");
-  const [contacts, companies, people] = await Promise.all([listContacts(), listCompanies(), crmStaff()]);
+  const [contacts, companies, people, sp] = await Promise.all([listContacts(), listCompanies(), crmStaff(), searchParams]);
   return (
     <AdminPage title="Contacts" description="Everyone Qallus works with, from first lead to paying client. Internal; customers never see this." className="max-w-[96rem]">
-      <ContactsPage contacts={contacts} companies={companies.map(({ id, name }) => ({ id, name }))} staff={people} readOnly={!can(staff, "crm.manage")} />
+      <ContactsPage contacts={contacts} companies={companies.map(({ id, name }) => ({ id, name }))} staff={people} readOnly={!can(staff, "crm.manage")} phoneImport={sp.import === "phone"} />
     </AdminPage>
   );
 }
