@@ -3,19 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Download, ExternalLink, Eye, GitBranchPlus, Kanban, LayoutGrid, List, Mail, MessageSquare, Pencil, Phone, Plus, Smartphone, Table as TableIcon, Trash2, Upload } from "lucide-react";
+import { Archive, Download, ExternalLink, Magnet, Tag, Tags as TagsIcon, UserCog, UserRound, Eye, GitBranchPlus, Kanban, LayoutGrid, List, Mail, MessageSquare, Pencil, Phone, Plus, Smartphone, Table as TableIcon, Trash2, Upload } from "lucide-react";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { addToPipeline } from "@/lib/admin/actions/crm-pipeline";
+import { bulkUpdate, type BulkChange } from "@/lib/admin/actions/crm-bulk";
 import { deleteContacts } from "@/lib/admin/actions/crm-people";
 import { contactsToCsv, downloadCsv } from "@/lib/crm/csv";
 import { CONTACT_ROLES, CONTACT_STATUSES, LEAD_STATUSES, contactName, ownerName, type Contact, type ContactRole, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { DetailRow, EmptyState, RowActions, SearchBox, StatRow, StatTile, ViewSwitcher, type RowAction } from "./crm-kit";
 import { FILTER } from "./crm-ui";
+import { BulkBar, emailEveryone, type BulkAction } from "./bulk-bar";
+import { DataTable, plain, type Column } from "./data-table";
 import { ImportDialog } from "./import-dialog";
 import { PhoneImportDialog } from "./phone-import-dialog";
 import { ContactDialog } from "./record-dialogs";
@@ -80,6 +82,39 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
     ]),
   ];
   const d = contacts.find((c) => c.id === drawer) ?? null;
+  const ids = [...selected];
+  const change = (patch: BulkChange) => run(() => bulkUpdate("crm_contacts", ids, patch));
+  const people = [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))];
+  const bulk: BulkAction[] = [
+    ...(readOnly ? [] : [
+      { label: "Add to pipeline", icon: GitBranchPlus, run: () => pipeline(ids) },
+      { label: "Add tags", icon: Tag, input: { placeholder: "Tags, comma separated", submit: "Add tags", onSubmit: (v: string) => change({ add_tags: v }) } },
+      { label: "Remove tags", icon: TagsIcon, input: { placeholder: "Tags to remove", submit: "Remove tags", onSubmit: (v: string) => change({ remove_tags: v }) } },
+      { label: "Role", icon: UserCog, options: CONTACT_ROLES.map((r) => ({ value: r.id, label: r.label })), onPick: (v: string) => change({ role: v }) },
+      { label: "Status", icon: Archive, options: CONTACT_STATUSES.map((r) => ({ value: r.id, label: r.label })), onPick: (v: string) => change({ status: v }) },
+      { label: "Lead status", icon: Magnet, options: [{ value: "", label: "Not a lead" }, ...LEAD_STATUSES.map((r) => ({ value: r.id, label: r.label }))], onPick: (v: string) => change({ lead_status: v }) },
+      { label: "Owner", icon: UserRound, options: people, onPick: (v: string) => change({ owner_id: v || null }) },
+    ]),
+    { label: "Email", icon: Mail, run: () => { const missing = emailEveryone(contacts.filter((c) => selected.has(c.id)).map((c) => c.email)); if (missing) setMsg({ ok: `${missing} selected have no email address.` }); } },
+    { label: "Export", icon: Download, run: () => downloadCsv("contacts.csv", contactsToCsv(contacts.filter((c) => selected.has(c.id)))) },
+    ...(readOnly ? [] : [{ label: "Delete", icon: Trash2, destructive: true, run: () => remove(ids) }]),
+  ];
+  const columns: Column<Contact>[] = [
+    { id: "name", label: "Name", cell: (c) => <span className="font-medium">{contactName(c)}</span>, value: contactName },
+    { id: "role", label: "Role", cell: (c) => <RoleBadge role={c.role} />, value: (c) => CONTACT_ROLES.find((r) => r.id === c.role)!.label, filter: true },
+    { id: "company", label: "Company", cell: (c) => plain(c.company?.name), value: (c) => c.company?.name ?? null, filter: true },
+    { id: "email", label: "Email", cell: (c) => plain(c.email), value: (c) => c.email },
+    { id: "phone", label: "Phone", cell: (c) => plain(c.phone), value: (c) => c.phone },
+    { id: "title", label: "Title", cell: (c) => plain(c.title), value: (c) => c.title, hidden: true },
+    { id: "lead", label: "Lead status", cell: (c) => plain(LEAD_STATUSES.find((s) => s.id === c.lead_status)?.label), value: (c) => LEAD_STATUSES.find((s) => s.id === c.lead_status)?.label ?? null, filter: true, hidden: true },
+    { id: "status", label: "Status", cell: (c) => plain(CONTACT_STATUSES.find((s) => s.id === c.status)?.label), value: (c) => CONTACT_STATUSES.find((s) => s.id === c.status)!.label, filter: true, hidden: true },
+    { id: "tags", label: "Tags", cell: (c) => c.tags.join(", ") || "—", value: (c) => c.tags, filter: true, hidden: true },
+    { id: "city", label: "City", cell: (c) => plain(c.city), value: (c) => c.city, filter: true, hidden: true },
+    { id: "state", label: "State", cell: (c) => plain(c.state), value: (c) => c.state, filter: true, hidden: true },
+    { id: "source", label: "Source", cell: (c) => plain(c.source), value: (c) => c.source, filter: true, hidden: true },
+    { id: "owner", label: "Owner", cell: (c) => plain(ownerName(staff, c.owner_id)), value: (c) => ownerName(staff, c.owner_id), filter: true },
+    { id: "created", label: "Added", cell: (c) => new Date(c.created_at).toLocaleDateString(), value: (c) => c.created_at, hidden: true },
+  ];
 
   return (
     <div className="space-y-6">
@@ -117,15 +152,8 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
         </div>
       </div>
 
-      {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-2 pl-3 text-sm">
-          <span className="font-medium">{selected.size} selected</span>
-          {!readOnly && <Button size="sm" disabled={pending} onClick={() => pipeline([...selected])}><GitBranchPlus /> Add to pipeline</Button>}
-          <Button size="sm" variant="outline" onClick={() => downloadCsv("contacts.csv", contactsToCsv(contacts.filter((c) => selected.has(c.id))))}><Download /> Export</Button>
-          {!readOnly && <Button size="sm" variant="outline" disabled={pending} onClick={() => remove([...selected])}><Trash2 /> Delete</Button>}
-          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
-        </div>
-      )}
+      <BulkBar count={selected.size} total={shown.length} pending={pending} onClear={() => setSelected(new Set())}
+        onSelectAll={() => setSelected(new Set(shown.map((c) => c.id)))} actions={bulk} />
       {(msg.ok || msg.error) && <p className={cn("text-sm", msg.error ? "text-destructive" : "text-muted-foreground")}>{msg.error ?? msg.ok}</p>}
 
       {shown.length === 0 ? (
@@ -149,30 +177,8 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
           ))}
         </div>
       ) : view === "table" ? (
-        <div className="rounded-xl border bg-card px-2">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" /></TableHead>
-                <TableHead>Name</TableHead><TableHead>Role</TableHead><TableHead>Company</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Owner</TableHead><TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shown.map((c) => (
-                <TableRow key={c.id} className="cursor-pointer" onClick={() => setDrawer(c.id)}>
-                  <TableCell onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${contactName(c)}`} /></TableCell>
-                  <TableCell className="font-medium">{contactName(c)}</TableCell>
-                  <TableCell><RoleBadge role={c.role} /></TableCell>
-                  <TableCell className="text-muted-foreground">{c.company?.name ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{c.email ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{c.phone ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{ownerName(staff, c.owner_id) ?? "—"}</TableCell>
-                  <TableCell><RowActions actions={actions(c)} /></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable rows={shown} columns={columns} getId={(c) => c.id} selected={selected} onSelect={setSelected}
+          onOpen={(c) => setDrawer(c.id)} rowEnd={(c) => <RowActions actions={actions(c)} />} />
       ) : view === "cards" ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((c) => (

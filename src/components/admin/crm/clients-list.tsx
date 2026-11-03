@@ -1,98 +1,110 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Building2, LayoutGrid, Rows3, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { Building2, Download, Flag, LayoutGrid, Mail, Table as TableIcon, Tag, Tags as TagsIcon, Trash2, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { bulkDelete, bulkUpdate, type BulkChange } from "@/lib/admin/actions/crm-bulk";
 import { money } from "@/lib/billing/catalog";
+import { downloadCsv } from "@/lib/crm/csv";
 import { COMPANY_STATUSES, ownerName, type Company, type CompanyStatus, type StaffOption } from "@/lib/crm/types";
-import { FILTER } from "./crm-ui";
+import { cn } from "@/lib/utils";
+import { BulkBar, emailEveryone, type BulkAction } from "./bulk-bar";
+import { EmptyState, SearchBox, ViewSwitcher } from "./crm-kit";
+import { DataTable, plain, type Column } from "./data-table";
 import { AddCompanyButton } from "./record-actions";
 
 export type ClientRow = Company & { contacts: number; open_deals: number; open_value: number; won_value: number };
 
 const statusLabel = (s: CompanyStatus) => COMPANY_STATUSES.find((x) => x.id === s)?.label ?? s;
+const VIEWS = [{ id: "table" as const, label: "Table", icon: TableIcon }, { id: "cards" as const, label: "Cards", icon: LayoutGrid }];
 
-// Searchable client list with contact and pipeline totals.
+// Clients with contact and pipeline totals; select rows for bulk changes.
 export function ClientsList({ clients, staff, readOnly }: { clients: ClientRow[]; staff: StaffOption[]; readOnly: boolean }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
   const [view, setView] = useState<"table" | "cards">("table");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
+  const [pending, start] = useTransition();
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return clients.filter((c) =>
-      (!status || c.status === status)
-      && (!q || `${c.name} ${c.industry ?? ""} ${c.email ?? ""} ${c.tags.join(" ")}`.toLowerCase().includes(q)));
-  }, [clients, query, status]);
+    return clients.filter((c) => !q || `${c.name} ${c.industry ?? ""} ${c.email ?? ""} ${c.tags.join(" ")}`.toLowerCase().includes(q));
+  }, [clients, query]);
+
+  const ids = [...selected];
+  const picked = () => clients.filter((c) => selected.has(c.id));
+  const run = (fn: () => Promise<{ ok?: string; error?: string }>, clear = false) =>
+    start(async () => { const res = await fn(); setMsg(res); if (!res.error && clear) setSelected(new Set()); });
+  const change = (patch: BulkChange) => run(() => bulkUpdate("crm_companies", ids, patch));
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const exportCsv = () => {
+    const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const rows = picked().map((c) => [c.name, statusLabel(c.status), c.industry ?? "", c.email ?? "", c.phone ?? "", c.website ?? "", String(c.contacts), String(c.open_value / 100), String(c.won_value / 100), ownerName(staff, c.owner_id) ?? "", c.tags.join("; ")].map(esc).join(","));
+    downloadCsv("clients.csv", ["Client,Status,Industry,Email,Phone,Website,Contacts,Open pipeline,Won,Owner,Tags", ...rows].join("\n"));
+  };
+
+  const bulk: BulkAction[] = [
+    ...(readOnly ? [] : [
+      { label: "Status", icon: Flag, options: COMPANY_STATUSES.map((s) => ({ value: s.id, label: s.label })), onPick: (v: string) => change({ status: v }) },
+      { label: "Owner", icon: UserRound, options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))], onPick: (v: string) => change({ owner_id: v || null }) },
+      { label: "Add tags", icon: Tag, input: { placeholder: "Tags, comma separated", submit: "Add tags", onSubmit: (v: string) => change({ add_tags: v }) } },
+      { label: "Remove tags", icon: TagsIcon, input: { placeholder: "Tags to remove", submit: "Remove tags", onSubmit: (v: string) => change({ remove_tags: v }) } },
+    ]),
+    { label: "Email", icon: Mail, run: () => { const missing = emailEveryone(picked().map((c) => c.email)); if (missing) setMsg({ ok: `${missing} selected have no email address.` }); } },
+    { label: "Export", icon: Download, run: exportCsv },
+    ...(readOnly ? [] : [{ label: "Delete", icon: Trash2, destructive: true,
+      run: () => confirm(`Delete ${ids.length} clients? Their contacts are kept but unlinked.`) && run(() => bulkDelete("crm_companies", ids), true) }]),
+  ];
+
+  const columns: Column<ClientRow>[] = [
+    { id: "name", label: "Client", value: (c) => c.name, cell: (c) => (
+      <span className="flex items-center gap-2"><Building2 className="size-4 shrink-0 text-muted-foreground" /><span className="min-w-0"><span className="block truncate font-medium">{c.name}</span>
+        {c.industry && <span className="block truncate text-xs text-muted-foreground">{c.industry}</span>}</span></span>) },
+    { id: "status", label: "Status", cell: (c) => <Badge variant={c.status === "client" ? "default" : "outline"}>{statusLabel(c.status)}</Badge>, value: (c) => statusLabel(c.status), filter: true },
+    { id: "industry", label: "Industry", cell: (c) => plain(c.industry), value: (c) => c.industry, filter: true, hidden: true },
+    { id: "contacts", label: "Contacts", cell: (c) => c.contacts, value: (c) => c.contacts, className: "text-right tabular-nums" },
+    { id: "open", label: "Open pipeline", cell: (c) => (c.open_deals ? `${money(c.open_value)} · ${c.open_deals}` : "—"), value: (c) => c.open_value, className: "text-right tabular-nums" },
+    { id: "won", label: "Won", cell: (c) => (c.won_value ? money(c.won_value) : "—"), value: (c) => c.won_value, className: "text-right tabular-nums" },
+    { id: "email", label: "Email", cell: (c) => plain(c.email), value: (c) => c.email, hidden: true },
+    { id: "phone", label: "Phone", cell: (c) => plain(c.phone), value: (c) => c.phone, hidden: true },
+    { id: "tags", label: "Tags", cell: (c) => c.tags.join(", ") || "—", value: (c) => c.tags, filter: true, hidden: true },
+    { id: "owner", label: "Owner", cell: (c) => plain(ownerName(staff, c.owner_id)), value: (c) => ownerName(staff, c.owner_id), filter: true },
+  ];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1 sm:max-w-xs">
-          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search clients" className="pl-8" aria-label="Search clients" />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SearchBox value={query} onChange={setQuery} placeholder="Search clients…" />
+        <div className="flex flex-wrap items-center gap-2">
+          <ViewSwitcher views={VIEWS} value={view} onChange={setView} />
+          {!readOnly && <AddCompanyButton staff={staff} />}
         </div>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className={FILTER} aria-label="Status">
-          <option value="">All statuses</option>
-          {COMPANY_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-        </select>
-        <div className="flex rounded-lg border p-0.5">
-          <Button variant={view === "table" ? "secondary" : "ghost"} size="icon-sm" aria-label="Table view" onClick={() => setView("table")}><Rows3 /></Button>
-          <Button variant={view === "cards" ? "secondary" : "ghost"} size="icon-sm" aria-label="Card view" onClick={() => setView("cards")}><LayoutGrid /></Button>
-        </div>
-        <span className="text-sm text-muted-foreground">{shown.length} of {clients.length}</span>
-        {!readOnly && <span className="ml-auto"><AddCompanyButton staff={staff} /></span>}
       </div>
+      <BulkBar count={selected.size} total={shown.length} pending={pending} onClear={() => setSelected(new Set())} onSelectAll={() => setSelected(new Set(shown.map((c) => c.id)))} actions={bulk} />
+      {(msg.ok || msg.error) && <p className={cn("text-sm", msg.error ? "text-destructive" : "text-muted-foreground")}>{msg.error ?? msg.ok}</p>}
 
       {shown.length === 0 ? (
-        <p className="rounded-xl border p-6 text-center text-sm text-muted-foreground">{clients.length ? "No clients match." : "No clients yet."}</p>
+        <EmptyState message={clients.length ? "No clients match." : "No clients yet."} />
       ) : view === "table" ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Contacts</TableHead>
-              <TableHead className="text-right">Open pipeline</TableHead><TableHead className="text-right">Won</TableHead><TableHead>Owner</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shown.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell>
-                  <Link href={`/admin/clients/${c.id}`} className="flex items-center gap-2 hover:underline">
-                    <Building2 className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">{c.name}</span>
-                      {c.industry && <span className="block truncate text-xs text-muted-foreground">{c.industry}</span>}
-                    </span>
-                  </Link>
-                </TableCell>
-                <TableCell><Badge variant={c.status === "client" ? "default" : "outline"}>{statusLabel(c.status)}</Badge></TableCell>
-                <TableCell className="text-right tabular-nums">{c.contacts}</TableCell>
-                <TableCell className="text-right tabular-nums">{c.open_deals ? `${money(c.open_value)} · ${c.open_deals}` : "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">{c.won_value ? money(c.won_value) : "—"}</TableCell>
-                <TableCell className="text-muted-foreground">{ownerName(staff, c.owner_id) ?? "—"}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <DataTable rows={shown} columns={columns} getId={(c) => c.id} selected={selected} onSelect={setSelected} onOpen={(c) => router.push(`/admin/clients/${c.id}`)} />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((c) => (
-            <Link key={c.id} href={`/admin/clients/${c.id}`} className="space-y-2 rounded-xl border p-4 hover:bg-muted/40">
-              <span className="flex items-center gap-2">
-                <Building2 className="size-4 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
-                <Badge variant={c.status === "client" ? "default" : "outline"}>{statusLabel(c.status)}</Badge>
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {c.contacts} contacts · {c.open_deals ? `${money(c.open_value)} open` : "no open deals"}{c.won_value ? ` · ${money(c.won_value)} won` : ""}
-              </span>
-              {c.tags.length > 0 && <span className="flex flex-wrap gap-1">{c.tags.map((t) => <Badge key={t} variant="outline">{t}</Badge>)}</span>}
-            </Link>
+            <div key={c.id} className="flex items-start gap-3 rounded-xl border p-4 hover:bg-muted/40">
+              <input type="checkbox" className="mt-1" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${c.name}`} />
+              <button type="button" onClick={() => router.push(`/admin/clients/${c.id}`)} className="min-w-0 flex-1 space-y-2 text-left">
+                <span className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
+                  <Badge variant={c.status === "client" ? "default" : "outline"}>{statusLabel(c.status)}</Badge>
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {c.contacts} contacts · {c.open_deals ? `${money(c.open_value)} open` : "no open deals"}{c.won_value ? ` · ${money(c.won_value)} won` : ""}
+                </span>
+                {c.tags.length > 0 && <span className="flex flex-wrap gap-1">{c.tags.map((t) => <Badge key={t} variant="outline">{t}</Badge>)}</span>}
+              </button>
+            </div>
           ))}
         </div>
       )}

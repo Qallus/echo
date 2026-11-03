@@ -2,17 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Eye, GitBranchPlus, LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2 } from "lucide-react";
+import { CalendarDays, Download, Flag, UserRound, ChevronLeft, ChevronRight, ExternalLink, Eye, GitBranchPlus, LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteDeal, moveDeal } from "@/lib/admin/actions/crm";
+import { bulkDelete, bulkUpdate } from "@/lib/admin/actions/crm-bulk";
+import { downloadCsv } from "@/lib/crm/csv";
 import { money } from "@/lib/billing/catalog";
 import { OPEN_STAGES, STAGES, STAGE_ORDER, weighted, type DealStage } from "@/lib/crm/deals";
 import { closedRecently, contactName, formatDay, ownerName, type Contact, type Deal, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { DetailRow, EmptyState, RecordCalendar, RowActions, SearchBox, StageBadge, StatRow, StatTile, ViewSwitcher, type RowAction } from "./crm-kit";
 import { FILTER } from "./crm-ui";
+import { BulkBar, type BulkAction } from "./bulk-bar";
+import { DataTable, plain, type Column } from "./data-table";
 import { DealDialog } from "./record-dialogs";
 
 type View = "board" | "list" | "table" | "cards" | "calendar";
@@ -42,7 +45,8 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
   const [quick, setQuick] = useState<string | null>(null);
   const [editing, setEditing] = useState<Deal | "new" | null>(null);
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
-  const [, start] = useTransition();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pending, start] = useTransition();
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -81,6 +85,38 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
     ]),
   ];
   const q = list.find((d) => d.id === quick) ?? null;
+  const ids = [...selected];
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const box = (d: Deal) => <input type="checkbox" checked={selected.has(d.id)} onChange={() => toggle(d.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${d.title}`} />;
+  const bulkRun = (fn: () => Promise<{ ok?: string; error?: string }>, clear = false) =>
+    start(async () => { const res = await fn(); setMsg(res); if (!res.error && clear) setSelected(new Set()); });
+  const exportCsv = () => {
+    const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const rows = list.filter((d) => selected.has(d.id)).map((d) => [d.title, who(d), STAGES[d.stage].label, String(d.value_cents / 100), `${d.probability}%`, d.expected_close ?? "", ownerName(staff, d.owner_id) ?? "", d.source ?? ""].map(esc).join(","));
+    downloadCsv("pipeline.csv", ["Deal,Client,Stage,Value,Probability,Expected close,Owner,Source", ...rows].join("\n"));
+  };
+  const bulk: BulkAction[] = [
+    ...(readOnly ? [] : [
+      { label: "Stage", icon: Flag, options: STAGE_ORDER.map((s) => ({ value: s, label: STAGES[s].label })), onPick: (v: string) => bulkRun(() => bulkUpdate("crm_deals", ids, { stage: v })) },
+      { label: "Owner", icon: UserRound, options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))], onPick: (v: string) => bulkRun(() => bulkUpdate("crm_deals", ids, { owner_id: v || null })) },
+    ]),
+    { label: "Export", icon: Download, run: exportCsv },
+    ...(readOnly ? [] : [{ label: "Delete", icon: Trash2, destructive: true, run: () => confirm(`Delete ${ids.length} deals? This can't be undone.`) && bulkRun(() => bulkDelete("crm_deals", ids), true) }]),
+  ];
+  const columns: Column<Deal>[] = [
+    { id: "title", label: "Deal", cell: (d) => <span className="font-medium">{d.title}</span>, value: (d) => d.title },
+    { id: "client", label: "Client", cell: (d) => plain(who(d)), value: (d) => d.company?.name ?? null, filter: true },
+    { id: "stage", label: "Stage", cell: (d) => <StageBadge stage={d.stage} />, value: (d) => STAGES[d.stage].label, filter: true },
+    { id: "value", label: "Value", cell: (d) => money(d.value_cents, d.currency), value: (d) => d.value_cents, className: "text-right tabular-nums" },
+    { id: "prob", label: "Prob.", cell: (d) => `${d.probability}%`, value: (d) => d.probability, className: "text-right" },
+    { id: "weighted", label: "Weighted", cell: (d) => money(weighted(d)), value: (d) => weighted(d), className: "text-right tabular-nums", hidden: true },
+    { id: "close", label: "Close", cell: (d) => (d.expected_close ? formatDay(d.expected_close) : "—"), value: (d) => d.expected_close },
+    { id: "type", label: "Type", cell: (d) => plain(d.opportunity_type), value: (d) => d.opportunity_type, filter: true, hidden: true },
+    { id: "source", label: "Source", cell: (d) => plain(d.source), value: (d) => d.source, filter: true, hidden: true },
+    { id: "next", label: "Next step", cell: (d) => plain(d.next_step), value: (d) => d.next_step_due, hidden: true },
+    { id: "owner", label: "Owner", cell: (d) => plain(ownerName(staff, d.owner_id)), value: (d) => ownerName(staff, d.owner_id), filter: true },
+    { id: "updated", label: "Updated", cell: (d) => new Date(d.updated_at).toLocaleDateString(), value: (d) => d.updated_at, hidden: true },
+  ];
 
   return (
     <div className="space-y-6">
@@ -107,17 +143,19 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
           {!readOnly && <Button onClick={() => setEditing("new")}><Plus /> Add deal</Button>}
         </div>
       </div>
-      {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
+      <BulkBar count={selected.size} total={shown.length} pending={pending} onClear={() => setSelected(new Set())} onSelectAll={() => setSelected(new Set(shown.map((d) => d.id)))} actions={bulk} />
+      {(msg.ok || msg.error) && <p className={cn("text-sm", msg.error ? "text-destructive" : "text-muted-foreground")}>{msg.error ?? msg.ok}</p>}
 
       {shown.length === 0 && view !== "board" ? (
         <EmptyState message={list.length ? "No deals match your filters." : "No deals yet. Add your first opportunity."} />
       ) : view === "board" ? (
-        <BoardView deals={shown} staff={staff} readOnly={readOnly} onOpen={open} onMove={move} />
+        <BoardView deals={shown} staff={staff} readOnly={readOnly} onOpen={open} onMove={move} box={box} />
       ) : view === "list" ? (
         <div className="space-y-2">
           {shown.map((d) => (
             <div key={d.id} role="button" tabIndex={0} onClick={() => open(d.id)} onKeyDown={(e) => e.key === "Enter" && open(d.id)}
               className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-3 hover:border-primary/40">
+              {box(d)}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2"><p className="truncate text-sm font-medium">{d.title}</p><StageBadge stage={d.stage} /></div>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">{who(d) || "No client"}{d.expected_close ? ` · closes ${formatDay(d.expected_close)}` : ""}</p>
@@ -129,37 +167,15 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
           ))}
         </div>
       ) : view === "table" ? (
-        <div className="rounded-xl border bg-card px-2">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Deal</TableHead><TableHead>Client</TableHead><TableHead>Stage</TableHead><TableHead className="text-right">Value</TableHead>
-                <TableHead className="text-right">Prob.</TableHead><TableHead>Close</TableHead><TableHead>Owner</TableHead><TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shown.map((d) => (
-                <TableRow key={d.id} className="cursor-pointer" onClick={() => open(d.id)}>
-                  <TableCell className="max-w-56 truncate font-medium">{d.title}</TableCell>
-                  <TableCell className="text-muted-foreground">{who(d) || "—"}</TableCell>
-                  <TableCell><StageBadge stage={d.stage} /></TableCell>
-                  <TableCell className="text-right tabular-nums">{money(d.value_cents, d.currency)}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{d.probability}%</TableCell>
-                  <TableCell className="text-muted-foreground">{d.expected_close ? formatDay(d.expected_close) : "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{ownerName(staff, d.owner_id) ?? "—"}</TableCell>
-                  <TableCell><RowActions actions={actions(d)} /></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable rows={shown} columns={columns} getId={(d) => d.id} selected={selected} onSelect={setSelected} onOpen={(d) => open(d.id)} rowEnd={(d) => <RowActions actions={actions(d)} />} />
       ) : view === "cards" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((d) => (
             <div key={d.id} role="button" tabIndex={0} onClick={() => open(d.id)} onKeyDown={(e) => e.key === "Enter" && open(d.id)}
               className="cursor-pointer space-y-3 rounded-xl border bg-card p-4 hover:border-primary/40">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0"><p className="truncate font-medium">{d.title}</p><p className="truncate text-xs text-muted-foreground">{who(d) || "No client"}</p></div>
+                <span className="pt-1">{box(d)}</span>
+                <div className="min-w-0 flex-1"><p className="truncate font-medium">{d.title}</p><p className="truncate text-xs text-muted-foreground">{who(d) || "No client"}</p></div>
                 <RowActions actions={actions(d)} />
               </div>
               <StageBadge stage={d.stage} />
@@ -225,8 +241,8 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
   );
 }
 
-function BoardView({ deals, staff, readOnly, onOpen, onMove }: {
-  deals: Deal[]; staff: StaffOption[]; readOnly: boolean; onOpen: (id: string) => void; onMove: (d: Deal, s: DealStage) => void;
+function BoardView({ deals, staff, readOnly, onOpen, onMove, box }: {
+  deals: Deal[]; staff: StaffOption[]; readOnly: boolean; onOpen: (id: string) => void; onMove: (d: Deal, s: DealStage) => void; box: (d: Deal) => React.ReactNode;
 }) {
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<DealStage | null>(null);
@@ -250,7 +266,9 @@ function BoardView({ deals, staff, readOnly, onOpen, onMove }: {
                   onDragStart={(e) => { setDragging(d.id); e.dataTransfer.effectAllowed = "move"; }}
                   onDragEnd={() => { setDragging(null); setOver(null); }}
                   className={cn("rounded-md border bg-background p-2.5", !readOnly && "cursor-grab active:cursor-grabbing", dragging === d.id && "opacity-50")}>
-                  <button type="button" onClick={() => onOpen(d.id)} className="w-full text-left">
+                  <div className="flex items-start gap-2">
+                  <span className="pt-0.5">{box(d)}</span>
+                  <button type="button" onClick={() => onOpen(d.id)} className="min-w-0 flex-1 text-left">
                     <p className="truncate text-sm font-medium">{d.title}</p>
                     <p className="truncate text-[11px] text-muted-foreground">{who(d) || "No client"}</p>
                     <div className="mt-1 flex items-center justify-between">
@@ -258,6 +276,7 @@ function BoardView({ deals, staff, readOnly, onOpen, onMove }: {
                       <span className="text-[11px] text-muted-foreground">{d.probability}%</span>
                     </div>
                   </button>
+                  </div>
                   <div className="mt-2 flex items-center justify-between gap-1">
                     <span className="truncate text-[10px] text-muted-foreground">
                       {[d.expected_close && formatDay(d.expected_close), ownerName(staff, d.owner_id)].filter(Boolean).join(" · ")}
