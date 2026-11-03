@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldOff } from "lucide-react";
@@ -19,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const mfaOff = (security?.value as { requireMfa?: boolean } | null)?.requireMfa === false;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={(await cookies()).get("sidebar_state")?.value !== "false"}>
       <AdminSidebar role={staff.role} permissions={staff.permissions} />
       <SidebarInset className="min-w-0 overflow-x-clip">
         <AdminMobileHeader />

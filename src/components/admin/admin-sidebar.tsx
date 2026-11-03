@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft, Bot, Building2, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, Settings, ShieldCheck, SquareKanban, UserRound, Users } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
-  SidebarMenuButton, SidebarMenuItem, useSidebar,
+  SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme";
 import type { Permission, StaffRole } from "@/lib/admin/permissions";
@@ -45,21 +45,29 @@ const GROUPS: { label: string; items: Item[] }[] = [
 
 export function AdminSidebar({ role, permissions }: { role: StaffRole; permissions: Permission[] }) {
   const pathname = usePathname();
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, state, isMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const visible = (i: Item) => !i.permission || permissions.includes(i.permission);
   const isActive = (i: Item) => (i.exact ? pathname === i.href : pathname === i.href || pathname.startsWith(`${i.href}/`));
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 pt-1 pl-2">
-          <ShieldCheck className="size-5" />
-          <span className="min-w-0 leading-tight">
-            <span className="block text-sm font-semibold tracking-[0.2em]">ECHO ADMIN</span>
-            <span className="block text-xs text-muted-foreground">{roleLabel(role)}</span>
-          </span>
-          <span className="ml-auto"><ThemeToggle /></span>
-        </div>
+        {collapsed ? (
+          <div className="flex justify-center pt-1"><SidebarTrigger aria-label="Expand sidebar" title="Expand sidebar" /></div>
+        ) : (
+          <div className="flex items-center gap-2 pt-1 pl-2">
+            <ShieldCheck className="size-5 shrink-0" />
+            <span className="min-w-0 leading-tight">
+              <span className="block text-sm font-semibold tracking-[0.2em]">ECHO ADMIN</span>
+              <span className="block text-xs text-muted-foreground">{roleLabel(role)}</span>
+            </span>
+            <span className="ml-auto flex items-center">
+              <ThemeToggle />
+              {!isMobile && <SidebarTrigger aria-label="Collapse sidebar" title="Collapse sidebar" />}
+            </span>
+          </div>
+        )}
       </SidebarHeader>
       <SidebarContent>
         {GROUPS.map((g) => {
@@ -71,7 +79,7 @@ export function AdminSidebar({ role, permissions }: { role: StaffRole; permissio
               <SidebarMenu>
                 {items.map((i) => (
                   <SidebarMenuItem key={i.href}>
-                    <SidebarMenuButton isActive={isActive(i)} render={<Link href={i.href} onClick={() => setOpenMobile(false)} />}>
+                    <SidebarMenuButton isActive={isActive(i)} tooltip={i.label} render={<Link href={i.href} onClick={() => setOpenMobile(false)} />}>
                       <i.icon /> <span>{i.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -84,15 +92,16 @@ export function AdminSidebar({ role, permissions }: { role: StaffRole; permissio
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton render={<Link href="/" />}><ArrowLeft /> <span>Back to Echo</span></SidebarMenuButton>
+            <SidebarMenuButton tooltip="Back to Echo" render={<Link href="/" />}><ArrowLeft /> <span>Back to Echo</span></SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <form action="/auth/signout" method="post">
-              <SidebarMenuButton render={<button type="submit" />}><LogOut /> <span>Log out</span></SidebarMenuButton>
+              <SidebarMenuButton tooltip="Log out" render={<button type="submit" />}><LogOut /> <span>Log out</span></SidebarMenuButton>
             </form>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

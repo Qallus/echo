@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarSeparator, useSidebar,
+  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
@@ -46,7 +46,7 @@ function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProp
   const active = href === "/" ? pathname === "/" || pathname === "/home" : exact ? pathname === href : pathname.startsWith(href);
   return (
     <SidebarMenuItem {...drop} className={cn(highlight && "rounded-md bg-sidebar-accent ring-2 ring-sidebar-ring")}>
-      <SidebarMenuButton isActive={active} render={<Link href={href} />}>
+      <SidebarMenuButton isActive={active} tooltip={label} render={<Link href={href} />}>
         <Icon />
         <span>{label}</span>
       </SidebarMenuButton>
@@ -62,7 +62,8 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
   const { email } = me;
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
-  const { isMobile } = useSidebar();
+  const { isMobile, state } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
 
   const active = recordings.filter((r) => !r.deletedAt);
   const bySource = (s: Recording["source"]) => active.filter((r) => r.source === s).length;
@@ -109,17 +110,25 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
   };
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3">
-        <div className="flex items-center gap-2 pt-1 pl-2">
-          <AudioLines className="size-5" />
-          <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
-          {/* Phones show the bell in the top header instead. */}
-          <span className="ml-auto flex items-center">
-            <ThemeToggle />
-            {!isMobile && <NotificationBell userId={me.id} initialUnread={me.unread} />}
-          </span>
-        </div>
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-1 pt-1">
+            <SidebarTrigger aria-label="Expand sidebar" title="Expand sidebar" />
+            <NotificationBell userId={me.id} initialUnread={me.unread} />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 pt-1 pl-2">
+            <AudioLines className="size-5" />
+            <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
+            {/* Phones show the bell in the top header instead. */}
+            <span className="ml-auto flex items-center">
+              <ThemeToggle />
+              {!isMobile && <NotificationBell userId={me.id} initialUnread={me.unread} />}
+              {!isMobile && <SidebarTrigger aria-label="Collapse sidebar" title="Collapse sidebar" />}
+            </span>
+          </div>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger render={<SidebarMenuButton size="lg" className="justify-between" />}>
@@ -152,9 +161,15 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="outline" className="w-full" />}>
-            <Plus /> New recording
-          </DropdownMenuTrigger>
+          {collapsed ? (
+            <DropdownMenuTrigger render={<Button variant="outline" size="icon" className="mx-auto" aria-label="New recording" title="New recording" />}>
+              <Plus />
+            </DropdownMenuTrigger>
+          ) : (
+            <DropdownMenuTrigger render={<Button variant="outline" className="w-full" />}>
+              <Plus /> New recording
+            </DropdownMenuTrigger>
+          )}
           <DropdownMenuContent className="w-60" align="start">
             <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("meeting")}><Mic /> Record a meeting</DropdownMenuItem>
             <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("phone_call")}><Phone /> Record a call</DropdownMenuItem>
@@ -164,7 +179,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
       </SidebarHeader>
 
       <SidebarContent>
-        {notice && (
+        {notice && !collapsed && (
           <p role="status" className={cn("mx-3 mt-2 rounded-md border px-2 py-1.5 text-xs", notice.error ? "border-destructive/40 text-destructive" : "text-muted-foreground")}>
             {notice.text}
           </p>
@@ -211,7 +226,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="gap-3 p-3">
+      <SidebarFooter className="gap-3 p-3 group-data-[collapsible=icon]:hidden">
         <Link href="/billing" className="rounded-lg border p-3 text-sm hover:bg-sidebar-accent">
           <div className="flex items-center justify-between font-medium">Pro (Trial) <span className="text-muted-foreground">›</span></div>
           <div className="mt-2 h-1 rounded-full bg-primary/80" />
@@ -219,6 +234,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
         </Link>
         <Button variant="outline" className="w-full" nativeButton={false} render={<Link href="/team" />}><Users /> Invite teammates</Button>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

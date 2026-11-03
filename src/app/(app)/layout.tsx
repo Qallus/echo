@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { AppSidebar } from "@/components/app-sidebar";
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { MobileHeader } from "@/components/mobile/mobile-header";
@@ -19,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <RecorderProvider workspaces={workspaces} userId={user.id}>
     <CatalogSync products={catalog} />
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={(await cookies()).get("sidebar_state")?.value !== "false"}>
       <AppSidebar me={me} workspaces={workspaces} recordings={recordings} folders={folders} superAdmin={superAdmin} />
       {/* overflow-x-clip (not hidden): trims sub-pixel overflow without breaking the sticky header. */}
       <SidebarInset className="min-w-0 overflow-x-clip">
