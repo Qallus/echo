@@ -3,15 +3,18 @@ import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
 import { CartButton } from "@/components/store/store";
+import { CatalogSync } from "@/components/store/catalog-sync";
+import { loadCatalog } from "@/lib/billing/catalog-server";
 import { ThemeToggle } from "@/components/theme";
 import { getUser } from "@/lib/data";
 import { COMPANY } from "@/lib/company";
 
 // Public site: header and footer around the landing and pricing pages.
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
-  const user = await getUser();
+  const [user, catalog] = await Promise.all([getUser(), loadCatalog()]);
   return (
     <div className="flex min-h-svh flex-col bg-background">
+      <CatalogSync products={catalog} />
       <header className="sticky top-0 z-30 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">

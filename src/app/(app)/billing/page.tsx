@@ -8,6 +8,9 @@ import { LocalDate } from "@/components/local-date";
 import { listOrders, listRecordings, listSubscriptions, requireUser } from "@/lib/data";
 import { openBillingPortal } from "@/lib/billing/actions";
 import { findPrice, money } from "@/lib/billing/catalog";
+import { loadCatalog } from "@/lib/billing/catalog-server";
+import { minutesUsage } from "@/lib/billing/usage";
+import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/format";
 
 export const metadata = { title: "Billing · Echo" };
@@ -16,7 +19,11 @@ const ACTIVE = ["active", "trialing", "past_due"];
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ portal?: string }> }) {
   const user = await requireUser();
-  const [{ portal }, subs, orders, recordings] = await Promise.all([searchParams, listSubscriptions(), listOrders(5), listRecordings()]);
+  await loadCatalog();
+  const [{ portal }, subs, orders, recordings, minutes] = await Promise.all([
+    searchParams, listSubscriptions(), listOrders(5), listRecordings(), createClient().then((c) => minutesUsage(c, user.id)),
+  ]);
+  const share = minutes.allowance ? Math.min(1, minutes.used / minutes.allowance) : 0;
 
   const active = subs.filter((s) => ACTIVE.includes(s.status));
   const lines = active.flatMap((s) => s.items.map((i) => ({ ...i, sub: s, hit: i.price_key ? findPrice(i.price_key) : null })));
@@ -39,6 +46,30 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       {portal === "unavailable" && (
         <p className="rounded-lg border bg-muted/40 p-3 text-sm">Billing management opens after your first purchase.</p>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Minutes this month</CardTitle>
+          <CardDescription>
+            {minutes.planName ? `${minutes.planName} plan` : "Free plan"}: {minutes.plan.toLocaleString()} minutes a month
+            {minutes.packs ? `, plus ${minutes.packs.toLocaleString()} from minute packs` : ""}. Resets on the 1st.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-baseline justify-between text-sm">
+            <span className="text-2xl font-semibold tabular-nums">{minutes.used.toLocaleString()}</span>
+            <span className="text-muted-foreground">of {minutes.allowance.toLocaleString()} minutes</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={Math.round(share * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Minutes used">
+            <div className={`h-full rounded-full ${share >= 0.9 ? "bg-destructive" : "bg-primary"}`} style={{ width: `${share * 100}%` }} />
+          </div>
+          {share >= 0.8 && (
+            <p className="text-sm text-muted-foreground">
+              Running low. <Link href="/pricing#packs" className="underline underline-offset-4">Add a minute pack</Link> or upgrade your plan.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

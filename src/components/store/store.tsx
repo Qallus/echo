@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Briefcase, Check, Lock, Minus, Plus, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addToCart, useCart } from "@/lib/billing/cart";
-import { amountFor, money, per, PRODUCTS, type Interval, type Product } from "@/lib/billing/catalog";
+import { amountFor, money, per, products, type Interval, type Product } from "@/lib/billing/catalog";
 import { cn } from "@/lib/utils";
 
 function AddButton({ priceKey, quantity = 1, label = "Add to cart", className }: { priceKey: string; quantity?: number; label?: string; className?: string }) {
@@ -102,7 +102,7 @@ export function PlanSection() {
           </ul>
           <Button className="mt-6" variant="outline" nativeButton={false} render={<Link href="/signup" />}>Start free</Button>
         </div>
-        {PRODUCTS.filter((p) => p.kind === "plan").map((p) => <PlanCard key={p.id} product={p} interval={interval} />)}
+        {products().filter((p) => p.kind === "plan").map((p) => <PlanCard key={p.id} product={p} interval={interval} />)}
       </div>
     </div>
   );
@@ -111,7 +111,7 @@ export function PlanSection() {
 export function ProductGrid({ kind }: { kind: Product["kind"] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {PRODUCTS.filter((p) => p.kind === kind).map((p) => {
+      {products().filter((p) => p.kind === kind).map((p) => {
         const price = p.prices[0];
         return (
           <div key={p.id} className="flex flex-col rounded-xl border p-5">

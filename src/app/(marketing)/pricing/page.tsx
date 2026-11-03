@@ -31,7 +31,7 @@ export default function PricingPage() {
         <ProductGrid kind="bolt_on" />
       </section>
 
-      <section className="mt-20 space-y-6">
+      <section id="packs" className="mt-20 scroll-mt-24 space-y-6">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Minute packs</h2>
           <p className="mt-1 text-muted-foreground">One-time top-ups for busy months.</p>

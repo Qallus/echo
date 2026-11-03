@@ -2,6 +2,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { MobileHeader } from "@/components/mobile/mobile-header";
 import { RecorderProvider } from "@/components/recorder/recorder-provider";
+import { CatalogSync } from "@/components/store/catalog-sync";
+import { loadCatalog } from "@/lib/billing/catalog-server";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { redirect } from "next/navigation";
 import { countUnreadNotifications, getMyProfile, isSuperAdmin, isSuspended, listFolders, listRecordings, listWorkspaces, requireUser } from "@/lib/data";
@@ -9,13 +11,14 @@ import { countUnreadNotifications, getMyProfile, isSuperAdmin, isSuspended, list
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   if (await isSuspended()) redirect("/suspended");
-  const [workspaces, recordings, folders, superAdmin, profile, unread] = await Promise.all([
-    listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile(), countUnreadNotifications(),
+  const [workspaces, recordings, folders, superAdmin, profile, unread, catalog] = await Promise.all([
+    listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile(), countUnreadNotifications(), loadCatalog(),
   ]);
   const me = { id: user.id, name: profile.fullName, email: user.email, avatarUrl: profile.avatarUrl, unread };
 
   return (
     <RecorderProvider workspaces={workspaces} userId={user.id}>
+    <CatalogSync products={catalog} />
     <SidebarProvider>
       <AppSidebar me={me} workspaces={workspaces} recordings={recordings} folders={folders} superAdmin={superAdmin} />
       {/* overflow-x-clip (not hidden): trims sub-pixel overflow without breaking the sticky header. */}

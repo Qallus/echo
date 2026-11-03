@@ -5,10 +5,33 @@ import { getUser, requireUser } from "@/lib/data";
 import { siteOrigin } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { findPrice } from "./catalog";
+import { loadCatalog } from "./catalog-server";
+import { getBillingSettings } from "./settings";
 import { stripe } from "./stripe";
 import type { CartLine } from "./cart";
 
 export type CheckoutResult = { url?: string; error?: string; needLogin?: boolean };
+
+// Customers with a working AI key (their own, or their team's) get the Super
+// Admin discount on subscriptions (one Stripe coupon per percentage, created
+// on first use). RLS limits the lookup to keys this user can use.
+async function byokCoupon(): Promise<string | null> {
+  const supabase = await createClient();
+  const [settings, keys] = await Promise.all([
+    getBillingSettings(supabase),
+    supabase.from("ai_keys").select("id").eq("status", "ok").limit(1),
+  ]);
+  const pct = settings.byokDiscountPercent;
+  if (!pct || !keys.data?.length) return null;
+  const s = stripe()!;
+  const id = `echo-own-keys-${pct}`;
+  try {
+    await s.coupons.retrieve(id);
+  } catch {
+    await s.coupons.create({ id, percent_off: pct, duration: "forever", name: `Own AI keys (${pct}% off)` });
+  }
+  return id;
+}
 
 async function customerId(userId: string) {
   const supabase = await createClient();
@@ -24,6 +47,7 @@ export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> 
   const s = stripe();
   if (!s) return { error: "Checkout isn't switched on yet. Please try again soon." };
 
+  await loadCatalog();
   const items = lines.map((l) => ({ ...l, hit: findPrice(l.key) })).filter((l) => l.hit && l.quantity > 0);
   if (!items.length) return { error: "Your cart is empty." };
   if (items.filter((l) => l.hit!.product.kind === "plan").length > 1) return { error: "Choose one plan." };
@@ -38,6 +62,8 @@ export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> 
   const origin = await siteOrigin();
   const customer = await customerId(user.id);
   const meta = { echo_user_id: user.id };
+  // Stripe allows either an automatic discount or promo-code entry, not both.
+  const coupon = recurring ? await byokCoupon() : null;
 
   const session = await s.checkout.sessions.create({
     mode: recurring ? "subscription" : "payment",
@@ -48,7 +74,7 @@ export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> 
     ...(recurring
       ? { subscription_data: { metadata: meta } }
       : { invoice_creation: { enabled: true, invoice_data: { metadata: meta } }, ...(customer ? {} : { customer_creation: "always" as const }) }),
-    allow_promotion_codes: true,
+    ...(coupon ? { discounts: [{ coupon }] } : { allow_promotion_codes: true }),
     billing_address_collection: "auto",
     success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/cart`,

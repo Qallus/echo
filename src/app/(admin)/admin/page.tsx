@@ -3,7 +3,9 @@ import { AlertTriangle, AudioLines, Briefcase, CircleCheck, CreditCard, Mail, Re
 import { AdminPage, Section, StatCard } from "@/components/admin/admin-ui";
 import { LocalDate } from "@/components/local-date";
 import { can, requireStaff } from "@/lib/admin/guard";
-import { amountFor, findPrice, money } from "@/lib/billing/catalog";
+import { money } from "@/lib/billing/catalog";
+import { loadCatalog } from "@/lib/billing/catalog-server";
+import { mrr } from "@/lib/billing/metrics";
 import { createClient } from "@/lib/supabase/server";
 
 type Dashboard = {
@@ -15,28 +17,13 @@ type Dashboard = {
 type Attention = { kind: "transcription" | "delivery" | "payment"; title: string; detail: string | null; at: string; target_id: string };
 type AuditRow = { id: number; action: string; target_type: string | null; created_at: string; actor: string | null };
 
-// Monthly recurring revenue from active subscriptions, priced from the
-// catalog (annual prices count as a twelfth per month).
-function mrr(subs: NonNullable<Dashboard["subscriptions"]>) {
-  let cents = 0;
-  for (const s of subs.filter((x) => x.status !== "past_due")) {
-    for (const item of s.items ?? []) {
-      const found = findPrice(item.price_key);
-      if (!found?.price.interval) continue;
-      const amount = amountFor(found.price, item.quantity ?? 1);
-      cents += found.price.interval === "year" ? amount / 12 : amount;
-    }
-  }
-  return Math.round(cents);
-}
-
 const ATTENTION_ICON = { transcription: AudioLines, delivery: Mail, payment: CreditCard };
 
 export default async function AdminDashboardPage() {
   const staff = await requireStaff("dashboard.view");
   const supabase = await createClient();
   const [dash, attention, audit] = await Promise.all([
-    supabase.rpc("admin_dashboard"),
+    loadCatalog().then(() => supabase.rpc("admin_dashboard")),
     supabase.rpc("admin_attention"),
     can(staff, "audit.view")
       ? supabase.from("admin_audit_log").select("id, action, target_type, created_at, actor").order("created_at", { ascending: false }).limit(8)

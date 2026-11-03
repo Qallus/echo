@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { can, requireStaff } from "@/lib/admin/guard";
 import { roleLabel, type StaffRole } from "@/lib/admin/permissions";
 import { findPrice, money } from "@/lib/billing/catalog";
+import { loadCatalog } from "@/lib/billing/catalog-server";
 import { isUuid } from "@/lib/data";
 import { formatDuration } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -45,6 +46,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 // only, never transcripts or summaries.
 export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff("users.view");
+  await loadCatalog();
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const supabase = await createClient();

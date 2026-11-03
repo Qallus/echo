@@ -26,7 +26,7 @@ const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ES
 const tmp = `${root}/.next/catalog.tmp.mjs`;
 fs.mkdirSync(`${root}/.next`, { recursive: true });
 fs.writeFileSync(tmp, js);
-const { PRODUCTS } = await import(pathToFileURL(tmp).href);
+const { SEED_PRODUCTS: PRODUCTS } = await import(pathToFileURL(tmp).href);
 fs.unlinkSync(tmp);
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);

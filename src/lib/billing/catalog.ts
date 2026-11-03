@@ -1,6 +1,8 @@
-// Echo's catalog. Prices here are the source of truth for the store pages;
-// scripts/stripe-setup.mjs creates matching Stripe products and prices, each
-// with a lookup_key equal to the `key` below. Amounts are in US cents.
+// Echo's catalog types and helpers. The catalog itself lives in the database
+// (catalog_products / catalog_prices, edited in Admin > Billing); the server
+// loads it (catalog-server.ts) and pages hand it to the browser (CatalogSync).
+// SEED_PRODUCTS is the starting catalog and the fallback if the database is
+// unreachable. Each price key is its Stripe lookup_key. Amounts are US cents.
 
 export type Interval = "month" | "year";
 export type Kind = "plan" | "bolt_on" | "pack" | "service";
@@ -13,6 +15,7 @@ export type Price = {
   interval: Interval | null; // null = one-time
   unitAmount?: number;
   tiers?: Tier[];
+  active?: boolean;
 };
 
 export type Product = {
@@ -22,10 +25,12 @@ export type Product = {
   tagline: string;
   features?: string[];
   perSeat?: boolean;
+  minutes?: number | null; // plans: per month (per seat when perSeat); packs: minutes added
+  active?: boolean;
   prices: Price[];
 };
 
-export const PRODUCTS: Product[] = [
+export const SEED_PRODUCTS: Product[] = [
   {
     id: "pro", kind: "plan", name: "Pro", tagline: "For your own calls and meetings.",
     features: ["2,000 transcription minutes a month", "Unlimited history and storage", "Claude, ChatGPT and Grok in Ask Echo", "Branded PDF and web reports", "Claude connector"],
@@ -58,8 +63,15 @@ export const PRODUCTS: Product[] = [
 
 export const KIND_LABEL: Record<Kind, string> = { plan: "Plans", bolt_on: "Bolt-ons", pack: "Minute packs", service: "Services" };
 
+// The catalog in use: the database copy once loaded, SEED_PRODUCTS until then.
+let current: Product[] = SEED_PRODUCTS;
+export const products = () => current;
+export function setCatalog(list: Product[]) {
+  if (list.length) current = list;
+}
+
 export function findPrice(key: string): { product: Product; price: Price } | null {
-  for (const product of PRODUCTS) {
+  for (const product of current) {
     const price = product.prices.find((p) => p.key === key);
     if (price) return { product, price };
   }
