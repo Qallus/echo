@@ -18,6 +18,7 @@ import { DetailRow, EmptyState, RowActions, SearchBox, StatRow, StatTile, ViewSw
 import { FILTER } from "./crm-ui";
 import { BulkBar, emailEveryone, type BulkAction } from "./bulk-bar";
 import { DataTable, plain, type Column } from "./data-table";
+import { ComposeDialog, type Person } from "@/components/admin/comms/compose-dialog";
 import { ImportDialog } from "./import-dialog";
 import { PhoneImportDialog } from "./phone-import-dialog";
 import { ContactDialog } from "./record-dialogs";
@@ -51,6 +52,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
   const [drawer, setDrawer] = useState<string | null>(null);
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [importing, setImporting] = useState(false);
+  const [composeTo, setComposeTo] = useState<Person[] | null>(null);
   const [fromPhone, setFromPhone] = useState(Boolean(phoneImport && !readOnly));
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
@@ -95,7 +97,9 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
       { label: "Lead status", icon: Magnet, options: [{ value: "", label: "Not a lead" }, ...LEAD_STATUSES.map((r) => ({ value: r.id, label: r.label }))], onPick: (v: string) => change({ lead_status: v }) },
       { label: "Owner", icon: UserRound, options: people, onPick: (v: string) => change({ owner_id: v || null }) },
     ]),
-    { label: "Email", icon: Mail, run: () => { const missing = emailEveryone(contacts.filter((c) => selected.has(c.id)).map((c) => c.email)); if (missing) setMsg({ ok: `${missing} selected have no email address.` }); } },
+    { label: "Email", icon: Mail, run: () => (readOnly
+      ? emailEveryone(contacts.filter((c) => selected.has(c.id)).map((c) => c.email))
+      : setComposeTo(contacts.filter((c) => selected.has(c.id)).map((c) => ({ id: c.id, name: contactName(c), email: c.email })))) },
     { label: "Export", icon: Download, run: () => downloadCsv("contacts.csv", contactsToCsv(contacts.filter((c) => selected.has(c.id)))) },
     ...(readOnly ? [] : [{ label: "Delete", icon: Trash2, destructive: true, run: () => remove(ids) }]),
   ];
@@ -258,6 +262,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
 
       {editing && <ContactDialog open onOpenChange={(o) => !o && setEditing(null)} contact={editing === "new" ? undefined : editing} companies={companies} staff={staff} stay={editing !== "new"} />}
       {importing && <ImportDialog onClose={() => setImporting(false)} role="contact" />}
+      {composeTo && <ComposeDialog initial={composeTo} people={contacts.map((c) => ({ id: c.id, name: contactName(c), email: c.email }))} onClose={() => setComposeTo(null)} />}
       {fromPhone && <PhoneImportDialog existing={contacts} onClose={() => { setFromPhone(false); if (phoneImport) router.replace("/admin/contacts"); }} />}
     </div>
   );

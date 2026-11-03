@@ -57,7 +57,7 @@ export function NotificationBell({ userId, initialUnread, className }: { userId:
   const load = async () => {
     const supabase = createClient();
     const { data } = await supabase.from("notifications").select("id, title, body, url, read_at, created_at")
-      .eq("show_in_app", true).order("created_at", { ascending: false }).limit(20);
+      .eq("user_id", userId).eq("show_in_app", true).order("created_at", { ascending: false }).limit(20);
     setItems(data ?? []);
   };
 

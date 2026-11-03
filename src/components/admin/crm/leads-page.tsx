@@ -15,6 +15,7 @@ import { EmptyState, RecordCalendar, RowActions, SearchBox, StatRow, StatTile, V
 import { FILTER } from "./crm-ui";
 import { BulkBar, emailEveryone, type BulkAction } from "./bulk-bar";
 import { DataTable, plain, type Column } from "./data-table";
+import { ComposeDialog, type Person } from "@/components/admin/comms/compose-dialog";
 import { ImportDialog } from "./import-dialog";
 import { ContactDialog } from "./record-dialogs";
 
@@ -49,6 +50,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
   const [showClosed, setShowClosed] = useState(false);
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [importing, setImporting] = useState(false);
+  const [composeTo, setComposeTo] = useState<Person[] | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
@@ -92,7 +94,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
       { label: "Owner", icon: UserRound, options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))], onPick: (v: string) => change({ owner_id: v || null }) },
       { label: "Add tags", icon: Tag, input: { placeholder: "Tags, comma separated", submit: "Add tags", onSubmit: (v: string) => change({ add_tags: v }) } },
     ]),
-    { label: "Email", icon: Mail, run: () => { const missing = emailEveryone(picked().map((c) => c.email)); if (missing) setMsg({ ok: `${missing} selected have no email address.` }); } },
+    { label: "Email", icon: Mail, run: () => (readOnly ? emailEveryone(picked().map((c) => c.email)) : setComposeTo(picked().map((c) => ({ id: c.id, name: contactName(c), email: c.email })))) },
     { label: "Export", icon: Download, run: () => downloadCsv("leads.csv", contactsToCsv(picked())) },
     ...(readOnly ? [] : [{ label: "Delete", icon: Trash2, destructive: true,
       run: () => confirm(`Delete ${ids.length} leads? Their activity is deleted too.`) && run(async () => { const r = await bulkDelete("crm_contacts", ids); if (!r.error) setSelected(new Set()); return r; }) }]),
@@ -204,6 +206,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
 
       {editing && <ContactDialog open onOpenChange={(o) => !o && setEditing(null)} contact={editing === "new" ? undefined : editing} role="lead" companies={companies} staff={staff} stay={editing !== "new"} />}
       {importing && <ImportDialog onClose={() => setImporting(false)} role="lead" />}
+      {composeTo && <ComposeDialog initial={composeTo} people={list.map((c) => ({ id: c.id, name: contactName(c), email: c.email }))} onClose={() => setComposeTo(null)} />}
     </div>
   );
 }

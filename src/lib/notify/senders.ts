@@ -27,17 +27,20 @@ export function siteUrl(path: string) {
   return `${(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "")}${path}`;
 }
 
-export async function sendEmail(to: string, subject: string, html: string, text: string): Promise<SendResult> {
+export async function sendEmail(to: string, subject: string, html: string, text: string,
+  opts: { headers?: Record<string, string>; replyTo?: string; idempotencyKey?: string } = {}): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
   if (!key || !from) return { ok: false, error: "Email isn't configured (RESEND_API_KEY / EMAIL_FROM)." };
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}) },
       body: JSON.stringify({
         from: from.includes("<") ? from : `Echo <${from}>`, to: [to], subject, html, text,
-        ...(process.env.RESEND_REPLY_TO ? { reply_to: process.env.RESEND_REPLY_TO } : {}), // replies go to the team inbox
+        ...(opts.headers ? { headers: opts.headers } : {}),
+        // Replies go to the team inbox.
+        ...(opts.replyTo ?? process.env.RESEND_REPLY_TO ? { reply_to: opts.replyTo ?? process.env.RESEND_REPLY_TO } : {}),
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { id?: string; message?: string };

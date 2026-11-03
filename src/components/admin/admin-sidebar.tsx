@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bot, Building2, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, Settings, ShieldCheck, SquareKanban, UserRound, Users } from "lucide-react";
+import { ArrowLeft, Bot, Building2, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarTrigger, useSidebar,
@@ -20,6 +20,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
     label: "Main",
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view", exact: true },
+      { href: "/admin/communications", label: "Communications", icon: MessagesSquare, permission: "comms.view" },
       { href: "/admin/contacts", label: "Contacts", icon: Contact, permission: "crm.view" },
       { href: "/admin/leads", label: "Leads", icon: Magnet, permission: "crm.view" },
       { href: "/admin/pipeline", label: "Pipeline", icon: SquareKanban, permission: "crm.view" },

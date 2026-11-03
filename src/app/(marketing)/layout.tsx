@@ -29,6 +29,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <Link href="/#how" className="hover:text-foreground">How it works</Link>
               <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
               <Link href="/developers" className="hover:text-foreground">Developers</Link>
+              <Link href="/contact" className="hover:text-foreground">Contact</Link>
             </nav>
             <CartButton />
             {user ? (
@@ -62,6 +63,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <Link href="/#features" className="block text-muted-foreground hover:text-foreground">Features</Link>
               <Link href="/pricing" className="block text-muted-foreground hover:text-foreground">Pricing</Link>
               <Link href="/developers" className="block text-muted-foreground hover:text-foreground">Developers</Link>
+              <Link href="/contact" className="block text-muted-foreground hover:text-foreground">Contact</Link>
             </div>
             <div className="space-y-2">
               <p className="font-medium">Legal</p>

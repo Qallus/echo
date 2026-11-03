@@ -112,10 +112,12 @@ export async function listMembers(workspaceId: string): Promise<Member[]> {
   }));
 }
 
+// Filters by user: staff can also read others' notifications (admin log).
 export async function countUnreadNotifications(): Promise<number> {
+  const user = await requireUser();
   const supabase = await createClient();
   const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true })
-    .is("read_at", null).eq("show_in_app", true);
+    .eq("user_id", user.id).is("read_at", null).eq("show_in_app", true);
   return count ?? 0;
 }
 

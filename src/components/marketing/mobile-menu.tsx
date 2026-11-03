@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/#how", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
   { href: "/developers", label: "Developers" },
+  { href: "/contact", label: "Contact" },
 ];
 
 // Phone and tablet menu for the public site header (the inline links are hidden below lg).
