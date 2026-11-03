@@ -7,7 +7,7 @@ import { TRANSCRIPTION_OPTIONS, type TranscriptionSetting } from "@/lib/transcri
 import { cn } from "@/lib/utils";
 import { setTranscription } from "./actions";
 
-export function TranscriptionSettingForm({ current, keys }: { current: TranscriptionSetting; keys: Record<string, boolean> }) {
+export function TranscriptionSettingForm({ current, keys, readOnly }: { current: TranscriptionSetting; keys: Record<string, boolean>; readOnly?: boolean }) {
   const [selected, setSelected] = useState(`${current.provider}:${current.model}`);
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
@@ -31,8 +31,8 @@ export function TranscriptionSettingForm({ current, keys }: { current: Transcrip
           const active = selected === id;
           const missingKey = o.available && !keys[o.provider];
           return (
-            <button key={id} type="button" disabled={!o.available || pending} aria-pressed={active}
-              onClick={() => choose(o.provider, o.model)}
+            <button key={id} type="button" disabled={!o.available || pending || (readOnly && !active)} aria-pressed={active}
+              onClick={() => { if (!readOnly) choose(o.provider, o.model); }}
               className={cn("flex flex-col items-start gap-1 rounded-lg border p-3 text-left text-sm transition-colors enabled:hover:bg-muted/50 disabled:opacity-60",
                 active && "border-primary ring-1 ring-primary")}>
               <span className="flex w-full items-center gap-2 font-medium">

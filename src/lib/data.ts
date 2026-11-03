@@ -25,6 +25,13 @@ export async function requireUser() {
   return user;
 }
 
+// Suspended by Super Admin (RLS already blocks their workspace data).
+export async function isSuspended() {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("am_i_suspended");
+  return data === true;
+}
+
 // Every workspace the user belongs to: Business ones (A–Z), then Personal.
 export const listWorkspaces = cache(async (): Promise<Workspace[]> => {
   const user = await requireUser();
