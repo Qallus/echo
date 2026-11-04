@@ -1,21 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, PhoneCall, User } from "lucide-react";
-import { liveCalls, type LiveCall } from "@/lib/redial/actions";
+import { Bot, PhoneCall, User, X } from "lucide-react";
+import { liveCalls, removeListener, type LiveCall, type LiveParticipant } from "@/lib/redial/actions";
 import type { Line } from "@/lib/redial/types";
 import { cn } from "@/lib/utils";
+import { ListenLive } from "./listen-live";
 
 const prettyNumber = (n: string | null) => (n ? n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "No caller ID");
 const IDLE_MS = 15000;
 const LIVE_MS = 2500;
 
 // Calls happening right now on this line: who's calling, what state the call
-// is in and, with transcript access, what's being said. Read-only for now.
+// is in, who's on it and, with transcript access, what's being said. People
+// with the listen permission can join conference calls muted (Insider).
 // Checks every 15 seconds, every 2.5 while a call is live, and not at all
 // while the tab is hidden. When a call ends the page refreshes its inbox.
-export function LiveCalls({ line, canReadTranscript }: { line: Line; canReadTranscript: boolean }) {
+type Props = { line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean };
+
+export function LiveCalls(props: Props) {
+  const { line } = props;
   const router = useRouter();
   const [calls, setCalls] = useState<LiveCall[]>([]);
   const liveIds = useRef<string>("");
@@ -42,12 +47,12 @@ export function LiveCalls({ line, canReadTranscript }: { line: Line; canReadTran
   if (!calls.length) return null;
   return (
     <section aria-label="Live calls" className="space-y-3">
-      {calls.map((c) => <LiveCard key={c.id} call={c} line={line} canReadTranscript={canReadTranscript} />)}
+      {calls.map((c) => <LiveCard key={c.id} call={c} {...props} />)}
     </section>
   );
 }
 
-function LiveCard({ call: c, line, canReadTranscript }: { call: LiveCall; line: Line; canReadTranscript: boolean }) {
+function LiveCard({ call: c, line, owner, canReadTranscript, canListen }: Props & { call: LiveCall }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const seconds = Math.max(0, Math.floor((now - new Date(c.started_at).getTime()) / 1000));
@@ -66,14 +71,29 @@ function LiveCard({ call: c, line, canReadTranscript }: { call: LiveCall; line: 
         <span className="text-xs text-muted-foreground">· {stateLabel(c, line)}</span>
       </header>
       {onCall.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          On the call: {onCall.map((p) => (p.role === "agent" ? line.assistant_name : p.role === "caller" ? "Caller" : "Team member") + (p.muted ? " (muted)" : "")).join(", ")}
-        </p>
+        <ul className="flex flex-wrap items-center gap-1.5 text-xs" aria-label="On the call">
+          {onCall.map((p) => <Person key={p.id} p={p} line={line} canRemove={owner && p.role === "member" && !p.me} />)}
+        </ul>
       )}
+      {canListen && c.session?.state === "live" && <ListenLive callId={c.id} />}
       {canReadTranscript ? <LiveTranscript turns={c.turns} assistant={line.assistant_name} /> : (
         <p className="text-xs text-muted-foreground">The live transcript is only shown to people the owner lets read transcripts.</p>
       )}
     </article>
+  );
+}
+
+function Person({ p, line, canRemove }: { p: LiveParticipant; line: Line; canRemove: boolean }) {
+  const [pending, start] = useTransition();
+  const name = p.role === "agent" ? line.assistant_name : p.role === "caller" ? "Caller" : p.me ? "You (listening)" : "Team member (listening)";
+  return (
+    <li className="flex items-center gap-1 rounded-full border bg-card px-2 py-0.5">
+      {name}
+      {canRemove && (
+        <button type="button" aria-label="Remove from the call" disabled={pending} className="rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+          onClick={() => start(async () => { const r = await removeListener(p.id); if (r.error) alert(r.error); })}><X className="size-3" /></button>
+      )}
+    </li>
   );
 }
 

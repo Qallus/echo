@@ -37,3 +37,11 @@ export function conference(callId: string) {
 export function agentStream(gatewayUrl: string, token: string) {
   return `<Connect><Stream url="${xml(`${gatewayUrl}/twilio`)}"><Parameter name="token" value="${xml(token)}"/></Stream></Connect><Hangup/>`;
 }
+
+// Insider: a member's browser joins as a listener. muted="true" is enforced
+// by Twilio, so nothing they say reaches the call, and they never start or
+// end the conference.
+export const listenLabel = (userId: string) => `listen-${userId}`;
+export function listenerJoin(name: string, userId: string) {
+  return `<Dial><Conference muted="true" beep="false" startConferenceOnEnter="false" endConferenceOnExit="false" participantLabel="${xml(listenLabel(userId))}">${xml(name)}</Conference></Dial>`;
+}

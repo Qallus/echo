@@ -1,5 +1,6 @@
 import "server-only";
 import { twilioRequest } from "@/lib/comms/twilio";
+import { isUuid } from "@/lib/data";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { redialUrl } from "./twiml";
 
@@ -14,8 +15,8 @@ export type Session = {
   agent_call_sid: string | null; state: string; ai_state: string;
 };
 
-export async function liveEvent(db: Db, s: Session, kind: string, detail: Record<string, unknown> = {}) {
-  const { error } = await db.from("redial_live_events").insert({ session_id: s.id, line_id: s.line_id, kind, detail });
+export async function liveEvent(db: Db, s: Session, kind: string, detail: Record<string, unknown> = {}, actor: string | null = null) {
+  const { error } = await db.from("redial_live_events").insert({ session_id: s.id, line_id: s.line_id, kind, detail, actor_id: actor });
   if (error) console.error("[redial live event]", error.message);
 }
 
@@ -46,4 +47,23 @@ export async function aiGone(db: Db, s: Session, state: "left" | "failed", error
     console.error("[redial live handback]", r.status, r.data.message);
     await liveEvent(db, s, "handback.failed", { status: r.status });
   }
+}
+
+// Browser identities for Redial listeners: member_<user id without dashes>.
+export const memberIdentity = (userId: string) => `member_${userId.replace(/-/g, "")}`;
+
+// The participant label a member joins with (listen-<user id>), if any.
+export function memberFromLabel(label: string): string | null {
+  const id = label.startsWith("listen-") ? label.slice(7) : "";
+  return isUuid(id) ? id : null;
+}
+
+// Owner, or granted this capability on the line (the service-role twin of
+// private.redial_can, for webhooks that have no user session).
+export async function memberCan(db: Db, lineId: string, userId: string, cap: string) {
+  const [{ data: line }, { data: grant }] = await Promise.all([
+    db.from("redial_lines").select("owner_id").eq("id", lineId).maybeSingle(),
+    db.from("redial_line_grants").select("capabilities").eq("line_id", lineId).eq("user_id", userId).maybeSingle(),
+  ]);
+  return line?.owner_id === userId || Boolean(grant?.capabilities?.includes(cap));
 }

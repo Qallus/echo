@@ -43,7 +43,7 @@ export function CallsView({ line, access, calls, entries, callbacks, people, ini
       {line.paused && <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">Screening is paused: calls ring straight through. Turn it back on under Rules.</p>}
       {usage && <UsageBar usage={usage} />}
       {manage && needsSetup && !line.paused && <p className="rounded-xl border p-3 text-sm">Add the phone number your assistant should ring (usually your cell) under <span className="font-medium">Rules</span>, so it can put important calls through.</p>}
-      <LiveCalls line={line} canReadTranscript={allows(access, "read_transcript")} />
+      <LiveCalls line={line} owner={access.owner} canReadTranscript={allows(access, "read_transcript")} canListen={allows(access, "monitor_live")} />
       {!access.owner && <p className="rounded-xl border p-3 text-sm text-muted-foreground">This line is shared with you{manage ? "" : ". You can see its calls; only the owner changes its settings"}.</p>}
       <Tabs defaultValue={[...["inbox", "callbacks"], ...(manage ? ["rules", "assistant"] : []), ...(access.owner ? ["people"] : [])].includes(initialTab ?? "") ? initialTab! : "inbox"}>
         <TabsList variant="line">

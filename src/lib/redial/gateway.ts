@@ -29,6 +29,20 @@ export function readCallToken(secret: string, token: string): string | null {
   return same(mac(secret, `${id}.${exp}`), sig) ? id : null;
 }
 
+// Insider: a member's ticket to join one live call as a muted listener,
+// "<session>.<user>.<expiry>.<hmac>", valid for two minutes. Issued after an
+// RLS-checked permission check; the joining webhook checks it again.
+export function listenTicket(secret: string, sessionId: string, userId: string) {
+  const exp = Math.floor(Date.now() / 1000) + 120;
+  return `${sessionId}.${userId}.${exp}.${mac(secret, `listen.${sessionId}.${userId}.${exp}`)}`;
+}
+
+export function readListenTicket(secret: string, ticket: string): { sessionId: string; userId: string } | null {
+  const [sessionId, userId, exp, sig] = ticket.split(".");
+  if (!sessionId || !userId || !exp || !sig || Number(exp) < Date.now() / 1000) return null;
+  return same(mac(secret, `listen.${sessionId}.${userId}.${exp}`), sig) ? { sessionId, userId } : null;
+}
+
 // Gateway -> Echo requests: header x-redial-signature = hmac(timestamp.body),
 // x-redial-timestamp within five minutes.
 export async function verifyGateway(req: Request): Promise<unknown | null> {

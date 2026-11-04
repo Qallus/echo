@@ -79,6 +79,7 @@ export default async function RedialAdminPage() {
             <p className="text-muted-foreground">
               Put its SID (AP…) in <Link href="/admin/settings?tab=integrations" className="underline">Settings → Integrations → Redial</Link>
               {gw.aiApp ? " (set)" : " (not set yet)"}, then turn on Conference for a line above. Lines without it keep the direct path.
+              The same app lets members listen live from the browser, which also needs the Twilio API key and secret in Integrations.
             </p>
           </div>
         </Section>

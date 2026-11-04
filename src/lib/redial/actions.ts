@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/data";
+import { twilioRequest, voiceToken } from "@/lib/comms/twilio";
 import { toE164 } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { SHAREABLE } from "./features";
+import { gatewayConfig, listenTicket } from "./gateway";
+import { memberIdentity } from "./live";
 import { VOICES, type Category, type ListKind, type Mode } from "./types";
 
 // Member actions for Redial call screening. Everything runs as the signed-in
@@ -118,7 +121,11 @@ function zonedToUtc(local: string, tz: string): string | null {
 
 // Sharing a line: the owner grants someone in one of their workspaces
 // specific capabilities (the database re-checks ownership and workspace).
-const cleanCaps = (caps: string[]) => [...new Set(caps)].filter((c) => SHAREABLE.some((x) => x.id === c));
+// Anything else on a line needs seeing its calls, so read_summary comes along.
+const cleanCaps = (caps: string[]) => {
+  const ok = [...new Set(caps)].filter((c) => SHAREABLE.some((x) => x.id === c));
+  return ok.length && !ok.includes("read_summary") ? ["read_summary", ...ok] : ok;
+};
 
 export async function shareLine(lineId: string, email: string, caps: string[]): Promise<Result> {
   await requireUser();
@@ -130,33 +137,44 @@ export async function shareLine(lineId: string, email: string, caps: string[]): 
   return error ? { error: error.message } : done("Shared.");
 }
 
+// Losing the listen permission (or the share) drops them from any live call
+// they're listening to, right away.
 export async function updateShare(grantId: string, caps: string[]): Promise<Result> {
   await requireUser();
   const capabilities = cleanCaps(caps);
   if (!capabilities.length) return { error: "Leave at least one option on, or remove them." };
   const supabase = await createClient();
+  const { data: grant } = await supabase.from("redial_line_grants").select("line_id, user_id").eq("id", grantId).maybeSingle();
+  const listening = grant && !capabilities.includes("monitor_live") ? await listenersFor(supabase, grant.line_id, grant.user_id) : [];
   const { error } = await supabase.from("redial_line_grants").update({ capabilities }).eq("id", grantId);
-  return error ? { error: error.message } : done("Updated.");
+  if (error) return { error: error.message };
+  await Promise.all(listening.map(dropParticipant));
+  return done("Updated.");
 }
 
 export async function removeShare(grantId: string): Promise<Result> {
   await requireUser();
   const supabase = await createClient();
+  const { data: grant } = await supabase.from("redial_line_grants").select("line_id, user_id").eq("id", grantId).maybeSingle();
+  const listening = grant ? await listenersFor(supabase, grant.line_id, grant.user_id) : [];
   const { error } = await supabase.from("redial_line_grants").delete().eq("id", grantId);
-  return error ? { error: error.message } : done("Removed.");
+  if (error) return { error: error.message };
+  await Promise.all(listening.map(dropParticipant));
+  return done("Removed.");
 }
 
 // Calls happening now on a line, for the live view (polled while Calls is
 // open). RLS limits it to lines the member can see; live transcript lines
 // only come back with the read_transcript capability.
+export type LiveParticipant = { id: string; role: string; status: string; muted: boolean; me: boolean };
 export type LiveCall = {
   id: string; from_number: string | null; caller_id_name: string | null; caller_name: string | null; status: string; started_at: string;
-  session: { state: string; ai_state: string; participants: { role: string; status: string; muted: boolean }[] } | null;
+  session: { state: string; ai_state: string; participants: LiveParticipant[] } | null;
   turns: { id: number; role: "caller" | "assistant"; text: string }[];
 };
 
 export async function liveCalls(lineId: string): Promise<LiveCall[]> {
-  await requireUser();
+  const user = await requireUser();
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const { data: calls } = await supabase.from("redial_calls").select("id, from_number, caller_id_name, caller_name, status, started_at")
@@ -164,15 +182,67 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
   if (!calls?.length) return [];
   const ids = calls.map((c) => c.id);
   const [{ data: sessions }, { data: turns }] = await Promise.all([
-    supabase.from("redial_live_sessions").select("call_id, state, ai_state, participants:redial_live_participants(role, status, muted)").in("call_id", ids),
+    supabase.from("redial_live_sessions").select("call_id, state, ai_state, participants:redial_live_participants(id, role, status, muted, user_id)").in("call_id", ids),
     supabase.from("redial_live_turns").select("id, call_id, role, text").in("call_id", ids).order("id").limit(400),
   ]);
   return calls.map((c) => {
     const s = sessions?.find((x) => x.call_id === c.id);
     return {
       ...c,
-      session: s ? { state: s.state, ai_state: s.ai_state, participants: s.participants ?? [] } : null,
+      session: s ? { state: s.state, ai_state: s.ai_state, participants: (s.participants ?? []).map(({ user_id, ...p }) => ({ ...p, me: user_id === user.id })) } : null,
       turns: (turns ?? []).filter((t) => t.call_id === c.id).map(({ id, role, text }) => ({ id, role: role as "caller" | "assistant", text })),
     };
   });
+}
+
+// Insider: a browser voice token and a two-minute ticket to join one live
+// call as a muted listener. The joining webhook checks the permission again.
+export async function startListening(callId: string): Promise<{ token?: string; ticket?: string; error?: string }> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data: s } = await supabase.from("redial_live_sessions").select("id, line_id, state").eq("call_id", callId).maybeSingle();
+  if (!s || s.state !== "live") return { error: "This call isn't live any more." };
+  if (!(await canOnLine(supabase, s.line_id, user.id, "monitor_live"))) return { error: "You don't have permission to listen to this line's calls." };
+  const gw = await gatewayConfig();
+  const token = gw.aiApp && gw.secret ? await voiceToken(memberIdentity(user.id), { app: gw.aiApp, incoming: false }) : null;
+  if (!token) return { error: "Live listening isn't set up yet (Twilio API key or the Redial TwiML App is missing)." };
+  return { token, ticket: listenTicket(gw.secret!, s.id, user.id) };
+}
+
+// The owner removes someone who is listening to a call on their line.
+export async function removeListener(participantId: string): Promise<Result> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data: p } = await supabase.from("redial_live_participants").select("call_sid, role, status, line_id, session:redial_live_sessions(conference_sid)").eq("id", participantId).maybeSingle();
+  if (!p || p.role !== "member") return { error: "They're not on the call." };
+  const { data: line } = await supabase.from("redial_lines").select("owner_id").eq("id", p.line_id).maybeSingle();
+  if (line?.owner_id !== user.id) return { error: "Only the line's owner can remove listeners." };
+  if (p.status === "joined") await dropParticipant({ call_sid: p.call_sid, conference_sid: confSid(p.session) });
+  return { ok: "Removed from the call." };
+}
+
+type Listener = { call_sid: string; conference_sid: string | null };
+type Db = Awaited<ReturnType<typeof createClient>>;
+const confSid = (session: unknown) => (session as { conference_sid: string | null } | null)?.conference_sid ?? null;
+
+async function canOnLine(supabase: Db, lineId: string, userId: string, cap: string) {
+  const [{ data: line }, { data: grant }] = await Promise.all([
+    supabase.from("redial_lines").select("owner_id").eq("id", lineId).maybeSingle(),
+    supabase.from("redial_line_grants").select("capabilities").eq("line_id", lineId).eq("user_id", userId).maybeSingle(),
+  ]);
+  return line?.owner_id === userId || Boolean(grant?.capabilities?.includes(cap));
+}
+
+async function listenersFor(supabase: Db, lineId: string, userId: string): Promise<Listener[]> {
+  const { data } = await supabase.from("redial_live_participants").select("call_sid, session:redial_live_sessions(conference_sid)")
+    .eq("line_id", lineId).eq("user_id", userId).eq("role", "member").eq("status", "joined");
+  return (data ?? []).map((p) => ({ call_sid: p.call_sid, conference_sid: confSid(p.session) }));
+}
+
+// Removes a participant from the conference; the conference webhook records it.
+async function dropParticipant(l: Listener) {
+  const r = l.conference_sid
+    ? await twilioRequest(`/Conferences/${l.conference_sid}/Participants/${l.call_sid}.json`, {}, "DELETE")
+    : await twilioRequest(`/Calls/${l.call_sid}.json`, { Status: "completed" });
+  if (!r.ok && r.status !== 404) console.error("[redial listener]", r.status, r.data.message);
 }

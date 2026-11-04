@@ -1,14 +1,13 @@
-import { verifyTwilio } from "@/lib/comms/twilio";
+import { twilioRequest, verifyTwilio } from "@/lib/comms/twilio";
 import { isUuid } from "@/lib/data";
 import { gatewayConfig } from "@/lib/redial/gateway";
-import { addAgent, aiGone, liveEvent, type Session } from "@/lib/redial/live";
+import { addAgent, aiGone, liveEvent, memberFromLabel, type Session } from "@/lib/redial/live";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Conference status callback for Redial conference calls (signed by Twilio),
 // plus the AI leg's call status (leg=agent). Records who is on the call, adds
 // the AI once the caller is in, and hands the caller back when the AI leaves.
-
-const ROLES = ["caller", "agent"];
+// Listeners (Insider) join muted; if one is ever unmuted, they're muted again.
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
@@ -30,7 +29,8 @@ export async function POST(req: Request) {
 
   const now = new Date().toISOString();
   const label = p.ParticipantLabel ?? "";
-  const role = ROLES.includes(label) ? label : "member";
+  const member = memberFromLabel(label);
+  const role = label === "caller" || label === "agent" ? label : "member";
   switch (p.StatusCallbackEvent) {
     case "conference-start":
       await db.from("redial_live_sessions").update({ conference_sid: p.ConferenceSid, state: "live" }).eq("id", s.id).eq("state", "starting");
@@ -38,8 +38,8 @@ export async function POST(req: Request) {
       break;
     case "participant-join": {
       if (!p.CallSid) break;
-      await db.from("redial_live_participants").upsert({ session_id: s.id, line_id: s.line_id, role, call_sid: p.CallSid, muted: p.Muted === "true", status: "joined" }, { onConflict: "call_sid" });
-      await liveEvent(db, s, "participant.join", { role });
+      await db.from("redial_live_participants").upsert({ session_id: s.id, line_id: s.line_id, role, call_sid: p.CallSid, user_id: member, muted: p.Muted === "true", status: "joined" }, { onConflict: "call_sid" });
+      await liveEvent(db, s, "participant.join", { role }, member);
       if (role === "caller") {
         const gw = await gatewayConfig();
         if (gw.aiApp && p.ConferenceSid) await addAgent(db, { ...s, conference_sid: p.ConferenceSid }, p.ConferenceSid, gw.aiApp, s.line.number);
@@ -52,12 +52,17 @@ export async function POST(req: Request) {
     case "participant-leave":
       if (!p.CallSid) break;
       await db.from("redial_live_participants").update({ status: "left", left_at: now }).eq("call_sid", p.CallSid);
-      await liveEvent(db, s, "participant.leave", { role });
+      await liveEvent(db, s, "participant.leave", { role }, member);
       if (role === "agent") await aiGone(db, s, "left");
       break;
     case "participant-mute":
     case "participant-unmute":
-      if (p.CallSid) await db.from("redial_live_participants").update({ muted: p.StatusCallbackEvent === "participant-mute" }).eq("call_sid", p.CallSid);
+      if (!p.CallSid) break;
+      await db.from("redial_live_participants").update({ muted: p.StatusCallbackEvent === "participant-mute" }).eq("call_sid", p.CallSid);
+      if (member && p.StatusCallbackEvent === "participant-unmute" && p.ConferenceSid) {
+        await twilioRequest(`/Conferences/${p.ConferenceSid}/Participants/${p.CallSid}.json`, { Muted: "true" });
+        await liveEvent(db, s, "listen.remuted", {}, member);
+      }
       break;
     case "conference-end":
       await db.from("redial_live_sessions").update({ state: "ended", ended_at: now }).eq("id", s.id);

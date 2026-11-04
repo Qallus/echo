@@ -80,14 +80,17 @@ export async function verifyTwilio(req: Request): Promise<Record<string, string>
 const b64url = (v: string | Buffer) => Buffer.from(v).toString("base64url");
 
 // A one-hour Voice access token for the browser phone (identity per staff member).
-export async function voiceToken(identity: string): Promise<string | null> {
+// `opts.app` swaps the outgoing TwiML App (Redial listening uses its own),
+// and `incoming: false` makes a token that can only place calls.
+export async function voiceToken(identity: string, opts: { app?: string; incoming?: boolean } = {}): Promise<string | null> {
   const e = await env();
-  if (!e.sid || !e.keySid || !e.keySecret || !e.app) return null;
+  const app = opts.app ?? e.app;
+  if (!e.sid || !e.keySid || !e.keySecret || !app) return null;
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ typ: "JWT", alg: "HS256", cty: "twilio-fpa;v=1" }));
   const payload = b64url(JSON.stringify({
     jti: `${e.keySid}-${now}`, iss: e.keySid, sub: e.sid, iat: now, exp: now + 3600,
-    grants: { identity, voice: { incoming: { allow: true }, outgoing: { application_sid: e.app } } },
+    grants: { identity, voice: { incoming: { allow: opts.incoming ?? true }, outgoing: { application_sid: app } } },
   }));
   const signature = b64url(createHmac("sha256", e.keySecret).update(`${header}.${payload}`).digest());
   return `${header}.${payload}.${signature}`;

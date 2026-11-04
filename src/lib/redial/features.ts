@@ -11,12 +11,12 @@ export const FEATURES = {
 } as const;
 
 // Mirrors redial_line_grants.capabilities. `live: true` ones do nothing until
-// the live-call controls ship, so the sharing screen doesn't offer them yet.
+// their live-call control ships, so the sharing screen doesn't offer them yet.
 export const CAPABILITIES = [
   { id: "read_summary", label: "See calls and summaries", live: false },
   { id: "read_transcript", label: "Read transcripts and play voicemails", live: false },
   { id: "manage_rules", label: "Change rules, lists and the assistant", live: false },
-  { id: "monitor_live", label: `${FEATURES.insider.name}: listen live`, live: true },
+  { id: "monitor_live", label: `${FEATURES.insider.name}: listen to live calls`, live: false },
   { id: "takeover_live", label: `${FEATURES.gavel.name}: take over calls`, live: true },
   { id: "direct_agent", label: `${FEATURES.audible.name}: guide the assistant`, live: true },
   { id: "transfer_call", label: `${FEATURES.directory.name}: transfer calls`, live: true },
