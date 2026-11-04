@@ -9,8 +9,6 @@ begin
   select id into a from public.profiles where id <> staff order by created_at limit 1;
   select id into b from public.profiles where id not in (staff, a) order by created_at limit 1;
   if b is null then b := staff; end if;
-  delete from public.platform_staff where user_id = a;
-  delete from public.subscriptions where user_id = a;
   update public.platform_settings set value = value || '{"redialFreeMinutes": 10}' where key = 'billing';
   update public.platform_settings set value = '{"requireMfa": true}' where key = 'admin_security';
 

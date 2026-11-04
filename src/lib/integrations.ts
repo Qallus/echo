@@ -16,6 +16,7 @@ export const SERVICES: Service[] = [
       { key: "TWILIO_API_KEY_SID", label: "API key SID (browser phone)", placeholder: "SK…" },
       { key: "TWILIO_API_KEY_SECRET", label: "API key secret (browser phone)", secret: true },
       { key: "TWILIO_TWIML_APP_SID", label: "TwiML App SID (browser phone)", placeholder: "AP…" },
+      { key: "ECHO_CALL_LINE", label: "Echo call line number (members' Call & record)", placeholder: "+14805550111", help: "A second Twilio number, not the notification number." },
     ],
   },
   {

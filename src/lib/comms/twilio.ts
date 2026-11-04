@@ -38,6 +38,20 @@ export async function twilioSms(to: string, body: string): Promise<{ ok: boolean
   }
 }
 
+// A form POST (or DELETE) to Twilio's REST API with the account's credentials.
+export async function twilioRequest(path: string, params: Record<string, string> = {}, method: "POST" | "DELETE" | "GET" = "POST"): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+  const e = await env();
+  if (!e.sid || !e.token) return { ok: false, status: 0, data: { message: "Twilio isn't set up (Admin → Settings → Integrations → Twilio)." } };
+  const qs = method === "GET" && Object.keys(params).length ? `?${new URLSearchParams(params)}` : "";
+  const res = await fetch(api(e.sid, path) + qs, {
+    method, headers: { Authorization: auth(e), ...(method === "POST" ? { "Content-Type": "application/x-www-form-urlencoded" } : {}) },
+    ...(method === "POST" ? { body: new URLSearchParams(params) } : {}),
+  }).catch(() => null);
+  if (!res) return { ok: false, status: 0, data: { message: "Couldn't reach Twilio." } };
+  const data = (res.status === 204 ? {} : await res.json().catch(() => ({}))) as Record<string, unknown>;
+  return { ok: res.ok, status: res.status, data };
+}
+
 export async function fetchRecording(recordingUrl: string): Promise<Blob | null> {
   const res = await fetch(`${recordingUrl}.mp3`, { headers: { Authorization: auth(await env()) } });
   return res.ok ? res.blob() : null;

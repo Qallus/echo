@@ -57,9 +57,9 @@ function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProp
 }
 
 export type Me = { id: string; name: string | null; email: string; avatarUrl: string | null; unread: number };
-type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null };
+type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null; phoneLine?: boolean };
 
-export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null }: Props) {
+export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null, phoneLine = false }: Props) {
   const { email } = me;
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
@@ -188,6 +188,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
         <SidebarGroup>
           <SidebarMenu>
             {main.map((i) => <NavItem key={i.href} {...i} />)}
+            {phoneLine && <NavItem href="/phone" label="Phone" icon={Phone} exact />}
             {callsUnread !== null && <NavItem href="/calls" label="Calls" icon={PhoneIncoming} n={callsUnread || undefined} />}
           </SidebarMenu>
         </SidebarGroup>
