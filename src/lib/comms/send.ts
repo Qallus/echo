@@ -4,6 +4,7 @@ import { money } from "@/lib/billing/catalog";
 import { STAGES, type DealStage } from "@/lib/crm/deals";
 import { sendEmail, siteUrl } from "@/lib/notify/senders";
 import { secret } from "@/lib/secrets";
+import { loadOrganization, orgMergeValues } from "@/lib/settings/organization";
 import { applyMerge, schemaToHtml, schemaToText, type EmailSchema } from "./blocks";
 import { unsubscribeUrl } from "./unsubscribe";
 
@@ -24,11 +25,13 @@ export async function sendToRecipients(supabase: SupabaseClient, msg: Message, r
   const html = schemaToHtml(msg.schema, { preheader: msg.preheader ?? undefined, origin: siteUrl("") });
   const text = schemaToText(msg.schema);
   const from = (await secret("EMAIL_FROM")) ?? process.env.RESEND_FROM_EMAIL ?? null;
+  const org = orgMergeValues(await loadOrganization(supabase));
   let sent = 0, skipped = 0, failed = 0;
   const errors: string[] = [];
 
-  for (const r of recipients) {
+  for (let r of recipients) {
     const to = r.email.toLowerCase();
+    r = { ...r, values: { ...org, ...r.values } };
     const subject = applyMerge(msg.subject, r.values).slice(0, 300) || "(no subject)";
     if (blocked.has(to)) {
       skipped++;

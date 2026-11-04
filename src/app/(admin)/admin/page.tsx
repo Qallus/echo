@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, AudioLines, Briefcase, CircleCheck, CreditCard, Mail, Repeat, Users } from "lucide-react";
+import { AlertTriangle, AudioLines, Briefcase, CalendarDays, CircleCheck, CreditCard, Inbox, ListTodo, Mail, Repeat, SquareKanban, Trophy, Users } from "lucide-react";
 import { AdminPage, Section, StatCard } from "@/components/admin/admin-ui";
 import { LocalDate } from "@/components/local-date";
 import { can, requireStaff } from "@/lib/admin/guard";
@@ -13,6 +13,9 @@ type Dashboard = {
   failed_transcriptions_7d: number; failed_deliveries_24h: number;
   subscriptions: { status: string; items: { price_key: string; quantity: number }[] }[] | null;
   orders_month: { count: number; total: number } | null;
+  active_users_30d: number;
+  pipeline: { open: number; open_value: number; weighted: number; won_month: number; won_month_value: number; new_leads_7d: number } | null;
+  tasks_due: number | null; bookings_today: number | null; inbox_unread: number | null;
 };
 type Attention = { kind: "transcription" | "delivery" | "payment"; title: string; detail: string | null; at: string; target_id: string };
 type AuditRow = { id: number; action: string; target_type: string | null; created_at: string; actor: string | null };
@@ -37,7 +40,7 @@ export default async function AdminDashboardPage() {
   return (
     <AdminPage title="Dashboard" description="How Echo is doing right now.">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={Users} label="Users" value={d.users} hint={`+${d.users_30d} in the last 30 days`} />
+        <StatCard icon={Users} label="Users" value={d.users} hint={`+${d.users_30d} in the last 30 days · ${d.active_users_30d} recorded`} />
         <StatCard icon={Briefcase} label="Business workspaces" value={d.business_workspaces} />
         <StatCard icon={AudioLines} label="Recordings this month" value={d.recordings_month} hint={`${d.minutes_month} minutes · ${d.recordings} all time`} />
         {billing ? (
@@ -47,6 +50,17 @@ export default async function AdminDashboardPage() {
           <StatCard icon={AlertTriangle} label="Failures (7 days)" value={d.failed_transcriptions_7d + d.failed_deliveries_24h} />
         )}
       </div>
+
+      {(d.pipeline || d.inbox_unread !== null) && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {d.pipeline && <>
+            <Tile href="/admin/pipeline"><StatCard icon={SquareKanban} label="Open pipeline" value={money(d.pipeline.open_value)} hint={`${d.pipeline.open} deals · ${money(d.pipeline.weighted)} weighted`} /></Tile>
+            <Tile href="/admin/pipeline"><StatCard icon={Trophy} label="Won this month" value={money(d.pipeline.won_month_value)} hint={`${d.pipeline.won_month} deals · ${d.pipeline.new_leads_7d} new leads this week`} /></Tile>
+            <Tile href="/admin/plans"><StatCard icon={ListTodo} label="Tasks due today" value={d.tasks_due ?? 0} hint={<span className="flex items-center gap-1"><CalendarDays className="size-3" />{d.bookings_today ?? 0} bookings today</span>} /></Tile>
+          </>}
+          {d.inbox_unread !== null && <Tile href="/admin/communications?tab=inbox"><StatCard icon={Inbox} label="Unread messages" value={d.inbox_unread} hint="Inbox emails, website messages and texts" /></Tile>}
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
         <Section title="Needs attention" description="Failed transcriptions and notifications from the last 7 days, and past-due payments.">
@@ -90,4 +104,8 @@ export default async function AdminDashboardPage() {
       </div>
     </AdminPage>
   );
+}
+
+function Tile({ href, children }: { href: string; children: React.ReactNode }) {
+  return <Link href={href} className="block rounded-xl transition hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">{children}</Link>;
 }

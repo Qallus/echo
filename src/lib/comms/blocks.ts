@@ -32,6 +32,8 @@ export const MERGE_FIELDS = [
   { token: "{{email}}", label: "Email" }, { token: "{{phone}}", label: "Phone" }, { token: "{{title}}", label: "Job title" },
   { token: "{{company}}", label: "Company" }, { token: "{{owner}}", label: "Owner" }, { token: "{{deal}}", label: "Deal" },
   { token: "{{stage}}", label: "Stage" }, { token: "{{amount}}", label: "Amount" }, { token: "{{site_url}}", label: "Site URL" },
+  { token: "{{org_name}}", label: "Your company" }, { token: "{{org_address}}", label: "Your address" },
+  { token: "{{org_phone}}", label: "Your phone" }, { token: "{{org_website}}", label: "Your website" },
 ];
 
 const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -55,7 +57,7 @@ export function createBlock(type: BlockType): EmailBlock {
     case "divider": return { ...base, dividerColor: "#e4e4e7", padBottom: 16 };
     case "spacer": return { ...base, height: 24, padBottom: 0 };
     case "columns": return { ...base, columns: [{ blocks: [createBlock("text")] }, { blocks: [createBlock("text")] }] };
-    case "footer": return { ...base, text: "Qallus LLC · Arizona", fontSize: 12, textColor: "#71717a", align: "center", padTop: 8 };
+    case "footer": return { ...base, text: "{{org_name}} · {{org_address}}", fontSize: 12, textColor: "#71717a", align: "center", padTop: 8 };
   }
 }
 

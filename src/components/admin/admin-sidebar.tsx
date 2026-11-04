@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bot, Building2, CalendarDays, FolderOpen, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users } from "lucide-react";
+import { ArrowLeft, Bot, ChartColumn, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarTrigger, useSidebar,
@@ -20,6 +20,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
     label: "Main",
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view", exact: true },
+      { href: "/admin/analytics", label: "Analytics", icon: ChartColumn, permission: "analytics.view" },
       { href: "/admin/communications", label: "Communications", icon: MessagesSquare, permission: "comms.view" },
       { href: "/admin/bookings", label: "Bookings", icon: CalendarDays, permission: "crm.view" },
       { href: "/admin/contacts", label: "Contacts", icon: Contact, permission: "crm.view" },
@@ -27,6 +28,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { href: "/admin/pipeline", label: "Pipeline", icon: SquareKanban, permission: "crm.view" },
       { href: "/admin/plans", label: "Plans", icon: ListChecks, permission: "crm.view" },
       { href: "/admin/workspace", label: "Workspace", icon: NotebookPen, permission: "crm.view" },
+      { href: "/admin/reports", label: "Reports", icon: FileChartColumn, permission: "analytics.view" },
     ],
   },
   {
@@ -35,6 +37,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { href: "/admin/clients", label: "Clients", icon: Building2, permission: "crm.view" },
       { href: "/admin/cards", label: "Business Cards", icon: IdCard, permission: "crm.view" },
       { href: "/admin/documents", label: "Documents", icon: FolderOpen, permission: "crm.view" },
+      { href: "/admin/automation", label: "Automation", icon: Workflow, permission: "comms.view" },
       { href: "/admin/billing", label: "Billing", icon: CreditCard, permission: "billing.view" },
       { href: "/admin/ai", label: "AI", icon: Bot, permission: "ai.view" },
     ],

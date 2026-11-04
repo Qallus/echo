@@ -64,8 +64,12 @@ export const SERVICES: Service[] = [
     ],
   },
   {
-    id: "cron", name: "Scheduled jobs", description: "Protects /api/cron/comms (email automations). Generate one here and put the same value in the Coolify scheduled task.",
+    id: "cron", name: "Scheduled jobs", description: "Protects /api/cron/comms (automations and reminders). Generate one here and put the same value in the Coolify scheduled task.",
     fields: [{ key: "CRON_SECRET", label: "Cron secret", secret: true, required: true }],
+  },
+  {
+    id: "automation", name: "Automation webhooks", description: "Signs webhook calls from Automation rules (X-Echo-Signature: sha256=HMAC of the body), so the receiver can check they came from Echo.",
+    fields: [{ key: "AUTOMATION_WEBHOOK_SECRET", label: "Webhook signing secret", secret: true }],
   },
 ];
 
