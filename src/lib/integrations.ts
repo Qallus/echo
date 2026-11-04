@@ -68,6 +68,13 @@ export const SERVICES: Service[] = [
     fields: [{ key: "CRON_SECRET", label: "Cron secret", secret: true, required: true }],
   },
   {
+    id: "redial", name: "Redial voice gateway", description: "AI call screening. The voice gateway (voice-gateway/ in the repo, its own Coolify service) streams calls to xAI; it uses the xAI key above.",
+    fields: [
+      { key: "REDIAL_GATEWAY_URL", label: "Gateway URL", placeholder: "wss://voice.redial.si", required: true },
+      { key: "REDIAL_GATEWAY_SECRET", label: "Shared secret (same value in the gateway's Coolify variables)", secret: true, required: true },
+    ],
+  },
+  {
     id: "automation", name: "Automation webhooks", description: "Signs webhook calls from Automation rules (X-Echo-Signature: sha256=HMAC of the body), so the receiver can check they came from Echo.",
     fields: [{ key: "AUTOMATION_WEBHOOK_SECRET", label: "Webhook signing secret", secret: true }],
   },

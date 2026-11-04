@@ -1,0 +1,11 @@
+{
+  "name": "echo-voice-gateway",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Bridges Redial calls (Twilio Media Streams) to the xAI realtime voice agent.",
+  "type": "module",
+  "main": "index.mjs",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node index.mjs" },
+  "dependencies": { "ws": "^8.18.0" }
+}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  AudioLines, Briefcase, CalendarDays, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
+  AudioLines, Briefcase, CalendarDays, PhoneIncoming, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
   LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, UserRound, Users, Video,
 } from "lucide-react";
 import {
@@ -57,9 +57,9 @@ function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProp
 }
 
 export type Me = { id: string; name: string | null; email: string; avatarUrl: string | null; unread: number };
-type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean };
+type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null };
 
-export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: Props) {
+export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null }: Props) {
   const { email } = me;
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
@@ -186,7 +186,10 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin }: 
           </p>
         )}
         <SidebarGroup>
-          <SidebarMenu>{main.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>
+          <SidebarMenu>
+            {main.map((i) => <NavItem key={i.href} {...i} />)}
+            {callsUnread !== null && <NavItem href="/calls" label="Calls" icon={PhoneIncoming} n={callsUnread || undefined} />}
+          </SidebarMenu>
         </SidebarGroup>
         {workspaces.map((ws) => {
           const mine = recordings.filter((r) => r.workspaceId === ws.id);
