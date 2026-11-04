@@ -6,6 +6,7 @@ import { Bot, PhoneCall, User, X } from "lucide-react";
 import { liveCalls, removeListener, type LiveCall, type LiveParticipant } from "@/lib/redial/actions";
 import type { Line } from "@/lib/redial/types";
 import { cn } from "@/lib/utils";
+import { Audible } from "./audible";
 import { ListenLive } from "./listen-live";
 
 const prettyNumber = (n: string | null) => (n ? n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "No caller ID");
@@ -15,10 +16,11 @@ const LIVE_MS = 2500;
 // Calls happening right now on this line: who's calling, what state the call
 // is in, who's on it and, with transcript access, what's being said. People
 // with the listen permission can join conference calls muted (Insider), and
-// people with the takeover permission can take the call over (Gavel).
+// people with the takeover permission can take the call over (Gavel), and
+// people with the guide permission can send it private directions (Audible).
 // Checks every 15 seconds, every 2.5 while a call is live, and not at all
 // while the tab is hidden. When a call ends the page refreshes its inbox.
-type Props = { line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean; canTakeOver: boolean };
+type Props = { line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean; canTakeOver: boolean; canDirect: boolean };
 
 export function LiveCalls(props: Props) {
   const { line } = props;
@@ -53,12 +55,13 @@ export function LiveCalls(props: Props) {
   );
 }
 
-function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeOver }: Props & { call: LiveCall }) {
+function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeOver, canDirect }: Props & { call: LiveCall }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const seconds = Math.max(0, Math.floor((now - new Date(c.started_at).getTime()) / 1000));
   const who = c.caller_name || c.caller_id_name || prettyNumber(c.from_number);
   const onCall = c.session?.participants.filter((p) => p.status === "joined") ?? [];
+  const aiOnCall = c.status === "screening" && (!c.session || (!c.session.taken_over && ["pending", "joining", "active"].includes(c.session.ai_state)));
 
   return (
     <article className="space-y-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
@@ -79,6 +82,7 @@ function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeO
       {(canListen || canTakeOver) && c.session?.state === "live" && (
         <ListenLive callId={c.id} canListen={canListen} canTakeOver={canTakeOver} takenOver={c.session.taken_over} />
       )}
+      {canDirect && aiOnCall && <Audible callId={c.id} assistant={line.assistant_name} directions={c.directions} />}
       {canReadTranscript ? <LiveTranscript turns={c.turns} assistant={line.assistant_name} /> : (
         <p className="text-xs text-muted-foreground">The live transcript is only shown to people the owner lets read transcripts.</p>
       )}

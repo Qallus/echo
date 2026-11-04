@@ -44,12 +44,13 @@ export function readListenTicket(secret: string, ticket: string): { sessionId: s
 }
 
 // Echo -> gateway control (POST <gateway>/control), signed the same way.
-// "stop" ends the AI on one call at once (takeover). False if the gateway
-// couldn't be reached or didn't have the call.
-export async function gatewayControl(callId: string, action: "stop"): Promise<boolean> {
+// "stop" ends the AI on one call at once (takeover); "direct" passes a
+// private direction (Audible). False if the gateway couldn't be reached or
+// didn't have the call.
+export async function gatewayControl(callId: string, action: "stop" | "direct", extra: { id?: string; text?: string } = {}): Promise<boolean> {
   const { url, secret } = await gatewayConfig();
   if (!url || !secret) return false;
-  const body = JSON.stringify({ callId, action });
+  const body = JSON.stringify({ callId, action, ...extra });
   const ts = String(Math.floor(Date.now() / 1000));
   const res = await fetch(`${url.replace(/^ws/, "http")}/control`, {
     method: "POST", headers: { "content-type": "application/json", "x-redial-timestamp": ts, "x-redial-signature": mac(secret, `${ts}.${body}`) }, body,

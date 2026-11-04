@@ -41,10 +41,12 @@ async function echo(path, body) {
   return data;
 }
 
-// Echo -> gateway: POST /control {callId, action: "stop"}, signed like the
-// requests the other way. "stop" is the takeover (Gavel): the AI goes silent
-// at once, drops anything queued, stops hearing the caller and ends.
-const controls = new Map(); // callId -> { stop }
+// Echo -> gateway: POST /control {callId, action}, signed like the requests
+// the other way. "stop" is the takeover (Gavel): the AI goes silent at once,
+// drops anything queued, stops hearing the caller and ends. "direct" is a
+// private typed direction (Audible) {id, text}: given to the AI at its next
+// pause, then reported back as delivered.
+const controls = new Map(); // callId -> { stop, direct }
 function verified(req, body) {
   const ts = String(req.headers["x-redial-timestamp"] ?? "");
   const sig = Buffer.from(String(req.headers["x-redial-signature"] ?? ""));
@@ -64,6 +66,7 @@ const server = http.createServer((req, res) => {
       try { msg = JSON.parse(body); } catch {}
       const c = controls.get(msg.callId);
       if (msg.action === "stop" && c) c.stop();
+      if (msg.action === "direct" && c && typeof msg.text === "string" && msg.text.trim()) c.direct(String(msg.id ?? ""), msg.text.trim().slice(0, 500));
       json(200, { ok: true, found: Boolean(c) });
     });
     return;
@@ -78,6 +81,8 @@ wss.on("connection", (tw) => {
   active++;
   let callId = null, streamSid = null, session = null, xai = null, ready = false, finished = false;
   let ending = false, endAfterResponse = false, startedAt = 0, stopped = false;
+  let responding = false, callerSpeaking = false;
+  const directions = []; // waiting for a pause: { id, text }
   const transcript = [];
   const said = new Map(); // response id -> assistant text so far
   const timers = [];
@@ -120,7 +125,7 @@ wss.on("connection", (tw) => {
         return finish();
       }
       callId = session.callId;
-      controls.set(callId, { stop });
+      controls.set(callId, { stop, direct });
       log(callId, "call started");
       openXai();
     } else if (msg.event === "media" && ready && !stopped && msg.media?.track !== "outbound") {
@@ -143,6 +148,24 @@ wss.on("connection", (tw) => {
     toXai({ type: "response.cancel" });
     if (streamSid) toTwilio({ event: "clear", streamSid });
     finish();
+  }
+
+  // Audible: hold a direction until the AI isn't mid-reply and the caller
+  // isn't talking, then hand it to the AI as a private note and let it
+  // respond. Delivered = the AI has it, not that it followed it.
+  function direct(id, text) {
+    if (stopped || finished) return;
+    directions.push({ id, text });
+    if (ready && !responding && !callerSpeaking) flushDirections();
+  }
+  function flushDirections() {
+    if (!directions.length || stopped || ending) return;
+    for (const d of directions.splice(0)) {
+      toXai({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text",
+        text: `(Private direction from the person you're answering for. The caller can't hear this; don't read it out or mention it. Follow it unless it conflicts with your rules: ${d.text})` }] } });
+      echo("result", { callId, direction: { id: d.id } }).catch((e) => log(callId, "direction report failed:", e.message));
+    }
+    toXai({ type: "response.create" });
   }
 
   function openXai() {
@@ -183,7 +206,15 @@ wss.on("connection", (tw) => {
           if (m.delta && streamSid && !stopped) toTwilio({ event: "media", streamSid, media: { payload: m.delta } });
           break;
         case "input_audio_buffer.speech_started":
+          callerSpeaking = true;
           if (!ending) toTwilio({ event: "clear", streamSid });
+          break;
+        case "input_audio_buffer.speech_stopped":
+          callerSpeaking = false;
+          break;
+        case "response.created":
+          responding = true;
+          callerSpeaking = false; // a reply starting means the caller's turn ended
           break;
         case "response.output_audio_transcript.delta":
           said.set(m.response_id, (said.get(m.response_id) ?? "") + (m.delta ?? ""));
@@ -201,7 +232,9 @@ wss.on("connection", (tw) => {
           if (m.item?.type === "function_call") onTool(m.item);
           break;
         case "response.done":
+          responding = false;
           if (endAfterResponse) hangUpSoon();
+          else if (!callerSpeaking) flushDirections();
           break;
         case "error":
           log(callId, "xAI:", m.error?.message ?? JSON.stringify(m));

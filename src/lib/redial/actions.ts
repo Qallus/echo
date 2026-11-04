@@ -171,7 +171,9 @@ export type LiveCall = {
   id: string; from_number: string | null; caller_id_name: string | null; caller_name: string | null; status: string; started_at: string;
   session: { state: string; ai_state: string; taken_over: "me" | "other" | null; participants: LiveParticipant[] } | null;
   turns: { id: number; role: "caller" | "assistant"; text: string }[];
+  directions: LiveDirection[];
 };
+export type LiveDirection = { id: string; text: string; status: "sending" | "delivered" | "failed"; created_at: string; mine: boolean };
 
 export async function liveCalls(lineId: string): Promise<LiveCall[]> {
   const user = await requireUser();
@@ -182,9 +184,10 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
     .gte("started_at", since).order("started_at", { ascending: false }).limit(5);
   if (!calls?.length) return [];
   const ids = calls.map((c) => c.id);
-  const [{ data: sessions }, { data: turns }] = await Promise.all([
+  const [{ data: sessions }, { data: turns }, { data: directions }] = await Promise.all([
     supabase.from("redial_live_sessions").select("call_id, state, ai_state, taken_over_by, participants:redial_live_participants(id, role, status, muted, user_id)").in("call_id", ids),
     supabase.from("redial_live_turns").select("id, call_id, role, text").in("call_id", ids).order("id").limit(400),
+    supabase.from("redial_live_directions").select("id, call_id, text, status, created_at, author_id").in("call_id", ids).order("created_at"),
   ]);
   return calls.map((c) => {
     const s = sessions?.find((x) => x.call_id === c.id);
@@ -193,6 +196,8 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
       session: s ? {
         state: s.state, ai_state: s.ai_state, taken_over: s.taken_over_by ? (s.taken_over_by === user.id ? "me" : "other") : null, participants: (s.participants ?? []).map(({ user_id, ...p }) => ({ ...p, me: user_id === user.id })) } : null,
       turns: (turns ?? []).filter((t) => t.call_id === c.id).map(({ id, role, text }) => ({ id, role: role as "caller" | "assistant", text })),
+      directions: (directions ?? []).filter((d) => d.call_id === c.id)
+        .map((d) => ({ id: d.id, text: d.text, status: d.status as LiveDirection["status"], created_at: d.created_at, mine: d.author_id === user.id })),
     };
   });
 }
@@ -280,4 +285,23 @@ export async function takeOver(callId: string): Promise<Result & { speaking?: bo
   if (!unmuted.ok) return { error: "The assistant is off the call, but your microphone couldn't be turned on. Try again." };
   revalidatePath("/calls");
   return { ok: "You're on the call.", speaking: true };
+}
+
+// Audible: a private direction to the AI on a call it's handling. Recorded
+// as "sending" (redial_direct checks the permission and the call); the
+// gateway marks it delivered once the AI has it. If the gateway can't take
+// it, it's marked failed, so the screen never claims more than happened.
+export async function directAgent(callId: string, text: string): Promise<Result> {
+  await requireUser();
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return { error: "Type a direction first." };
+  const supabase = await createClient();
+  const { data: id, error } = await supabase.rpc("redial_direct", { p_call: callId, p_text: clean });
+  if (error || !id) return { error: error?.message ?? "Couldn't send it." };
+  const taken = await gatewayControl(callId, "direct", { id: id as string, text: clean });
+  if (!taken) {
+    await supabase.rpc("redial_direction_failed", { p_id: id });
+    return { error: "The assistant couldn't be reached, so it wasn't delivered." };
+  }
+  return { ok: "Sent." };
 }

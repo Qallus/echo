@@ -9,9 +9,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // that are still being screened can be changed, except the AI time, which
 // is recorded once at the end and may trigger a low-minutes notification.
 // `turn` is one line of the live transcript, sent as it's spoken.
+// `direction` says the gateway has given a private direction to the AI.
 
 type Body = {
-  callId?: string; connect?: boolean; transcript?: Turn[]; aiSeconds?: number; turn?: Turn;
+  callId?: string; connect?: boolean; transcript?: Turn[]; aiSeconds?: number; turn?: Turn; direction?: { id?: string };
   details?: { caller_name?: string; purpose?: string; message?: string; callback_number?: string; category?: string; urgency?: string; summary?: string };
 };
 
@@ -23,6 +24,13 @@ export async function POST(req: Request) {
   if (!body?.callId || !isUuid(body.callId)) return Response.json({ error: "Not allowed." }, { status: 403 });
   const db = createAdminClient();
   if (body.turn) return liveTurn(db, body.callId, body.turn);
+  if (body.direction) {
+    if (isUuid(body.direction.id ?? "")) {
+      await db.from("redial_live_directions").update({ status: "delivered", delivered_at: new Date().toISOString() })
+        .eq("id", body.direction.id!).eq("call_id", body.callId).eq("status", "sending");
+    }
+    return Response.json({ ok: true });
+  }
   if (typeof body.aiSeconds === "number" && body.aiSeconds > 0) await recordAiTime(db, body.callId, Math.min(3600, Math.round(body.aiSeconds)));
   const patch: Record<string, unknown> = {};
   if (Array.isArray(body.transcript)) {
