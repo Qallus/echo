@@ -11,13 +11,14 @@ export const metadata = { title: "App waitlist · Admin · Echo" };
 export type Entry = {
   id: string; first_name: string; last_name: string; email: string; phone: string; platforms: string[]; products: string[];
   account_type: string; company: string | null; team_size: string | null; use_case: string | null; details: string | null; questions: string | null;
-  consent_sms: boolean; consent_call: boolean; status: string; source_page: string | null; contact_id: string | null; created_at: string;
+  consent_sms: boolean; consent_call: boolean; sms_frequency: string; update_topics: string[]; status: string; source_page: string | null; contact_id: string | null; created_at: string;
 };
 
 const FILTERS = [
   { id: "all", label: "Everyone" }, { id: "ios", label: "iPhone" }, { id: "android", label: "Android" },
   { id: "business", label: "Business" }, { id: "personal", label: "Personal" }, { id: "sms", label: "OK to text" }, { id: "call", label: "OK to call" },
 ];
+const FREQ: Record<string, string> = { major: "big news only", monthly: "monthly", weekly: "weekly", all: "every update" };
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 const apps = (e: Entry) => e.platforms.map((p) => (p === "ios" ? "iPhone" : "Android")).join(" + ");
 
@@ -50,7 +51,7 @@ export default async function WaitlistPage({ searchParams }: { searchParams: Pro
         <p className="mt-1">
           Everyone here is also a lead with source <span className="font-medium text-foreground">App waitlist</span> and tags like <code>app-ios</code>, <code>app-android</code>, <code>wants-redial</code> and <code>business</code>.
           For an email or text drip, add a rule in <Link href="/admin/automation" className="underline">Automation</Link>: &ldquo;A lead is added&rdquo;, where Contact source is App waitlist (add a tag condition to target one app), with delays between steps.
-          Only text or call people marked OK to text or OK to call.
+          Only text or call people marked OK to text or OK to call, no more often than the frequency they chose, and only about the topics they picked (shown on each person).
         </p>
       </div>
 
@@ -76,7 +77,8 @@ export default async function WaitlistPage({ searchParams }: { searchParams: Pro
                 </div>
                 <p className="text-xs text-muted-foreground">
                   <a href={`mailto:${e.email}`} className="hover:underline">{e.email}</a> · <a href={`tel:${e.phone}`} className="hover:underline">{pretty(e.phone)}</a>
-                  {" · "}{e.consent_sms ? "OK to text" : "No texts"} · {e.consent_call ? "OK to call" : "No calls"}
+                  {" · "}{e.consent_sms ? `OK to text (${FREQ[e.sms_frequency] ?? e.sms_frequency})` : "No texts"} · {e.consent_call ? "OK to call" : "No calls"}
+                  {e.update_topics.length > 0 && ` · wants ${e.update_topics.join(", ")}`}
                   {e.products.length > 0 && ` · wants ${e.products.map((p) => (p === "echo" ? "Echo" : "Redial")).join(" and ")}`}
                   {e.use_case && ` · ${e.use_case}`}
                 </p>

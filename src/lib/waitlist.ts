@@ -22,7 +22,8 @@ export async function joinWaitlist(f: Record<string, string | string[] | boolean
       platforms: list("platforms"), products: list("products"), account_type: str("account_type", 20),
       company: str("company", 200), team_size: str("team_size", 10), use_case: str("use_case", 100),
       details: str("details", 2000), questions: str("questions", 4000), consent_sms: sms, consent_call: call,
-      consent_text: [CONSENT.email, sms && CONSENT.sms, call && CONSENT.call].filter(Boolean).join(" "),
+      sms_frequency: str("sms_frequency", 20), update_topics: list("update_topics"),
+      consent_text: [CONSENT.email, sms && `${CONSENT.sms} Frequency: ${str("sms_frequency", 20) || "major"}.`, call && CONSENT.call].filter(Boolean).join(" "),
       source_page: str("source_page", 200),
     },
   });

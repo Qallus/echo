@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { joinWaitlist } from "@/lib/waitlist";
-import { CONSENT, PLATFORMS, PRODUCTS, TEAM_SIZES, USE_CASES, type Platform } from "@/lib/waitlist-options";
+import { CONSENT, PLATFORMS, PRODUCTS, SMS_FREQUENCIES, TEAM_SIZES, UPDATE_TOPICS, USE_CASES, type Platform } from "@/lib/waitlist-options";
 import { cn } from "@/lib/utils";
 
 const SELECT = "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
@@ -23,6 +23,8 @@ export function WaitlistForm({ platform, source, onBack }: { platform: Platform;
   const [type, setType] = useState<"personal" | "business">("personal");
   const [sms, setSms] = useState(false);
   const [call, setCall] = useState(false);
+  const [frequency, setFrequency] = useState("major");
+  const [topics, setTopics] = useState<string[]>(["launch", "beta"]);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
@@ -44,7 +46,7 @@ export function WaitlistForm({ platform, source, onBack }: { platform: Platform;
       const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
       setError(undefined);
       start(async () => {
-        const r = await joinWaitlist({ ...f, platforms, products, account_type: type, consent_sms: sms, consent_call: call, source_page: source });
+        const r = await joinWaitlist({ ...f, platforms, products, account_type: type, consent_sms: sms, consent_call: call, sms_frequency: frequency, update_topics: topics, source_page: source });
         if (r.error) setError(r.error); else setDone(true);
       });
     }}>
@@ -105,8 +107,24 @@ export function WaitlistForm({ platform, source, onBack }: { platform: Platform;
 
       <fieldset className="space-y-2 rounded-lg border p-3 text-xs text-muted-foreground">
         <legend className="px-1 text-sm font-medium text-foreground">How we can reach you</legend>
+        <div className="space-y-1.5">
+          <p className="text-foreground">Send me</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {UPDATE_TOPICS.map((t) => (
+              <label key={t.id} className="flex items-center gap-1.5 text-foreground"><Checkbox checked={topics.includes(t.id)} onCheckedChange={(v) => setTopics(toggle(topics, t.id, Boolean(v)))} />{t.label}</label>
+            ))}
+          </div>
+        </div>
         <p>{CONSENT.email}</p>
         <label className="flex items-start gap-2"><Checkbox className="mt-0.5" checked={sms} onCheckedChange={(v) => setSms(Boolean(v))} /><span>{CONSENT.sms}</span></label>
+        {sms && (
+          <div className="space-y-1 pl-6">
+            <label htmlFor="w-freq" className="text-foreground">How often may we text?</label>
+            <select id="w-freq" className={SELECT} value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+              {SMS_FREQUENCIES.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          </div>
+        )}
         <label className="flex items-start gap-2"><Checkbox className="mt-0.5" checked={call} onCheckedChange={(v) => setCall(Boolean(v))} /><span>{CONSENT.call}</span></label>
         <p>Texts and calls are optional and not a condition of anything. See our <a href="/privacy" className="underline">Privacy Policy</a>.</p>
       </fieldset>

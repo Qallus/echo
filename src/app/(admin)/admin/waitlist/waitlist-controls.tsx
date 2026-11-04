@@ -25,7 +25,7 @@ export function StatusSelect({ id, status }: { id: string; status: string }) {
 }
 
 const COLUMNS: (keyof Entry)[] = ["first_name", "last_name", "email", "phone", "platforms", "products", "account_type", "company", "team_size",
-  "use_case", "details", "questions", "consent_sms", "consent_call", "status", "source_page", "created_at"];
+  "use_case", "details", "questions", "consent_sms", "consent_call", "sms_frequency", "update_topics", "status", "source_page", "created_at"];
 const cell = (v: unknown) => {
   const s = Array.isArray(v) ? v.join(" ") : v == null ? "" : String(v);
   // Quote everything; neutralize spreadsheet formulas.
