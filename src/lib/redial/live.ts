@@ -12,7 +12,7 @@ import { redialUrl } from "./twiml";
 type Db = ReturnType<typeof createAdminClient>;
 export type Session = {
   id: string; call_id: string; line_id: string; conference_sid: string | null; caller_call_sid: string | null;
-  agent_call_sid: string | null; state: string; ai_state: string;
+  agent_call_sid: string | null; state: string; ai_state: string; taken_over_by?: string | null;
 };
 
 export async function liveEvent(db: Db, s: Session, kind: string, detail: Record<string, unknown> = {}, actor: string | null = null) {
@@ -35,6 +35,7 @@ export async function addAgent(db: Db, s: Session, conferenceSid: string, aiApp:
 }
 
 // The AI has left (or never made it). Hand the caller back exactly once.
+// A takeover sets ai_state to "removed" first, so it never gets here.
 export async function aiGone(db: Db, s: Session, state: "left" | "failed", error?: string) {
   const { data: claimed } = await db.from("redial_live_sessions").update({ ai_state: state, ...(error ? { error: error.slice(0, 500) } : {}) })
     .eq("id", s.id).in("ai_state", ["pending", "joining", "active"]).select("id").maybeSingle();

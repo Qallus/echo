@@ -39,6 +39,9 @@ export async function POST(req: Request) {
   }
   if (body.connect) patch.connect_requested = true;
   if (!Object.keys(patch).length) return Response.json({ ok: true });
+  // A call taken over from the assistant (Gavel) still gets its transcript
+  // up to that point, but nothing the assistant decided.
+  if (patch.transcript) await db.from("redial_calls").update({ transcript: patch.transcript }).eq("id", body.callId).eq("status", "connected");
   const { error } = await db.from("redial_calls").update(patch).eq("id", body.callId).eq("status", "screening");
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true });

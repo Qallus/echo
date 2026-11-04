@@ -17,7 +17,7 @@
 // Admin -> Settings -> Integrations -> Redial), PORT (8080), MAX_CALLS (20).
 
 import http from "node:http";
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { WebSocket, WebSocketServer } from "ws";
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -41,8 +41,33 @@ async function echo(path, body) {
   return data;
 }
 
+// Echo -> gateway: POST /control {callId, action: "stop"}, signed like the
+// requests the other way. "stop" is the takeover (Gavel): the AI goes silent
+// at once, drops anything queued, stops hearing the caller and ends.
+const controls = new Map(); // callId -> { stop }
+function verified(req, body) {
+  const ts = String(req.headers["x-redial-timestamp"] ?? "");
+  const sig = Buffer.from(String(req.headers["x-redial-signature"] ?? ""));
+  const want = Buffer.from(createHmac("sha256", SECRET).update(`${ts}.${body}`).digest("hex"));
+  return ts && Math.abs(Date.now() / 1000 - Number(ts)) <= 300 && sig.length === want.length && timingSafeEqual(sig, want);
+}
+
 const server = http.createServer((req, res) => {
-  if (req.url === "/health") { res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: true, calls: active })); return; }
+  const json = (code, data) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(data)); };
+  if (req.url === "/health") return json(200, { ok: true, calls: active });
+  if (req.url === "/control" && req.method === "POST") {
+    let body = "";
+    req.on("data", (c) => { body += c; if (body.length > 4096) req.destroy(); });
+    req.on("end", () => {
+      if (!verified(req, body)) return json(403, { error: "Not allowed." });
+      let msg = {};
+      try { msg = JSON.parse(body); } catch {}
+      const c = controls.get(msg.callId);
+      if (msg.action === "stop" && c) c.stop();
+      json(200, { ok: true, found: Boolean(c) });
+    });
+    return;
+  }
   res.writeHead(404); res.end();
 });
 const wss = new WebSocketServer({ server, path: "/twilio", maxPayload: 256 * 1024 });
@@ -52,7 +77,7 @@ wss.on("connection", (tw) => {
   if (active >= MAX_CALLS) { tw.close(1013, "busy"); return; }
   active++;
   let callId = null, streamSid = null, session = null, xai = null, ready = false, finished = false;
-  let ending = false, endAfterResponse = false, startedAt = 0;
+  let ending = false, endAfterResponse = false, startedAt = 0, stopped = false;
   const transcript = [];
   const said = new Map(); // response id -> assistant text so far
   const timers = [];
@@ -74,6 +99,7 @@ wss.on("connection", (tw) => {
   async function finish() {
     if (finished) return;
     finished = true;
+    if (callId) controls.delete(callId);
     timers.forEach(clearTimeout);
     await report(startedAt ? { aiSeconds: Math.round((Date.now() - startedAt) / 1000) } : {});
     try { xai?.close(); } catch {}
@@ -94,9 +120,10 @@ wss.on("connection", (tw) => {
         return finish();
       }
       callId = session.callId;
+      controls.set(callId, { stop });
       log(callId, "call started");
       openXai();
-    } else if (msg.event === "media" && ready && msg.media?.track !== "outbound") {
+    } else if (msg.event === "media" && ready && !stopped && msg.media?.track !== "outbound") {
       toXai({ type: "input_audio_buffer.append", audio: msg.media.payload });
     } else if (msg.event === "mark" && msg.mark?.name === "bye") {
       finish();
@@ -106,6 +133,17 @@ wss.on("connection", (tw) => {
   });
   tw.on("close", () => { active--; finish(); });
   tw.on("error", (e) => log(callId, "twilio error:", e.message));
+
+  // Taken over: cancel the reply in progress, drop queued audio, stop
+  // listening, then end (the final report still records the AI time).
+  function stop() {
+    if (stopped || finished) return;
+    stopped = true;
+    log(callId, "stopped for takeover");
+    toXai({ type: "response.cancel" });
+    if (streamSid) toTwilio({ event: "clear", streamSid });
+    finish();
+  }
 
   function openXai() {
     xai = new WebSocket(`wss://api.x.ai/v1/realtime?model=${encodeURIComponent(session.model)}`, { headers: { Authorization: `Bearer ${session.xaiKey}` } });
@@ -142,7 +180,7 @@ wss.on("connection", (tw) => {
           break;
         case "response.output_audio.delta":
         case "response.audio.delta":
-          if (m.delta && streamSid) toTwilio({ event: "media", streamSid, media: { payload: m.delta } });
+          if (m.delta && streamSid && !stopped) toTwilio({ event: "media", streamSid, media: { payload: m.delta } });
           break;
         case "input_audio_buffer.speech_started":
           if (!ending) toTwilio({ event: "clear", streamSid });
@@ -173,6 +211,7 @@ wss.on("connection", (tw) => {
   }
 
   async function onTool(item) {
+    if (stopped) return;
     let args = {};
     try { args = JSON.parse(item.arguments || "{}"); } catch {}
     log(callId, "tool", item.name);

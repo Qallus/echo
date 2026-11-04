@@ -6,7 +6,7 @@ import { twilioRequest, voiceToken } from "@/lib/comms/twilio";
 import { toE164 } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { SHAREABLE } from "./features";
-import { gatewayConfig, listenTicket } from "./gateway";
+import { gatewayConfig, gatewayControl, listenTicket } from "./gateway";
 import { memberIdentity } from "./live";
 import { VOICES, type Category, type ListKind, type Mode } from "./types";
 
@@ -169,7 +169,7 @@ export async function removeShare(grantId: string): Promise<Result> {
 export type LiveParticipant = { id: string; role: string; status: string; muted: boolean; me: boolean };
 export type LiveCall = {
   id: string; from_number: string | null; caller_id_name: string | null; caller_name: string | null; status: string; started_at: string;
-  session: { state: string; ai_state: string; participants: LiveParticipant[] } | null;
+  session: { state: string; ai_state: string; taken_over: "me" | "other" | null; participants: LiveParticipant[] } | null;
   turns: { id: number; role: "caller" | "assistant"; text: string }[];
 };
 
@@ -178,18 +178,20 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const { data: calls } = await supabase.from("redial_calls").select("id, from_number, caller_id_name, caller_name, status, started_at")
-    .eq("line_id", lineId).in("status", ["ringing", "screening", "connecting"]).gte("started_at", since).order("started_at", { ascending: false }).limit(5);
+    .eq("line_id", lineId).in("status", ["ringing", "screening", "connecting", "connected"]).is("ended_at", null)
+    .gte("started_at", since).order("started_at", { ascending: false }).limit(5);
   if (!calls?.length) return [];
   const ids = calls.map((c) => c.id);
   const [{ data: sessions }, { data: turns }] = await Promise.all([
-    supabase.from("redial_live_sessions").select("call_id, state, ai_state, participants:redial_live_participants(id, role, status, muted, user_id)").in("call_id", ids),
+    supabase.from("redial_live_sessions").select("call_id, state, ai_state, taken_over_by, participants:redial_live_participants(id, role, status, muted, user_id)").in("call_id", ids),
     supabase.from("redial_live_turns").select("id, call_id, role, text").in("call_id", ids).order("id").limit(400),
   ]);
   return calls.map((c) => {
     const s = sessions?.find((x) => x.call_id === c.id);
     return {
       ...c,
-      session: s ? { state: s.state, ai_state: s.ai_state, participants: (s.participants ?? []).map(({ user_id, ...p }) => ({ ...p, me: user_id === user.id })) } : null,
+      session: s ? {
+        state: s.state, ai_state: s.ai_state, taken_over: s.taken_over_by ? (s.taken_over_by === user.id ? "me" : "other") : null, participants: (s.participants ?? []).map(({ user_id, ...p }) => ({ ...p, me: user_id === user.id })) } : null,
       turns: (turns ?? []).filter((t) => t.call_id === c.id).map(({ id, role, text }) => ({ id, role: role as "caller" | "assistant", text })),
     };
   });
@@ -202,7 +204,8 @@ export async function startListening(callId: string): Promise<{ token?: string; 
   const supabase = await createClient();
   const { data: s } = await supabase.from("redial_live_sessions").select("id, line_id, state").eq("call_id", callId).maybeSingle();
   if (!s || s.state !== "live") return { error: "This call isn't live any more." };
-  if (!(await canOnLine(supabase, s.line_id, user.id, "monitor_live"))) return { error: "You don't have permission to listen to this line's calls." };
+  const allowed = (await canOnLine(supabase, s.line_id, user.id, "monitor_live")) || (await canOnLine(supabase, s.line_id, user.id, "takeover_live"));
+  if (!allowed) return { error: "You don't have permission to join this line's calls." };
   const gw = await gatewayConfig();
   const token = gw.aiApp && gw.secret ? await voiceToken(memberIdentity(user.id), { app: gw.aiApp, incoming: false }) : null;
   if (!token) return { error: "Live listening isn't set up yet (Twilio API key or the Redial TwiML App is missing)." };
@@ -245,4 +248,36 @@ async function dropParticipant(l: Listener) {
     ? await twilioRequest(`/Conferences/${l.conference_sid}/Participants/${l.call_sid}.json`, {}, "DELETE")
     : await twilioRequest(`/Calls/${l.call_sid}.json`, { Status: "completed" });
   if (!r.ok && r.status !== 404) console.error("[redial listener]", r.status, r.data.message);
+}
+
+// Gavel: take the call over from the AI, on the same call. The person must
+// already be on it as a listener (muted). Order matters, so there's only
+// ever one speaker: claim it (redial_takeover, once, logged), silence the AI
+// and put it on hold, stop it in the gateway, remove it from the call, and
+// only then unmute the person. If the AI can't be removed they stay muted;
+// the AI is never put back. Safe to retry by the same person.
+export async function takeOver(callId: string): Promise<Result & { speaking?: boolean }> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data: s } = await supabase.from("redial_live_sessions").select("id").eq("call_id", callId).maybeSingle();
+  const { data: me } = s
+    ? await supabase.from("redial_live_participants").select("call_sid").eq("session_id", s.id).eq("user_id", user.id).eq("role", "member").eq("status", "joined").maybeSingle()
+    : { data: null };
+  if (!me) return { error: "Join the call first." };
+  const { data: rows, error } = await supabase.rpc("redial_takeover", { p_call: callId });
+  const row = (rows as { conference_sid: string | null }[] | null)?.[0];
+  if (error || !row) return { error: error?.message ?? "Couldn't take over the call." };
+  if (!row.conference_sid) return { error: "The call isn't ready yet. Try again in a moment." };
+
+  const agent = `/Conferences/${row.conference_sid}/Participants/agent.json`;
+  const gone = (r: { ok: boolean; status: number }) => r.ok || r.status === 404;
+  await twilioRequest(agent, { Muted: "true", Hold: "true" });
+  await gatewayControl(callId, "stop");
+  const removed = gone(await twilioRequest(agent, {}, "DELETE"));
+  if (!removed) return { error: "Couldn't remove the assistant from the call yet, so you're still muted. Try again." };
+
+  const unmuted = await twilioRequest(`/Conferences/${row.conference_sid}/Participants/${me.call_sid}.json`, { Muted: "false" });
+  if (!unmuted.ok) return { error: "The assistant is off the call, but your microphone couldn't be turned on. Try again." };
+  revalidatePath("/calls");
+  return { ok: "You're on the call.", speaking: true };
 }

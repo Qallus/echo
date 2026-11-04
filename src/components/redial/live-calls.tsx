@@ -14,10 +14,11 @@ const LIVE_MS = 2500;
 
 // Calls happening right now on this line: who's calling, what state the call
 // is in, who's on it and, with transcript access, what's being said. People
-// with the listen permission can join conference calls muted (Insider).
+// with the listen permission can join conference calls muted (Insider), and
+// people with the takeover permission can take the call over (Gavel).
 // Checks every 15 seconds, every 2.5 while a call is live, and not at all
 // while the tab is hidden. When a call ends the page refreshes its inbox.
-type Props = { line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean };
+type Props = { line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean; canTakeOver: boolean };
 
 export function LiveCalls(props: Props) {
   const { line } = props;
@@ -52,7 +53,7 @@ export function LiveCalls(props: Props) {
   );
 }
 
-function LiveCard({ call: c, line, owner, canReadTranscript, canListen }: Props & { call: LiveCall }) {
+function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeOver }: Props & { call: LiveCall }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const seconds = Math.max(0, Math.floor((now - new Date(c.started_at).getTime()) / 1000));
@@ -75,7 +76,9 @@ function LiveCard({ call: c, line, owner, canReadTranscript, canListen }: Props 
           {onCall.map((p) => <Person key={p.id} p={p} line={line} canRemove={owner && p.role === "member" && !p.me} />)}
         </ul>
       )}
-      {canListen && c.session?.state === "live" && <ListenLive callId={c.id} />}
+      {(canListen || canTakeOver) && c.session?.state === "live" && (
+        <ListenLive callId={c.id} canListen={canListen} canTakeOver={canTakeOver} takenOver={c.session.taken_over} />
+      )}
       {canReadTranscript ? <LiveTranscript turns={c.turns} assistant={line.assistant_name} /> : (
         <p className="text-xs text-muted-foreground">The live transcript is only shown to people the owner lets read transcripts.</p>
       )}
@@ -85,7 +88,8 @@ function LiveCard({ call: c, line, owner, canReadTranscript, canListen }: Props 
 
 function Person({ p, line, canRemove }: { p: LiveParticipant; line: Line; canRemove: boolean }) {
   const [pending, start] = useTransition();
-  const name = p.role === "agent" ? line.assistant_name : p.role === "caller" ? "Caller" : p.me ? "You (listening)" : "Team member (listening)";
+  const doing = p.muted ? "listening" : "speaking";
+  const name = p.role === "agent" ? line.assistant_name : p.role === "caller" ? "Caller" : `${p.me ? "You" : "Team member"} (${doing})`;
   return (
     <li className="flex items-center gap-1 rounded-full border bg-card px-2 py-0.5">
       {name}
@@ -100,6 +104,7 @@ function Person({ p, line, canRemove }: { p: LiveParticipant; line: Line; canRem
 function stateLabel(c: LiveCall, line: Line) {
   if (c.status === "connecting") return "Ringing you";
   if (c.status === "ringing") return "Ringing";
+  if (c.session?.taken_over) return c.session.taken_over === "me" ? "You took over" : "A team member took over";
   const ai = c.session?.ai_state;
   if (ai === "pending" || ai === "joining") return `Connecting ${line.assistant_name}`;
   if (ai === "left" || ai === "failed") return "Wrapping up";

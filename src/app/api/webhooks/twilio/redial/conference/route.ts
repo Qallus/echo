@@ -7,7 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Conference status callback for Redial conference calls (signed by Twilio),
 // plus the AI leg's call status (leg=agent). Records who is on the call, adds
 // the AI once the caller is in, and hands the caller back when the AI leaves.
-// Listeners (Insider) join muted; if one is ever unmuted, they're muted again.
+// Listeners (Insider) join muted; if one is ever unmuted, they're muted again,
+// except the person who took the call over (Gavel). When that person hangs
+// up, the call ends for the caller too.
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
@@ -16,7 +18,7 @@ export async function POST(req: Request) {
   const id = url.searchParams.get("call") ?? "";
   if (!isUuid(id)) return new Response(null, { status: 204 });
   const db = createAdminClient();
-  const { data } = await db.from("redial_live_sessions").select("id, call_id, line_id, conference_sid, caller_call_sid, agent_call_sid, state, ai_state, line:redial_lines(number)").eq("call_id", id).maybeSingle();
+  const { data } = await db.from("redial_live_sessions").select("id, call_id, line_id, conference_sid, caller_call_sid, agent_call_sid, state, ai_state, taken_over_by, line:redial_lines(number)").eq("call_id", id).maybeSingle();
   if (!data) return new Response(null, { status: 204 });
   const s = data as unknown as Session & { line: { number: string } };
 
@@ -38,6 +40,8 @@ export async function POST(req: Request) {
       break;
     case "participant-join": {
       if (!p.CallSid) break;
+      // Join can arrive before conference-start; the controls need the SID.
+      if (p.ConferenceSid) await db.from("redial_live_sessions").update({ conference_sid: p.ConferenceSid }).eq("id", s.id).is("conference_sid", null);
       await db.from("redial_live_participants").upsert({ session_id: s.id, line_id: s.line_id, role, call_sid: p.CallSid, user_id: member, muted: p.Muted === "true", status: "joined" }, { onConflict: "call_sid" });
       await liveEvent(db, s, "participant.join", { role }, member);
       if (role === "caller") {
@@ -54,14 +58,20 @@ export async function POST(req: Request) {
       await db.from("redial_live_participants").update({ status: "left", left_at: now }).eq("call_sid", p.CallSid);
       await liveEvent(db, s, "participant.leave", { role }, member);
       if (role === "agent") await aiGone(db, s, "left");
+      if (member && member === s.taken_over_by && p.ConferenceSid) {
+        await twilioRequest(`/Conferences/${p.ConferenceSid}.json`, { Status: "completed" });
+        await liveEvent(db, s, "takeover.end", {}, member);
+      }
       break;
     case "participant-mute":
     case "participant-unmute":
       if (!p.CallSid) break;
       await db.from("redial_live_participants").update({ muted: p.StatusCallbackEvent === "participant-mute" }).eq("call_sid", p.CallSid);
-      if (member && p.StatusCallbackEvent === "participant-unmute" && p.ConferenceSid) {
+      if (member && member !== s.taken_over_by && p.StatusCallbackEvent === "participant-unmute" && p.ConferenceSid) {
         await twilioRequest(`/Conferences/${p.ConferenceSid}/Participants/${p.CallSid}.json`, { Muted: "true" });
         await liveEvent(db, s, "listen.remuted", {}, member);
+      } else if (member && member === s.taken_over_by && p.StatusCallbackEvent === "participant-unmute") {
+        await liveEvent(db, s, "takeover.speaking", {}, member);
       }
       break;
     case "conference-end":

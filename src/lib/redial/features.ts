@@ -17,7 +17,7 @@ export const CAPABILITIES = [
   { id: "read_transcript", label: "Read transcripts and play voicemails", live: false },
   { id: "manage_rules", label: "Change rules, lists and the assistant", live: false },
   { id: "monitor_live", label: `${FEATURES.insider.name}: listen to live calls`, live: false },
-  { id: "takeover_live", label: `${FEATURES.gavel.name}: take over calls`, live: true },
+  { id: "takeover_live", label: `${FEATURES.gavel.name}: take over calls from the assistant`, live: false },
   { id: "direct_agent", label: `${FEATURES.audible.name}: guide the assistant`, live: true },
   { id: "transfer_call", label: `${FEATURES.directory.name}: transfer calls`, live: true },
   { id: "manage_directory", label: `${FEATURES.directory.name}: edit destinations`, live: true },

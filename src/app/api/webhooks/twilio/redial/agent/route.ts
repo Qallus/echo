@@ -9,8 +9,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Two kinds of call reach it:
 // * the AI's leg joining a conference (?call=<id> from the participant's To):
 //   stream it to the voice gateway;
-// * a member's browser joining to listen (Insider), with a signed ticket:
-//   re-check the listen permission and join them muted.
+// * a member's browser joining to listen (Insider) or to take over (Gavel),
+//   with a signed ticket: re-check the permission and join them muted.
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
@@ -36,7 +36,8 @@ async function listen(db: ReturnType<typeof createAdminClient>, secret: string |
   const { data } = await db.from("redial_live_sessions").select("id, call_id, line_id, conference_sid, conference_name, caller_call_sid, agent_call_sid, state, ai_state").eq("id", t.sessionId).maybeSingle();
   const s = data as (Session & { conference_name: string }) | null;
   if (!s || s.state !== "live") return refuse("This call has ended.");
-  if (!(await memberCan(db, s.line_id, t.userId, "monitor_live"))) return refuse("Sorry, you can't join this call.");
+  const allowed = (await memberCan(db, s.line_id, t.userId, "monitor_live")) || (await memberCan(db, s.line_id, t.userId, "takeover_live"));
+  if (!allowed) return refuse("Sorry, you can't join this call.");
   await liveEvent(db, s, "listen.join", {}, t.userId);
   return twiml(listenerJoin(s.conference_name, t.userId));
 }

@@ -43,6 +43,22 @@ export function readListenTicket(secret: string, ticket: string): { sessionId: s
   return same(mac(secret, `listen.${sessionId}.${userId}.${exp}`), sig) ? { sessionId, userId } : null;
 }
 
+// Echo -> gateway control (POST <gateway>/control), signed the same way.
+// "stop" ends the AI on one call at once (takeover). False if the gateway
+// couldn't be reached or didn't have the call.
+export async function gatewayControl(callId: string, action: "stop"): Promise<boolean> {
+  const { url, secret } = await gatewayConfig();
+  if (!url || !secret) return false;
+  const body = JSON.stringify({ callId, action });
+  const ts = String(Math.floor(Date.now() / 1000));
+  const res = await fetch(`${url.replace(/^ws/, "http")}/control`, {
+    method: "POST", headers: { "content-type": "application/json", "x-redial-timestamp": ts, "x-redial-signature": mac(secret, `${ts}.${body}`) }, body,
+    signal: AbortSignal.timeout(4000),
+  }).catch(() => null);
+  const data = res?.ok ? ((await res.json().catch(() => ({}))) as { found?: boolean }) : null;
+  return Boolean(data?.found);
+}
+
 // Gateway -> Echo requests: header x-redial-signature = hmac(timestamp.body),
 // x-redial-timestamp within five minutes.
 export async function verifyGateway(req: Request): Promise<unknown | null> {
