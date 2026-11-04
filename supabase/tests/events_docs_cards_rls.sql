@@ -74,7 +74,7 @@ begin
   select count(*) into n from public.workspace_docs where id in (team, priv); r := r || format(E'3e finance sees team page, not the private one=%s [1]\n', n);
   update public.workspace_docs set title = 'x' where id = team; get diagnostics n = row_count; r := r || format(E'3f finance edits a team page rows=%s [0]\n', n);
   insert into public.workspace_docs (title, visibility) values ('Finance notes', 'private');
-  update public.workspace_docs set title = 'Finance notes v2' where created_by = b; get diagnostics n = row_count; r := r || format(E'3g finance edits its own page rows=%s [1]\n', n);
+  update public.workspace_docs set title = 'Finance notes v2' where created_by = b and title = 'Finance notes'; get diagnostics n = row_count; r := r || format(E'3g finance edits its own page rows=%s [1]\n', n);
   insert into public.workspace_comments (doc_id, body) values (team, 'Looks good'); r := r || E'3h finance comments on a team page [ok]\n';
   begin insert into public.workspace_comments (doc_id, body) values (priv, 'Peek'); r := r || E'3i finance comments on a private page ALLOWED (FAIL)\n';
   exception when insufficient_privilege then r := r || E'3i finance comments on a private page denied [ok]\n'; end;
