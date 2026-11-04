@@ -20,6 +20,11 @@ export function BillingSettingsForm({ initial, readOnly }: { initial: BillingSet
           <span className="block text-xs text-muted-foreground">Transcription minutes for accounts without a plan.</span>
         </label>
         <label className="block space-y-1.5 text-sm">
+          <span className="font-medium">Free Redial screening minutes a month</span>
+          <Input type="number" min={0} className="max-w-40" value={s.redialFreeMinutes} onChange={(e) => setS({ ...s, redialFreeMinutes: Number(e.target.value) })} />
+          <span className="block text-xs text-muted-foreground">AI screening minutes for Redial lines without a Redial plan. Past the limit, calls go to voicemail (always enforced: AI minutes cost money).</span>
+        </label>
+        <label className="block space-y-1.5 text-sm">
           <span className="font-medium">Discount for customers using their own AI keys (%)</span>
           <Input type="number" min={0} max={90} className="max-w-40" value={s.byokDiscountPercent} onChange={(e) => setS({ ...s, byokDiscountPercent: Number(e.target.value) })} />
           <span className="block text-xs text-muted-foreground">Applied automatically at checkout to subscriptions when the customer has a working key. 0 turns it off.</span>

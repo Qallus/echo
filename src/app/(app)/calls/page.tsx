@@ -4,6 +4,8 @@ import { PhoneIncoming } from "lucide-react";
 import { CallsView } from "@/components/redial/calls-view";
 import { getMyProfile, requireUser } from "@/lib/data";
 import { lineDetail, myLines } from "@/lib/redial/data";
+import { redialUsage } from "@/lib/redial/usage";
+import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Calls · Echo" };
@@ -11,11 +13,11 @@ export const metadata = { title: "Calls · Echo" };
 // Redial call screening: screened calls and messages, callbacks, rules and
 // the assistant, for one of the member's lines.
 export default async function CallsPage({ searchParams }: { searchParams: Promise<{ line?: string; call?: string; tab?: string }> }) {
-  await requireUser();
+  const user = await requireUser();
   const [{ line: lineId, call, tab }, lines, profile] = await Promise.all([searchParams, myLines(), getMyProfile()]);
   if (!lines.length) notFound();
   const line = lines.find((l) => l.id === lineId) ?? lines[0];
-  const detail = await lineDetail(line.id);
+  const [detail, usage] = await Promise.all([lineDetail(line.id), createClient().then((s) => redialUsage(s, user.id))]);
   const pretty = line.number.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 
   return (
@@ -35,7 +37,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           </nav>
         )}
       </div>
-      <CallsView key={line.id} line={line} {...detail} initialCall={call ?? null} initialTab={tab ?? null}
+      <CallsView key={line.id} line={line} {...detail} usage={usage} initialCall={call ?? null} initialTab={tab ?? null}
         ownerFirst={profile.fullName?.trim().split(/\s+/)[0] ?? "you"} />
     </div>
   );

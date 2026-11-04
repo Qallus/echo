@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LocalDate } from "@/components/local-date";
 import { addListEntry, updateCall, voicemailUrl } from "@/lib/redial/actions";
 import { CATEGORY_LABEL, STATUS_LABEL, type Call, type Callback, type Category, type Line, type ListEntry } from "@/lib/redial/types";
+import type { RedialUsage } from "@/lib/redial/usage";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import { CallbackDialog, Callbacks } from "./callbacks";
 import { AssistantSettings, RulesSettings, useLineForm } from "./line-settings";
 
@@ -21,8 +23,8 @@ const CATEGORY_TONE: Record<Category, string> = {
   sales: "bg-amber-500/15 text-amber-800 dark:text-amber-300", spam: "bg-red-500/15 text-red-700 dark:text-red-300", unknown: "bg-muted text-muted-foreground",
 };
 
-export function CallsView({ line, calls, entries, callbacks, initialCall, initialTab, ownerFirst }: {
-  line: Line; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; initialCall: string | null; initialTab: string | null; ownerFirst: string;
+export function CallsView({ line, calls, entries, callbacks, initialCall, initialTab, ownerFirst, usage }: {
+  line: Line; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null;
 }) {
   const form = useLineForm(line);
   const [filter, setFilter] = useState<"inbox" | "messages" | "archived">("inbox");
@@ -35,6 +37,7 @@ export function CallsView({ line, calls, entries, callbacks, initialCall, initia
   return (
     <div className="space-y-4">
       {line.paused && <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">Screening is paused: calls ring straight through. Turn it back on under Rules.</p>}
+      {usage && <UsageBar usage={usage} />}
       {needsSetup && !line.paused && <p className="rounded-xl border p-3 text-sm">Add the phone number your assistant should ring (usually your cell) under <span className="font-medium">Rules</span>, so it can put important calls through.</p>}
       <Tabs defaultValue={["inbox", "callbacks", "rules", "assistant"].includes(initialTab ?? "") ? initialTab! : "inbox"}>
         <TabsList variant="line">
@@ -165,5 +168,27 @@ function CallDetail({ call: c, line, entries }: { call: Call; line: Line; entrie
       {(msg.ok || msg.error) && <p className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.error ?? msg.ok}</p>}
       {scheduling && <CallbackDialog line={line} call={c} onClose={() => setScheduling(false)} />}
     </article>
+  );
+}
+
+// "12 of 50 screening minutes used this month", with a way to get more.
+function UsageBar({ usage: u }: { usage: RedialUsage }) {
+  const pct = u.allowance ? Math.min(100, (u.used_minutes / u.allowance) * 100) : 100;
+  const out = u.remaining_seconds < 30;
+  return (
+    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border p-3", out && "border-destructive/40 bg-destructive/5")}>
+      <div className="min-w-48 flex-1 space-y-1.5">
+        <p className="text-sm">
+          <span className="font-medium tabular-nums">{u.used_minutes}</span> of <span className="tabular-nums">{u.allowance}</span> screening minutes used this month
+          {u.pack_minutes > 0 && <span className="text-muted-foreground"> (includes {u.pack_minutes} pack minutes)</span>}
+        </p>
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={u.allowance} aria-valuenow={u.used_minutes} aria-label="Screening minutes used">
+          <div className={cn("h-full rounded-full", out ? "bg-destructive" : pct >= 80 ? "bg-amber-500" : "bg-primary")} style={{ width: `${pct}%` }} />
+        </div>
+        {out && <p className="text-xs text-destructive">Unknown callers go to voicemail until your minutes reset next month.</p>}
+        {u.free && !out && <p className="text-xs text-muted-foreground">Free trial minutes. A Redial plan adds more every month.</p>}
+      </div>
+      <Button size="sm" variant={out ? "default" : "outline"} nativeButton={false} render={<Link href="/pricing" />}>{u.free ? "Get Redial" : "Add minutes"}</Button>
+    </div>
   );
 }

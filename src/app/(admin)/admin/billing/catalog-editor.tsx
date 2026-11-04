@@ -65,7 +65,7 @@ function ProductRow({ product: p, readOnly }: { product: Product; readOnly: bool
   const [f, setF] = useState({ name: p.name, tagline: p.tagline, features: (p.features ?? []).join("\n"), minutes: p.minutes?.toString() ?? "", active: p.active !== false, sort: 0 });
   const [msg, setMsg] = useState<Msg>({});
   const [pending, start] = useTransition();
-  const showMinutes = p.kind === "plan" || p.kind === "pack";
+  const showMinutes = p.kind === "plan" || p.kind === "pack" || p.meter === "redial";
 
   return (
     <li className={cn("p-3", p.active === false && "opacity-60")}>
@@ -88,7 +88,7 @@ function ProductRow({ product: p, readOnly }: { product: Product; readOnly: bool
             <fieldset disabled={readOnly} className="contents">
               <label className="space-y-1 text-sm">Name<Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
               {showMinutes && (
-                <label className="space-y-1 text-sm">{p.kind === "plan" ? `Minutes per month${p.perSeat ? " (per seat)" : ""}` : "Minutes in the pack"}
+                <label className="space-y-1 text-sm">{p.meter === "redial" ? (p.kind === "pack" ? "Screening minutes in the pack" : "Screening minutes per month") : p.kind === "plan" ? `Minutes per month${p.perSeat ? " (per seat)" : ""}` : "Minutes in the pack"}
                   <Input type="number" min={0} value={f.minutes} onChange={(e) => setF({ ...f, minutes: e.target.value })} />
                 </label>
               )}

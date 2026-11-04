@@ -3,13 +3,14 @@ import { AdminPage, Section, StatCard } from "@/components/admin/admin-ui";
 import { LocalDate } from "@/components/local-date";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { gatewayConfig } from "@/lib/redial/gateway";
+import { redialUsage, type RedialUsage } from "@/lib/redial/usage";
 import { siteUrl } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { AssignLine, RemoveLine } from "./line-forms";
 
 export const metadata = { title: "Redial · Admin · Echo" };
 
-type Row = { id: string; owner_email: string; owner_name: string | null; label: string; number: string; has_destination: boolean; mode: string; paused: boolean; calls_30d: number; last_call_at: string | null };
+type Row = { id: string; owner_id: string; owner_email: string; owner_name: string | null; label: string; number: string; has_destination: boolean; mode: string; paused: boolean; calls_30d: number; last_call_at: string | null };
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 
 // Redial lines: which member has which number, and whether screening is
@@ -20,6 +21,7 @@ export default async function RedialAdminPage() {
   const [{ data, error }, gw] = await Promise.all([supabase.rpc("admin_redial_lines"), gatewayConfig()]);
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Row[];
+  const usage = new Map<string, RedialUsage | null>(await Promise.all([...new Set(rows.map((r) => r.owner_id))].map(async (id) => [id, await redialUsage(supabase, id)] as const)));
   const manage = can(staff, "users.manage");
 
   return (
@@ -49,7 +51,8 @@ export default async function RedialAdminPage() {
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {r.paused ? "Paused" : r.mode === "off" ? "Not screening" : r.mode === "all" ? "Screening all" : "Screening unknown"}
-                  {!r.has_destination && " · no ring number"} · {r.calls_30d} calls{r.last_call_at && <> · last <LocalDate iso={r.last_call_at} short /></>}
+                  {!r.has_destination && " · no ring number"} · {r.calls_30d} calls
+                  {usage.get(r.owner_id) && ` · ${usage.get(r.owner_id)!.used_minutes}/${usage.get(r.owner_id)!.allowance} min${usage.get(r.owner_id)!.free ? " (free)" : ""}`}{r.last_call_at && <> · last <LocalDate iso={r.last_call_at} short /></>}
                 </span>
                 {manage && <RemoveLine id={r.id} number={pretty(r.number)} />}
               </li>

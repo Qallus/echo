@@ -49,7 +49,7 @@ wss.on("connection", (tw) => {
   if (active >= MAX_CALLS) { tw.close(1013, "busy"); return; }
   active++;
   let callId = null, streamSid = null, session = null, xai = null, ready = false, finished = false;
-  let ending = false, endAfterResponse = false;
+  let ending = false, endAfterResponse = false, startedAt = 0;
   const transcript = [];
   const said = new Map(); // response id -> assistant text so far
   const timers = [];
@@ -68,7 +68,7 @@ wss.on("connection", (tw) => {
     if (finished) return;
     finished = true;
     timers.forEach(clearTimeout);
-    await report();
+    await report(startedAt ? { aiSeconds: Math.round((Date.now() - startedAt) / 1000) } : {});
     try { xai?.close(); } catch {}
     try { tw.close(); } catch {}
   }
@@ -122,6 +122,7 @@ wss.on("connection", (tw) => {
         case "session.updated":
           if (ready) break;
           ready = true;
+          startedAt = Date.now();
           clearTimeout(connectTimer);
           toXai({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text: "(The call just connected. Greet the caller now.)" }] } });
           toXai({ type: "response.create" });

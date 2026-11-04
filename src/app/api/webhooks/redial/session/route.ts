@@ -1,6 +1,7 @@
 import { instructions, tools } from "@/lib/redial/assistant";
 import { gatewayConfig, readCallToken, verifyGateway } from "@/lib/redial/gateway";
 import type { Line } from "@/lib/redial/types";
+import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // The voice gateway asks how to run a call (signed with REDIAL_GATEWAY_SECRET,
@@ -20,9 +21,12 @@ export async function POST(req: Request) {
   const { data: profile } = await db.from("profiles").select("full_name").eq("id", call.owner_id).maybeSingle();
   const first = profile?.full_name?.trim().split(/\s+/)[0] || "the person you called";
   const canConnect = line.allow_connect && Boolean(line.forward_to);
+  const usage = await redialUsage(db, call.owner_id);
+  if (!usage || usage.remaining_seconds < MIN_SECONDS_TO_SCREEN) return Response.json({ error: "No screening minutes left." }, { status: 409 });
+  const maxSeconds = Math.max(MIN_SECONDS_TO_SCREEN, Math.min(line.max_seconds, usage.remaining_seconds));
 
   return Response.json({
-    callId: call.id, xaiKey, model: "grok-voice-latest", voice: line.voice, maxSeconds: line.max_seconds,
+    callId: call.id, xaiKey, model: "grok-voice-latest", voice: line.voice, maxSeconds,
     instructions: instructions(line, first, call.from_number, canConnect), tools: tools(canConnect),
   });
 }

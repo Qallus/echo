@@ -2,12 +2,14 @@ import { e164, twiml, verifyTwilio } from "@/lib/comms/twilio";
 import { callToken, gatewayConfig } from "@/lib/redial/gateway";
 import { ringOwner, stream, voicemail } from "@/lib/redial/twiml";
 import { decide, type Line } from "@/lib/redial/types";
+import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // A call to a Redial number ("A call comes in" on that Twilio number).
 // Signed by Twilio. Applies the line's rules: block, ring through, or let the
 // AI assistant screen it through the voice gateway. If the gateway isn't set
-// up, unknown callers can leave a voicemail instead.
+// up, or this month's screening minutes are used up, unknown callers can
+// leave a voicemail instead.
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
@@ -21,11 +23,14 @@ export async function POST(req: Request) {
   const { data: entries } = from ? await db.from("redial_list_entries").select("number, kind").eq("line_id", line.id) : { data: [] };
   const decision = decide(line, from, entries ?? []);
   const gw = await gatewayConfig();
-  const action = decision.action === "screen" && !gw.ready ? "voicemail" : decision.action;
+  const usage = decision.action === "screen" && gw.ready ? await redialUsage(db, line.owner_id) : null;
+  const outOfMinutes = Boolean(usage && usage.remaining_seconds < MIN_SECONDS_TO_SCREEN);
+  const action = decision.action === "screen" && (!gw.ready || !usage || outOfMinutes) ? "voicemail" : decision.action;
+  const fallback = !gw.ready ? "assistant not set up" : outOfMinutes ? "this month's screening minutes are used up" : "couldn't check minutes";
 
   const { data: call, error } = await db.from("redial_calls").upsert({
     line_id: line.id, owner_id: line.owner_id, twilio_sid: p.CallSid, from_number: from ?? p.From ?? null,
-    caller_id_name: p.CallerName || null, reason: action === decision.action ? decision.reason : `${decision.reason}; assistant not set up, so voicemail`,
+    caller_id_name: p.CallerName || null, reason: action === decision.action ? decision.reason : `${decision.reason}; ${fallback}, so voicemail`,
     status: action === "block" ? "blocked" : action === "forward" ? "forwarded" : action === "screen" ? "screening" : "ringing",
     ...(action === "block" ? { ended_at: new Date().toISOString() } : {}),
   }, { onConflict: "twilio_sid" }).select("id").single();

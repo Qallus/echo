@@ -27,14 +27,14 @@ export async function minutesUsage(supabase: SupabaseClient, userId: string): Pr
   for (const s of subs.data ?? []) {
     for (const item of (s.items ?? []) as { price_key: string; quantity: number }[]) {
       const hit = findPrice(item.price_key);
-      if (hit?.product.kind !== "plan" || !hit.product.minutes) continue;
+      if (hit?.product.kind !== "plan" || hit.product.meter === "redial" || !hit.product.minutes) continue;
       plan += hit.product.minutes * (hit.product.perSeat ? item.quantity ?? 1 : 1);
       planName = hit.product.name;
     }
   }
   const packMinutes = (packs.data ?? []).reduce((n, i) => {
     const hit = i.price_key ? findPrice(i.price_key) : null;
-    return n + (hit?.product.kind === "pack" ? (hit.product.minutes ?? 0) * (i.quantity ?? 1) : 0);
+    return n + (hit?.product.kind === "pack" && hit.product.meter !== "redial" ? (hit.product.minutes ?? 0) * (i.quantity ?? 1) : 0);
   }, 0);
   const base = plan || settings.freeMinutes;
   return { used, plan: base, packs: packMinutes, allowance: base + packMinutes, planName };

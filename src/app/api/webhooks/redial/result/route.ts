@@ -1,14 +1,16 @@
 import { isUuid } from "@/lib/data";
 import { verifyGateway } from "@/lib/redial/gateway";
 import type { Category, Turn } from "@/lib/redial/types";
+import { redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // The voice gateway reports a call's outcome (signed). Sent when the
 // assistant saves details, asks to connect, or the stream ends. Only calls
-// that are still being screened can be changed.
+// that are still being screened can be changed, except the AI time, which
+// is recorded once at the end and may trigger a low-minutes notification.
 
 type Body = {
-  callId?: string; connect?: boolean; transcript?: Turn[];
+  callId?: string; connect?: boolean; transcript?: Turn[]; aiSeconds?: number;
   details?: { caller_name?: string; purpose?: string; message?: string; callback_number?: string; category?: string; urgency?: string; summary?: string };
 };
 
@@ -19,6 +21,7 @@ export async function POST(req: Request) {
   const body = (await verifyGateway(req)) as Body | null;
   if (!body?.callId || !isUuid(body.callId)) return Response.json({ error: "Not allowed." }, { status: 403 });
   const db = createAdminClient();
+  if (typeof body.aiSeconds === "number" && body.aiSeconds > 0) await recordAiTime(db, body.callId, Math.min(3600, Math.round(body.aiSeconds)));
   const patch: Record<string, unknown> = {};
   if (Array.isArray(body.transcript)) {
     patch.transcript = body.transcript.filter((t) => (t.role === "caller" || t.role === "assistant") && typeof t.text === "string")
@@ -37,4 +40,27 @@ export async function POST(req: Request) {
   const { error } = await db.from("redial_calls").update(patch).eq("id", body.callId).eq("status", "screening");
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true });
+}
+
+// Saves the call's AI time once, then warns the owner at 80% and 100% of the
+// month's screening minutes (one notification per level per month).
+async function recordAiTime(db: ReturnType<typeof createAdminClient>, callId: string, seconds: number) {
+  const { data: call } = await db.from("redial_calls").update({ ai_seconds: seconds }).eq("id", callId).is("ai_seconds", null).select("owner_id").maybeSingle();
+  if (!call) return;
+  const usage = await redialUsage(db, call.owner_id);
+  if (!usage || !usage.allowance) return;
+  const level = usage.used_minutes >= usage.allowance ? 100 : usage.used_minutes >= usage.allowance * 0.8 ? 80 : 0;
+  if (!level) return;
+  const period = usage.period_start.slice(0, 7);
+  const { count } = await db.from("notifications").select("id", { count: "exact", head: true })
+    .eq("user_id", call.owner_id).eq("type", "redial_usage").eq("data->>period", period).eq("data->>level", String(level));
+  if (count) return;
+  await db.from("notifications").insert({
+    user_id: call.owner_id, type: "redial_usage", url: "/calls",
+    title: level === 100 ? "Your screening minutes are used up" : "You've used 80% of your screening minutes",
+    body: level === 100
+      ? "Unknown callers go to voicemail until next month. Add minutes or upgrade to keep your assistant answering."
+      : `${usage.used_minutes} of ${usage.allowance} minutes used this month.`,
+    data: { period, level: String(level) },
+  });
 }

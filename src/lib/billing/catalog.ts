@@ -6,6 +6,8 @@
 
 export type Interval = "month" | "year";
 export type Kind = "plan" | "bolt_on" | "pack" | "service";
+// What a product's minutes count: Echo transcription, or Redial AI screening.
+export type Meter = "transcription" | "redial";
 
 // Graduated per-seat tiers (Stripe "graduated" tiered pricing).
 export type Tier = { upTo: number | null; unitAmount: number };
@@ -25,7 +27,8 @@ export type Product = {
   tagline: string;
   features?: string[];
   perSeat?: boolean;
-  minutes?: number | null; // plans: per month (per seat when perSeat); packs: minutes added
+  minutes?: number | null; // plans: per month (per seat when perSeat); packs: minutes added; Redial bolt-on: screening minutes a month
+  meter?: Meter;
   active?: boolean;
   prices: Price[];
 };
@@ -56,6 +59,8 @@ export const SEED_PRODUCTS: Product[] = [
   { id: "min500", kind: "pack", name: "500 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_500", interval: null, unitAmount: 1000 }] },
   { id: "min2000", kind: "pack", name: "2,000 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_2000", interval: null, unitAmount: 3500 }] },
   { id: "min5000", kind: "pack", name: "5,000 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_5000", interval: null, unitAmount: 7500 }] },
+  { id: "redial", kind: "bolt_on", meter: "redial", minutes: 50, name: "Redial call screening", tagline: "An AI assistant answers your Redial number, screens unknown callers and takes messages. 50 screening minutes a month.", prices: [{ key: "redial_monthly", interval: "month", unitAmount: 2900 }, { key: "redial_annual", interval: "year", unitAmount: 29000 }] },
+  { id: "redial_min100", kind: "pack", meter: "redial", minutes: 100, name: "100 screening minutes", tagline: "Extra Redial screening minutes. Valid for 12 months.", prices: [{ key: "pack_redial_100", interval: null, unitAmount: 1500 }] },
   { id: "onboarding", kind: "service", name: "Guided onboarding", tagline: "A 60-minute session to set up workspaces, templates and the Claude connector for your team.", prices: [{ key: "svc_onboarding", interval: null, unitAmount: 29900 }] },
   { id: "templates", kind: "service", name: "Custom template pack", tagline: "Three summary templates written for your calls (sales, support, interviews…).", prices: [{ key: "svc_templates", interval: null, unitAmount: 14900 }] },
   { id: "integration", kind: "service", name: "Custom integration", tagline: "We connect Echo to your platform with the API and webhooks. Scoped on a call first.", prices: [{ key: "svc_integration", interval: null, unitAmount: 150000 }] },
