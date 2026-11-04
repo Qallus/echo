@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bot, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users } from "lucide-react";
+import { ArrowLeft, Bot, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users, Smartphone } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarTrigger, useSidebar,
@@ -25,6 +25,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { href: "/admin/bookings", label: "Bookings", icon: CalendarDays, permission: "crm.view" },
       { href: "/admin/contacts", label: "Contacts", icon: Contact, permission: "crm.view" },
       { href: "/admin/leads", label: "Leads", icon: Magnet, permission: "crm.view" },
+      { href: "/admin/waitlist", label: "App waitlist", icon: Smartphone, permission: "comms.view" },
       { href: "/admin/pipeline", label: "Pipeline", icon: SquareKanban, permission: "crm.view" },
       { href: "/admin/plans", label: "Plans", icon: ListChecks, permission: "crm.view" },
       { href: "/admin/workspace", label: "Workspace", icon: NotebookPen, permission: "crm.view" },

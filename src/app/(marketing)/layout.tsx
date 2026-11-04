@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppBadges } from "@/components/marketing/app-badges";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
 import { CartButton } from "@/components/store/store";
 import { CatalogSync } from "@/components/store/catalog-sync";
@@ -56,6 +57,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <span className="font-semibold tracking-[0.2em]">ECHO</span>
             </div>
             <p className="max-w-xs text-muted-foreground">Recordings, transcripts and summaries in one place.</p>
+            <AppBadges source="footer" signedIn={!!user} className="pt-2" />
           </div>
           <nav className="grid grid-cols-2 gap-x-10 gap-y-6 sm:ml-auto sm:flex">
             <div className="space-y-2">

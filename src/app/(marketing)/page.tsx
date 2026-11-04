@@ -3,6 +3,7 @@ import {
   Briefcase, FileAudio, Lock, MessageSquareText, Mic, PictureInPicture2, Plug, Search, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppBadges } from "@/components/marketing/app-badges";
 import { HeroDemo } from "@/components/marketing/hero-demo/hero-demo";
 
 export const metadata = {
@@ -50,6 +51,7 @@ export default function LandingPage() {
           <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Start free trial</Button>
           <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/#how" />}>See how it works</Button>
         </div>
+        <AppBadges source="home-hero" className="mt-6 justify-center" />
       </section>
 
       <section className="px-4 pb-20 sm:px-6"><HeroDemo /></section>
@@ -150,6 +152,8 @@ export default function LandingPage() {
           <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Start free trial</Button>
           <Button size="lg" variant="ghost" nativeButton={false} render={<Link href="/pricing" />}>See pricing</Button>
         </div>
+        <p className="mt-8 text-sm text-muted-foreground">Echo for your phone</p>
+        <AppBadges source="home-cta" className="mt-3 justify-center" />
       </section>
     </>
   );

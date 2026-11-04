@@ -1,3 +1,4 @@
+import { AppBadges } from "@/components/marketing/app-badges";
 import { PlanSection, ProductGrid } from "@/components/store/store";
 
 export const metadata = {
@@ -19,6 +20,8 @@ export default function PricingPage() {
       <header className="text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Simple plans that grow with your team</h1>
         <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Start free. Upgrade when you need more minutes, a shared workspace or to plug Echo into the rest of your stack.</p>
+        <p className="mt-6 text-sm text-muted-foreground">One account on the web and on your phone</p>
+        <AppBadges source="pricing" className="mt-3 justify-center" />
       </header>
 
       <section className="mt-12"><PlanSection /></section>
