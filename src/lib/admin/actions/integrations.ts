@@ -17,6 +17,11 @@ type Result = { ok?: string; error?: string };
 
 const done = (r: Result): Result => { invalidateSecrets(); revalidatePath("/admin", "layout"); return r; };
 
+// Insert-or-update goes through public.admin_save_secret: a direct upsert
+// would need read access to the encrypted column, which the API never has.
+const saveSecret = (supabase: Awaited<ReturnType<typeof createClient>>, key: string, ciphertext: string, hint: string) =>
+  supabase.rpc("admin_save_secret", { p_key: key, p_ciphertext: ciphertext, p_hint: hint });
+
 // Saves the filled-in fields of one service. Blank fields are left as they are.
 export async function saveIntegration(serviceId: string, values: Record<string, string>): Promise<Result> {
   await requireStaff("settings.manage");
@@ -29,8 +34,10 @@ export async function saveIntegration(serviceId: string, values: Record<string, 
   });
   if (!rows.length) return { error: "Nothing to save. Fill in at least one field." };
   const supabase = await createClient();
-  const { error } = await supabase.from("platform_secrets").upsert(rows, { onConflict: "key" });
-  if (error) return { error: error.message };
+  for (const r of rows) {
+    const { error } = await saveSecret(supabase, r.key, r.ciphertext, r.hint);
+    if (error) return { error: error.message };
+  }
   await adminAudit(supabase, "integrations.save", { type: "integration", id: serviceId }, { keys: rows.map((r) => r.key) });
   return done({ ok: `${service.name} saved. In use within a minute.` });
 }
@@ -51,7 +58,7 @@ export async function generateCronSecret(): Promise<Result & { value?: string }>
   await requireStaff("settings.manage");
   const value = randomBytes(32).toString("base64url");
   const supabase = await createClient();
-  const { error } = await supabase.from("platform_secrets").upsert({ key: "CRON_SECRET", ciphertext: encryptKey(value), hint: `••••${last4(value)}` }, { onConflict: "key" });
+  const { error } = await saveSecret(supabase, "CRON_SECRET", encryptKey(value), `••••${last4(value)}`);
   if (error) return { error: error.message };
   await adminAudit(supabase, "integrations.cron.generate", { type: "integration", id: "CRON_SECRET" });
   done({});
