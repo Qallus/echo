@@ -1,0 +1,69 @@
+import { verifyTwilio } from "@/lib/comms/twilio";
+import { isUuid } from "@/lib/data";
+import { gatewayConfig } from "@/lib/redial/gateway";
+import { addAgent, aiGone, liveEvent, type Session } from "@/lib/redial/live";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+// Conference status callback for Redial conference calls (signed by Twilio),
+// plus the AI leg's call status (leg=agent). Records who is on the call, adds
+// the AI once the caller is in, and hands the caller back when the AI leaves.
+
+const ROLES = ["caller", "agent"];
+
+export async function POST(req: Request) {
+  const p = await verifyTwilio(req);
+  if (!p) return new Response("Invalid signature", { status: 403 });
+  const url = new URL(req.url);
+  const id = url.searchParams.get("call") ?? "";
+  if (!isUuid(id)) return new Response(null, { status: 204 });
+  const db = createAdminClient();
+  const { data } = await db.from("redial_live_sessions").select("id, call_id, line_id, conference_sid, caller_call_sid, agent_call_sid, state, ai_state, line:redial_lines(number)").eq("call_id", id).maybeSingle();
+  if (!data) return new Response(null, { status: 204 });
+  const s = data as unknown as Session & { line: { number: string } };
+
+  // The AI leg ended. If it never joined the conference (no answer, error),
+  // the leave event won't come, so hand the caller back here.
+  if (url.searchParams.get("leg") === "agent") {
+    if (s.ai_state === "joining" || s.ai_state === "pending") await aiGone(db, s, "failed", `AI leg ${p.CallStatus ?? "ended"} before joining`);
+    return new Response(null, { status: 204 });
+  }
+
+  const now = new Date().toISOString();
+  const label = p.ParticipantLabel ?? "";
+  const role = ROLES.includes(label) ? label : "member";
+  switch (p.StatusCallbackEvent) {
+    case "conference-start":
+      await db.from("redial_live_sessions").update({ conference_sid: p.ConferenceSid, state: "live" }).eq("id", s.id).eq("state", "starting");
+      await liveEvent(db, s, "conference.start");
+      break;
+    case "participant-join": {
+      if (!p.CallSid) break;
+      await db.from("redial_live_participants").upsert({ session_id: s.id, line_id: s.line_id, role, call_sid: p.CallSid, muted: p.Muted === "true", status: "joined" }, { onConflict: "call_sid" });
+      await liveEvent(db, s, "participant.join", { role });
+      if (role === "caller") {
+        const gw = await gatewayConfig();
+        if (gw.aiApp && p.ConferenceSid) await addAgent(db, { ...s, conference_sid: p.ConferenceSid }, p.ConferenceSid, gw.aiApp, s.line.number);
+        else await aiGone(db, s, "failed", "AI participant app isn't set up");
+      } else if (role === "agent") {
+        await db.from("redial_live_sessions").update({ ai_state: "active", agent_call_sid: p.CallSid }).eq("id", s.id).eq("ai_state", "joining");
+      }
+      break;
+    }
+    case "participant-leave":
+      if (!p.CallSid) break;
+      await db.from("redial_live_participants").update({ status: "left", left_at: now }).eq("call_sid", p.CallSid);
+      await liveEvent(db, s, "participant.leave", { role });
+      if (role === "agent") await aiGone(db, s, "left");
+      break;
+    case "participant-mute":
+    case "participant-unmute":
+      if (p.CallSid) await db.from("redial_live_participants").update({ muted: p.StatusCallbackEvent === "participant-mute" }).eq("call_sid", p.CallSid);
+      break;
+    case "conference-end":
+      await db.from("redial_live_sessions").update({ state: "ended", ended_at: now }).eq("id", s.id);
+      await db.from("redial_live_participants").update({ status: "left", left_at: now }).eq("session_id", s.id).eq("status", "joined");
+      await liveEvent(db, s, "conference.end", { reason: p.ReasonConferenceEnded ?? null });
+      break;
+  }
+  return new Response(null, { status: 204 });
+}

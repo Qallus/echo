@@ -6,9 +6,12 @@
 // <Parameter name="token">. On "start" the gateway asks Echo for the call's
 // session (POST /api/webhooks/redial/session, HMAC-signed); Echo checks the
 // token and returns the instructions, voice, tools, time limit and xAI key.
-// Tool calls and the transcript go back to /api/webhooks/redial/result.
-// Closing the stream hands the call back to Echo's TwiML (<Redirect>), which
-// rings the owner if the assistant asked to connect, or hangs up.
+// Tool calls and the transcript go back to /api/webhooks/redial/result, and
+// each line of the transcript is also sent as it's spoken (the live view).
+// Closing the stream hands the call back to Echo: on the direct path the
+// caller's TwiML continues (<Redirect>); on a conference call the AI's own
+// leg hangs up and Echo moves the caller on. Either way Echo rings the owner
+// if the assistant asked to connect, or hangs up.
 //
 // Env: APP_URL (https://echo.redial.si), REDIAL_GATEWAY_SECRET (same value as
 // Admin -> Settings -> Integrations -> Redial), PORT (8080), MAX_CALLS (20).
@@ -55,6 +58,10 @@ wss.on("connection", (tw) => {
   const timers = [];
   const toTwilio = (m) => { if (tw.readyState === WebSocket.OPEN) tw.send(JSON.stringify(m)); };
   const toXai = (m) => { if (xai?.readyState === WebSocket.OPEN) xai.send(JSON.stringify(m)); };
+  const addTurn = (role, text) => {
+    transcript.push({ role, text });
+    if (callId) echo("result", { callId, turn: { role, text } }).catch((e) => log(callId, "turn failed:", e.message));
+  };
   const report = (extra = {}) => callId && echo("result", { callId, transcript, ...extra }).catch((e) => log(callId, "result failed:", e.message));
 
   // Hand the call back to Echo after the last words have played.
@@ -146,11 +153,11 @@ wss.on("connection", (tw) => {
         case "response.output_audio_transcript.done": {
           const text = (m.transcript ?? said.get(m.response_id) ?? "").trim();
           said.delete(m.response_id);
-          if (text) transcript.push({ role: "assistant", text });
+          if (text) addTurn("assistant", text);
           break;
         }
         case "conversation.item.input_audio_transcription.completed":
-          if (m.transcript?.trim()) transcript.push({ role: "caller", text: m.transcript.trim() });
+          if (m.transcript?.trim()) addTurn("caller", m.transcript.trim());
           break;
         case "response.output_item.done":
           if (m.item?.type === "function_call") onTool(m.item);

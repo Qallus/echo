@@ -5,7 +5,8 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { assignRedialLine, removeRedialLine } from "@/lib/admin/actions/redial";
+import { Switch } from "@/components/ui/switch";
+import { assignRedialLine, removeRedialLine, setRedialRouting } from "@/lib/admin/actions/redial";
 
 export function AssignLine() {
   const [email, setEmail] = useState("");
@@ -34,5 +35,19 @@ export function RemoveLine({ id, number }: { id: string; number: string }) {
       onClick={() => { if (confirm(`Remove ${number}? Calls to it will stop being answered, and the member's call history for it is deleted.`)) start(async () => { const r = await removeRedialLine(id); if (r.error) alert(r.error); }); }}>
       <Trash2 />
     </Button>
+  );
+}
+
+export function RoutingSwitch({ id, on, ready }: { id: string; on: boolean; ready: boolean }) {
+  const [value, setValue] = useState(on);
+  const [pending, start] = useTransition();
+  return (
+    <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title={ready ? undefined : "Add the AI participant TwiML App SID in Settings → Integrations first"}>
+      <Switch checked={value} disabled={pending || (!ready && !value)} onCheckedChange={(v) => {
+        setValue(v);
+        start(async () => { const r = await setRedialRouting(id, v); if (r.error) { setValue(!v); alert(r.error); } });
+      }} />
+      Conference
+    </label>
   );
 }

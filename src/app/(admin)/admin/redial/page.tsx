@@ -6,7 +6,7 @@ import { gatewayConfig } from "@/lib/redial/gateway";
 import { redialUsage, type RedialUsage } from "@/lib/redial/usage";
 import { siteUrl } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
-import { AssignLine, RemoveLine } from "./line-forms";
+import { AssignLine, RemoveLine, RoutingSwitch } from "./line-forms";
 
 export const metadata = { title: "Redial · Admin · Echo" };
 
@@ -18,11 +18,14 @@ const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$
 export default async function RedialAdminPage() {
   const staff = await requireStaff("users.view");
   const supabase = await createClient();
-  const [{ data, error }, gw] = await Promise.all([supabase.rpc("admin_redial_lines"), gatewayConfig()]);
+  const [{ data, error }, gw, { data: routing }] = await Promise.all([
+    supabase.rpc("admin_redial_lines"), gatewayConfig(), supabase.from("redial_lines").select("id, live_routing"),
+  ]);
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Row[];
   const usage = new Map<string, RedialUsage | null>(await Promise.all([...new Set(rows.map((r) => r.owner_id))].map(async (id) => [id, await redialUsage(supabase, id)] as const)));
   const manage = can(staff, "users.manage");
+  const live = new Set((routing ?? []).filter((r) => r.live_routing).map((r) => r.id));
 
   return (
     <AdminPage title="Redial" description="AI call screening lines. Call content stays private to each member.">
@@ -54,6 +57,7 @@ export default async function RedialAdminPage() {
                   {!r.has_destination && " · no ring number"} · {r.calls_30d} calls
                   {usage.get(r.owner_id) && ` · ${usage.get(r.owner_id)!.used_minutes}/${usage.get(r.owner_id)!.allowance} min${usage.get(r.owner_id)!.free ? " (free)" : ""}`}{r.last_call_at && <> · last <LocalDate iso={r.last_call_at} short /></>}
                 </span>
+                {manage ? <RoutingSwitch id={r.id} on={live.has(r.id)} ready={Boolean(gw.aiApp)} /> : live.has(r.id) && <span className="text-xs text-muted-foreground">Conference</span>}
                 {manage && <RemoveLine id={r.id} number={pretty(r.number)} />}
               </li>
             ))}
@@ -68,6 +72,14 @@ export default async function RedialAdminPage() {
             <p className="font-medium">Set these on the number in the Twilio console (Phone Numbers → the number → Voice):</p>
             <p className="text-muted-foreground">A call comes in → Webhook, POST: <code className="break-all">{siteUrl("/api/webhooks/twilio/redial/voice")}</code></p>
             <p className="text-muted-foreground">Call status changes → POST: <code className="break-all">{siteUrl("/api/webhooks/twilio/redial/status")}</code></p>
+          </div>
+          <div className="space-y-1 rounded-xl border p-4 text-sm">
+            <p className="font-medium">Conference routing (the AI joins as its own participant):</p>
+            <p className="text-muted-foreground">Create a TwiML App in Twilio with Voice Request URL, POST: <code className="break-all">{siteUrl("/api/webhooks/twilio/redial/agent")}</code></p>
+            <p className="text-muted-foreground">
+              Put its SID (AP…) in <Link href="/admin/settings?tab=integrations" className="underline">Settings → Integrations → Redial</Link>
+              {gw.aiApp ? " (set)" : " (not set yet)"}, then turn on Conference for a line above. Lines without it keep the direct path.
+            </p>
           </div>
         </Section>
       )}

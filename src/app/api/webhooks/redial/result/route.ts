@@ -8,9 +8,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // assistant saves details, asks to connect, or the stream ends. Only calls
 // that are still being screened can be changed, except the AI time, which
 // is recorded once at the end and may trigger a low-minutes notification.
+// `turn` is one line of the live transcript, sent as it's spoken.
 
 type Body = {
-  callId?: string; connect?: boolean; transcript?: Turn[]; aiSeconds?: number;
+  callId?: string; connect?: boolean; transcript?: Turn[]; aiSeconds?: number; turn?: Turn;
   details?: { caller_name?: string; purpose?: string; message?: string; callback_number?: string; category?: string; urgency?: string; summary?: string };
 };
 
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   const body = (await verifyGateway(req)) as Body | null;
   if (!body?.callId || !isUuid(body.callId)) return Response.json({ error: "Not allowed." }, { status: 403 });
   const db = createAdminClient();
+  if (body.turn) return liveTurn(db, body.callId, body.turn);
   if (typeof body.aiSeconds === "number" && body.aiSeconds > 0) await recordAiTime(db, body.callId, Math.min(3600, Math.round(body.aiSeconds)));
   const patch: Record<string, unknown> = {};
   if (Array.isArray(body.transcript)) {
@@ -39,6 +41,14 @@ export async function POST(req: Request) {
   if (!Object.keys(patch).length) return Response.json({ ok: true });
   const { error } = await db.from("redial_calls").update(patch).eq("id", body.callId).eq("status", "screening");
   if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true });
+}
+
+async function liveTurn(db: ReturnType<typeof createAdminClient>, callId: string, t: Turn) {
+  const text = typeof t.text === "string" ? t.text.trim().slice(0, 2000) : "";
+  if (!text || (t.role !== "caller" && t.role !== "assistant")) return Response.json({ ok: true });
+  const { data: call } = await db.from("redial_calls").select("line_id").eq("id", callId).eq("status", "screening").maybeSingle();
+  if (call) await db.from("redial_live_turns").insert({ call_id: callId, line_id: call.line_id, role: t.role, text });
   return Response.json({ ok: true });
 }
 

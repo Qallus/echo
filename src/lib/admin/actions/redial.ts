@@ -33,3 +33,15 @@ export async function removeRedialLine(id: string): Promise<Result> {
   revalidatePath("/admin/redial");
   return { ok: "Line removed, with its call history." };
 }
+
+// Conference routing for one line: screened calls run as a conference with
+// the AI as its own participant (needs REDIAL_AI_APP_SID). Off by default.
+export async function setRedialRouting(id: string, on: boolean): Promise<Result> {
+  await requireStaff("users.manage");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_redial_set_routing", { p_line: id, p_on: on });
+  if (error) return { error: error.message };
+  await adminAudit(supabase, "redial.line.routing", { type: "redial_line", id }, { live_routing: on });
+  revalidatePath("/admin/redial");
+  return { ok: on ? "Conference routing on." : "Conference routing off." };
+}

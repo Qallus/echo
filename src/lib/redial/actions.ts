@@ -145,3 +145,34 @@ export async function removeShare(grantId: string): Promise<Result> {
   const { error } = await supabase.from("redial_line_grants").delete().eq("id", grantId);
   return error ? { error: error.message } : done("Removed.");
 }
+
+// Calls happening now on a line, for the live view (polled while Calls is
+// open). RLS limits it to lines the member can see; live transcript lines
+// only come back with the read_transcript capability.
+export type LiveCall = {
+  id: string; from_number: string | null; caller_id_name: string | null; caller_name: string | null; status: string; started_at: string;
+  session: { state: string; ai_state: string; participants: { role: string; status: string; muted: boolean }[] } | null;
+  turns: { id: number; role: "caller" | "assistant"; text: string }[];
+};
+
+export async function liveCalls(lineId: string): Promise<LiveCall[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const { data: calls } = await supabase.from("redial_calls").select("id, from_number, caller_id_name, caller_name, status, started_at")
+    .eq("line_id", lineId).in("status", ["ringing", "screening", "connecting"]).gte("started_at", since).order("started_at", { ascending: false }).limit(5);
+  if (!calls?.length) return [];
+  const ids = calls.map((c) => c.id);
+  const [{ data: sessions }, { data: turns }] = await Promise.all([
+    supabase.from("redial_live_sessions").select("call_id, state, ai_state, participants:redial_live_participants(role, status, muted)").in("call_id", ids),
+    supabase.from("redial_live_turns").select("id, call_id, role, text").in("call_id", ids).order("id").limit(400),
+  ]);
+  return calls.map((c) => {
+    const s = sessions?.find((x) => x.call_id === c.id);
+    return {
+      ...c,
+      session: s ? { state: s.state, ai_state: s.ai_state, participants: s.participants ?? [] } : null,
+      turns: (turns ?? []).filter((t) => t.call_id === c.id).map(({ id, role, text }) => ({ id, role: role as "caller" | "assistant", text })),
+    };
+  });
+}

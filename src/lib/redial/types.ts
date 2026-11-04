@@ -10,6 +10,7 @@ export type Category = "personal" | "business" | "sales" | "spam" | "unknown";
 export type Line = {
   id: string; owner_id: string; label: string; number: string; forward_to: string | null; mode: Mode; paused: boolean; allow_connect: boolean;
   assistant_name: string; voice: string; greeting: string | null; about: string | null; max_seconds: number;
+  live_routing: boolean;
 };
 export type ListEntry = { id: string; line_id: string; number: string; kind: ListKind; label: string | null; created_at: string };
 export type Turn = { role: "caller" | "assistant"; text: string };

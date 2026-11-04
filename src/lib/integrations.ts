@@ -73,6 +73,7 @@ export const SERVICES: Service[] = [
     fields: [
       { key: "REDIAL_GATEWAY_URL", label: "Gateway URL", placeholder: "wss://voice.redial.si", required: true },
       { key: "REDIAL_GATEWAY_SECRET", label: "Shared secret (same value in the gateway's Coolify variables)", secret: true, required: true },
+      { key: "REDIAL_AI_APP_SID", label: "AI participant TwiML App SID (AP…), for conference routing", placeholder: "AP…" },
     ],
   },
   {

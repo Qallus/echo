@@ -1,6 +1,6 @@
 import { e164, twiml, verifyTwilio } from "@/lib/comms/twilio";
 import { callToken, gatewayConfig } from "@/lib/redial/gateway";
-import { ringOwner, stream, voicemail } from "@/lib/redial/twiml";
+import { conference, conferenceName, ringOwner, stream, voicemail } from "@/lib/redial/twiml";
 import { decide, type Line } from "@/lib/redial/types";
 import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -9,7 +9,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Signed by Twilio. Applies the line's rules: block, ring through, or let the
 // AI assistant screen it through the voice gateway. If the gateway isn't set
 // up, or this month's screening minutes are used up, unknown callers can
-// leave a voicemail instead.
+// leave a voicemail instead. Lines with live routing run the screening as a
+// conference (caller and AI as separate participants); otherwise, or if that
+// can't start, the call streams to the gateway directly.
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
@@ -42,7 +44,16 @@ export async function POST(req: Request) {
   switch (action) {
     case "block": return twiml(`<Reject reason="busy"/>`);
     case "forward": return twiml(ringOwner(line, call.id, false));
-    case "screen": return twiml(stream(gw.url!, callToken(gw.secret!, call.id), call.id));
+    case "screen": {
+      if (line.live_routing && gw.aiApp) {
+        const { error: e } = await db.from("redial_live_sessions").upsert(
+          { call_id: call.id, line_id: line.id, conference_name: conferenceName(call.id), caller_call_sid: p.CallSid },
+          { onConflict: "call_id", ignoreDuplicates: true });
+        if (!e) return twiml(conference(call.id));
+        console.error("[redial voice] live session", e.message);
+      }
+      return twiml(stream(gw.url!, callToken(gw.secret!, call.id), call.id));
+    }
     default: return twiml(voicemail(call.id, `Hi, you've reached ${line.label === "My line" ? "this number" : line.label}. Please leave your name, number and a short message after the tone.`));
   }
 }

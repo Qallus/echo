@@ -7,9 +7,11 @@ import { secrets } from "@/lib/secrets";
 // the gateway's requests back to Echo are signed with the same secret.
 
 export async function gatewayConfig() {
-  const s = await secrets("REDIAL_GATEWAY_URL", "REDIAL_GATEWAY_SECRET", "XAI_API_KEY");
+  const s = await secrets("REDIAL_GATEWAY_URL", "REDIAL_GATEWAY_SECRET", "XAI_API_KEY", "REDIAL_AI_APP_SID");
   const url = s.REDIAL_GATEWAY_URL?.replace(/\/$/, "") ?? null;
-  return { url, secret: s.REDIAL_GATEWAY_SECRET ?? null, xaiKey: s.XAI_API_KEY ?? null, ready: Boolean(url && s.REDIAL_GATEWAY_SECRET && s.XAI_API_KEY) };
+  // aiApp: the TwiML App the AI joins conference calls through (step 2).
+  const aiApp = /^AP[0-9a-f]{32}$/i.test(s.REDIAL_AI_APP_SID ?? "") ? s.REDIAL_AI_APP_SID! : null;
+  return { url, secret: s.REDIAL_GATEWAY_SECRET ?? null, xaiKey: s.XAI_API_KEY ?? null, aiApp, ready: Boolean(url && s.REDIAL_GATEWAY_SECRET && s.XAI_API_KEY) };
 }
 
 const mac = (secret: string, data: string) => createHmac("sha256", secret).update(data).digest("hex");
