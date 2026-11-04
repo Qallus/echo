@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/data";
 import { toE164 } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
+import { SHAREABLE } from "./features";
 import { VOICES, type Category, type ListKind, type Mode } from "./types";
 
 // Member actions for Redial call screening. Everything runs as the signed-in
@@ -21,6 +22,7 @@ export async function saveLine(lineId: string, s: LineSettings): Promise<Result>
   await requireUser();
   const forward = s.forward_to.trim() ? toE164(s.forward_to) : null;
   if (s.forward_to.trim() && !forward) return { error: "Enter the phone number to ring, e.g. (480) 555-0142." };
+  if (s.mode === "spam") return { error: "Screening suspected spam needs a spam-check service, which isn't connected yet." };
   if (!["all", "unknown", "off"].includes(s.mode)) return { error: "Choose a screening mode." };
   if (!VOICES.some((v) => v.id === s.voice)) return { error: "Choose a voice." };
   if (!s.assistant_name.trim()) return { error: "Give your assistant a name." };
@@ -112,4 +114,34 @@ function zonedToUtc(local: string, tz: string): string | null {
   } catch {
     return null;
   }
+}
+
+// Sharing a line: the owner grants someone in one of their workspaces
+// specific capabilities (the database re-checks ownership and workspace).
+const cleanCaps = (caps: string[]) => [...new Set(caps)].filter((c) => SHAREABLE.some((x) => x.id === c));
+
+export async function shareLine(lineId: string, email: string, caps: string[]): Promise<Result> {
+  await requireUser();
+  const capabilities = cleanCaps(caps);
+  if (!/^\S+@\S+\.\S+$/.test(email.trim())) return { error: "Enter their email address." };
+  if (!capabilities.length) return { error: "Choose at least one thing they can do." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("redial_grant", { p_line: lineId, p_email: email.trim(), p_capabilities: capabilities });
+  return error ? { error: error.message } : done("Shared.");
+}
+
+export async function updateShare(grantId: string, caps: string[]): Promise<Result> {
+  await requireUser();
+  const capabilities = cleanCaps(caps);
+  if (!capabilities.length) return { error: "Leave at least one option on, or remove them." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("redial_line_grants").update({ capabilities }).eq("id", grantId);
+  return error ? { error: error.message } : done("Updated.");
+}
+
+export async function removeShare(grantId: string): Promise<Result> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("redial_line_grants").delete().eq("id", grantId);
+  return error ? { error: error.message } : done("Removed.");
 }

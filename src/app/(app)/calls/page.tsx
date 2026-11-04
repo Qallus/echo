@@ -17,7 +17,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
   const [{ line: lineId, call, tab }, lines, profile] = await Promise.all([searchParams, myLines(), getMyProfile()]);
   if (!lines.length) notFound();
   const line = lines.find((l) => l.id === lineId) ?? lines[0];
-  const [detail, usage] = await Promise.all([lineDetail(line.id), createClient().then((s) => redialUsage(s, user.id))]);
+  const [detail, usage] = await Promise.all([lineDetail(line.id, line.access), line.access.owner ? createClient().then((s) => redialUsage(s, user.id)) : Promise.resolve(null)]);
   const pretty = line.number.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 
   return (
@@ -37,7 +37,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           </nav>
         )}
       </div>
-      <CallsView key={line.id} line={line} {...detail} usage={usage} initialCall={call ?? null} initialTab={tab ?? null}
+      <CallsView key={line.id} line={line} access={line.access} {...detail} usage={usage} initialCall={call ?? null} initialTab={tab ?? null}
         ownerFirst={profile.fullName?.trim().split(/\s+/)[0] ?? "you"} />
     </div>
   );

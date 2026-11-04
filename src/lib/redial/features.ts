@@ -1,0 +1,29 @@
+// Redial feature names and per-line capabilities, in one place. The live-call
+// names (Insider, Audible, Gavel, Directory, Mirror) are working names and
+// will probably change: rename them here.
+
+export const FEATURES = {
+  insider: { name: "Insider", action: "Listen live", detail: "Hear the live call. Your microphone isn't sent." },
+  audible: { name: "Audible", action: "Guide agent", detail: "Send your assistant private directions while it talks." },
+  gavel: { name: "Gavel", action: "Take over", detail: "Remove the assistant and talk to the caller on the same call." },
+  directory: { name: "Directory", action: "Transfer", detail: "Connect the caller to an approved person or number." },
+  mirror: { name: "Mirror", action: "Assist me", detail: "Your assistant listens silently while you talk and suggests what you need." },
+} as const;
+
+// Mirrors redial_line_grants.capabilities. `live: true` ones do nothing until
+// the live-call controls ship, so the sharing screen doesn't offer them yet.
+export const CAPABILITIES = [
+  { id: "read_summary", label: "See calls and summaries", live: false },
+  { id: "read_transcript", label: "Read transcripts and play voicemails", live: false },
+  { id: "manage_rules", label: "Change rules, lists and the assistant", live: false },
+  { id: "monitor_live", label: `${FEATURES.insider.name}: listen live`, live: true },
+  { id: "takeover_live", label: `${FEATURES.gavel.name}: take over calls`, live: true },
+  { id: "direct_agent", label: `${FEATURES.audible.name}: guide the assistant`, live: true },
+  { id: "transfer_call", label: `${FEATURES.directory.name}: transfer calls`, live: true },
+  { id: "manage_directory", label: `${FEATURES.directory.name}: edit destinations`, live: true },
+  { id: "dial_custom_destination", label: `${FEATURES.directory.name}: transfer to a one-time number`, live: true },
+  { id: "mirror", label: `${FEATURES.mirror.name}: use the call assistant`, live: true },
+] as const;
+export type Capability = (typeof CAPABILITIES)[number]["id"];
+export const SHAREABLE = CAPABILITIES.filter((c) => !c.live);
+export const capabilityLabel = (id: string) => CAPABILITIES.find((c) => c.id === id)?.label ?? id;

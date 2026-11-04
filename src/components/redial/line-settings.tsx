@@ -48,7 +48,7 @@ export function RulesSettings({ line, form, entries }: { line: Line; form: LineF
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Screening</h2>
           <div className="space-y-2" role="radiogroup" aria-label="Screening mode">
-            {MODES.map((m) => (
+            {MODES.filter((m) => !m.needsSpamCheck || m.id === s.mode).map((m) => (
               <label key={m.id} className={cn("flex cursor-pointer gap-3 rounded-xl border p-3", s.mode === m.id && "border-primary bg-primary/5")}>
                 <input type="radio" name="mode" className="mt-1" checked={s.mode === m.id} onChange={() => set({ mode: m.id })} />
                 <span><span className="block text-sm font-medium">{m.label}</span><span className="block text-xs text-muted-foreground">{m.detail}</span></span>

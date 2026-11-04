@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LocalDate } from "@/components/local-date";
 import { addListEntry, updateCall, voicemailUrl } from "@/lib/redial/actions";
-import { CATEGORY_LABEL, STATUS_LABEL, type Call, type Callback, type Category, type Line, type ListEntry } from "@/lib/redial/types";
+import { CATEGORY_LABEL, STATUS_LABEL, allows, type Access, type Call, type Callback, type Category, type Line, type ListEntry } from "@/lib/redial/types";
 import type { RedialUsage } from "@/lib/redial/usage";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { CallbackDialog, Callbacks } from "./callbacks";
+import { LinePeople } from "./line-people";
+import type { LinePerson } from "@/lib/redial/data";
 import { AssistantSettings, RulesSettings, useLineForm } from "./line-settings";
 
 const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30";
@@ -23,9 +25,10 @@ const CATEGORY_TONE: Record<Category, string> = {
   sales: "bg-amber-500/15 text-amber-800 dark:text-amber-300", spam: "bg-red-500/15 text-red-700 dark:text-red-300", unknown: "bg-muted text-muted-foreground",
 };
 
-export function CallsView({ line, calls, entries, callbacks, initialCall, initialTab, ownerFirst, usage }: {
-  line: Line; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null;
+export function CallsView({ line, access, calls, entries, callbacks, people, initialCall, initialTab, ownerFirst, usage }: {
+  line: Line; access: Access; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; people: LinePerson[]; initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null;
 }) {
+  const manage = allows(access, "manage_rules");
   const form = useLineForm(line);
   const [filter, setFilter] = useState<"inbox" | "messages" | "archived">("inbox");
   const [selected, setSelected] = useState<string | null>(initialCall ?? calls.find((c) => !c.archived_at)?.id ?? null);
@@ -38,13 +41,15 @@ export function CallsView({ line, calls, entries, callbacks, initialCall, initia
     <div className="space-y-4">
       {line.paused && <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">Screening is paused: calls ring straight through. Turn it back on under Rules.</p>}
       {usage && <UsageBar usage={usage} />}
-      {needsSetup && !line.paused && <p className="rounded-xl border p-3 text-sm">Add the phone number your assistant should ring (usually your cell) under <span className="font-medium">Rules</span>, so it can put important calls through.</p>}
-      <Tabs defaultValue={["inbox", "callbacks", "rules", "assistant"].includes(initialTab ?? "") ? initialTab! : "inbox"}>
+      {manage && needsSetup && !line.paused && <p className="rounded-xl border p-3 text-sm">Add the phone number your assistant should ring (usually your cell) under <span className="font-medium">Rules</span>, so it can put important calls through.</p>}
+      {!access.owner && <p className="rounded-xl border p-3 text-sm text-muted-foreground">This line is shared with you{manage ? "" : ". You can see its calls; only the owner changes its settings"}.</p>}
+      <Tabs defaultValue={[...["inbox", "callbacks"], ...(manage ? ["rules", "assistant"] : []), ...(access.owner ? ["people"] : [])].includes(initialTab ?? "") ? initialTab! : "inbox"}>
         <TabsList variant="line">
           <TabsTrigger value="inbox">Inbox</TabsTrigger>
           <TabsTrigger value="callbacks">Callbacks{openCallbacks ? ` (${openCallbacks})` : ""}</TabsTrigger>
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="assistant">Assistant</TabsTrigger>
+          {manage && <TabsTrigger value="rules">Rules</TabsTrigger>}
+          {manage && <TabsTrigger value="assistant">Assistant</TabsTrigger>}
+          {access.owner && <TabsTrigger value="people">People{people.length ? ` (${people.length})` : ""}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="inbox" className="pt-4">
@@ -82,21 +87,22 @@ export function CallsView({ line, calls, entries, callbacks, initialCall, initia
                 </ul>
               )}
             </div>
-            {call ? <CallDetail key={call.id} call={call} line={line} entries={entries} /> : (
+            {call ? <CallDetail key={call.id} call={call} line={line} entries={entries} manage={manage} /> : (
               <p className="hidden rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground lg:block">Choose a call to see what the caller said.</p>
             )}
           </div>
         </TabsContent>
 
         <TabsContent value="callbacks" className="pt-4"><Callbacks line={line} callbacks={callbacks} calls={calls} /></TabsContent>
-        <TabsContent value="rules" className="pt-4"><RulesSettings line={line} form={form} entries={entries} /></TabsContent>
-        <TabsContent value="assistant" className="pt-4"><AssistantSettings line={line} form={form} ownerFirst={ownerFirst} /></TabsContent>
+        {manage && <TabsContent value="rules" className="pt-4"><RulesSettings line={line} form={form} entries={entries} /></TabsContent>}
+        {manage && <TabsContent value="assistant" className="pt-4"><AssistantSettings line={line} form={form} ownerFirst={ownerFirst} /></TabsContent>}
+        {access.owner && <TabsContent value="people" className="pt-4"><LinePeople lineId={line.id} people={people} /></TabsContent>}
       </Tabs>
     </div>
   );
 }
 
-function CallDetail({ call: c, line, entries }: { call: Call; line: Line; entries: ListEntry[] }) {
+function CallDetail({ call: c, line, entries, manage }: { call: Call; line: Line; entries: ListEntry[]; manage: boolean }) {
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
   const [audio, setAudio] = useState<string | null>(null);
@@ -154,9 +160,9 @@ function CallDetail({ call: c, line, entries }: { call: Call; line: Line; entrie
         <select id="call-cat" className={SELECT} value={c.category ?? "unknown"} disabled={pending} onChange={(e) => act(() => updateCall(c.id, { category: e.target.value as Category }))}>
           {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => <option key={k} value={k}>{CATEGORY_LABEL[k]}</option>)}
         </select>
-        {c.from_number && listed?.kind !== "vip" && <Button size="sm" variant="ghost" disabled={pending} onClick={() => act(() => addListEntry(line.id, c.from_number!, "vip", who(c)))}><Star /> VIP</Button>}
-        {c.from_number && !listed && <Button size="sm" variant="ghost" disabled={pending} onClick={() => act(() => addListEntry(line.id, c.from_number!, "allow", who(c)))}><UserCheck /> Allow</Button>}
-        {c.from_number && listed?.kind !== "block" && (
+        {manage && c.from_number && listed?.kind !== "vip" && <Button size="sm" variant="ghost" disabled={pending} onClick={() => act(() => addListEntry(line.id, c.from_number!, "vip", who(c)))}><Star /> VIP</Button>}
+        {manage && c.from_number && !listed && <Button size="sm" variant="ghost" disabled={pending} onClick={() => act(() => addListEntry(line.id, c.from_number!, "allow", who(c)))}><UserCheck /> Allow</Button>}
+        {manage && c.from_number && listed?.kind !== "block" && (
           <Button size="sm" variant="ghost" disabled={pending} onClick={() => { if (confirm(`Block ${prettyNumber(c.from_number)}? Their calls will be rejected. You can undo this under Rules.`)) act(() => addListEntry(line.id, c.from_number!, "block", who(c))); }}><Ban /> Block</Button>
         )}
         {listed && <span className="text-xs text-muted-foreground">{listed.kind === "block" ? "Blocked" : listed.kind === "vip" ? "VIP" : "On your allow list"}</span>}
