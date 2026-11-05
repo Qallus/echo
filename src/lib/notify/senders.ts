@@ -12,7 +12,8 @@ export type SendResult = { ok: boolean; id?: string; error?: string; gone?: bool
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 // Echo-branded email, matching the auth email templates.
-export function emailHtml({ title, body, url, cta = "Open in Echo" }: { title: string; body?: string | null; url?: string | null; cta?: string }) {
+export function emailHtml({ title, body, url, cta = "Open in Echo", footer }: { title: string; body?: string | null; url?: string | null; cta?: string; footer?: string }) {
+  const foot = footer ? esc(footer) : `You're receiving this because of your Echo notification settings. <a href="${esc(siteUrl("/settings/notifications"))}" style="color:#737373">Manage notifications</a>`;
   return `<!doctype html><html><body style="margin:0;background:#f5f5f5;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#0a0a0a">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border:1px solid #e5e5e5;border-radius:16px">
@@ -20,7 +21,7 @@ export function emailHtml({ title, body, url, cta = "Open in Echo" }: { title: s
 <tr><td style="padding:20px 32px 0;font-size:20px;font-weight:600;line-height:1.3">${esc(title)}</td></tr>
 ${body ? `<tr><td style="padding:12px 32px 0;font-size:15px;line-height:1.6;color:#404040">${esc(body)}</td></tr>` : ""}
 ${url ? `<tr><td style="padding:24px 32px 0"><a href="${esc(url)}" style="display:inline-block;background:#0a0a0a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 20px;border-radius:10px">${esc(cta)}</a></td></tr>` : ""}
-<tr><td style="padding:28px 32px 28px;font-size:12px;color:#737373;border-top:1px solid #f0f0f0;margin-top:24px">You're receiving this because of your Echo notification settings. <a href="${esc(siteUrl("/settings/notifications"))}" style="color:#737373">Manage notifications</a></td></tr>
+<tr><td style="padding:28px 32px 28px;font-size:12px;color:#737373;border-top:1px solid #f0f0f0;margin-top:24px">${foot}</td></tr>
 </table></td></tr></table></body></html>`;
 }
 

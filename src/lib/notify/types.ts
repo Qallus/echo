@@ -6,6 +6,7 @@ export const NOTIFICATION_TYPES = [
   { type: "transcript_failed", label: "Transcription failed", desc: "A recording couldn't be transcribed." },
   { type: "summary_ready", label: "Summary added", desc: "A summary was written for one of your recordings." },
   { type: "member_joined", label: "Teammate joined", desc: "Someone joined a Business workspace you manage." },
+  { type: "recording_shared", label: "Recording shared with you", desc: "Someone shared one of their recordings with you." },
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]["type"] | "test";

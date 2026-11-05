@@ -52,7 +52,8 @@ export const FAQ_TOPICS: FaqTopic[] = [
     items: [
       { q: "What's the difference between Personal and Business?", a: "A Personal workspace is only yours. A Business workspace is shared with the people you invite, who can be owners, admins or members. You can move a recording between them at any time, and its audio moves with it.", tags: "team workspace invite members", home: true },
       { q: "How do I find an old conversation?", a: "Search looks through the titles and transcripts of everything you can access. You can also file recordings into folders, or just ask Ask Echo.", tags: "search find folders" },
-      { q: "Can I get a summary as a PDF?", a: "Yes. Every recording has a branded summary page you can print or save as a PDF.", tags: "export download report print" },
+      { q: "Can I share a recording with someone outside my team?", a: "Yes. Press Share on any recording. Make a link anyone can open, choosing what it shows (summary, transcript, highlights, audio) and whether it expires, or share it with people by email. They sign in to see it under Shared with me, read-only. You can turn off a link or stop sharing at any time.", tags: "share link public send client invite external", home: true },
+      { q: "Can I get a summary as a PDF?", a: "Yes. Every recording has a branded summary page you can print or save as a PDF, and you can download the transcript and summary as a text file.", tags: "export download report print txt" },
       { q: "What happens when I delete a recording?", a: "It goes to the trash first, so you can restore it if you change your mind.", tags: "delete trash restore" },
     ],
   },

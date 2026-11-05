@@ -22,6 +22,7 @@ import { Transcript } from "@/components/recording/transcript";
 import { EventDialog, blankDraft, type EventDraft } from "@/components/calendar/event-dialog";
 import { itemsFor } from "@/lib/visuals";
 import { TemplatePicker } from "@/components/recording/template-picker";
+import { ShareDialog } from "@/components/share/share-dialog";
 import { LocalDate } from "@/components/local-date";
 import { exportRecordings, moveRecordings, toggleActionItem } from "@/lib/actions";
 import { formatClock, formatDuration, spaceLabel } from "@/lib/format";
@@ -66,6 +67,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
   const [askOpen, setAskOpen] = useState(true);
   const [mobileAsk, setMobileAsk] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [vote, setVote] = useState<"up" | "down" | null>(null);
 
@@ -112,7 +114,8 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Button variant="outline" size="sm" aria-label="Share"><Share2 /> <span className="hidden sm:inline">Share</span></Button>
+            <Button variant="outline" size="sm" aria-label="Share" onClick={() => setShareOpen(true)}><Share2 /> <span className="hidden sm:inline">Share</span></Button>
+            <ShareDialog recordingId={r.id} open={shareOpen} onOpenChange={setShareOpen} canManage={space.role === "owner" || space.role === "admin"} />
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Export" />}><Download /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
