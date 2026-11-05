@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/#redial", label: "Redial" },
   { href: "/#how", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/faq", label: "FAQ" },
   { href: "/developers", label: "Developers" },
   { href: "/contact", label: "Contact" },
 ];

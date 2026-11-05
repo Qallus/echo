@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Briefcase, CalendarClock, FileAudio, Gavel, Headphones, Lock, MessageSquareLock, MessageSquareText, Mic, PhoneForwarded, PhoneIncoming,
   PictureInPicture2, Plug, Search, ShieldCheck, Sparkles, UsersRound,
@@ -5,6 +6,7 @@ import {
 import { Hero } from "@/components/marketing/hero";
 import { MobileAppSection } from "@/components/marketing/mobile-app-section";
 import { FEATURES as REDIAL } from "@/lib/redial/features";
+import { ALL_FAQ } from "@/lib/faq";
 
 export const metadata = {
   title: "Echo · Record every meeting. Let your AI assistant screen every call.",
@@ -45,16 +47,7 @@ const STEPS = [
   { n: "3", title: "Find, ask and share", desc: "Search across everything, ask questions in plain words, and keep your team in the loop." },
 ];
 
-const FAQ = [
-  { q: "Does Redial answer calls to my regular cell number?", a: "Only calls that reach your Redial number, or a cell that forwards to it. Installing the app doesn't intercept ordinary cell calls." },
-  { q: "Can I step into a call my assistant is handling?", a: "Yes. Listen in muted, send it private directions, take the call over or transfer it, all on the same call, so the caller never has to redial." },
-  { q: "Who can see my calls?", a: "Only you, unless you share a line. Then each person gets only what you choose: summaries, transcripts, listening or taking over." },
-  { q: "Who can hear my recordings?", a: "Recordings in your Personal workspace are only yours. Recordings in a Business workspace are shared with the people you invite to it. You can move a recording between them at any time, and its audio moves with it." },
-  { q: "Where is my audio stored?", a: "In a private storage bucket. Every request is checked against your workspace membership, so files are only reachable by people who belong to that workspace." },
-  { q: "How long can a recording be?", a: "Browser recordings are saved in a compact format, so about an hour and forty minutes fits in one transcription. Uploads can be up to 50 MB each." },
-  { q: "Which browsers work?", a: "Recording works in Chrome, Edge, Firefox and Safari. The always-on-top pop-out recorder needs Chrome or Edge on a computer." },
-  { q: "Can I use Echo from Claude?", a: "Yes. Echo includes a Claude connector, so you can search recordings, add notes and manage your backlog from Claude on the web, on your phone, or in Claude Code." },
-];
+const FAQ = ALL_FAQ.filter((f) => f.home);
 
 export default function LandingPage() {
   return (
@@ -174,6 +167,7 @@ export default function LandingPage() {
               </details>
             ))}
           </div>
+          <p className="mt-6 text-sm text-muted-foreground"><Link href="/faq" className="font-medium text-foreground underline underline-offset-2">See all questions</Link>, searchable by topic.</p>
         </div>
       </section>
     </>

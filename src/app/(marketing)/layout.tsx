@@ -30,6 +30,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <Link href="/#redial" className="hover:text-foreground">Redial</Link>
               <Link href="/#how" className="hover:text-foreground">How it works</Link>
               <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
+              <Link href="/faq" className="hover:text-foreground">FAQ</Link>
               <Link href="/developers" className="hover:text-foreground">Developers</Link>
               <Link href="/contact" className="hover:text-foreground">Contact</Link>
             </nav>
@@ -65,6 +66,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <p className="font-medium">Product</p>
               <Link href="/#features" className="block text-muted-foreground hover:text-foreground">Features</Link>
               <Link href="/pricing" className="block text-muted-foreground hover:text-foreground">Pricing</Link>
+              <Link href="/faq" className="block text-muted-foreground hover:text-foreground">FAQ</Link>
               <Link href="/developers" className="block text-muted-foreground hover:text-foreground">Developers</Link>
               <Link href="/contact" className="block text-muted-foreground hover:text-foreground">Contact</Link>
             </div>

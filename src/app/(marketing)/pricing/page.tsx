@@ -1,5 +1,7 @@
 import { AppBadges } from "@/components/marketing/app-badges";
 import { PlanSection, ProductGrid } from "@/components/store/store";
+import { ALL_FAQ } from "@/lib/faq";
+import Link from "next/link";
 
 export const metadata = {
   title: "Pricing and plans · Echo",
@@ -7,12 +9,7 @@ export const metadata = {
   alternates: { canonical: "/pricing" },
 };
 
-const FAQ = [
-  { q: "Can I change or cancel my plan?", a: "Yes. Switch plans, change seats, update your card or cancel any time from Billing. Cancelling keeps your plan until the end of the period you've paid for." },
-  { q: "How does Business pricing work?", a: "You pay per seat, and the price per seat drops as your team grows: seats 1–5, 6–20 and 21+ are each billed at a lower rate. Add seats any time; they're charged pro rata." },
-  { q: "What happens to unused minutes?", a: "Plan minutes reset each month. Minute packs stay valid for 12 months and are used after your plan's minutes run out." },
-  { q: "Do you offer refunds?", a: "If something isn't right, write to us within 30 days of a charge and we'll make it right. See the Terms of Service for details." },
-];
+const FAQ = ALL_FAQ.filter((f) => f.pricing);
 
 export default function PricingPage() {
   return (
@@ -62,6 +59,7 @@ export default function PricingPage() {
             </details>
           ))}
         </div>
+        <p className="mt-4 text-sm text-muted-foreground"><Link href="/faq#topic-billing" className="font-medium text-foreground underline underline-offset-2">More billing questions</Link></p>
       </section>
     </div>
   );
