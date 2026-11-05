@@ -27,6 +27,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
           <div className="ml-auto flex items-center gap-2">
             <nav className="mr-3 hidden items-center gap-5 text-sm text-muted-foreground lg:flex">
               <Link href="/#features" className="hover:text-foreground">Features</Link>
+              <Link href="/#redial" className="hover:text-foreground">Redial</Link>
               <Link href="/#how" className="hover:text-foreground">How it works</Link>
               <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
               <Link href="/developers" className="hover:text-foreground">Developers</Link>

@@ -18,13 +18,13 @@ const LINES = [
 ];
 const ACTIONS = ["Design finishes the panel (this week)", "Ship the recorder on Friday", "Send the announcement on Monday"];
 
-function Stage({ children, className }: { children: React.ReactNode; className?: string }) {
+export function Stage({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={cn("flex h-full items-center justify-center p-4 sm:p-8", className)}>{children}</div>;
 }
 
 // Always rendered so its space is reserved: content appearing never shifts the
 // layout (which would also leave the cursor pointing at the wrong spot).
-function In({ show, children, className }: { show: boolean; children: React.ReactNode; className?: string }) {
+export function In({ show, children, className }: { show: boolean; children: React.ReactNode; className?: string }) {
   return <div className={cn(show ? "hero-in" : "invisible", className)}>{children}</div>;
 }
 
@@ -32,7 +32,7 @@ function clock(sec: number) {
   return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
 }
 
-function Waveform({ bars = 28, progress = 0, live = false }: { bars?: number; progress?: number; live?: boolean }) {
+export function Waveform({ bars = 28, progress = 0, live = false }: { bars?: number; progress?: number; live?: boolean }) {
   return (
     <div className="flex h-8 flex-1 items-end gap-[3px]">
       {Array.from({ length: bars }, (_, i) => {

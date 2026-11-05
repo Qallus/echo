@@ -7,13 +7,16 @@ import {
   ClaudeScene, ConnectScene, EmailScene, PdfScene, RecordScene, SaveScene, TranscribeScene, WebReportScene,
 } from "./scenes";
 
-// Looping product demo for the landing page hero: record -> transcribe ->
-// Claude -> email -> connections -> PDF -> web report -> save. Visitors can jump to a step.
-// With reduced motion on, it holds each step's finished frame and doesn't advance.
+// Looping product demos for the landing page hero, drawn in a phone (below
+// md) or a monitor (md up). Echo: record -> transcribe -> Claude -> email ->
+// connections -> PDF -> web report -> save. Redial's scenes are in
+// redial-scenes.tsx. Visitors can jump to a step. With reduced motion on, it
+// holds each step's finished frame and doesn't advance.
 
 type CursorStep = { at: number; target: string; click?: boolean };
+export type DemoScene = { label: string; ms: number; Scene: React.ComponentType<{ t: number }>; cursor?: CursorStep[] };
 
-const SCENES: { label: string; ms: number; Scene: React.ComponentType<{ t: number }>; cursor?: CursorStep[] }[] = [
+export const ECHO_SCENES: DemoScene[] = [
   { label: "Record", ms: 3600, Scene: RecordScene },
   { label: "Transcribe", ms: 3800, Scene: TranscribeScene },
   { label: "Ask Claude", ms: 3800, Scene: ClaudeScene },
@@ -44,13 +47,26 @@ function subscribeReducedMotion(onChange: () => void) {
   return () => mq.removeEventListener("change", onChange);
 }
 
-export function HeroDemo() {
+type DemoProps = {
+  scenes: readonly DemoScene[]; title: string; Logo?: React.ComponentType<{ className?: string }>;
+  // Called each time the demo finishes its last step on its own (not after
+  // the visitor picked a step).
+  onLoop?: () => void;
+};
+
+export function HeroDemo(props: Partial<DemoProps>) {
+  return <DeviceDemo scenes={ECHO_SCENES} title="Launch plan review" {...props} />;
+}
+
+export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop }: DemoProps) {
   const reduced = useSyncExternalStore(
     subscribeReducedMotion,
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     () => false,
   );
   const [{ scene, t }, setPos] = useState({ scene: 0, t: 0 });
+  const picked = useRef(false);
+  const last = useRef(0);
   const stageRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -62,7 +78,13 @@ export function HeroDemo() {
       setPos((p) => (p.t + TICK < SCENES[p.scene].ms ? { scene: p.scene, t: p.t + TICK } : { scene: (p.scene + 1) % SCENES.length, t: 0 }));
     }, TICK);
     return () => clearInterval(id);
-  }, [reduced]);
+  }, [reduced, SCENES]);
+
+  // A full loop on its own (last step -> first) tells the parent.
+  useEffect(() => {
+    if (last.current === SCENES.length - 1 && scene === 0 && !picked.current) onLoop?.();
+    last.current = scene;
+  }, [scene, SCENES.length, onLoop]);
 
   const { Scene, cursor, label } = SCENES[scene];
   const shownT = reduced ? SCENES[scene].ms : t;
@@ -119,8 +141,8 @@ export function HeroDemo() {
               <span className="flex items-center gap-1.5"><Signal className="size-3.5" /><Wifi className="size-3.5" /><BatteryFull className="size-4" /></span>
             </div>
             <div className="flex h-11 shrink-0 items-center gap-2 border-b px-4 md:hidden">
-              <AudioLines className="size-4" />
-              <span className="min-w-0 truncate text-sm font-medium">Launch plan review</span>
+              <Logo className="size-4" />
+              <span className="min-w-0 truncate text-sm font-medium">{title}</span>
               <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{label}</span>
             </div>
             {/* Desktop: browser bar. */}
@@ -128,7 +150,7 @@ export function HeroDemo() {
               <span className="size-2.5 rounded-full bg-muted-foreground/20" />
               <span className="size-2.5 rounded-full bg-muted-foreground/20" />
               <span className="size-2.5 rounded-full bg-muted-foreground/20" />
-              <span className="ml-3 flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground"><Lock className="size-3 shrink-0" /> Personal · Launch plan review</span>
+              <span className="ml-3 flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground"><Lock className="size-3 shrink-0" /> {title}</span>
               <span className="ml-auto text-xs font-medium">{label}</span>
             </div>
 
@@ -155,7 +177,7 @@ export function HeroDemo() {
         </div>
 
         {/* Monitor: logo on the chin. */}
-        <AudioLines className="absolute bottom-[0.7%] left-1/2 hidden size-[1.6%] min-h-3 min-w-3 -translate-x-1/2 text-neutral-500 md:block" />
+        <Logo className="absolute bottom-[0.7%] left-1/2 hidden size-[1.6%] min-h-3 min-w-3 -translate-x-1/2 text-neutral-500 md:block" />
       </div>
 
       {/* Monitor: stand. */}
@@ -169,7 +191,7 @@ export function HeroDemo() {
           <button
             key={s.label}
             type="button"
-            onClick={() => setPos({ scene: i, t: 0 })}
+            onClick={() => { picked.current = true; setPos({ scene: i, t: 0 }); }}
             aria-current={i === scene ? "step" : undefined}
             className={cn(
               "relative overflow-hidden rounded-full border px-3 py-1 text-xs transition-colors",

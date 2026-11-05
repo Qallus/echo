@@ -1,15 +1,15 @@
-import Link from "next/link";
 import {
-  Briefcase, FileAudio, Lock, MessageSquareText, Mic, PictureInPicture2, Plug, Search, Sparkles,
+  Briefcase, CalendarClock, FileAudio, Gavel, Headphones, Lock, MessageSquareLock, MessageSquareText, Mic, PhoneForwarded, PhoneIncoming,
+  PictureInPicture2, Plug, Search, ShieldCheck, Sparkles, UsersRound,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { AppBadges } from "@/components/marketing/app-badges";
-import { HeroDemo } from "@/components/marketing/hero-demo/hero-demo";
+import { Hero } from "@/components/marketing/hero";
+import { MobileAppSection } from "@/components/marketing/mobile-app-section";
+import { FEATURES as REDIAL } from "@/lib/redial/features";
 
 export const metadata = {
-  title: "Echo · Record, transcribe and search every call and meeting",
+  title: "Echo · Record every meeting. Let your AI assistant screen every call.",
   description:
-    "Record meetings and calls in your browser, take notes as you talk, and get speaker-labelled transcripts automatically. Share with your team or keep it private.",
+    "Echo records meetings and calls and turns them into transcripts, summaries and action items. Redial, its AI call assistant, screens callers, takes messages and lets you listen in, guide it, take over or transfer.",
 };
 
 const FEATURES = [
@@ -21,6 +21,24 @@ const FEATURES = [
   { icon: FileAudio, title: "Bring your audio", desc: "Drag audio files from your computer anywhere onto Echo. MP3, M4A, WAV and more." },
 ];
 
+const REDIAL_FEATURES = [
+  { icon: PhoneIncoming, title: "AI call screening", desc: "Your assistant answers, asks who's calling and why, then takes a message or puts the call through to you." },
+  { icon: ShieldCheck, title: "Rules, VIPs and blocks", desc: "Screen unknown callers or everyone. VIPs ring straight through, and blocked numbers never get through." },
+  { icon: Headphones, title: `${REDIAL.insider.name}: listen live`, desc: "Hear the call as it happens. You're muted by the phone system, so nobody can hear you." },
+  { icon: MessageSquareLock, title: `${REDIAL.audible.name}: guide your assistant`, desc: "Type private directions while it talks, like \u201cask which project this is about.\u201d The caller never sees them." },
+  { icon: Gavel, title: `${REDIAL.gavel.name}: take over`, desc: "Take the call yourself, on the same call. The assistant steps away and the caller never has to redial." },
+  { icon: PhoneForwarded, title: `${REDIAL.directory.name}: transfer`, desc: "Send the caller to a saved person or number. They hear who's calling and press 1 to take it." },
+  { icon: Sparkles, title: `${REDIAL.mirror.name}: a second brain on your calls`, desc: "While you talk, it suggests answers from your notes and drafts follow-up texts and emails you approve." },
+  { icon: CalendarClock, title: "Messages and callbacks", desc: "Every call ends as a summary, message or voicemail transcript, with callback reminders when you need them." },
+  { icon: UsersRound, title: "Share a line", desc: "Give a teammate or family member exactly what they need: summaries, transcripts, listening or taking over." },
+];
+
+const REDIAL_STEPS = [
+  { n: "1", title: "Send calls to Redial", desc: "Use your Redial number, or forward your cell to it when you don't pick up." },
+  { n: "2", title: "Choose who gets screened", desc: "Unknown callers, or everyone except your VIPs. Pause it any time." },
+  { n: "3", title: "Step in, or read the summary", desc: "Listen, guide, take over or transfer live, or catch up later with the message and summary." },
+];
+
 const STEPS = [
   { n: "1", title: "Record or drop a file", desc: "Choose Business or Personal first, so every recording lands in the right place." },
   { n: "2", title: "Echo transcribes it", desc: "A speaker-labelled transcript appears a minute or two later, ready to read and search." },
@@ -28,6 +46,9 @@ const STEPS = [
 ];
 
 const FAQ = [
+  { q: "Does Redial answer calls to my regular cell number?", a: "Only calls that reach your Redial number, or a cell that forwards to it. Installing the app doesn't intercept ordinary cell calls." },
+  { q: "Can I step into a call my assistant is handling?", a: "Yes. Listen in muted, send it private directions, take the call over or transfer it, all on the same call, so the caller never has to redial." },
+  { q: "Who can see my calls?", a: "Only you, unless you share a line. Then each person gets only what you choose: summaries, transcripts, listening or taking over." },
   { q: "Who can hear my recordings?", a: "Recordings in your Personal workspace are only yours. Recordings in a Business workspace are shared with the people you invite to it. You can move a recording between them at any time, and its audio moves with it." },
   { q: "Where is my audio stored?", a: "In a private storage bucket. Every request is checked against your workspace membership, so files are only reachable by people who belong to that workspace." },
   { q: "How long can a recording be?", a: "Browser recordings are saved in a compact format, so about an hour and forty minutes fits in one transcription. Uploads can be up to 50 MB each." },
@@ -38,27 +59,12 @@ const FAQ = [
 export default function LandingPage() {
   return (
     <>
-      <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-10 text-center sm:px-6 sm:pt-24">
-        <p className="mb-4 text-sm text-muted-foreground">Recordings, transcripts and summaries in one place</p>
-        <h1 className="mx-auto max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Every call and meeting, captured and searchable.
-        </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-lg text-balance text-muted-foreground">
-          Record in your browser, take notes as you talk, and get speaker-labelled transcripts automatically.
-          Share with your team or keep it private.
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Start free trial</Button>
-          <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/#how" />}>See how it works</Button>
-        </div>
-        <AppBadges source="home-hero" className="mt-6 justify-center" />
-      </section>
-
-      <section className="px-4 pb-20 sm:px-6"><HeroDemo /></section>
+      <Hero />
 
       <section id="features" className="scroll-mt-20 border-t bg-muted/30">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-          <h2 className="text-3xl font-semibold tracking-tight">Everything from the conversation, kept</h2>
+          <p className="text-sm font-medium text-muted-foreground">Echo</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Everything from the conversation, kept</h2>
           <p className="mt-2 max-w-2xl text-muted-foreground">Echo handles the recording and the paperwork, so you can pay attention to the people.</p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
@@ -72,18 +78,44 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="how" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <h2 className="text-3xl font-semibold tracking-tight">How it works</h2>
-        <ol className="mt-10 grid gap-8 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <li key={s.n} className="space-y-2">
-              <span className="flex size-8 items-center justify-center rounded-full border text-sm font-medium">{s.n}</span>
-              <h3 className="font-medium">{s.title}</h3>
-              <p className="text-sm text-muted-foreground">{s.desc}</p>
-            </li>
+      <section id="redial" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
+        <p className="text-sm font-medium text-muted-foreground">Redial</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight">An assistant on every call, and you in control</h2>
+        <p className="mt-2 max-w-2xl text-muted-foreground">
+          Redial answers in the cloud, so your phone stays quiet until a call deserves you. When it does, step in on the same call.
+        </p>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {REDIAL_FEATURES.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="rounded-xl border bg-background p-5">
+              <Icon className="mb-3 size-5" />
+              <h3 className="font-medium">{title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+            </div>
           ))}
-        </ol>
+        </div>
       </section>
+
+      <section id="how" className="scroll-mt-20 border-t bg-muted/30">
+        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+          <h2 className="text-3xl font-semibold tracking-tight">How it works</h2>
+          {[{ name: "Echo", icon: Mic, steps: STEPS }, { name: "Redial", icon: PhoneIncoming, steps: REDIAL_STEPS }].map(({ name, icon: Icon, steps }) => (
+            <div key={name} className="mt-10">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><Icon className="size-4" /> {name}</h3>
+              <ol className="mt-4 grid gap-8 md:grid-cols-3">
+                {steps.map((s) => (
+                  <li key={s.n} className="space-y-2">
+                    <span className="flex size-8 items-center justify-center rounded-full border bg-background text-sm font-medium">{s.n}</span>
+                    <h4 className="font-medium">{s.title}</h4>
+                    <p className="text-sm text-muted-foreground">{s.desc}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <MobileAppSection />
 
       <section className="border-y bg-muted/30">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6 md:grid-cols-2">
@@ -143,17 +175,6 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-6xl px-4 py-20 text-center sm:px-6">
-        <h2 className="text-3xl font-semibold tracking-tight">Start capturing your conversations</h2>
-        <p className="mt-2 text-muted-foreground">Create an account in a minute. Personal or Business, your choice.</p>
-        <div className="mt-6 flex justify-center gap-3">
-          <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Start free trial</Button>
-          <Button size="lg" variant="ghost" nativeButton={false} render={<Link href="/pricing" />}>See pricing</Button>
-        </div>
-        <p className="mt-8 text-sm text-muted-foreground">Echo for your phone</p>
-        <AppBadges source="home-cta" className="mt-3 justify-center" />
       </section>
     </>
   );
