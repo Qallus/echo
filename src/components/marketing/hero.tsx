@@ -76,7 +76,7 @@ export function Hero() {
           <p className="mx-auto mt-5 max-w-2xl text-lg text-balance text-muted-foreground">{p.sub}</p>
         </div>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Start free trial</Button>
+          <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Start free</Button>
           <Button size="lg" variant="outline" nativeButton={false} render={<Link href={p.more.href} />}>{p.more.label}</Button>
         </div>
       </section>

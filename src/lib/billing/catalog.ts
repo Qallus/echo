@@ -2,7 +2,8 @@
 // (catalog_products / catalog_prices, edited in Admin > Billing); the server
 // loads it (catalog-server.ts) and pages hand it to the browser (CatalogSync).
 // SEED_PRODUCTS is the starting catalog and the fallback if the database is
-// unreachable. Each price key is its Stripe lookup_key. Amounts are US cents.
+// unreachable (inactive items stay hidden from customers: they're for sale
+// once built). Each price key is its Stripe lookup_key. Amounts are US cents.
 
 export type Interval = "month" | "year";
 export type Kind = "plan" | "bolt_on" | "pack" | "service";
@@ -36,7 +37,7 @@ export type Product = {
 export const SEED_PRODUCTS: Product[] = [
   {
     id: "pro", kind: "plan", name: "Pro", tagline: "For your own calls and meetings.",
-    features: ["2,000 transcription minutes a month", "Unlimited history and storage", "Claude, ChatGPT and Grok in Ask Echo", "Branded PDF and web reports", "Claude connector"],
+    features: ["2,000 transcription minutes a month", "Unlimited history and storage", "Claude, ChatGPT and Grok in Ask Echo", "Branded PDF reports", "Claude connector"],
     prices: [
       { key: "pro_monthly", interval: "month", unitAmount: 1500 },
       { key: "pro_annual", interval: "year", unitAmount: 14400 },
@@ -50,12 +51,12 @@ export const SEED_PRODUCTS: Product[] = [
       { key: "business_annual", interval: "year", tiers: [{ upTo: 5, unitAmount: 20000 }, { upTo: 20, unitAmount: 17000 }, { upTo: null, unitAmount: 14000 }] },
     ],
   },
-  { id: "api", kind: "bolt_on", name: "API & webhooks", tagline: "Pipe recordings, transcripts and summaries into your platform.", prices: [{ key: "bolt_api_monthly", interval: "month", unitAmount: 1900 }] },
-  { id: "crm", kind: "bolt_on", name: "CRM sync", tagline: "Summaries and action items on HubSpot, Salesforce or GoHighLevel records.", prices: [{ key: "bolt_crm_monthly", interval: "month", unitAmount: 2900 }] },
-  { id: "bot", kind: "bolt_on", name: "Meeting bot", tagline: "Joins Zoom, Meet and Teams from your calendar and records for you.", prices: [{ key: "bolt_bot_monthly", interval: "month", unitAmount: 4900 }] },
+  { id: "api", kind: "bolt_on", active: false, name: "API & webhooks", tagline: "Pipe recordings, transcripts and summaries into your platform.", prices: [{ key: "bolt_api_monthly", interval: "month", unitAmount: 1900 }] },
+  { id: "crm", kind: "bolt_on", active: false, name: "CRM sync", tagline: "Summaries and action items on HubSpot, Salesforce or GoHighLevel records.", prices: [{ key: "bolt_crm_monthly", interval: "month", unitAmount: 2900 }] },
+  { id: "bot", kind: "bolt_on", active: false, name: "Meeting bot", tagline: "Joins Zoom, Meet and Teams from your calendar and records for you.", prices: [{ key: "bolt_bot_monthly", interval: "month", unitAmount: 4900 }] },
   { id: "phone", kind: "bolt_on", name: "Phone line", tagline: "A number that records and transcribes your calls.", prices: [{ key: "bolt_phone_monthly", interval: "month", unitAmount: 1500 }] },
-  { id: "whitelabel", kind: "bolt_on", name: "White-label", tagline: "Your logo, colors and domain on share pages and emails.", prices: [{ key: "bolt_whitelabel_monthly", interval: "month", unitAmount: 4900 }] },
-  { id: "translate", kind: "bolt_on", name: "Translation", tagline: "Transcripts and summaries in 30+ languages.", prices: [{ key: "bolt_translate_monthly", interval: "month", unitAmount: 1000 }] },
+  { id: "whitelabel", kind: "bolt_on", active: false, name: "White-label", tagline: "Your logo, colors and domain on share pages and emails.", prices: [{ key: "bolt_whitelabel_monthly", interval: "month", unitAmount: 4900 }] },
+  { id: "translate", kind: "bolt_on", active: false, name: "Translation", tagline: "Transcripts and summaries in 30+ languages.", prices: [{ key: "bolt_translate_monthly", interval: "month", unitAmount: 1000 }] },
   { id: "min500", kind: "pack", name: "500 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_500", interval: null, unitAmount: 1000 }] },
   { id: "min2000", kind: "pack", name: "2,000 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_2000", interval: null, unitAmount: 3500 }] },
   { id: "min5000", kind: "pack", name: "5,000 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_5000", interval: null, unitAmount: 7500 }] },
@@ -63,7 +64,7 @@ export const SEED_PRODUCTS: Product[] = [
   { id: "redial_min100", kind: "pack", meter: "redial", minutes: 100, name: "100 screening minutes", tagline: "Extra Redial screening minutes. Valid for 12 months.", prices: [{ key: "pack_redial_100", interval: null, unitAmount: 1500 }] },
   { id: "onboarding", kind: "service", name: "Guided onboarding", tagline: "A 60-minute session to set up workspaces, templates and the Claude connector for your team.", prices: [{ key: "svc_onboarding", interval: null, unitAmount: 29900 }] },
   { id: "templates", kind: "service", name: "Custom template pack", tagline: "Three summary templates written for your calls (sales, support, interviews…).", prices: [{ key: "svc_templates", interval: null, unitAmount: 14900 }] },
-  { id: "integration", kind: "service", name: "Custom integration", tagline: "We connect Echo to your platform with the API and webhooks. Scoped on a call first.", prices: [{ key: "svc_integration", interval: null, unitAmount: 150000 }] },
+  { id: "integration", kind: "service", name: "Custom integration", tagline: "We connect Echo to the tools you already use. Scoped on a call first.", prices: [{ key: "svc_integration", interval: null, unitAmount: 150000 }] },
 ];
 
 export const KIND_LABEL: Record<Kind, string> = { plan: "Plans", bolt_on: "Bolt-ons", pack: "Minute packs", service: "Services" };

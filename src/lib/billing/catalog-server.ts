@@ -44,7 +44,7 @@ async function fetchCatalog(supabase: SupabaseClient, includeInactive: boolean):
 export async function loadCatalog(): Promise<Product[]> {
   if (cache && Date.now() - cache.at < TTL) return cache.products;
   const fresh = await fetchCatalog(await createClient(), false);
-  const list = fresh ?? SEED_PRODUCTS;
+  const list = fresh ?? SEED_PRODUCTS.filter((p) => p.active !== false);
   cache = { at: Date.now(), products: list };
   setCatalog(list);
   return list;

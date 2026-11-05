@@ -233,9 +233,8 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
 
       <SidebarFooter className="gap-3 p-3 group-data-[collapsible=icon]:hidden">
         <Link href="/billing" className="rounded-lg border p-3 text-sm hover:bg-sidebar-accent">
-          <div className="flex items-center justify-between font-medium">Pro (Trial) <span className="text-muted-foreground">›</span></div>
-          <div className="mt-2 h-1 rounded-full bg-primary/80" />
-          <div className="mt-2 text-xs text-muted-foreground">∞ Unlimited minutes</div>
+          <div className="flex items-center justify-between font-medium">Plan and billing <span className="text-muted-foreground">›</span></div>
+          <div className="mt-1 text-xs text-muted-foreground">See your plan and minutes used</div>
         </Link>
         <Button variant="outline" className="w-full" nativeButton={false} render={<Link href="/team" />}><Users /> Invite teammates</Button>
       </SidebarFooter>

@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Pricing and plans · Echo",
-  description: "Echo plans for individuals and teams, monthly or annual, plus bolt-ons like the API, CRM sync and a meeting bot, minute packs and setup services.",
+  description: "Echo plans for individuals and teams, monthly or annual, plus Redial call screening, a phone line, minute packs and setup services.",
   alternates: { canonical: "/pricing" },
 };
 
