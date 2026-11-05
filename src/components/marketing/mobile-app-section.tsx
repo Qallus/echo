@@ -1,6 +1,7 @@
-import { AudioLines, BatteryFull, Bell, Bot, Gavel, Headphones, Inbox, Mic, PhoneCall, PhoneForwarded, Settings, Signal, Sparkles, Wifi } from "lucide-react";
+import { AudioLines, BatteryFull, Bell, Headphones, Inbox, Mic, PhoneCall, Settings, Signal, Sparkles, Wifi } from "lucide-react";
 import { FEATURES } from "@/lib/redial/features";
 import { AppBadges } from "./app-badges";
+import { PhoneCallDemo } from "./phone-call-demo";
 
 // Home page: the Echo app for iPhone and Android. Text, the store buttons
 // under it, and a phone showing the app's live call screen.
@@ -39,7 +40,8 @@ export function MobileAppSection() {
   );
 }
 
-// A phone frame with the app's live call screen inside. Decorative.
+// A phone frame with the app's live call screen inside, playing a short
+// Redial call. Decorative.
 function Phone() {
   return (
     <div aria-hidden className="relative mx-auto w-full max-w-[300px]">
@@ -53,33 +55,9 @@ function Phone() {
           </div>
           <div className="flex items-center gap-1.5 border-b px-4 py-2.5">
             <PhoneCall className="size-3.5" /><span className="text-xs font-semibold">Calls</span>
-            <span className="ml-auto rounded-full bg-primary px-1.5 text-[9px] font-medium text-primary-foreground">2 new</span>
+            <span className="ml-auto rounded-full bg-primary px-1.5 text-[9px] font-medium text-primary-foreground">Live</span>
           </div>
-          <div className="flex-1 space-y-2.5 overflow-hidden p-3">
-            <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-2.5">
-              <div className="flex items-center gap-1.5">
-                <span className="size-1.5 animate-pulse rounded-full bg-primary" />
-                <span className="font-semibold">Live: Dana Ortiz</span><span className="ml-auto tabular-nums text-muted-foreground">0:42</span>
-              </div>
-              <div className="flex max-w-[90%] gap-1.5 rounded-lg bg-muted px-2 py-1.5"><Bot className="mt-px size-3 shrink-0" />Thanks, Dana. What time should the crew arrive?</div>
-              <div className="ml-auto max-w-[85%] rounded-lg bg-primary/10 px-2 py-1.5">Around 8am works.</div>
-              <div className="grid grid-cols-3 gap-1 pt-0.5 text-[9px]">
-                <span className="flex flex-col items-center gap-0.5 rounded-md border py-1.5"><Headphones className="size-3" />{FEATURES.insider.action}</span>
-                <span className="flex flex-col items-center gap-0.5 rounded-md bg-foreground py-1.5 text-background"><Gavel className="size-3" />{FEATURES.gavel.action}</span>
-                <span className="flex flex-col items-center gap-0.5 rounded-md border py-1.5"><PhoneForwarded className="size-3" />{FEATURES.directory.action}</span>
-              </div>
-            </div>
-            {[
-              { who: "Mike Chen", what: "Wants a quote for a roof inspection next week.", tag: "Business" },
-              { who: "(602) 555-0188", what: "Sales call about a car warranty. Message taken.", tag: "Sales" },
-              { who: "Mom", what: "VIP, rang straight through.", tag: "Personal" },
-            ].map((c) => (
-              <div key={c.who} className="rounded-xl border p-2.5">
-                <div className="flex items-center justify-between"><span className="font-medium">{c.who}</span><span className="text-[9px] text-muted-foreground">{c.tag}</span></div>
-                <p className="text-muted-foreground">{c.what}</p>
-              </div>
-            ))}
-          </div>
+          <PhoneCallDemo />
           <div className="grid shrink-0 grid-cols-4 border-t px-2 py-2 text-[9px] text-muted-foreground">
             <span className="flex flex-col items-center gap-0.5 text-foreground"><Inbox className="size-3.5" />Calls</span>
             <span className="flex flex-col items-center gap-0.5"><AudioLines className="size-3.5" />Echo</span>

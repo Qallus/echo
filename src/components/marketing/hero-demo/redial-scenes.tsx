@@ -183,6 +183,19 @@ function SummaryScene({ t }: SceneProps) {
   );
 }
 
+// The timings above are written at Echo's pace; Redial's scenes carry more
+// to read, so the whole demo plays this many times slower.
+const SLOW = 1.8;
+
+function slowed({ Scene, ms, cursor, label }: DemoScene): DemoScene {
+  return {
+    label,
+    ms: ms * SLOW,
+    Scene: function SlowScene({ t }: SceneProps) { return <Scene t={t / SLOW} />; },
+    cursor: cursor?.map((c) => ({ ...c, at: c.at * SLOW })),
+  };
+}
+
 export const REDIAL_SCENES: DemoScene[] = [
   { label: "Call comes in", ms: 3600, Scene: IncomingScene },
   { label: "AI screens", ms: 4200, Scene: ScreenScene },
@@ -190,4 +203,4 @@ export const REDIAL_SCENES: DemoScene[] = [
   { label: "Take over", ms: 4400, Scene: TakeOverScene, cursor: [{ at: 400, target: "takeover" }, { at: 1100, target: "takeover", click: true }] },
   { label: FEATURES.mirror.name, ms: 4800, Scene: MirrorScene, cursor: [{ at: 2900, target: "send" }, { at: 3400, target: "send", click: true }] },
   { label: "Summary", ms: 4200, Scene: SummaryScene },
-];
+].map(slowed);
