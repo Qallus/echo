@@ -3,7 +3,7 @@ import { FEATURES } from "@/lib/redial/features";
 import { AppBadges } from "./app-badges";
 import { PhoneCallDemo } from "./phone-call-demo";
 
-// Home page: the Echo app for iPhone and Android. Text, the store buttons
+// Home page: the Redial app for iPhone and Android (Echo is a tab inside it). Text, the store buttons
 // under it, and a phone showing the app's live call screen.
 
 const POINTS = [
@@ -19,9 +19,9 @@ export function MobileAppSection() {
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 md:grid-cols-[1.1fr_1fr]">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Mobile app</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Echo and Redial, in your pocket</h2>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Redial, in your pocket</h2>
           <p className="mt-3 max-w-xl text-muted-foreground">
-            One app for your calls and your conversations. Your assistant answers on the server, so screening works whether the app is open or not.
+            Your call assistant in one app, with Echo recordings built in. Your assistant answers on the server, so screening works whether the app is open or not.
           </p>
           <ul className="mt-8 grid gap-5 sm:grid-cols-2">
             {POINTS.map(({ icon: Icon, title, desc }) => (

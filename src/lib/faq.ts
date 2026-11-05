@@ -20,7 +20,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
       { q: "What are Echo and Redial?", a: "Echo records your calls and meetings and turns them into transcripts, summaries and action items you can search and ask questions about. Redial is Echo's AI call assistant: it answers calls to your Redial number, screens the caller and takes a message or puts the call through, and you can step into any call it's handling." },
       { q: "Do I need both?", a: "No. Echo works on its own. Redial is an add-on to an Echo account, and its calls, messages and summaries show up in the same app." },
       { q: "How do I get started?", a: "Create a free account, choose Business or Personal, and record or upload your first conversation. No card is needed for the Free plan. Add Redial from Pricing when you want it to answer your calls.", tags: "sign up signup register free" },
-      { q: "Is there an app for iPhone and Android?", a: "The mobile app is on the way, Android first. Tap the App Store or Google Play button anywhere on the site to join the waitlist and we'll tell you when it's ready. Until then, Echo works in the browser on your phone.", tags: "mobile ios google play app store download" },
+      { q: "Is there an app for iPhone and Android?", a: "The Redial app, with Echo built in, is on the way, Android first. Tap the App Store or Google Play button anywhere on the site to join the waitlist and we'll tell you when it's ready. Until then, Echo works in the browser on your phone.", tags: "mobile ios google play app store download" },
     ],
   },
   {

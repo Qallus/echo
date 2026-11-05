@@ -8,7 +8,7 @@ import type { Platform } from "@/lib/waitlist-options";
 import { cn } from "@/lib/utils";
 import { WaitlistForm } from "./waitlist-form";
 
-// App Store and Google Play buttons for the Echo mobile apps. Until the
+// App Store and Google Play buttons for the Redial mobile app (Echo is inside it). Until the
 // store listings are live they open a window: set up an account, sign in, or
 // get notified (the waitlist form). When a listing is live, pass its URL in
 // STORE_URLS and that button links straight to the store.
@@ -28,8 +28,8 @@ export function AppBadges({ source, signedIn = false, className }: { source: str
       </div>
       <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
         {open && (
-          <DialogContent className="max-h-[90svh] max-w-lg overflow-y-auto" title={view === "notify" ? `Get notified about the ${name} app` : `Echo for ${name}`}
-            description={view === "notify" ? "We'll let you know the moment it's ready, and only contact you the ways you choose." : "The Echo app is on its way. Your account works on the web today and in the app when it arrives."}>
+          <DialogContent className="max-h-[90svh] max-w-lg overflow-y-auto" title={view === "notify" ? `Get notified about Redial for ${name}` : `Redial for ${name}`}
+            description={view === "notify" ? "We'll let you know the moment it's ready, and only contact you the ways you choose." : "The Redial app, with Echo inside, is on its way. Your account works on the web today and in the app when it arrives."}>
             {view === "choose" ? (
               <div className="grid gap-2">
                 {!signedIn && (
@@ -66,7 +66,7 @@ function Badge({ platform, onOpen }: { platform: Platform; onOpen: (p: Platform)
     <>
       {ios ? <AppleLogo /> : <PlayLogo />}
       <span className="text-left leading-tight">
-        <span className="block text-[10px] font-normal opacity-80">{ios ? "Echo for iPhone" : "Echo for Android"}</span>
+        <span className="block text-[10px] font-normal opacity-80">{ios ? "Redial for iPhone" : "Redial for Android"}</span>
         <span className="block text-base font-semibold tracking-tight">{ios ? "App Store" : "Google Play"}</span>
       </span>
     </>
