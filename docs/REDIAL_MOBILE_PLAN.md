@@ -19,7 +19,10 @@ Status: plan, waiting for approval. Decided (Nov 5): the app is called **Redial*
 
 ## Phases
 
-### 8a. Mobile API (backend, this repo) — first
+### 8a. Mobile API (backend, this repo): built Nov 5
+Reference: `docs/MOBILE_API.md`. One route, `/api/mobile/<name>` (`src/lib/mobile/routes.ts`), plus `/api/mobile/ask`; the member's token is set for the request (`src/lib/mobile/context.ts`) so the web's reads and server actions run unchanged. Push to phones through Expo in `/api/notifications/deliver`; `device_tokens` and `profiles.push_privacy` in `20261105120000_mobile_devices`; test `supabase/tests/mobile_devices_rls.sql`.
+
+Original plan:
 The web uses server actions, which a phone app can't call. Add a small REST API under `/api/mobile/*`:
 - Authenticated with the member's Supabase access token (`Authorization: Bearer`), building a per-request Supabase client from it. No service-role key.
 - Endpoints wrap the existing logic, so the web and the app behave the same: lines and calls, call detail and transcript, callbacks, live calls, listen ticket and voice token, take over, guide (Audible), transfer (Directory), Mirror start/stop/send, rules and assistant settings.

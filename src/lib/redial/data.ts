@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/data";
 import { MIRROR_DEFAULTS, type MirrorSettings } from "./mirror";
 import type { Access, Call, Callback, Line, ListEntry, Turn } from "./types";
 
@@ -23,7 +24,7 @@ export async function callsBadge(): Promise<number | null> {
 // (Staff can also read line rows in admin; those aren't "my" lines.)
 export async function myLines(): Promise<(Line & { access: Access })[]> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return [];
   const [{ data: owned }, { data: grants }] = await Promise.all([
     supabase.from("redial_lines").select("*").eq("owner_id", user.id).order("created_at"),

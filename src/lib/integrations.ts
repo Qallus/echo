@@ -78,6 +78,10 @@ export const SERVICES: Service[] = [
     ],
   },
   {
+    id: "mobile", name: "Redial mobile app", description: "Push notifications to the Redial app go through Expo's push service. Optional: only needed if you turn on enhanced push security in your Expo account.",
+    fields: [{ key: "EXPO_ACCESS_TOKEN", label: "Expo access token (push security)", secret: true }],
+  },
+  {
     id: "automation", name: "Automation webhooks", description: "Signs webhook calls from Automation rules (X-Echo-Signature: sha256=HMAC of the body), so the receiver can check they came from Echo.",
     fields: [{ key: "AUTOMATION_WEBHOOK_SECRET", label: "Webhook signing secret", secret: true }],
   },

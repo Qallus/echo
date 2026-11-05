@@ -1,8 +1,14 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { mobileToken } from "@/lib/mobile/context";
+import { clientForToken } from "./token";
 
+// The signed-in member's client: their cookie session on the web, or the
+// Redial app's access token inside the mobile API.
 export async function createClient() {
+  const token = mobileToken();
+  if (token) return clientForToken(token);
   const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

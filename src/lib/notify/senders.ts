@@ -97,6 +97,31 @@ export async function sendPush(subscription: webpush.PushSubscription, payload: 
   }
 }
 
+// Push to the Redial app through Expo's push service (which relays to FCM and
+// APNs). One result per token, in order; `gone` means the app was uninstalled
+// or signed out, so the token should be dropped.
+export async function sendExpoPush(tokens: string[], msg: { title: string; body?: string | null; data: Record<string, unknown>; channelId: string }): Promise<SendResult[]> {
+  if (!tokens.length) return [];
+  const { EXPO_ACCESS_TOKEN: key } = await secrets("EXPO_ACCESS_TOKEN");
+  try {
+    const res = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json", ...(key ? { Authorization: `Bearer ${key}` } : {}) },
+      body: JSON.stringify(tokens.map((to) => ({ to, title: msg.title, body: msg.body ?? undefined, data: msg.data, channelId: msg.channelId, sound: "default", priority: "high" }))),
+    });
+    const json = (await res.json().catch(() => null)) as { data?: { status: string; id?: string; message?: string; details?: { error?: string } }[]; errors?: { message: string }[] } | null;
+    if (!res.ok || !json?.data) {
+      const error = json?.errors?.[0]?.message ?? `Expo push failed (${res.status}).`;
+      return tokens.map(() => ({ ok: false, error }));
+    }
+    return json.data.map((t) => t.status === "ok"
+      ? { ok: true, id: t.id }
+      : { ok: false, error: t.message ?? "Push failed.", gone: t.details?.error === "DeviceNotRegistered" });
+  } catch (e) {
+    return tokens.map(() => ({ ok: false, error: e instanceof Error ? e.message : "Push failed." }));
+  }
+}
+
 // Verification codes are stored as hmac(channel_id:code) with NOTIFY_SECRET,
 // the same secret the database holds in Vault (it checks codes itself).
 export function codeHash(channelId: string, code: string) {

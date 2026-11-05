@@ -1,18 +1,11 @@
 import "server-only";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { clientForToken } from "@/lib/supabase/token";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 
 export type McpUser = { id: string; email: string | null; clientId: string };
 export type McpContext = { supabase: SupabaseClient; user: McpUser };
 
-// A client that runs every query as the token's user, so RLS decides access.
-// Never the secret/service-role key.
-export function clientForToken(token: string): SupabaseClient {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
-}
 
 // Validates `Authorization: Bearer <Supabase access token>`. Returns null for a
 // missing, malformed, expired or non-user (anon/service) token.

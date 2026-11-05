@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { emailHtml, secretMatches, sendEmail, sendPush, sendSms, siteUrl } from "@/lib/notify/senders";
+import { emailHtml, secretMatches, sendEmail, sendExpoPush, sendPush, sendSms, siteUrl } from "@/lib/notify/senders";
 import { DEFAULT_PREFS, type Preference } from "@/lib/notify/types";
 
 // Called by the database (pg_net trigger on notifications insert) with the
@@ -20,6 +20,18 @@ function inQuietHours(start: string | null, end: string | null, tz: string | nul
   return s <= e ? now >= s && now < e : now >= s || now < e;
 }
 
+// What a phone notification shows, by the member's choice (profiles.push_privacy):
+// everything, the title only (for calls, who's calling), or nothing specific.
+const PRIVATE_TITLE: Record<string, string> = {
+  redial_call: "New call", transcript_ready: "A recording is ready", transcript_failed: "A recording needs attention",
+  summary_ready: "A summary is ready", recording_shared: "A recording was shared with you", member_joined: "Someone joined your team",
+};
+function phoneText(n: { type: string; title: string; body: string | null }, privacy: string | null) {
+  if (privacy === "private") return { title: "Redial", body: PRIVATE_TITLE[n.type] ?? "You have a new notification" };
+  if (privacy === "caller") return { title: n.title, body: "Open Redial for details." };
+  return { title: n.title, body: n.body };
+}
+
 export async function POST(req: NextRequest) {
   if (!secretMatches(req.headers.get("x-echo-secret"))) return new NextResponse("Forbidden", { status: 403 });
   const { id } = (await req.json().catch(() => ({}))) as { id?: string };
@@ -32,11 +44,12 @@ export async function POST(req: NextRequest) {
   const { count } = await db.from("notification_deliveries").select("id", { count: "exact", head: true }).eq("notification_id", id);
   if (count) return NextResponse.json({ ok: true, duplicate: true });
 
-  const [{ data: pref }, { data: profile }, { data: channels }, { data: user }] = await Promise.all([
+  const [{ data: pref }, { data: profile }, { data: channels }, { data: user }, { data: devices }] = await Promise.all([
     db.from("notification_preferences").select("in_app, email, sms, push").eq("user_id", n.user_id).eq("type", n.type).maybeSingle(),
-    db.from("profiles").select("timezone, quiet_start, quiet_end").eq("id", n.user_id).maybeSingle(),
+    db.from("profiles").select("timezone, quiet_start, quiet_end, push_privacy").eq("id", n.user_id).maybeSingle(),
     db.from("notification_channels").select("id, kind, address, push_subscription").eq("user_id", n.user_id).not("verified_at", "is", null),
     db.auth.admin.getUserById(n.user_id),
+    db.from("device_tokens").select("id, token, platform").eq("user_id", n.user_id),
   ]);
   // Test notifications go to every channel you've set up.
   const want: Preference = n.type === "test" ? { in_app: true, email: true, sms: true, push: true } : (pref ?? DEFAULT_PREFS);
@@ -72,12 +85,26 @@ export async function POST(req: NextRequest) {
   }
 
   if (!want.push) skip("push", "Turned off for this event");
-  else if (!push.length) skip("push", "No devices with push enabled");
+  else if (!push.length && !devices?.length) skip("push", "No devices with push enabled");
   else if (quiet) skip("push", "Quiet hours");
   else for (const c of push) {
     jobs.push(sendPush(c.push_subscription as webpush.PushSubscription, { title: n.title, body: n.body, url: n.url }).then(async (r) => {
       record("push", "device", r);
       if (r.gone) await db.from("notification_channels").delete().eq("id", c.id); // unsubscribed browser
+    }));
+  }
+  // Phones with the Redial app. Calls use their own Android channel so people
+  // can give them a different sound.
+  const phones = devices ?? [];
+  if (want.push && !quiet && phones.length) {
+    jobs.push(sendExpoPush(phones.map((d) => d.token), {
+      ...phoneText(n, profile?.push_privacy ?? null),
+      data: { url: n.url, type: n.type, notification_id: id },
+      channelId: n.type === "redial_call" ? "calls" : "default",
+    }).then(async (results) => {
+      results.forEach((r, i) => record("push", phones[i].platform, r));
+      const gone = phones.filter((_, i) => results[i]?.gone).map((d) => d.id);
+      if (gone.length) await db.from("device_tokens").delete().in("id", gone); // app uninstalled or signed out
     }));
   }
 

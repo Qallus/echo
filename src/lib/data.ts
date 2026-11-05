@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { mobileToken } from "@/lib/mobile/context";
 import { readDetails } from "@/lib/profile-details";
 import { readSpeakers } from "@/lib/speakers";
 import { isVisual, readDates, readItems } from "@/lib/visuals";
@@ -16,7 +17,8 @@ export const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 
 export const getUser = cache(async () => {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const token = mobileToken();
+  const { data } = token ? await supabase.auth.getClaims(token) : await supabase.auth.getClaims();
   if (!data?.claims) return null;
   return { id: data.claims.sub as string, email: (data.claims.email as string | undefined) ?? "" };
 });
