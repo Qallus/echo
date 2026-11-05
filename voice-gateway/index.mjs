@@ -13,6 +13,11 @@
 // leg hangs up and Echo moves the caller on. Either way Echo rings the owner
 // if the assistant asked to connect, or hangs up.
 //
+// Mirror (wss://<this host>/mirror): a one-way Twilio media stream of a call a
+// person is on (both tracks). Each side is transcribed separately with
+// OpenAI's realtime transcription and every line goes to
+// /api/webhooks/redial/mirror; the gateway never sends audio back.
+//
 // Env: APP_URL (https://echo.redial.si), REDIAL_GATEWAY_SECRET (same value as
 // Admin -> Settings -> Integrations -> Redial), PORT (8080), MAX_CALLS (20).
 
@@ -73,7 +78,14 @@ const server = http.createServer((req, res) => {
   }
   res.writeHead(404); res.end();
 });
-const wss = new WebSocketServer({ server, path: "/twilio", maxPayload: 256 * 1024 });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
+const mirrorWss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
+server.on("upgrade", (req, socket, head) => {
+  const path = new URL(req.url ?? "/", "http://gateway").pathname;
+  const target = path === "/twilio" ? wss : path === "/mirror" ? mirrorWss : null;
+  if (!target) { socket.destroy(); return; }
+  target.handleUpgrade(req, socket, head, (ws) => target.emit("connection", ws, req));
+});
 let active = 0;
 
 wss.on("connection", (tw) => {
@@ -267,6 +279,68 @@ wss.on("connection", (tw) => {
       toXai({ type: "response.create" });
     }
   }
+});
+
+// Mirror: transcribe both sides of a call; no audio is ever sent back.
+mirrorWss.on("connection", (tw) => {
+  if (active >= MAX_CALLS) { tw.close(1013, "busy"); return; }
+  active++;
+  let callId = null, session = null, finished = false;
+  const sides = {}; // Twilio track -> OpenAI transcription socket
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    Object.values(sides).forEach((ws) => { try { ws.close(); } catch {} });
+    if (callId) echo("mirror", { callId, ended: true }).catch(() => {});
+    try { tw.close(); } catch {}
+  };
+  const startTimer = setTimeout(() => { if (!session) finish(); }, 10000);
+
+  function transcriber(track, role) {
+    const ws = new WebSocket("wss://api.openai.com/v1/realtime?intent=transcription", { headers: { Authorization: `Bearer ${session.openaiKey}` } });
+    ws.on("open", () => ws.send(JSON.stringify({
+      type: "session.update",
+      session: { type: "transcription", audio: { input: { format: { type: "audio/pcmu" }, transcription: { model: session.model }, turn_detection: { type: "server_vad", silence_duration_ms: 600 } } } },
+    })));
+    ws.on("message", (raw) => {
+      let m;
+      try { m = JSON.parse(raw.toString()); } catch { return; }
+      if (m.type === "conversation.item.input_audio_transcription.completed" && m.transcript?.trim()) {
+        echo("mirror", { callId, turn: { role, text: m.transcript.trim() } }).catch((e) => log(callId, "mirror line failed:", e.message));
+      } else if (m.type === "error") {
+        log(callId, `mirror ${track}:`, m.error?.message ?? JSON.stringify(m));
+      }
+    });
+    ws.on("error", (e) => log(callId, `mirror ${track} error:`, e.message));
+    ws.on("close", () => { if (!finished) log(callId, `mirror ${track} closed`); });
+    return ws;
+  }
+
+  tw.on("message", async (raw) => {
+    let msg;
+    try { msg = JSON.parse(raw.toString()); } catch { return; }
+    if (msg.event === "start") {
+      try {
+        session = await echo("mirror-session", { token: msg.start?.customParameters?.token ?? "" });
+      } catch (e) {
+        log(null, "mirror refused:", e.message);
+        return finish();
+      }
+      clearTimeout(startTimer);
+      callId = session.callId;
+      log(callId, "mirror started");
+      // inbound = the caller; outbound = what the caller hears (the person).
+      sides.inbound = transcriber("inbound", "caller");
+      sides.outbound = transcriber("outbound", "person");
+    } else if (msg.event === "media" && session) {
+      const ws = sides[msg.media?.track];
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio: msg.media.payload }));
+    } else if (msg.event === "stop") {
+      finish();
+    }
+  });
+  tw.on("close", () => { active--; clearTimeout(startTimer); finish(); });
+  tw.on("error", (e) => log(callId, "mirror twilio error:", e.message));
 });
 
 server.listen(PORT, () => console.log(`Echo voice gateway on :${PORT} → ${APP_URL}`));

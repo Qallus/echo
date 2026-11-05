@@ -22,7 +22,7 @@ export const CAPABILITIES = [
   { id: "transfer_call", label: `${FEATURES.directory.name}: transfer calls to saved numbers`, live: false },
   { id: "manage_directory", label: `${FEATURES.directory.name}: edit the transfer list`, live: false },
   { id: "dial_custom_destination", label: `${FEATURES.directory.name}: transfer to a one-time number`, live: false },
-  { id: "mirror", label: `${FEATURES.mirror.name}: use the call assistant`, live: true },
+  { id: "mirror", label: `${FEATURES.mirror.name}: get suggestions during calls`, live: false },
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number]["id"];
 export const SHAREABLE = CAPABILITIES.filter((c) => !c.live);

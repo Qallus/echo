@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { MIRROR_DEFAULTS, type MirrorSettings } from "./mirror";
 import type { Access, Call, Callback, Line, ListEntry, Turn } from "./types";
 
 // Redial reads for the signed-in member. RLS limits them to lines they own or
@@ -40,12 +41,13 @@ export async function myLines(): Promise<(Line & { access: Access })[]> {
 export async function lineDetail(lineId: string, access: Access) {
   const supabase = await createClient();
   const directoryAccess = access.owner || access.capabilities.includes("transfer_call") || access.capabilities.includes("manage_directory");
-  const [calls, entries, callbacks, people, directory] = await Promise.all([
+  const [calls, entries, callbacks, people, directory, mirror] = await Promise.all([
     supabase.from("redial_calls").select(CALL_COLS).eq("line_id", lineId).order("started_at", { ascending: false }).limit(200),
     supabase.from("redial_list_entries").select("id, line_id, number, kind, label, created_at").eq("line_id", lineId).order("created_at", { ascending: false }),
     supabase.from("redial_callbacks").select("id, line_id, call_id, name, number, due_at, timezone, note, done_at").eq("line_id", lineId).order("due_at"),
     access.owner ? supabase.rpc("redial_line_people", { p_line: lineId }) : Promise.resolve({ data: [] }),
     directoryAccess ? supabase.from("redial_directory").select("id, label, number, note, sort").eq("line_id", lineId).order("sort").order("label") : Promise.resolve({ data: [] }),
+    supabase.from("redial_mirror_settings").select("*").eq("line_id", lineId).maybeSingle(),
   ]);
   const rows = (calls.data ?? []) as Omit<Call, "transcript">[];
   const canRead = access.owner || access.capabilities.includes("read_transcript");
@@ -59,6 +61,7 @@ export async function lineDetail(lineId: string, access: Access) {
     callbacks: (callbacks.data ?? []) as Callback[],
     people: (people.data ?? []) as LinePerson[],
     directory: (directory.data ?? []) as DirectoryEntry[],
+    mirror: { ...MIRROR_DEFAULTS, line_id: lineId, ...(mirror.data ?? {}) } as MirrorSettings,
   };
 }
 

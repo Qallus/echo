@@ -15,6 +15,8 @@ import { LinePeople } from "./line-people";
 import { LiveCalls } from "./live-calls";
 import type { DirectoryEntry, LinePerson } from "@/lib/redial/data";
 import { DirectorySettings } from "./directory-settings";
+import { MirrorSettingsPanel } from "./mirror-settings";
+import type { MirrorSettings } from "@/lib/redial/mirror";
 import { AssistantSettings, RulesSettings, useLineForm } from "./line-settings";
 
 const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30";
@@ -27,8 +29,8 @@ const CATEGORY_TONE: Record<Category, string> = {
   sales: "bg-amber-500/15 text-amber-800 dark:text-amber-300", spam: "bg-red-500/15 text-red-700 dark:text-red-300", unknown: "bg-muted text-muted-foreground",
 };
 
-export function CallsView({ line, access, calls, entries, callbacks, people, directory, initialCall, initialTab, ownerFirst, usage }: {
-  line: Line; access: Access; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; people: LinePerson[]; directory: DirectoryEntry[];
+export function CallsView({ line, access, calls, entries, callbacks, people, directory, mirror, initialCall, initialTab, ownerFirst, usage }: {
+  line: Line; access: Access; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; people: LinePerson[]; directory: DirectoryEntry[]; mirror: MirrorSettings;
   initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null;
 }) {
   const manage = allows(access, "manage_rules");
@@ -47,15 +49,17 @@ export function CallsView({ line, access, calls, entries, callbacks, people, dir
       {usage && <UsageBar usage={usage} />}
       {manage && needsSetup && !line.paused && <p className="rounded-xl border p-3 text-sm">Add the phone number your assistant should ring (usually your cell) under <span className="font-medium">Rules</span>, so it can put important calls through.</p>}
       <LiveCalls line={line} owner={access.owner} canReadTranscript={allows(access, "read_transcript")} canListen={allows(access, "monitor_live")} canTakeOver={allows(access, "takeover_live")} canDirect={allows(access, "direct_agent")}
-        canTransfer={allows(access, "transfer_call")} canCustomTransfer={allows(access, "dial_custom_destination")} directory={directory} />
+        canTransfer={allows(access, "transfer_call")} canCustomTransfer={allows(access, "dial_custom_destination")} directory={directory}
+        canMirror={allows(access, "mirror") && mirror.enabled} />
       {!access.owner && <p className="rounded-xl border p-3 text-sm text-muted-foreground">This line is shared with you{manage ? "" : ". You can see its calls; only the owner changes its settings"}.</p>}
-      <Tabs defaultValue={[...["inbox", "callbacks"], ...(manage ? ["rules", "assistant"] : []), ...(editDirectory ? ["directory"] : []), ...(access.owner ? ["people"] : [])].includes(initialTab ?? "") ? initialTab! : "inbox"}>
+      <Tabs defaultValue={[...["inbox", "callbacks"], ...(manage ? ["rules", "assistant"] : []), ...(editDirectory ? ["directory"] : []), ...(manage ? ["mirror"] : []), ...(access.owner ? ["people"] : [])].includes(initialTab ?? "") ? initialTab! : "inbox"}>
         <TabsList variant="line">
           <TabsTrigger value="inbox">Inbox</TabsTrigger>
           <TabsTrigger value="callbacks">Callbacks{openCallbacks ? ` (${openCallbacks})` : ""}</TabsTrigger>
           {manage && <TabsTrigger value="rules">Rules</TabsTrigger>}
           {manage && <TabsTrigger value="assistant">Assistant</TabsTrigger>}
           {editDirectory && <TabsTrigger value="directory">Directory</TabsTrigger>}
+          {manage && <TabsTrigger value="mirror">Mirror</TabsTrigger>}
           {access.owner && <TabsTrigger value="people">People{people.length ? ` (${people.length})` : ""}</TabsTrigger>}
         </TabsList>
 
@@ -104,6 +108,7 @@ export function CallsView({ line, access, calls, entries, callbacks, people, dir
         {manage && <TabsContent value="rules" className="pt-4"><RulesSettings line={line} form={form} entries={entries} /></TabsContent>}
         {manage && <TabsContent value="assistant" className="pt-4"><AssistantSettings line={line} form={form} ownerFirst={ownerFirst} /></TabsContent>}
         {editDirectory && <TabsContent value="directory" className="pt-4"><DirectorySettings lineId={line.id} entries={directory} canEdit /></TabsContent>}
+        {manage && <TabsContent value="mirror" className="pt-4"><MirrorSettingsPanel lineId={line.id} initial={mirror} /></TabsContent>}
         {access.owner && <TabsContent value="people" className="pt-4"><LinePeople lineId={line.id} people={people} /></TabsContent>}
       </Tabs>
     </div>

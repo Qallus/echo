@@ -129,7 +129,7 @@ export async function reportKeyFailure(supabase: SupabaseClient, keyId: string, 
 }
 
 export type UsageRow = {
-  workspaceId?: string | null; feature: "chat" | "summary" | "transcription" | "mcp" | "test";
+  workspaceId?: string | null; feature: "chat" | "summary" | "transcription" | "mcp" | "test" | "mirror";
   resolved: Pick<Resolved, "provider" | "modelName" | "keySource">; fallback?: boolean;
   inputTokens?: number; outputTokens?: number; audioSeconds?: number; ok?: boolean; latencyMs?: number; error?: string;
   settings?: AiSettings;

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Audible } from "./audible";
 import { ListenLive } from "./listen-live";
 import { TransferCall } from "./transfer-call";
+import { MirrorPanel } from "./mirror-panel";
 import type { DirectoryEntry } from "@/lib/redial/data";
 
 const prettyNumber = (n: string | null) => (n ? n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "No caller ID");
@@ -24,7 +25,7 @@ const LIVE_MS = 2500;
 // while the tab is hidden. When a call ends the page refreshes its inbox.
 type Props = {
   line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean; canTakeOver: boolean; canDirect: boolean;
-  canTransfer: boolean; canCustomTransfer: boolean; directory: DirectoryEntry[];
+  canTransfer: boolean; canCustomTransfer: boolean; directory: DirectoryEntry[]; canMirror: boolean;
 };
 
 export function LiveCalls(props: Props) {
@@ -60,7 +61,7 @@ export function LiveCalls(props: Props) {
   );
 }
 
-function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeOver, canDirect, canTransfer, canCustomTransfer, directory }: Props & { call: LiveCall }) {
+function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeOver, canDirect, canTransfer, canCustomTransfer, directory, canMirror }: Props & { call: LiveCall }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const seconds = Math.max(0, Math.floor((now - new Date(c.started_at).getTime()) / 1000));
@@ -89,6 +90,9 @@ function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeO
       )}
       {canTransfer && c.session?.state === "live" && (
         <TransferCall callId={c.id} assistant={line.assistant_name} directory={directory} canCustom={canCustomTransfer} transfers={c.transfers} />
+      )}
+      {canMirror && (c.status === "connecting" || c.status === "connected") && (
+        <MirrorPanel callId={c.id} callerNumber={c.from_number} mirror={c.mirror} suggestions={c.suggestions} />
       )}
       {canDirect && aiOnCall && <Audible callId={c.id} assistant={line.assistant_name} directions={c.directions} />}
       {canReadTranscript ? <LiveTranscript turns={c.turns} assistant={line.assistant_name} /> : (
@@ -134,9 +138,9 @@ function LiveTranscript({ turns, assistant }: { turns: LiveCall["turns"]; assist
     <ol ref={box} aria-live="polite" onScroll={(e) => { const el = e.currentTarget; pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40; }}
       className="max-h-72 space-y-2 overflow-y-auto pr-1 text-sm">
       {turns.map((t) => (
-        <li key={t.id} className={cn("flex max-w-[85%] gap-2 rounded-lg px-3 py-2", t.role === "assistant" ? "bg-card" : "ml-auto bg-primary/10")}>
+        <li key={t.id} className={cn("flex max-w-[85%] gap-2 rounded-lg px-3 py-2", t.role === "caller" ? "ml-auto bg-primary/10" : "bg-card")}>
           {t.role === "assistant" ? <Bot className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" /> : <User className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />}
-          <span><span className="block text-[10px] font-medium text-muted-foreground">{t.role === "assistant" ? assistant : "Caller"}</span>{t.text}</span>
+          <span><span className="block text-[10px] font-medium text-muted-foreground">{t.role === "assistant" ? assistant : t.role === "person" ? "Your side" : "Caller"}</span>{t.text}</span>
         </li>
       ))}
     </ol>

@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/data";
 import { twilioRequest, voiceToken } from "@/lib/comms/twilio";
-import { toE164 } from "@/lib/notify/senders";
+import { sendEmail, toE164 } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { SHAREABLE } from "./features";
 import { gatewayConfig, gatewayControl, listenTicket } from "./gateway";
 import { memberIdentity, tellAgent } from "./live";
 import { redialUrl } from "./twiml";
+import { closeMirrorStream, openMirrorStream, type MirrorSettings } from "./mirror";
 import { VOICES, type Category, type ListKind, type Mode } from "./types";
 
 // Member actions for Redial call screening. Everything runs as the signed-in
@@ -171,12 +172,20 @@ export type LiveParticipant = { id: string; role: string; status: string; muted:
 export type LiveCall = {
   id: string; from_number: string | null; caller_id_name: string | null; caller_name: string | null; status: string; started_at: string;
   session: { state: string; ai_state: string; taken_over: "me" | "other" | null; participants: LiveParticipant[] } | null;
-  turns: { id: number; role: "caller" | "assistant"; text: string }[];
+  turns: { id: number; role: "caller" | "assistant" | "person"; text: string }[];
   directions: LiveDirection[];
   transfers: LiveTransfer[];
+  mirror: { state: string; error: string | null } | null;
+  suggestions: LiveSuggestion[];
+};
+export type LiveSuggestion = {
+  id: string; kind: "say" | "answer" | "info" | "caution" | "sms" | "email"; title: string; body: string; subject: string | null;
+  source: string | null; status: "new" | "dismissed" | "sending" | "sent" | "failed"; sent_to: string | null; created_at: string;
 };
 export type LiveTransfer = { id: string; label: string; status: "ringing" | "accepted" | "connected" | "declined" | "no_answer" | "failed" | "ended"; created_at: string };
 export type LiveDirection = { id: string; text: string; status: "sending" | "delivered" | "failed"; created_at: string; mine: boolean };
+
+const mirrorOf = (m?: { state: string; error: string | null }) => (m ? { state: m.state, error: m.error } : null);
 
 export async function liveCalls(lineId: string): Promise<LiveCall[]> {
   const user = await requireUser();
@@ -187,11 +196,13 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
     .gte("started_at", since).order("started_at", { ascending: false }).limit(5);
   if (!calls?.length) return [];
   const ids = calls.map((c) => c.id);
-  const [{ data: sessions }, { data: turns }, { data: directions }, { data: transfers }] = await Promise.all([
+  const [{ data: sessions }, { data: turns }, { data: directions }, { data: transfers }, { data: mirrors }, { data: suggestions }] = await Promise.all([
     supabase.from("redial_live_sessions").select("call_id, state, ai_state, taken_over_by, participants:redial_live_participants(id, role, status, muted, user_id)").in("call_id", ids),
     supabase.from("redial_live_turns").select("id, call_id, role, text").in("call_id", ids).order("id").limit(400),
     supabase.from("redial_live_directions").select("id, call_id, text, status, created_at, author_id").in("call_id", ids).order("created_at"),
     supabase.from("redial_transfers").select("id, call_id, label, status, created_at").in("call_id", ids).order("created_at"),
+    supabase.from("redial_mirror_sessions").select("call_id, state, error").in("call_id", ids),
+    supabase.from("redial_mirror_suggestions").select("id, call_id, kind, title, body, subject, source, status, sent_to, created_at").in("call_id", ids).order("created_at", { ascending: false }).limit(60),
   ]);
   return calls.map((c) => {
     const s = sessions?.find((x) => x.call_id === c.id);
@@ -199,10 +210,12 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
       ...c,
       session: s ? {
         state: s.state, ai_state: s.ai_state, taken_over: s.taken_over_by ? (s.taken_over_by === user.id ? "me" : "other") : null, participants: (s.participants ?? []).map(({ user_id, ...p }) => ({ ...p, me: user_id === user.id })) } : null,
-      turns: (turns ?? []).filter((t) => t.call_id === c.id).map(({ id, role, text }) => ({ id, role: role as "caller" | "assistant", text })),
+      turns: (turns ?? []).filter((t) => t.call_id === c.id).map(({ id, role, text }) => ({ id, role: role as "caller" | "assistant" | "person", text })),
       directions: (directions ?? []).filter((d) => d.call_id === c.id)
         .map((d) => ({ id: d.id, text: d.text, status: d.status as LiveDirection["status"], created_at: d.created_at, mine: d.author_id === user.id })),
       transfers: (transfers ?? []).filter((t) => t.call_id === c.id).map(({ id, label, status, created_at }) => ({ id, label, status: status as LiveTransfer["status"], created_at })),
+      mirror: mirrorOf(mirrors?.find((m) => m.call_id === c.id)),
+      suggestions: (suggestions ?? []).filter((g) => g.call_id === c.id) as LiveSuggestion[],
     };
   });
 }
@@ -269,7 +282,7 @@ async function dropParticipant(l: Listener) {
 export async function takeOver(callId: string): Promise<Result & { speaking?: boolean }> {
   const user = await requireUser();
   const supabase = await createClient();
-  const { data: s } = await supabase.from("redial_live_sessions").select("id").eq("call_id", callId).maybeSingle();
+  const { data: s } = await supabase.from("redial_live_sessions").select("id, line_id").eq("call_id", callId).maybeSingle();
   const { data: me } = s
     ? await supabase.from("redial_live_participants").select("call_sid").eq("session_id", s.id).eq("user_id", user.id).eq("role", "member").eq("status", "joined").maybeSingle()
     : { data: null };
@@ -288,6 +301,8 @@ export async function takeOver(callId: string): Promise<Result & { speaking?: bo
 
   const unmuted = await twilioRequest(`/Conferences/${row.conference_sid}/Participants/${me.call_sid}.json`, { Muted: "false" });
   if (!unmuted.ok) return { error: "The assistant is off the call, but your microphone couldn't be turned on. Try again." };
+  const { data: mirror } = await supabase.from("redial_mirror_settings").select("enabled, auto_start").eq("line_id", s?.line_id ?? "").maybeSingle();
+  if (mirror?.enabled && mirror.auto_start) await startMirror(callId).catch(() => null);
   revalidatePath("/calls");
   return { ok: "You're on the call.", speaking: true };
 }
@@ -355,4 +370,78 @@ export async function transferCall(callId: string, to: { destinationId?: string;
   }
   await tellAgent(callId, `You're connecting the caller to ${t.label} now. Tell them, and ask them to stay on the line for a moment.`);
   return { ok: `Calling ${t.label}…` };
+}
+
+// Mirror settings for a line (manage_rules): what it may read and do.
+export async function saveMirrorSettings(lineId: string, s: Omit<MirrorSettings, "line_id">): Promise<Result> {
+  await requireUser();
+  const supabase = await createClient();
+  const row = {
+    enabled: Boolean(s.enabled), auto_start: Boolean(s.auto_start), use_knowledge: Boolean(s.use_knowledge), use_history: Boolean(s.use_history),
+    use_directory: Boolean(s.use_directory), allow_sms: Boolean(s.allow_sms), allow_email: Boolean(s.allow_email), knowledge: s.knowledge?.trim().slice(0, 20000) || null,
+  };
+  const { data: existing } = await supabase.from("redial_mirror_settings").select("line_id").eq("line_id", lineId).maybeSingle();
+  const { error } = existing
+    ? await supabase.from("redial_mirror_settings").update(row).eq("line_id", lineId)
+    : await supabase.from("redial_mirror_settings").insert({ line_id: lineId, ...row });
+  return error ? { error: error.code === "42501" ? "You can't change this line's Mirror settings." : error.message } : done("Saved.");
+}
+
+// Mirror on a call a person is on: opens the media stream on the caller's call.
+export async function startMirror(callId: string): Promise<Result> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data: sid, error } = await supabase.rpc("redial_mirror_start", { p_call: callId });
+  if (error || !sid) return { error: error?.message ?? "Couldn't start Mirror." };
+  const r = await openMirrorStream(callId, sid as string);
+  if (!r.ok) {
+    await supabase.rpc("redial_mirror_stop", { p_call: callId, p_error: r.error ?? "stream failed" });
+    return { error: "Couldn't start Mirror on this call." };
+  }
+  return { ok: "Mirror is listening." };
+}
+
+export async function stopMirror(callId: string): Promise<Result> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data: sid, error } = await supabase.rpc("redial_mirror_stop", { p_call: callId });
+  if (error) return { error: error.message };
+  if (sid) await closeMirrorStream(callId, sid as string);
+  return { ok: "Mirror stopped." };
+}
+
+export async function dismissSuggestion(id: string): Promise<Result> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("redial_mirror_act", { p_suggestion: id, p_action: "dismiss" });
+  return error ? { error: error.message } : { ok: "Dismissed." };
+}
+
+// Sends a drafted text or email to the caller after the person reviewed it.
+// Texts come from the Redial line's number; emails from Echo, with replies
+// going to the person. Marked sent only once the provider accepted it.
+export async function sendSuggestion(id: string, draft: { to: string; subject?: string; body: string }): Promise<Result> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const body = draft.body.trim().slice(0, 1600);
+  if (!body) return { error: "The message is empty." };
+  const { data: g } = await supabase.from("redial_mirror_suggestions").select("kind").eq("id", id).maybeSingle();
+  if (!g) return { error: "Suggestion not found." };
+  const to = g.kind === "sms" ? toE164(draft.to) : /^\S+@\S+\.\S+$/.test(draft.to.trim()) ? draft.to.trim() : null;
+  if (!to) return { error: g.kind === "sms" ? "Enter the caller's mobile number." : "Enter the caller's email address." };
+  const { data: rows, error } = await supabase.rpc("redial_mirror_act", { p_suggestion: id, p_action: "send", p_sent_to: to });
+  const info = (rows as { kind: string; line_number: string; line_label: string }[] | null)?.[0];
+  if (error || !info) return { error: error?.message ?? "Couldn't send it." };
+  let ok = false;
+  if (info.kind === "sms") {
+    const r = await twilioRequest("/Messages.json", { To: to, From: info.line_number, Body: body });
+    ok = r.ok;
+  } else {
+    const subject = (draft.subject?.trim() || "Following up on our call").slice(0, 200);
+    const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;white-space:pre-wrap">${body.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}</div>`;
+    const r = await sendEmail(to, subject, html, body, { replyTo: user.email ?? undefined, idempotencyKey: `mirror/${id}` });
+    ok = r.ok;
+  }
+  await supabase.rpc("redial_mirror_act", { p_suggestion: id, p_action: ok ? "sent" : "failed" });
+  return ok ? { ok: info.kind === "sms" ? "Text sent." : "Email sent." } : { error: "It didn't send. Check the address and try again." };
 }
