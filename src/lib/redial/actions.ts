@@ -7,7 +7,8 @@ import { toE164 } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { SHAREABLE } from "./features";
 import { gatewayConfig, gatewayControl, listenTicket } from "./gateway";
-import { memberIdentity } from "./live";
+import { memberIdentity, tellAgent } from "./live";
+import { redialUrl } from "./twiml";
 import { VOICES, type Category, type ListKind, type Mode } from "./types";
 
 // Member actions for Redial call screening. Everything runs as the signed-in
@@ -172,7 +173,9 @@ export type LiveCall = {
   session: { state: string; ai_state: string; taken_over: "me" | "other" | null; participants: LiveParticipant[] } | null;
   turns: { id: number; role: "caller" | "assistant"; text: string }[];
   directions: LiveDirection[];
+  transfers: LiveTransfer[];
 };
+export type LiveTransfer = { id: string; label: string; status: "ringing" | "accepted" | "connected" | "declined" | "no_answer" | "failed" | "ended"; created_at: string };
 export type LiveDirection = { id: string; text: string; status: "sending" | "delivered" | "failed"; created_at: string; mine: boolean };
 
 export async function liveCalls(lineId: string): Promise<LiveCall[]> {
@@ -184,10 +187,11 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
     .gte("started_at", since).order("started_at", { ascending: false }).limit(5);
   if (!calls?.length) return [];
   const ids = calls.map((c) => c.id);
-  const [{ data: sessions }, { data: turns }, { data: directions }] = await Promise.all([
+  const [{ data: sessions }, { data: turns }, { data: directions }, { data: transfers }] = await Promise.all([
     supabase.from("redial_live_sessions").select("call_id, state, ai_state, taken_over_by, participants:redial_live_participants(id, role, status, muted, user_id)").in("call_id", ids),
     supabase.from("redial_live_turns").select("id, call_id, role, text").in("call_id", ids).order("id").limit(400),
     supabase.from("redial_live_directions").select("id, call_id, text, status, created_at, author_id").in("call_id", ids).order("created_at"),
+    supabase.from("redial_transfers").select("id, call_id, label, status, created_at").in("call_id", ids).order("created_at"),
   ]);
   return calls.map((c) => {
     const s = sessions?.find((x) => x.call_id === c.id);
@@ -198,6 +202,7 @@ export async function liveCalls(lineId: string): Promise<LiveCall[]> {
       turns: (turns ?? []).filter((t) => t.call_id === c.id).map(({ id, role, text }) => ({ id, role: role as "caller" | "assistant", text })),
       directions: (directions ?? []).filter((d) => d.call_id === c.id)
         .map((d) => ({ id: d.id, text: d.text, status: d.status as LiveDirection["status"], created_at: d.created_at, mine: d.author_id === user.id })),
+      transfers: (transfers ?? []).filter((t) => t.call_id === c.id).map(({ id, label, status, created_at }) => ({ id, label, status: status as LiveTransfer["status"], created_at })),
     };
   });
 }
@@ -304,4 +309,50 @@ export async function directAgent(callId: string, text: string): Promise<Result>
     return { error: "The assistant couldn't be reached, so it wasn't delivered." };
   }
   return { ok: "Sent." };
+}
+
+// Directory: saved transfer destinations for a line (manage_directory).
+export async function addDirectoryEntry(lineId: string, label: string, raw: string, note: string): Promise<Result> {
+  await requireUser();
+  const number = toE164(raw);
+  if (!label.trim()) return { error: "Give it a name, e.g. Office manager." };
+  if (!number) return { error: "Enter a valid phone number." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("redial_directory").insert({ line_id: lineId, label: label.trim().slice(0, 80), number, note: note.trim().slice(0, 300) || null });
+  if (error) return { error: error.code === "23505" ? "That number is already in the directory." : error.code === "42501" ? "You can't edit this line's directory." : error.message };
+  return done("Added.");
+}
+
+export async function removeDirectoryEntry(id: string): Promise<Result> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error, count } = await supabase.from("redial_directory").delete({ count: "exact" }).eq("id", id);
+  if (error) return { error: error.message };
+  return count ? done("Removed.") : { error: "You can't edit this line's directory." };
+}
+
+// Directory: transfer a live conference call. redial_transfer_start checks
+// the permissions, the destination and loops; then the target is called with
+// a private briefing and press 1. Nothing says "transferred" until they've
+// accepted and joined (the conference webhook records that).
+export async function transferCall(callId: string, to: { destinationId?: string; number?: string; confirmed?: boolean }): Promise<Result> {
+  await requireUser();
+  const custom = to.destinationId ? null : toE164(to.number ?? "");
+  if (!to.destinationId && !custom) return { error: "Enter a valid phone number." };
+  const supabase = await createClient();
+  const { data: rows, error } = await supabase.rpc("redial_transfer_start", {
+    p_call: callId, p_destination: to.destinationId ?? null, p_number: custom, p_confirmed: Boolean(to.confirmed),
+  });
+  const t = (rows as { transfer_id: string; number: string; label: string; from_number: string }[] | null)?.[0];
+  if (error || !t) return { error: error?.message ?? "Couldn't start the transfer." };
+  const r = await twilioRequest("/Calls.json", {
+    To: t.number, From: t.from_number, Url: redialUrl("transfer", callId, `&t=${t.transfer_id}`), Method: "POST",
+    StatusCallback: redialUrl("transfer", callId, `&t=${t.transfer_id}&step=status`), StatusCallbackEvent: "completed", Timeout: "25",
+  });
+  if (!r.ok) {
+    await supabase.rpc("redial_transfer_failed", { p_id: t.transfer_id, p_error: String(r.data.message ?? `Twilio ${r.status}`) });
+    return { error: "Couldn't place the call to that number." };
+  }
+  await tellAgent(callId, `You're connecting the caller to ${t.label} now. Tell them, and ask them to stay on the line for a moment.`);
+  return { ok: `Calling ${t.label}…` };
 }

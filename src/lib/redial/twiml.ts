@@ -45,3 +45,14 @@ export const listenLabel = (userId: string) => `listen-${userId}`;
 export function listenerJoin(name: string, userId: string) {
   return `<Dial><Conference muted="true" beep="false" startConferenceOnEnter="false" endConferenceOnExit="false" participantLabel="${xml(listenLabel(userId))}">${xml(name)}</Conference></Dial>`;
 }
+
+// Directory: the person a call is being transferred to hears who's calling
+// and why, privately, and presses 1 to be joined to the conference.
+export const transferLabel = (transferId: string) => `transfer-${transferId}`;
+export function transferBriefing(callId: string, transferId: string, briefing: string) {
+  const accept = hook("transfer", callId, `&t=${transferId}&step=accept`);
+  return `<Gather numDigits="1" timeout="8" action="${accept}"><Say>${xml(briefing)} Press 1 to take the call.</Say></Gather><Say>No problem. Goodbye.</Say><Hangup/>`;
+}
+export function transferJoin(name: string, transferId: string) {
+  return `<Dial><Conference beep="false" startConferenceOnEnter="true" endConferenceOnExit="true" participantLabel="${xml(transferLabel(transferId))}">${xml(name)}</Conference></Dial>`;
+}

@@ -1,6 +1,7 @@
 import "server-only";
 import { twilioRequest } from "@/lib/comms/twilio";
 import { isUuid } from "@/lib/data";
+import { gatewayControl } from "./gateway";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { redialUrl } from "./twiml";
 
@@ -68,3 +69,25 @@ export async function memberCan(db: Db, lineId: string, userId: string, cap: str
   ]);
   return line?.owner_id === userId || Boolean(grant?.capabilities?.includes(cap));
 }
+
+// The transfer target from a participant label (transfer-<id>), if any.
+export function transferFromLabel(label: string): string | null {
+  const id = label.startsWith("transfer-") ? label.slice(9) : "";
+  return isUuid(id) ? id : null;
+}
+
+// Takes the AI off a conference call for good (a transfer connected): mark
+// it removed so nothing can re-add it or hand the caller anywhere, stop it in
+// the gateway, and remove its participant. Safe to call twice.
+export async function removeAgent(db: Db, s: Session, conferenceSid: string) {
+  const { data: claimed } = await db.from("redial_live_sessions").update({ ai_state: "removed" })
+    .eq("id", s.id).in("ai_state", ["pending", "joining", "active"]).select("id").maybeSingle();
+  if (!claimed) return;
+  await twilioRequest(`/Conferences/${conferenceSid}/Participants/agent.json`, { Muted: "true", Hold: "true" });
+  await gatewayControl(s.call_id, "stop");
+  await twilioRequest(`/Conferences/${conferenceSid}/Participants/agent.json`, {}, "DELETE");
+  await liveEvent(db, s, "ai.removed", { reason: "transfer" });
+}
+
+// Tells the AI something mid-call as a private note (no delivery tracking).
+export const tellAgent = (callId: string, text: string) => gatewayControl(callId, "direct", { id: "", text });

@@ -8,6 +8,8 @@ import type { Line } from "@/lib/redial/types";
 import { cn } from "@/lib/utils";
 import { Audible } from "./audible";
 import { ListenLive } from "./listen-live";
+import { TransferCall } from "./transfer-call";
+import type { DirectoryEntry } from "@/lib/redial/data";
 
 const prettyNumber = (n: string | null) => (n ? n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "No caller ID");
 const IDLE_MS = 15000;
@@ -20,7 +22,10 @@ const LIVE_MS = 2500;
 // people with the guide permission can send it private directions (Audible).
 // Checks every 15 seconds, every 2.5 while a call is live, and not at all
 // while the tab is hidden. When a call ends the page refreshes its inbox.
-type Props = { line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean; canTakeOver: boolean; canDirect: boolean };
+type Props = {
+  line: Line; owner: boolean; canReadTranscript: boolean; canListen: boolean; canTakeOver: boolean; canDirect: boolean;
+  canTransfer: boolean; canCustomTransfer: boolean; directory: DirectoryEntry[];
+};
 
 export function LiveCalls(props: Props) {
   const { line } = props;
@@ -55,7 +60,7 @@ export function LiveCalls(props: Props) {
   );
 }
 
-function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeOver, canDirect }: Props & { call: LiveCall }) {
+function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeOver, canDirect, canTransfer, canCustomTransfer, directory }: Props & { call: LiveCall }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const seconds = Math.max(0, Math.floor((now - new Date(c.started_at).getTime()) / 1000));
@@ -82,6 +87,9 @@ function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeO
       {(canListen || canTakeOver) && c.session?.state === "live" && (
         <ListenLive callId={c.id} canListen={canListen} canTakeOver={canTakeOver} takenOver={c.session.taken_over} />
       )}
+      {canTransfer && c.session?.state === "live" && (
+        <TransferCall callId={c.id} assistant={line.assistant_name} directory={directory} canCustom={canCustomTransfer} transfers={c.transfers} />
+      )}
       {canDirect && aiOnCall && <Audible callId={c.id} assistant={line.assistant_name} directions={c.directions} />}
       {canReadTranscript ? <LiveTranscript turns={c.turns} assistant={line.assistant_name} /> : (
         <p className="text-xs text-muted-foreground">The live transcript is only shown to people the owner lets read transcripts.</p>
@@ -93,7 +101,7 @@ function LiveCard({ call: c, line, owner, canReadTranscript, canListen, canTakeO
 function Person({ p, line, canRemove }: { p: LiveParticipant; line: Line; canRemove: boolean }) {
   const [pending, start] = useTransition();
   const doing = p.muted ? "listening" : "speaking";
-  const name = p.role === "agent" ? line.assistant_name : p.role === "caller" ? "Caller" : `${p.me ? "You" : "Team member"} (${doing})`;
+  const name = p.role === "agent" ? line.assistant_name : p.role === "caller" ? "Caller" : p.role === "transfer" ? "Transfer recipient" : `${p.me ? "You" : "Team member"} (${doing})`;
   return (
     <li className="flex items-center gap-1 rounded-full border bg-card px-2 py-0.5">
       {name}

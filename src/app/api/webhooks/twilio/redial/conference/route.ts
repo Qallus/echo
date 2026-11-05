@@ -1,7 +1,7 @@
 import { twilioRequest, verifyTwilio } from "@/lib/comms/twilio";
 import { isUuid } from "@/lib/data";
 import { gatewayConfig } from "@/lib/redial/gateway";
-import { addAgent, aiGone, liveEvent, memberFromLabel, type Session } from "@/lib/redial/live";
+import { addAgent, aiGone, liveEvent, memberFromLabel, removeAgent, transferFromLabel, type Session } from "@/lib/redial/live";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Conference status callback for Redial conference calls (signed by Twilio),
@@ -9,7 +9,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // the AI once the caller is in, and hands the caller back when the AI leaves.
 // Listeners (Insider) join muted; if one is ever unmuted, they're muted again,
 // except the person who took the call over (Gavel). When that person hangs
-// up, the call ends for the caller too.
+// up, the call ends for the caller too, unless it was transferred. When a
+// transfer target joins (they pressed 1), the AI is removed for good.
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
@@ -18,9 +19,9 @@ export async function POST(req: Request) {
   const id = url.searchParams.get("call") ?? "";
   if (!isUuid(id)) return new Response(null, { status: 204 });
   const db = createAdminClient();
-  const { data } = await db.from("redial_live_sessions").select("id, call_id, line_id, conference_sid, caller_call_sid, agent_call_sid, state, ai_state, taken_over_by, line:redial_lines(number)").eq("call_id", id).maybeSingle();
+  const { data } = await db.from("redial_live_sessions").select("id, call_id, line_id, conference_sid, caller_call_sid, agent_call_sid, state, ai_state, taken_over_by, transferred_at, line:redial_lines(number)").eq("call_id", id).maybeSingle();
   if (!data) return new Response(null, { status: 204 });
-  const s = data as unknown as Session & { line: { number: string } };
+  const s = data as unknown as Session & { transferred_at: string | null; line: { number: string } };
 
   // The AI leg ended. If it never joined the conference (no answer, error),
   // the leave event won't come, so hand the caller back here.
@@ -32,7 +33,8 @@ export async function POST(req: Request) {
   const now = new Date().toISOString();
   const label = p.ParticipantLabel ?? "";
   const member = memberFromLabel(label);
-  const role = label === "caller" || label === "agent" ? label : "member";
+  const transfer = transferFromLabel(label);
+  const role = label === "caller" || label === "agent" ? label : transfer ? "transfer" : "member";
   switch (p.StatusCallbackEvent) {
     case "conference-start":
       await db.from("redial_live_sessions").update({ conference_sid: p.ConferenceSid, state: "live" }).eq("id", s.id).eq("state", "starting");
@@ -50,6 +52,14 @@ export async function POST(req: Request) {
         else await aiGone(db, s, "failed", "AI participant app isn't set up");
       } else if (role === "agent") {
         await db.from("redial_live_sessions").update({ ai_state: "active", agent_call_sid: p.CallSid }).eq("id", s.id).eq("ai_state", "joining");
+      } else if (transfer && p.ConferenceSid) {
+        const { data: t } = await db.from("redial_transfers").update({ status: "connected" }).eq("id", transfer).eq("session_id", s.id).eq("status", "accepted").select("label").maybeSingle();
+        if (t) {
+          await db.from("redial_live_sessions").update({ transferred_at: now }).eq("id", s.id);
+          await db.from("redial_calls").update({ status: "connected", reason: `Transferred to ${t.label}` }).eq("id", s.call_id).in("status", ["screening", "connected"]);
+          await liveEvent(db, s, "transfer.connected", { transfer_id: transfer });
+          await removeAgent(db, s, p.ConferenceSid);
+        }
       }
       break;
     }
@@ -58,7 +68,8 @@ export async function POST(req: Request) {
       await db.from("redial_live_participants").update({ status: "left", left_at: now }).eq("call_sid", p.CallSid);
       await liveEvent(db, s, "participant.leave", { role }, member);
       if (role === "agent") await aiGone(db, s, "left");
-      if (member && member === s.taken_over_by && p.ConferenceSid) {
+      if (transfer) await db.from("redial_transfers").update({ status: "ended", ended_at: now }).eq("id", transfer).eq("status", "connected");
+      if (member && member === s.taken_over_by && !s.transferred_at && p.ConferenceSid) {
         await twilioRequest(`/Conferences/${p.ConferenceSid}.json`, { Status: "completed" });
         await liveEvent(db, s, "takeover.end", {}, member);
       }

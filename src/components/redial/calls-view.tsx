@@ -13,7 +13,8 @@ import Link from "next/link";
 import { CallbackDialog, Callbacks } from "./callbacks";
 import { LinePeople } from "./line-people";
 import { LiveCalls } from "./live-calls";
-import type { LinePerson } from "@/lib/redial/data";
+import type { DirectoryEntry, LinePerson } from "@/lib/redial/data";
+import { DirectorySettings } from "./directory-settings";
 import { AssistantSettings, RulesSettings, useLineForm } from "./line-settings";
 
 const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30";
@@ -26,10 +27,12 @@ const CATEGORY_TONE: Record<Category, string> = {
   sales: "bg-amber-500/15 text-amber-800 dark:text-amber-300", spam: "bg-red-500/15 text-red-700 dark:text-red-300", unknown: "bg-muted text-muted-foreground",
 };
 
-export function CallsView({ line, access, calls, entries, callbacks, people, initialCall, initialTab, ownerFirst, usage }: {
-  line: Line; access: Access; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; people: LinePerson[]; initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null;
+export function CallsView({ line, access, calls, entries, callbacks, people, directory, initialCall, initialTab, ownerFirst, usage }: {
+  line: Line; access: Access; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; people: LinePerson[]; directory: DirectoryEntry[];
+  initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null;
 }) {
   const manage = allows(access, "manage_rules");
+  const editDirectory = allows(access, "manage_directory");
   const form = useLineForm(line);
   const [filter, setFilter] = useState<"inbox" | "messages" | "archived">("inbox");
   const [selected, setSelected] = useState<string | null>(initialCall ?? calls.find((c) => !c.archived_at)?.id ?? null);
@@ -43,14 +46,16 @@ export function CallsView({ line, access, calls, entries, callbacks, people, ini
       {line.paused && <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">Screening is paused: calls ring straight through. Turn it back on under Rules.</p>}
       {usage && <UsageBar usage={usage} />}
       {manage && needsSetup && !line.paused && <p className="rounded-xl border p-3 text-sm">Add the phone number your assistant should ring (usually your cell) under <span className="font-medium">Rules</span>, so it can put important calls through.</p>}
-      <LiveCalls line={line} owner={access.owner} canReadTranscript={allows(access, "read_transcript")} canListen={allows(access, "monitor_live")} canTakeOver={allows(access, "takeover_live")} canDirect={allows(access, "direct_agent")} />
+      <LiveCalls line={line} owner={access.owner} canReadTranscript={allows(access, "read_transcript")} canListen={allows(access, "monitor_live")} canTakeOver={allows(access, "takeover_live")} canDirect={allows(access, "direct_agent")}
+        canTransfer={allows(access, "transfer_call")} canCustomTransfer={allows(access, "dial_custom_destination")} directory={directory} />
       {!access.owner && <p className="rounded-xl border p-3 text-sm text-muted-foreground">This line is shared with you{manage ? "" : ". You can see its calls; only the owner changes its settings"}.</p>}
-      <Tabs defaultValue={[...["inbox", "callbacks"], ...(manage ? ["rules", "assistant"] : []), ...(access.owner ? ["people"] : [])].includes(initialTab ?? "") ? initialTab! : "inbox"}>
+      <Tabs defaultValue={[...["inbox", "callbacks"], ...(manage ? ["rules", "assistant"] : []), ...(editDirectory ? ["directory"] : []), ...(access.owner ? ["people"] : [])].includes(initialTab ?? "") ? initialTab! : "inbox"}>
         <TabsList variant="line">
           <TabsTrigger value="inbox">Inbox</TabsTrigger>
           <TabsTrigger value="callbacks">Callbacks{openCallbacks ? ` (${openCallbacks})` : ""}</TabsTrigger>
           {manage && <TabsTrigger value="rules">Rules</TabsTrigger>}
           {manage && <TabsTrigger value="assistant">Assistant</TabsTrigger>}
+          {editDirectory && <TabsTrigger value="directory">Directory</TabsTrigger>}
           {access.owner && <TabsTrigger value="people">People{people.length ? ` (${people.length})` : ""}</TabsTrigger>}
         </TabsList>
 
@@ -98,6 +103,7 @@ export function CallsView({ line, access, calls, entries, callbacks, people, ini
         <TabsContent value="callbacks" className="pt-4"><Callbacks line={line} callbacks={callbacks} calls={calls} /></TabsContent>
         {manage && <TabsContent value="rules" className="pt-4"><RulesSettings line={line} form={form} entries={entries} /></TabsContent>}
         {manage && <TabsContent value="assistant" className="pt-4"><AssistantSettings line={line} form={form} ownerFirst={ownerFirst} /></TabsContent>}
+        {editDirectory && <TabsContent value="directory" className="pt-4"><DirectorySettings lineId={line.id} entries={directory} canEdit /></TabsContent>}
         {access.owner && <TabsContent value="people" className="pt-4"><LinePeople lineId={line.id} people={people} /></TabsContent>}
       </Tabs>
     </div>

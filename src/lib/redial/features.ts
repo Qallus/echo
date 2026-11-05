@@ -19,9 +19,9 @@ export const CAPABILITIES = [
   { id: "monitor_live", label: `${FEATURES.insider.name}: listen to live calls`, live: false },
   { id: "takeover_live", label: `${FEATURES.gavel.name}: take over calls from the assistant`, live: false },
   { id: "direct_agent", label: `${FEATURES.audible.name}: guide the assistant during calls`, live: false },
-  { id: "transfer_call", label: `${FEATURES.directory.name}: transfer calls`, live: true },
-  { id: "manage_directory", label: `${FEATURES.directory.name}: edit destinations`, live: true },
-  { id: "dial_custom_destination", label: `${FEATURES.directory.name}: transfer to a one-time number`, live: true },
+  { id: "transfer_call", label: `${FEATURES.directory.name}: transfer calls to saved numbers`, live: false },
+  { id: "manage_directory", label: `${FEATURES.directory.name}: edit the transfer list`, live: false },
+  { id: "dial_custom_destination", label: `${FEATURES.directory.name}: transfer to a one-time number`, live: false },
   { id: "mirror", label: `${FEATURES.mirror.name}: use the call assistant`, live: true },
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number]["id"];
