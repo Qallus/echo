@@ -23,7 +23,7 @@ import { EventDialog, blankDraft, type EventDraft } from "@/components/calendar/
 import { itemsFor } from "@/lib/visuals";
 import { TemplatePicker } from "@/components/recording/template-picker";
 import { LocalDate } from "@/components/local-date";
-import { moveRecordings, toggleActionItem } from "@/lib/actions";
+import { exportRecordings, moveRecordings, toggleActionItem } from "@/lib/actions";
 import { formatClock, formatDuration, spaceLabel } from "@/lib/format";
 import type { PersonCard, Recording, RecordingDetail, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,14 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
       if (!err) router.refresh();
     });
   };
+  const [exporting, startExport] = useTransition();
+  const exportText = () =>
+    startExport(async () => {
+      const { filename, text } = await exportRecordings([r.id]);
+      const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+      Object.assign(document.createElement("a"), { href: url, download: filename }).click();
+      URL.revokeObjectURL(url);
+    });
   const move = (to: Workspace) =>
     startMove(async () => {
       const res = await moveRecordings([r.id], to.id);
@@ -109,8 +117,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
               <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Export" />}><Download /></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem render={<Link href={`/recordings/${r.id}/report`} />}><FileText /> Branded summary (PDF)</DropdownMenuItem>
-                <DropdownMenuItem><FileText /> Export transcript (.txt)</DropdownMenuItem>
-                <DropdownMenuItem><FileText /> Publish as web page</DropdownMenuItem>
+                <DropdownMenuItem disabled={exporting} onClick={exportText}><FileText /> {exporting ? "Exporting…" : "Transcript and summary (.txt)"}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
