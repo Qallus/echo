@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Redial app has its own lint setup (npx expo lint in mobile/).
+    "mobile/**",
   ]),
 ]);
 

@@ -2,28 +2,16 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Bot, Check, Gavel, PhoneIncoming, User } from "lucide-react";
+import { DEMO_CALL } from "@/lib/redial/demo-call";
 import { FEATURES } from "@/lib/redial/features";
 import { cn } from "@/lib/utils";
 
 // The mobile app section's phone: a short Redial call on a loop. The
 // assistant screens Mike, you take over with Gavel, and the rest of the call
-// is recorded and transcribed. With reduced motion on, it shows the end.
+// is recorded and transcribed (script: src/lib/redial/demo-call.ts). With
+// reduced motion on, it shows the end.
 
-type Line = { at: number; who: "ai" | "caller" | "you"; text: string };
-
-const LINES: Line[] = [
-  { at: 1500, who: "ai", text: "Hi, this is Jeremy's assistant. How can I help you?" },
-  { at: 4500, who: "caller", text: "Is Jeremy available?" },
-  { at: 6800, who: "ai", text: "He's currently busy. Is there something I can help you with?" },
-  { at: 10000, who: "caller", text: "This is Mike from Strategic Income Group." },
-  { at: 16000, who: "you", text: "Hey Mike, how are you doing?" },
-  { at: 18800, who: "caller", text: "I'm doing great!" },
-];
-const NAMED = 10000; // Mike says who he is
-const PRESS = 12500; // you tap Gavel
-const TOOK_OVER = 14000;
-const ENDED = 21500;
-const LOOP = 25000;
+const { lines: LINES, named: NAMED, press: PRESS, tookOver: TOOK_OVER, ended: ENDED, loop: LOOP } = DEMO_CALL;
 const TICK = 100;
 
 function subscribeReducedMotion(onChange: () => void) {
@@ -46,7 +34,7 @@ export function PhoneCallDemo() {
   }, [reduced]);
   const t = reduced ? LOOP : clock;
 
-  const caller = t >= NAMED ? "Mike · Strategic Income Group" : "(602) 555-0117";
+  const caller = t >= NAMED ? DEMO_CALL.caller : DEMO_CALL.number;
   const yours = t >= TOOK_OVER;
   const ended = t >= ENDED;
 

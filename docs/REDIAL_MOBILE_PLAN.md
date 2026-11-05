@@ -30,6 +30,8 @@ The web uses server actions, which a phone app can't call. Add a small REST API 
 - Tests: an RLS test for `device_tokens`, and API tests with two members.
 
 ### 8b. Android app, first release (Play internal testing)
+Progress (Nov 5): `mobile/` app started (Expo SDK 58, Expo Router). Built: welcome with the animated call, sign-in and sign-up, setup (number with carrier forwarding codes, screening, assistant, notifications, test call), the six-card feature tour, Calls inbox and call detail (summary, transcript, call back, Block/VIP), Echo recordings and recording detail (summary, action items, transcript), Settings (lock-screen privacy, notifications, tour, sign out, delete account), push registration and notification deep links. Still to build in 8b: live call card (Audible, Directory, Mirror), live voice (Insider, Gavel; native Twilio SDK), callbacks, recording audio playback, Ask Echo, app icon and splash artwork, first EAS build.
+
 - **Onboarding** on first launch (see "Onboarding and feature tour" below).
 - Sign in (email and password, magic link), sign out, delete account (required by Apple).
 - Redial: call inbox, call detail (summary, message, voicemail, transcript where allowed), callbacks, quick block/VIP, basic rules (mode, pause).
