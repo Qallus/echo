@@ -2,6 +2,7 @@ import { useState } from "react";
 import { router } from "expo-router";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { PhoneOff } from "lucide-react-native";
+import { LiveCalls } from "@/components/live/live-calls";
 import { Body, Button, ErrorText, Loading, Screen, Title } from "@/components/ui";
 import { Radius, Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
@@ -9,15 +10,16 @@ import { get } from "@/lib/api";
 import { callerOf } from "@/lib/calls";
 import { ago } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
-import type { Call, LineData, Me } from "@/lib/types";
+import type { Call, LineDetail, Me } from "@/lib/types";
 
-// The call inbox for one line (with a switcher when there are several).
+// The call inbox for one line (with a switcher when there are several), with
+// any live calls on top.
 export default function Calls() {
   const c = useTheme();
   const me = useLoad(() => get<Me>("me"), "me");
   const [picked, setPicked] = useState<string | null>(null);
   const lineId = picked ?? me.data?.lines[0]?.id ?? null;
-  const line = useLoad(() => (lineId ? get<LineData>("line", { line: lineId }) : Promise.resolve(null)), lineId ?? "");
+  const line = useLoad(() => (lineId ? get<LineDetail>("line", { line: lineId }) : Promise.resolve(null)), lineId ?? "");
 
   if (me.loading) return <Loading />;
   if (me.error) return <Screen><ErrorText>{me.error}</ErrorText><Button title="Try again" onPress={() => me.reload()} /></Screen>;
@@ -52,6 +54,7 @@ export default function Calls() {
       <FlatList
         data={calls}
         keyExtractor={(x) => x.id}
+        ListHeaderComponent={line.data ? <LiveCalls detail={line.data} onChange={() => line.reload()} /> : undefined}
         refreshControl={<RefreshControl refreshing={line.refreshing} onRefresh={() => line.reload(true)} tintColor={c.text} />}
         ListEmptyComponent={line.loading ? <Loading /> : <Body muted style={{ textAlign: "center", paddingTop: 40 }}>No calls yet. They show up here as your assistant takes them.</Body>}
         ItemSeparatorComponent={() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.border }} />}

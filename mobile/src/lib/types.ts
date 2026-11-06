@@ -19,3 +19,24 @@ export type RecordingDetail = {
   summary: { overview: string; keyPoints: string[]; actionGroups: { owner: string; items: { id: string; text: string; done: boolean }[] }[] } | null;
   audioUrl: string | null;
 };
+
+// The live-call parts of `line` (directory, Mirror switch) and of `live`
+// (src/lib/redial/actions.ts on the website).
+export type DirectoryEntry = { id: string; label: string; number: string; note: string | null; sort: number };
+export type LineDetail = LineData & { directory: DirectoryEntry[]; mirror: { enabled: boolean } };
+export type LiveParticipant = { id: string; role: string; status: string; muted: boolean; me: boolean };
+export type LiveDirection = { id: string; text: string; status: "sending" | "delivered" | "failed"; created_at: string; mine: boolean };
+export type LiveTransfer = { id: string; label: string; status: "ringing" | "accepted" | "connected" | "declined" | "no_answer" | "failed" | "ended"; created_at: string };
+export type LiveSuggestion = {
+  id: string; kind: "say" | "answer" | "info" | "caution" | "sms" | "email"; title: string; body: string; subject: string | null;
+  source: string | null; status: "new" | "dismissed" | "sending" | "sent" | "failed"; sent_to: string | null; created_at: string;
+};
+export type LiveCall = {
+  id: string; from_number: string | null; caller_id_name: string | null; caller_name: string | null; status: string; started_at: string;
+  session: { state: string; ai_state: string; taken_over: "me" | "other" | null; participants: LiveParticipant[] } | null;
+  turns: { id: number; role: "caller" | "assistant" | "person"; text: string }[];
+  directions: LiveDirection[];
+  transfers: LiveTransfer[];
+  mirror: { state: string; error: string | null } | null;
+  suggestions: LiveSuggestion[];
+};

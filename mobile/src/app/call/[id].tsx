@@ -3,16 +3,19 @@ import { useLocalSearchParams } from "expo-router";
 import { Linking, Text, View } from "react-native";
 import { Ban, PhoneCall, Star } from "lucide-react-native";
 import { allows } from "@shared/types";
+import { LiveCalls } from "@/components/live/live-calls";
 import { Body, Button, Card, ErrorText, Label, Loading, Screen } from "@/components/ui";
 import { useTheme } from "@/hooks/use-theme";
 import { get, post } from "@/lib/api";
 import { callerOf } from "@/lib/calls";
 import { ago, duration, phone } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
-import type { LineData, Me } from "@/lib/types";
+import type { LineDetail, Me } from "@/lib/types";
 
-// One call: the summary or message, the transcript (when the member may read
+// One call: while it is live, the live card; then the summary or message, the transcript (when the member may read
 // it), call back, and quick Block or VIP. Opening it marks it read.
+const LIVE = ["ringing", "screening", "connecting", "connected"];
+
 export default function CallDetail() {
   const c = useTheme();
   const { id, line } = useLocalSearchParams<{ id: string; line?: string }>();
@@ -20,7 +23,7 @@ export default function CallDetail() {
     // From a notification there's no line id: find the line that has the call.
     const ids = line ? [line] : (await get<Me>("me")).lines.map((l) => l.id);
     for (const l of ids) {
-      const d = await get<LineData>("line", { line: l });
+      const d = await get<LineDetail>("line", { line: l });
       const call = d.calls.find((x) => x.id === id);
       if (call) return { d, call };
     }
@@ -54,6 +57,8 @@ export default function CallDetail() {
         <Text style={{ color: c.text, fontSize: 24, fontWeight: "700" }}>{callerOf(call)}</Text>
         <Body muted>{[phone(call.from_number), ago(call.started_at), call.duration_seconds ? duration(call.duration_seconds) : null].filter(Boolean).join(" · ")}</Body>
       </View>
+
+      {LIVE.includes(call.status) && <LiveCalls detail={d} only={call.id} onChange={() => data.reload()} />}
 
       {(call.summary || call.message) && (
         <Card style={{ gap: 6 }}>
