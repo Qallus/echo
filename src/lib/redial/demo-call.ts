@@ -1,7 +1,7 @@
-// The short Redial call the website's mobile section and the Redial app's
-// welcome screen both play: the assistant screens Mike, you take over with
-// Gavel, and the rest is recorded. Times are ms from the start of the loop.
-// No imports, so the app (mobile/) can share this file as is.
+// The short Redial call the website's mobile section plays: the assistant
+// screens Mike, you take over with Gavel, and the rest is recorded. Times are
+// ms from the start of the loop. No imports, so the app (mobile/) could share
+// this file as is (its welcome screen has its own call, mobile/src/lib/welcome-call.ts).
 
 export type DemoLine = { at: number; who: "ai" | "caller" | "you"; text: string };
 
