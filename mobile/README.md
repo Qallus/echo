@@ -12,7 +12,7 @@ The app talks to the Echo website's `/api/mobile` routes, so run the website too
 
 ## Phone builds
 
-Built in the cloud with Expo (EAS): `npx eas-cli@latest build --profile development --platform android`. Needs an Expo account, and Firebase (FCM) credentials for push notifications.
+Built in the cloud with Expo (EAS), under the `redial` Expo account: `npx eas-cli@latest build --profile development --platform android`. Profiles are in `eas.json`: `development` (dev client APK), `preview` (installable test APK) and `production` (Play Store bundle). Every profile points the app at https://redial.si. Push notifications also need Firebase (FCM) credentials uploaded to Expo.
 
 ## Shared with the website
 

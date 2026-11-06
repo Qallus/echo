@@ -1,0 +1,42 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://wcsejeuqqeepgrprcrde.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PvXGmd1Cjimjs3anbAD07Q_gRxTglDZ",
+        "EXPO_PUBLIC_API_URL": "https://redial.si"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://wcsejeuqqeepgrprcrde.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PvXGmd1Cjimjs3anbAD07Q_gRxTglDZ",
+        "EXPO_PUBLIC_API_URL": "https://redial.si"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://wcsejeuqqeepgrprcrde.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PvXGmd1Cjimjs3anbAD07Q_gRxTglDZ",
+        "EXPO_PUBLIC_API_URL": "https://redial.si"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
