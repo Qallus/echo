@@ -89,7 +89,7 @@ Feature names come from `src/lib/redial/features.ts`, as on the web.
 
 1. **Google Play Console** as an organization (Qallus LLC): $25 once, and it needs a D-U-N-S number for the company. New personal accounts must run a closed test with at least 12 testers for 14 days before going public; organization accounts don't, which is why the organization account is recommended.
 2. **Firebase project** (free) for Android push notifications. The same project later gives Twilio its push credential for call alerts (8c).
-3. **Expo account** (free to start) for builds. Done: account `redial`, set as the owner in `mobile/app.json`; build profiles in `mobile/eas.json`, all pointing at https://redial.si.
+3. **Expo account** (free to start) for builds. Done: organization Qallus (`qallus`, signed in as `redial`), set as the owner in `mobile/app.json`; build profiles in `mobile/eas.json`, all pointing at https://redial.si.
 4. **Two Android phones** for testing (see 8b).
 5. A **demo account** with a test line for Google's reviewers.
 6. Later: **Apple Developer Program** as an organization ($99 a year, same D-U-N-S number) for the iPhone app, and a Chrome Web Store developer account ($5 once).
