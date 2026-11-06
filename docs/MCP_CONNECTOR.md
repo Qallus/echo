@@ -165,6 +165,29 @@ Allowed values (enforced by the database):
 |---|---|---|
 | `audit_log_list` | Recent connector activity | `limit` |
 
+### Email (Echo staff only)
+Listed only for staff whose role has `comms.view` (owner, admin, support, marketing), and only once the session has passed two-step sign-in when that's required. Writes and sends need `comms.manage`; every row is checked again by RLS. Code: `src/lib/mcp/tools/email.ts`, using the same service as the admin (`src/lib/comms/email.ts`).
+
+| Tool | Does | Key inputs |
+|---|---|---|
+| `email_guide` | Block reference, example template, merge fields, brand details, audience options, rules. Call first | — |
+| `email_template_list` | Templates (archived only on request) | `status?`, `category?`, `query?`, `limit` |
+| `email_template_get` | One template: blocks or HTML, plus `revision` | `template_id` |
+| `email_template_save` | Create (draft by default) or update. Fails if someone changed it since `revision` | `template_id?`, `revision?`, `name`, `subject`, `preheader?`, `category?`, `status?`, `mode`, `blocks?`/`settings?` or `html?` |
+| `email_audience_list` | Saved audiences and the CRM contact tags | — |
+| `email_audience_save` | Save a named audience filter | `audience_id?`, `name`, `audience` |
+| `email_send_test` | One `[Test]` copy to the signed-in person | `content`, `to?` |
+| `email_send_prepare` | Who it goes to (count, sample, subject, excerpt, problems). Sends nothing; returns a `confirmation_id` | `content`, `to` |
+| `email_send_confirm` | Sends what was prepared. Only after the person says yes | `confirmation_id` |
+| `email_history` | Recent bulk sends and emails | `limit` |
+
+Sending rules (the same in the admin):
+- **Two steps through Claude.** `prepare` stores the exact email and audience in `mcp_confirmations`. `confirm` claims it once, within 15 minutes, for the same person and Claude connection. If the audience grew since the preview, nothing is sent.
+- **Test first.** A send to an audience or to more than 25 people needs a test of the same email by the same person in the last 24 hours.
+- **Limits.** At most 5,000 people per send, and 5,000 a day through Claude.
+- **Only Active templates are sent.** Drafts can be tested. Automations skip drafts and archived templates.
+- **Unsubscribed people are always skipped,** and each skip is logged with its reason.
+
 Later phases add tools as features land (uploads and signed audio URLs, transcription jobs, templates, AutoFlow rules, agents, Twilio/Resend messaging, admin), following the same rules.
 
 ---

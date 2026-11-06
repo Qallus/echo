@@ -147,3 +147,71 @@ export function parseSchema(raw: unknown): EmailSchema | null {
   if (!Array.isArray(s.blocks)) return null;
   return { version: 1, settings: { ...DEFAULT_SETTINGS, ...(s.settings ?? {}) }, blocks: s.blocks.slice(0, 80) as EmailBlock[] };
 }
+
+// ---------------------------------------------------------------------------
+// HTML templates: hand-written markup instead of blocks. Scripts and inline
+// event handlers are removed (email clients drop them anyway). The preview
+// text is added as a hidden line, and if the markup has no unsubscribe link
+// a small footer with one is added, so every send can be unsubscribed from.
+// ---------------------------------------------------------------------------
+export type TemplateMode = "blocks" | "html";
+export type TemplateContent = { mode: TemplateMode; schema: EmailSchema | null; html: string; preheader?: string | null };
+
+const UNSUB_FOOTER = `<div style="padding:16px;text-align:center;font-family:Arial,sans-serif;font-size:11px;line-height:1.6;color:#71717a">{{org_name}} · <a href="{{unsubscribe_url}}" style="color:#71717a">Unsubscribe</a></div>`;
+
+export function cleanHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script\s*>/gi, "")
+    .replace(/<(iframe|object|embed|form)[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/(href|src)\s*=\s*(["'])\s*javascript:[^"']*\2/gi, '$1="#"')
+    .slice(0, 500000);
+}
+
+export function htmlTemplate(html: string, opts: { preheader?: string | null } = {}): string {
+  let out = cleanHtml(html);
+  if (!out.includes("{{unsubscribe_url}}")) out = /<\/body\s*>/i.test(out) ? out.replace(/<\/body\s*>/i, `${UNSUB_FOOTER}</body>`) : `${out}${UNSUB_FOOTER}`;
+  if (opts.preheader) {
+    const pre = `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(opts.preheader)}</div>`;
+    out = /<body[^>]*>/i.test(out) ? out.replace(/<body[^>]*>/i, (m) => m + pre) : pre + out;
+  }
+  return out;
+}
+
+const ENTITIES: Record<string, string> = { "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&middot;": "·" };
+export function htmlToText(html: string): string {
+  const text = html
+    .replace(/<(style|head|title)[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/<div style="display:none[^>]*>[\s\S]*?<\/div>/i, "")
+    .replace(/<a\s[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, url: string, label: string) => {
+      const l = label.replace(/<[^>]+>/g, "").trim();
+      return l && l !== url ? `${l} (${url})` : url;
+    })
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|tr|table)>/gi, "\n\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&[a-z#0-9]+;/gi, (e) => ENTITIES[e] ?? " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n\s*\n+/g, "\n\n")
+    .trim();
+  return text.includes("{{unsubscribe_url}}") ? text : `${text}\n\nUnsubscribe: {{unsubscribe_url}}`;
+}
+
+// What gets sent for a template, in either mode (merge fields still in place).
+export function renderTemplate(t: TemplateContent, origin?: string): { html: string; text: string } {
+  if (t.mode === "html") {
+    const html = htmlTemplate(t.html, { preheader: t.preheader });
+    return { html, text: htmlToText(html) };
+  }
+  const schema = t.schema ?? defaultSchema();
+  return { html: schemaToHtml(schema, { preheader: t.preheader ?? undefined, origin }), text: schemaToText(schema) };
+}
+
+// Blocks -> starting HTML when switching a template to HTML mode.
+export const schemaToEditableHtml = (schema: EmailSchema, origin?: string) =>
+  `<!doctype html>\n<html>\n<body style="margin:0">\n${schemaToHtml(schema, { origin })}\n</body>\n</html>\n`;
+
+export const STATUSES = ["draft", "active", "archived"] as const;
+export type TemplateStatus = (typeof STATUSES)[number];
+export const CATEGORIES = ["general", "sales", "onboarding", "follow-up", "newsletter", "billing", "support"];

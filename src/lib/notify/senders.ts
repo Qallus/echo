@@ -54,6 +54,32 @@ export async function sendEmail(to: string, subject: string, html: string, text:
   }
 }
 
+// Up to 100 emails in one Resend request (bulk sends). One result per email,
+// in order; if the request itself fails, every email in it failed.
+export type BatchEmail = { to: string; subject: string; html: string; text: string; headers?: Record<string, string> };
+export async function sendEmailBatch(items: BatchEmail[], idempotencyKey?: string): Promise<SendResult[]> {
+  if (!items.length) return [];
+  const s = await secrets("RESEND_API_KEY", "EMAIL_FROM", "RESEND_REPLY_TO");
+  const from = s.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
+  const fail = (error: string) => items.map(() => ({ ok: false, error }));
+  if (!s.RESEND_API_KEY || !from) return fail("Email isn't set up (Admin → Settings → Integrations → Resend).");
+  try {
+    const res = await fetch("https://api.resend.com/emails/batch", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${s.RESEND_API_KEY}`, "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
+      body: JSON.stringify(items.slice(0, 100).map((i) => ({
+        from: from.includes("<") ? from : `Echo <${from}>`, to: [i.to], subject: i.subject, html: i.html, text: i.text,
+        ...(i.headers ? { headers: i.headers } : {}), ...(s.RESEND_REPLY_TO ? { reply_to: s.RESEND_REPLY_TO } : {}),
+      }))),
+    });
+    const json = (await res.json().catch(() => ({}))) as { data?: { id?: string }[]; message?: string };
+    if (!res.ok) return fail(json.message ?? `Resend ${res.status}`);
+    return items.map((_, k) => (json.data?.[k]?.id ? { ok: true, id: json.data[k].id } : { ok: false, error: "No confirmation from Resend." }));
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : "Email failed.");
+  }
+}
+
 // "+1 (555) 123-4567" -> "+15551234567". US numbers without a country code get +1.
 export function toE164(raw: string): string | null {
   const digits = raw.replace(/[^\d+]/g, "");

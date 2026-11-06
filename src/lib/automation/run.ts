@@ -3,8 +3,8 @@ import { createHmac } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { money } from "@/lib/billing/catalog";
-import { applyMerge, parseSchema } from "@/lib/comms/blocks";
-import { contactRecipients, sendToRecipients, type Recipient } from "@/lib/comms/send";
+import { applyMerge } from "@/lib/comms/blocks";
+import { contactRecipients, sendToRecipients, templateBody, type Recipient } from "@/lib/comms/send";
 import { phoneNumber, twilioSms } from "@/lib/comms/twilio";
 import { OPEN_STAGES, STAGES, type DealStage } from "@/lib/crm/deals";
 import { siteUrl, toE164 } from "@/lib/notify/senders";
@@ -136,9 +136,10 @@ async function perform(db: SupabaseClient, a: RuleAction, rec: Loaded, rule: Rul
   const ownerId = rec.deal?.owner_id ?? rec.contact?.owner_id ?? null;
   switch (a.type) {
     case "send_email": {
-      const { data: t } = await db.from("email_templates").select("id, subject, preheader, schema").eq("id", a.templateId).maybeSingle();
-      const schema = parseSchema(t?.schema);
-      if (!t || !schema) return { ok: false, detail: "The email template is missing." };
+      const { data: t } = await db.from("email_templates").select("id, subject, preheader, schema, html, mode, status").eq("id", a.templateId).maybeSingle();
+      const body = t ? templateBody(t) : null;
+      if (!t || !body) return { ok: false, detail: "The email template is missing." };
+      if (t.status !== "active") return { ok: true, detail: "Skipped: the template is a draft or archived." };
       let recipients: Recipient[] = [];
       if (a.to === "contact" && rec.contact?.email) {
         recipients = await contactRecipients(db, [rec.contact.id], rec.deal);
@@ -148,7 +149,7 @@ async function perform(db: SupabaseClient, a: RuleAction, rec: Loaded, rule: Rul
         if (to) recipients = [{ email: to, contact_id: a.to === "contact" ? rec.contact?.id ?? null : null, deal_id: rec.deal?.id ?? null, values: rec.values }];
       }
       if (!recipients.length) return { ok: false, detail: "No email address to send to." };
-      const res = await sendToRecipients(db, { subject: t.subject, schema, preheader: t.preheader, templateId: t.id }, recipients);
+      const res = await sendToRecipients(db, { subject: t.subject, ...body, templateId: t.id }, recipients);
       return res.sent ? { ok: true, detail: `Sent to ${recipients[0].email}` } : { ok: Boolean(res.skipped), detail: res.errors[0] ?? "Unsubscribed." };
     }
     case "send_sms": {

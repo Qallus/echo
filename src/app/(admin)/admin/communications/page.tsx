@@ -6,7 +6,7 @@ import { NotificationsPanel } from "@/components/admin/comms/notifications-panel
 import { TextsPanel } from "@/components/admin/comms/texts-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { can, requireStaff } from "@/lib/admin/guard";
-import { listAutomations, listCalls, listDeliveries, listInbox, listOptOuts, listSends, listTemplates, listTexts, listUnsubscribes } from "@/lib/comms/data";
+import { listAudiences, listAutomations, listCalls, listCampaigns, listDeliveries, listInbox, listOptOuts, listSends, listTemplates, listTexts, listUnsubscribes } from "@/lib/comms/data";
 import { callsReady, phoneNumber, textsReady } from "@/lib/comms/twilio";
 import { secret } from "@/lib/secrets";
 import { listContacts } from "@/lib/crm/data";
@@ -22,12 +22,13 @@ const TABS = ["inbox", "texts", "calls", "email", "notifications"] as const;
 export default async function CommunicationsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const staff = await requireStaff("comms.view");
   const showNotifications = can(staff, "notifications.view");
-  const [{ tab }, inbox, templates, sends, unsubscribes, contacts, deliveries, texts, calls, optOuts, automations] = await Promise.all([
+  const [{ tab }, inbox, templates, sends, unsubscribes, contacts, deliveries, texts, calls, optOuts, automations, campaigns, audiences] = await Promise.all([
     searchParams, listInbox(), listTemplates(), listSends(), listUnsubscribes(),
     can(staff, "crm.view") ? listContacts() : Promise.resolve([]),
     showNotifications ? listDeliveries() : Promise.resolve([]),
-    listTexts(), listCalls(), listOptOuts(), listAutomations(),
+    listTexts(), listCalls(), listOptOuts(), listAutomations(), listCampaigns(), listAudiences(),
   ]);
+  const knownTags = [...new Set(contacts.flatMap((c) => c.tags ?? []))].sort();
   const [canText, canCall, number, cronSecret] = await Promise.all([textsReady(), callsReady(), phoneNumber(), secret("CRON_SECRET")]);
   const phonePeople = contacts.map((c) => ({ id: c.id, name: contactName(c), phone: c.phone }));
   const unreadTexts = texts.filter((t) => t.direction === "inbound" && !t.read_at).length;
@@ -49,7 +50,8 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
         <TabsContent value="texts" className="pt-6"><TextsPanel texts={texts} people={phonePeople} optOuts={optOuts} ready={canText} readOnly={readOnly} /></TabsContent>
         <TabsContent value="calls" className="pt-6"><CallsPanel calls={calls} people={phonePeople} ready={canCall} number={number} readOnly={readOnly} /></TabsContent>
         <TabsContent value="email" className="pt-6">
-          <EmailPanel templates={templates} sends={sends} unsubscribes={unsubscribes} readOnly={readOnly} automations={automations} cronReady={Boolean(cronSecret)}
+          <EmailPanel templates={templates} sends={sends} campaigns={campaigns} audiences={audiences} unsubscribes={unsubscribes} readOnly={readOnly} automations={automations} cronReady={Boolean(cronSecret)}
+            knownTags={knownTags} canCustomers={can(staff, "users.view")}
             people={contacts.map((c) => ({ id: c.id, name: contactName(c), email: c.email }))} />
         </TabsContent>
         {showNotifications && <TabsContent value="notifications" className="pt-6"><NotificationsPanel deliveries={deliveries} /></TabsContent>}

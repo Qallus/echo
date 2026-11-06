@@ -129,6 +129,14 @@
   }
   html {
     @apply font-sans;
+    color-scheme: light;
+  }
+  /* Native controls (select menus, date pickers, scrollbars) follow the theme. */
+  html.dark {
+    color-scheme: dark;
+  }
+  option {
+    @apply bg-popover text-popover-foreground;
   }
 }
 /* Marketing hero demo (src/components/marketing/hero-demo). */

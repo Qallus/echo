@@ -3,11 +3,17 @@ import { listCalendarEvents, listWorkspaces } from "@/lib/data";
 
 export const metadata = { title: "Calendar · Echo" };
 
+// Six months back to about a year ahead.
+function range() {
+  const now = Date.now();
+  return [new Date(now - 180 * 86400000).toISOString(), new Date(now + 400 * 86400000).toISOString()] as const;
+}
+
 // Appointments, events and deadlines, including ones added from recordings.
 export default async function CalendarPage() {
-  const now = Date.now();
+  const [from, to] = range();
   const [events, workspaces] = await Promise.all([
-    listCalendarEvents(new Date(now - 180 * 86400000).toISOString(), new Date(now + 400 * 86400000).toISOString()),
+    listCalendarEvents(from, to),
     listWorkspaces(),
   ]);
   return (

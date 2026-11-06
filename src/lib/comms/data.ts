@@ -1,12 +1,21 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { EmailSchema } from "./blocks";
+import type { Audience } from "./audience";
+import type { EmailSchema, TemplateMode, TemplateStatus } from "./blocks";
 
 // Communications reads for the admin. RLS (comms.view / notifications.view)
 // decides what comes back.
 
-export type Template = { id: string; name: string; subject: string; preheader: string | null; category: string; schema: EmailSchema | null; sends: number; last_sent_at: string | null; updated_at: string };
-export type Send = { id: string; template_id: string | null; to_email: string; subject: string; status: "sent" | "failed" | "skipped"; error: string | null; contact_id: string | null; deal_id: string | null; sent_by: string | null; created_at: string };
+export type Template = {
+  id: string; name: string; subject: string; preheader: string | null; category: string; status: TemplateStatus; mode: TemplateMode;
+  schema: EmailSchema | null; html: string; revision: number; created_via: "admin" | "claude"; sends: number; last_sent_at: string | null; updated_at: string;
+};
+export type Campaign = {
+  id: string; template_id: string | null; subject: string; audience_label: string | null; total: number; sent: number; skipped: number; failed: number;
+  status: "sending" | "sent" | "partial" | "failed"; via: "admin" | "claude"; created_by: string | null; created_at: string; finished_at: string | null;
+};
+export type SavedAudience = { id: string; name: string; description: string | null; definition: Audience; updated_at: string };
+export type Send = { id: string; template_id: string | null; to_email: string; subject: string; status: "sent" | "failed" | "skipped" | "test"; error: string | null; campaign_id: string | null; contact_id: string | null; deal_id: string | null; sent_by: string | null; created_at: string };
 export type InboxMessage = {
   id: string; channel: "email" | "form"; from_name: string | null; from_email: string | null; phone: string | null; company: string | null; to_email: string | null;
   subject: string | null; body: string; topic: string | null; status: "new" | "read" | "archived"; contact_id: string | null; meta: { attachments?: { name?: string; type?: string; size?: number }[] }; created_at: string;
@@ -15,7 +24,7 @@ export type Delivery = { id: string; channel: "email" | "sms" | "push"; target: 
 
 export async function listTemplates(): Promise<Template[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("email_templates").select("id, name, subject, preheader, category, schema, sends, last_sent_at, updated_at").order("updated_at", { ascending: false });
+  const { data } = await supabase.from("email_templates").select("id, name, subject, preheader, category, status, mode, schema, html, revision, created_via, sends, last_sent_at, updated_at").order("updated_at", { ascending: false });
   return (data ?? []) as Template[];
 }
 
@@ -23,6 +32,19 @@ export async function listSends(limit = 300): Promise<Send[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("email_sends").select("*").order("created_at", { ascending: false }).limit(limit);
   return (data ?? []) as Send[];
+}
+
+export async function listCampaigns(limit = 100): Promise<Campaign[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("email_campaigns").select("id, template_id, subject, audience_label, total, sent, skipped, failed, status, via, created_by, created_at, finished_at")
+    .order("created_at", { ascending: false }).limit(limit);
+  return (data ?? []) as Campaign[];
+}
+
+export async function listAudiences(): Promise<SavedAudience[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("email_audiences").select("id, name, description, definition, updated_at").order("name");
+  return (data ?? []) as SavedAudience[];
 }
 
 export async function listInbox(): Promise<InboxMessage[]> {

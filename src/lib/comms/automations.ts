@@ -1,7 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseSchema } from "./blocks";
-import { contactRecipients, sendToRecipients, type Recipient } from "./send";
+import { contactRecipients, sendToRecipients, templateBody, type Recipient } from "./send";
 import { siteUrl } from "@/lib/notify/senders";
 
 // Email automations. CRM actions queue runs as the signed-in staff member;
@@ -67,14 +66,15 @@ export async function queueTimed(db: SupabaseClient) {
 // Sends every due run (service role, from the cron job).
 export async function processDueRuns(db: SupabaseClient) {
   const { data: runs } = await db.from("email_automation_runs")
-    .select("id, deal_id, contact_id, automation:email_automations(id, enabled, recipient, runs, template:email_templates(id, subject, preheader, schema))")
+    .select("id, deal_id, contact_id, automation:email_automations(id, enabled, recipient, runs, template:email_templates(id, subject, preheader, schema, html, mode, status))")
     .eq("status", "queued").lte("run_at", new Date().toISOString()).order("run_at").limit(100);
   let sent = 0;
   for (const run of (runs ?? []) as unknown as Run[]) {
     const finish = (status: string, detail?: string) => db.from("email_automation_runs").update({ status, detail: detail?.slice(0, 500) ?? null }).eq("id", run.id);
     const a = run.automation;
-    const schema = parseSchema(a?.template?.schema);
-    if (!a?.enabled || !a.template || !schema) { await finish("skipped", "Automation off or template missing."); continue; }
+    const body = a?.template ? templateBody(a.template) : null;
+    if (!a?.enabled || !a.template || !body) { await finish("skipped", "Automation off or template missing."); continue; }
+    if (a.template.status !== "active") { await finish("skipped", "The template is a draft or archived."); continue; }
 
     const { data: deal } = run.deal_id ? await db.from("crm_deals").select("id, title, stage, value_cents, currency, contact_id, owner_id").eq("id", run.deal_id).maybeSingle() : { data: null };
     let recipients: Recipient[] = [];
@@ -87,7 +87,7 @@ export async function processDueRuns(db: SupabaseClient) {
       if (contactId) recipients = await contactRecipients(db, [contactId], deal);
     }
     if (!recipients.length) { await finish("skipped", "No recipient with an email address."); continue; }
-    const res = await sendToRecipients(db, { subject: a.template.subject, schema, preheader: a.template.preheader, templateId: a.template.id }, recipients);
+    const res = await sendToRecipients(db, { subject: a.template.subject, ...body, templateId: a.template.id }, recipients);
     await finish(res.sent ? "sent" : res.skipped ? "skipped" : "failed", res.errors[0] ?? (res.skipped ? "Unsubscribed." : undefined));
     if (res.sent) { sent++; await db.from("email_automations").update({ runs: a.runs + 1 }).eq("id", a.id); }
   }
@@ -96,5 +96,5 @@ export async function processDueRuns(db: SupabaseClient) {
 
 type Run = {
   id: string; deal_id: string | null; contact_id: string | null;
-  automation: { id: string; enabled: boolean; recipient: "contact" | "owner"; runs: number; template: { id: string; subject: string; preheader: string | null; schema: unknown } | null } | null;
+  automation: { id: string; enabled: boolean; recipient: "contact" | "owner"; runs: number; template: { id: string; subject: string; preheader: string | null; schema: unknown; html: string; mode: string; status: string } | null } | null;
 };
