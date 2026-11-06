@@ -13,7 +13,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://wcsejeuqqeepgrprcrde.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PvXGmd1Cjimjs3anbAD07Q_gRxTglDZ",
-        "EXPO_PUBLIC_API_URL": "https://redial.si"
+        "EXPO_PUBLIC_API_URL": "https://echo.redial.si"
       }
     },
     "preview": {
@@ -24,7 +24,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://wcsejeuqqeepgrprcrde.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PvXGmd1Cjimjs3anbAD07Q_gRxTglDZ",
-        "EXPO_PUBLIC_API_URL": "https://redial.si"
+        "EXPO_PUBLIC_API_URL": "https://echo.redial.si"
       }
     },
     "production": {
@@ -32,7 +32,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://wcsejeuqqeepgrprcrde.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PvXGmd1Cjimjs3anbAD07Q_gRxTglDZ",
-        "EXPO_PUBLIC_API_URL": "https://redial.si"
+        "EXPO_PUBLIC_API_URL": "https://echo.redial.si"
       }
     }
   },
