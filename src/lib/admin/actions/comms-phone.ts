@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
 import { requireStaff } from "@/lib/admin/guard";
+import { checkSendAt } from "@/lib/comms/schedule";
+import { prepareTexts, previewTexts as previewSms, type SmsInput, type SmsPreview } from "@/lib/comms/sms-bulk";
 import { e164, phoneNumber, twilioSms } from "@/lib/comms/twilio";
 import { ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
@@ -46,6 +48,33 @@ export async function sendText(input: { to: string; body: string; contactId?: st
   }
   await adminAudit(supabase, "comms.text.send", { type: "phone", id: to }, { contact_id: contactId, deal_id: ref(input.dealId) });
   return done({ ok: "Text sent." });
+}
+
+// Who a scheduled text would reach, the final message and anything blocking it.
+export async function previewTexts(input: SmsInput): Promise<SmsPreview | { error: string }> {
+  await requireStaff("comms.manage");
+  return previewSms(await createClient(), input);
+}
+
+// Schedule texts (one number, contacts, or waitlist people by their texting
+// choices). No time means "as soon as possible" (the next 5-minute run).
+export async function scheduleTexts(input: SmsInput): Promise<Result> {
+  await requireStaff("comms.manage");
+  const sendAt = input.sendAt ?? new Date().toISOString();
+  const when = checkSendAt(sendAt);
+  if ("error" in when) return when;
+  const supabase = await createClient();
+  const prep = await prepareTexts(supabase, { ...input, sendAt });
+  if ("error" in prep) return prep;
+  const { data, error } = await supabase.from("scheduled_sends").insert({
+    channel: "sms", send_at: when.at.toISOString(), label: prep.label.slice(0, 300), subject: prep.body.slice(0, 120),
+    content: { body: prep.body, ...(input.audience ? { kind: input.audience.kind, topic: input.audience.topic ?? null } : {}) },
+    recipients: prep.recipients, total: prep.recipients.length, via: "admin",
+  }).select("id").single();
+  if (error) return { error: error.message };
+  await adminAudit(supabase, "comms.text.schedule", { type: "scheduled_send", id: data.id }, { send_at: when.at.toISOString(), total: prep.recipients.length, audience: prep.label });
+  const n = prep.recipients.length;
+  return done({ ok: `${input.sendAt ? "Scheduled" : "Queued (goes out within 5 minutes)"} for ${n.toLocaleString()} ${n === 1 ? "person" : "people"}.` });
 }
 
 export async function markThreadRead(number: string): Promise<Result> {

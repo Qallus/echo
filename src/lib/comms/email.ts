@@ -223,25 +223,75 @@ export async function deliver(supabase: SupabaseClient, c: Content, t: Target, o
     if (used + n > CLAUDE_DAILY) return fail(`Claude can send to ${CLAUDE_DAILY.toLocaleString()} people a day; ${used.toLocaleString()} are already used today. Send this one from the admin instead.`);
   }
 
+  const recipients = targets.recipients.map((r) => ({ ...r, deal_id: r.deal_id ?? targets.dealId }));
+  const out = await sendAsCampaign(supabase, content, recipients, { label: targets.label, audience: targets.audience, via: opts.via });
+  if (out.campaignId !== undefined) {
+    await adminAudit(supabase, "comms.email.send", { type: out.campaignId ? "email_campaign" : "email_template", id: out.campaignId ?? content.templateId ?? "message" },
+      { sent: out.sent, skipped: out.skipped, failed: out.failed, via: opts.via, audience: targets.label, deal_id: targets.dealId });
+  }
+  return out;
+}
+
+// Sends to a resolved list, as a bulk send (email_campaigns row) when it's
+// more than one person or an audience, and records the totals.
+async function sendAsCampaign(supabase: SupabaseClient, content: Resolved, recipients: Recipient[],
+  info: { label: string; audience: Audience | null; via: "admin" | "claude"; createdBy?: string | null }): Promise<SendOutcome> {
   let campaignId: string | null = null;
-  if (n > 1 || targets.audience) {
+  if (recipients.length > 1 || info.audience) {
     const { data: camp, error } = await supabase.from("email_campaigns").insert({
-      template_id: content.templateId, subject: content.subject, audience: targets.audience ?? {}, audience_label: targets.label.slice(0, 300), total: n, via: opts.via,
+      template_id: content.templateId, subject: content.subject, audience: info.audience ?? {}, audience_label: info.label.slice(0, 300), total: recipients.length, via: info.via,
+      ...(info.createdBy ? { created_by: info.createdBy } : {}),
     }).select("id").single();
     if (error) return fail(error.message);
     campaignId = camp.id;
   }
-  const res = await sendToRecipients(supabase, { ...content, campaignId }, targets.recipients.map((r) => ({ ...r, deal_id: r.deal_id ?? targets.dealId })));
+  const res = await sendToRecipients(supabase, { ...content, campaignId }, recipients);
   if (campaignId) {
     await supabase.from("email_campaigns").update({
       sent: res.sent, skipped: res.skipped, failed: res.failed, finished_at: new Date().toISOString(),
       status: res.failed && !res.sent ? "failed" : res.failed ? "partial" : "sent",
     }).eq("id", campaignId);
   }
-  await adminAudit(supabase, "comms.email.send", { type: campaignId ? "email_campaign" : "email_template", id: campaignId ?? content.templateId ?? "message" },
-    { sent: res.sent, skipped: res.skipped, failed: res.failed, via: opts.via, audience: targets.label, deal_id: targets.dealId });
   const parts = [`${res.sent} sent`, res.skipped && `${res.skipped} skipped (unsubscribed)`, res.failed && `${res.failed} failed`].filter(Boolean).join(", ");
   return { ...(res.sent ? { ok: `${parts}.` } : { error: `${parts}.${res.errors[0] ? ` ${res.errors[0]}` : ""}` }), sent: res.sent, skipped: res.skipped, failed: res.failed, campaignId };
+}
+
+// ---------------------------------------------------------------------------
+// Scheduled sends
+// ---------------------------------------------------------------------------
+// Scheduling checks the email exactly like sending now (Active template,
+// caps, a recent test for bulk sends), then captures the recipient list.
+// At send time the template must still be Active and unchanged; otherwise
+// the send is held, since what goes out has to be what was tested.
+export type ScheduledEmail = { content: Content & { revision: number | null }; recipients: Recipient[]; label: string; subject: string };
+
+export async function prepareSchedule(supabase: SupabaseClient, c: Content, t: Target, me: Sender): Promise<ScheduledEmail | Fail> {
+  const preview = await previewSend(supabase, c, t, me);
+  if (isFail(preview)) return preview;
+  if (preview.problems.length) return fail(preview.problems[0]);
+  const [content, targets] = await Promise.all([resolveContent(supabase, c), resolveTarget(supabase, t)]);
+  if (isFail(content)) return content;
+  if (isFail(targets)) return targets;
+  const { data: tpl } = content.templateId ? await supabase.from("email_templates").select("revision").eq("id", content.templateId).maybeSingle() : { data: null };
+  return {
+    content: { templateId: content.templateId, subject: text(c.subject, 300), body: text(c.body, 50000), html: c.html?.slice(0, 200000) ?? null, revision: tpl?.revision ?? null },
+    recipients: targets.recipients.map((r) => ({ ...r, deal_id: r.deal_id ?? targets.dealId })),
+    label: targets.label, subject: content.subject,
+  };
+}
+
+export async function deliverScheduled(db: SupabaseClient, row: { content: unknown; recipients: unknown; label: string | null; via: "admin" | "claude"; created_by: string | null }): Promise<SendOutcome> {
+  const c = (row.content ?? {}) as Content & { revision?: number | null };
+  const content = await resolveContent(db, c);
+  if (isFail(content)) return content;
+  if (content.template && content.template.status !== "active") return fail(`Held: the template was set to ${content.template.status} after this was scheduled.`);
+  if (content.templateId && c.revision != null) {
+    const { data: tpl } = await db.from("email_templates").select("revision").eq("id", content.templateId).maybeSingle();
+    if (tpl?.revision !== c.revision) return fail("Held: the template was edited after this was scheduled. Send yourself a test of the new version and schedule it again.");
+  }
+  const recipients = (Array.isArray(row.recipients) ? row.recipients : []) as Recipient[];
+  if (!recipients.length) return fail("No one to send to.");
+  return sendAsCampaign(db, content, recipients.slice(0, AUDIENCE_CAP), { label: row.label ?? "", audience: null, via: row.via, createdBy: row.created_by });
 }
 
 // ---------------------------------------------------------------------------

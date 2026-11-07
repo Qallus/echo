@@ -112,3 +112,18 @@ export async function listAutomations(): Promise<Automation[]> {
   const { data } = await supabase.from("email_automations").select("id, name, trigger, stage, stalled_days, template_id, recipient, delay_minutes, enabled, runs").order("created_at");
   return (data ?? []) as Automation[];
 }
+
+export type Scheduled = {
+  id: string; channel: "email" | "sms"; send_at: string; status: "scheduled" | "sending" | "sent" | "partial" | "failed" | "canceled";
+  label: string | null; subject: string | null; content: { body?: string; kind?: string; templateId?: string | null }; total: number; sent: number; skipped: number; failed: number;
+  progress: number; error: string | null; via: "admin" | "claude"; created_at: string; finished_at: string | null;
+};
+
+// Scheduled email and text sends (without the recipient lists), upcoming first.
+export async function listScheduled(): Promise<Scheduled[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("scheduled_sends")
+    .select("id, channel, send_at, status, label, subject, content, total, sent, skipped, failed, progress, error, via, created_at, finished_at")
+    .order("send_at", { ascending: false }).limit(200);
+  return (data ?? []) as Scheduled[];
+}

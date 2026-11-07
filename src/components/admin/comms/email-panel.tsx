@@ -7,22 +7,23 @@ import { Button } from "@/components/ui/button";
 import { deleteAudience, deleteTemplate, resubscribe, saveTemplate } from "@/lib/admin/actions/comms";
 import { audienceLabel } from "@/lib/comms/audience";
 import { CATEGORIES, STATUSES } from "@/lib/comms/blocks";
-import type { Automation, Campaign, SavedAudience, Send, Template, Unsubscribe } from "@/lib/comms/data";
+import type { Automation, Campaign, SavedAudience, Scheduled, Send, Template, Unsubscribe } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { AutomationsPanel } from "./automations-panel";
 import { EmailEditor } from "./email/email-editor";
 import { History } from "./email/history";
+import { ScheduledList } from "./scheduled-list";
 import { type Person } from "./email/people-field";
 import { Pick, cap, optionsOf } from "./email/pick";
 import { SendPanel } from "./email/send-panel";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-const SUB = ["send", "templates", "audiences", "automations", "history", "unsubscribes"] as const;
+const SUB = ["send", "scheduled", "templates", "audiences", "automations", "history", "unsubscribes"] as const;
 const STATUS_TONE: Record<string, string> = { draft: "text-amber-700 dark:text-amber-300", archived: "text-muted-foreground", active: "text-emerald-700 dark:text-emerald-300" };
 
-export function EmailPanel({ templates, sends, campaigns, audiences, unsubscribes, people, knownTags, canCustomers, readOnly, automations, cronReady }: {
-  templates: Template[]; sends: Send[]; campaigns: Campaign[]; audiences: SavedAudience[]; unsubscribes: Unsubscribe[];
+export function EmailPanel({ templates, sends, campaigns, audiences, unsubscribes, scheduled, people, knownTags, canCustomers, readOnly, automations, cronReady }: {
+  templates: Template[]; sends: Send[]; campaigns: Campaign[]; audiences: SavedAudience[]; unsubscribes: Unsubscribe[]; scheduled: Scheduled[];
   people: Person[]; knownTags: string[]; canCustomers: boolean; readOnly: boolean; automations: Automation[]; cronReady: boolean;
 }) {
   const [sub, setSub] = useState<(typeof SUB)[number]>(readOnly ? "templates" : "send");
@@ -33,20 +34,24 @@ export function EmailPanel({ templates, sends, campaigns, audiences, unsubscribe
 
   if (editing) return <EmailEditor template={editing === "new" ? undefined : editing} onDone={() => setEditing(null)} />;
   const tabs = SUB.filter((s) => !readOnly || s !== "send");
+  const upcoming = scheduled.filter((x) => x.status === "scheduled").length;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1 rounded-lg border bg-card p-1">
           {tabs.map((s) => (
-            <button key={s} type="button" onClick={() => setSub(s)} className={cn("rounded-md px-3 py-1.5 text-sm font-medium capitalize", sub === s ? "bg-accent" : "text-muted-foreground hover:text-foreground")}>{s}</button>
+            <button key={s} type="button" onClick={() => setSub(s)} className={cn("rounded-md px-3 py-1.5 text-sm font-medium capitalize", sub === s ? "bg-accent" : "text-muted-foreground hover:text-foreground")}>
+              {s}{s === "scheduled" && upcoming > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{upcoming}</span>}
+            </button>
           ))}
         </div>
         <span className="ml-auto text-sm text-muted-foreground" role="status">{msg.error ?? msg.ok}</span>
         {!readOnly && <Button variant="outline" onClick={() => setEditing("new")}><Plus /> New template</Button>}
       </div>
 
-      {sub === "send" && <SendPanel templates={templates} people={people} audiences={audiences} knownTags={knownTags} canCustomers={canCustomers} onEditTemplate={setEditing} />}
+      {sub === "send" && <SendPanel templates={templates} people={people} audiences={audiences} knownTags={knownTags} canCustomers={canCustomers} cronReady={cronReady} onEditTemplate={setEditing} />}
+      {sub === "scheduled" && <ScheduledList items={scheduled} readOnly={readOnly} empty="Nothing scheduled. On the Send tab, set up an email and press Schedule." />}
       {sub === "templates" && <TemplateList templates={templates} automations={automations} readOnly={readOnly} pending={pending} onEdit={setEditing}
         onDuplicate={(t) => run(() => saveTemplate(null, { name: `${t.name} (copy)`, subject: t.subject, preheader: t.preheader, category: t.category, status: "draft", mode: t.mode, schema: t.schema, html: t.html }))}
         onDelete={(t) => confirm(`Delete "${t.name}"?${automations.some((a) => a.template_id === t.id) ? " Automations that use it will stop sending." : ""}`) && run(() => deleteTemplate(t.id))} />}

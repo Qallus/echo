@@ -5,7 +5,8 @@ import {
   ACCOUNT_TYPES, CONTACT_ROLES, CONTACT_STATUSES, LEAD_STATUSES, PLANS, WAITLIST_PRODUCTS, WAITLIST_STATUSES, WAITLIST_TOPICS, audienceLabel,
 } from "@/lib/comms/audience";
 import { BLOCKS, BLOCK_ORDER, CATEGORIES, DEFAULT_SETTINGS, MERGE_FIELDS, STATUSES, defaultSchema } from "@/lib/comms/blocks";
-import { BULK, CLAUDE_DAILY, deliver, previewSend, saveAudienceRow, saveTemplateRow, sendTest, type Content, type Target } from "@/lib/comms/email";
+import { BULK, CLAUDE_DAILY, deliver, prepareSchedule, previewSend, saveAudienceRow, saveTemplateRow, sendTest, type Content, type Target } from "@/lib/comms/email";
+import { checkSendAt } from "@/lib/comms/schedule";
 import { AUDIENCE_CAP } from "@/lib/comms/send";
 import { loadOrganization, orgMergeValues } from "@/lib/settings/organization";
 import type { McpContext } from "../auth";
@@ -193,25 +194,31 @@ export function registerEmailTools(server: McpServer, ctx: McpContext, permissio
 
   defineTool(server, ctx, "email_send_prepare", {
     title: "Prepare a send (preview)",
-    description: "Works out who an email would go to and returns the count, a sample, the filled-in subject, a text excerpt and anything blocking it. Nothing is sent. If it can be sent, returns a confirmation_id (valid 15 minutes, once). Show the person the count and subject and ask; only after they say yes, call echo_email_send_confirm.",
-    inputSchema: z.object({ content: contentArg, to: targetArg }),
+    description: "Works out who an email would go to and returns the count, a sample, the filled-in subject, a text excerpt and anything blocking it. Nothing is sent. Pass send_at to schedule it for later instead of sending on confirm. If it can be sent, returns a confirmation_id (valid 15 minutes, once). Show the person the count, subject and time and ask; only after they say yes, call echo_email_send_confirm.",
+    inputSchema: z.object({
+      content: contentArg, to: targetArg,
+      send_at: z.string().max(40).optional().describe("Optional: when to send, as an ISO 8601 date-time with time zone (e.g. 2026-11-10T09:00:00-07:00). Ask the person for their time zone if unclear. Up to 90 days ahead."),
+    }),
     annotations: READ,
   }, async (a) => {
     manage();
     const content = toContent(a.content), target = toTarget(a.to);
+    const when = a.send_at ? checkSendAt(a.send_at) : null;
+    if (when && "error" in when) throw new ToolError(when.error);
+    const sendAt = when && "at" in when ? when.at.toISOString() : null;
     const p = ok(await previewSend(ctx.supabase, content, target, me));
     const { html: _html, ...preview } = p;
     void _html;
     if (p.problems.length || !p.sendable) return { data: { preview, can_send: false, next: p.problems[0] ?? "No one would receive it." } };
-    const summary = `"${p.firstSubject}" to ${p.sendable} ${p.sendable === 1 ? "person" : "people"} (${p.label})`;
+    const summary = `"${p.firstSubject}" to ${p.sendable} ${p.sendable === 1 ? "person" : "people"} (${p.label})${sendAt ? `, scheduled for ${sendAt}` : ""}`;
     const { data, error } = await ctx.supabase.from("mcp_confirmations").insert({
-      client_id: ctx.user.clientId || null, tool: "email_send", payload: { content, target, total: p.total }, summary,
+      client_id: ctx.user.clientId || null, tool: "email_send", payload: { content, target, total: p.total, send_at: sendAt }, summary,
     }).select("id, expires_at").single();
     check(error);
     if (!data) throw new ToolError("Couldn't prepare the send. Try again.");
     return {
       targetId: data.id,
-      data: { preview, can_send: true, confirmation_id: data.id, expires_at: data.expires_at, ask: `Send ${summary}?`, next: "Ask the person. Only after a clear yes, call echo_email_send_confirm with confirmation_id." },
+      data: { preview, can_send: true, confirmation_id: data.id, expires_at: data.expires_at, ask: `${sendAt ? "Schedule" : "Send"} ${summary}?`, next: "Ask the person. Only after a clear yes, call echo_email_send_confirm with confirmation_id." },
     };
   });
 
@@ -228,10 +235,57 @@ export function registerEmailTools(server: McpServer, ctx: McpContext, permissio
     const { data, error } = await q.select("payload").maybeSingle();
     check(error);
     if (!data) throw new ToolError("That confirmation has expired, was already used, or isn't yours. Prepare the send again.");
-    const { content, target, total } = data.payload as { content: Content; target: Target; total: number };
+    const { content, target, total, send_at } = data.payload as { content: Content; target: Target; total: number; send_at?: string | null };
+    if (send_at) {
+      const when = checkSendAt(send_at);
+      if ("error" in when) throw new ToolError(`${when.error} Prepare it again with a new time.`);
+      const prep = await prepareSchedule(ctx.supabase, content, target, me);
+      if ("error" in prep) throw new ToolError(prep.error);
+      if (prep.recipients.length > total) throw new ToolError(`The audience grew from ${total} to ${prep.recipients.length} people since the preview. Prepare it again.`);
+      // Claude's daily limit counts scheduled sends too.
+      const since = new Date(Date.now() - 864e5).toISOString();
+      const [{ data: c }, { data: q }] = await Promise.all([
+        ctx.supabase.from("email_campaigns").select("total").eq("via", "claude").gte("created_at", since),
+        ctx.supabase.from("scheduled_sends").select("total").eq("via", "claude").eq("channel", "email").neq("status", "canceled").gte("created_at", since),
+      ]);
+      const used = [...(c ?? []), ...(q ?? [])].reduce((n, r) => n + r.total, 0);
+      if (used + prep.recipients.length > CLAUDE_DAILY) throw new ToolError(`Claude can send to ${CLAUDE_DAILY.toLocaleString()} people a day; ${used.toLocaleString()} are already used. Schedule this one from the admin instead.`);
+      const ins = await ctx.supabase.from("scheduled_sends").insert({
+        channel: "email", send_at: when.at.toISOString(), label: prep.label.slice(0, 300), subject: prep.subject.slice(0, 300),
+        content: prep.content, recipients: prep.recipients, total: prep.recipients.length, via: "claude",
+      }).select("id").single();
+      check(ins.error);
+      return { targetId: ins.data!.id, data: { result: `Scheduled for ${when.at.toISOString()} to ${prep.recipients.length} people.`, scheduled_id: ins.data!.id, send_at: when.at.toISOString() } };
+    }
     const res = await deliver(ctx.supabase, content, target, { via: "claude", me, maxTotal: total });
     if (res.error && !res.sent) throw new ToolError(res.error);
     return { targetId: res.campaignId ?? confirmation_id, data: { result: res.ok ?? res.error, sent: res.sent, skipped: res.skipped, failed: res.failed, campaign_id: res.campaignId } };
+  });
+
+  defineTool(server, ctx, "email_scheduled_list", {
+    title: "Scheduled emails",
+    description: "Scheduled email sends (upcoming first), with when, who, how many and the result once sent.",
+    inputSchema: z.object({ limit: limitArg }),
+    annotations: READ,
+  }, async ({ limit }) => {
+    const { data, error } = await ctx.supabase.from("scheduled_sends").select("id, send_at, status, label, subject, total, sent, skipped, failed, error, via, created_at, finished_at")
+      .eq("channel", "email").order("send_at", { ascending: false }).limit(limit);
+    check(error);
+    return { data: { scheduled: data } };
+  });
+
+  defineTool(server, ctx, "email_scheduled_cancel", {
+    title: "Cancel a scheduled email",
+    description: "Cancels a scheduled email that hasn't started sending. Confirm with the person first.",
+    inputSchema: z.object({ scheduled_id: id("Scheduled send") }),
+    annotations: WRITE,
+  }, async ({ scheduled_id }) => {
+    manage();
+    const { data, error } = await ctx.supabase.from("scheduled_sends").update({ status: "canceled", canceled_by: ctx.user.id })
+      .eq("id", scheduled_id).eq("channel", "email").eq("status", "scheduled").select("id").maybeSingle();
+    check(error);
+    if (!data) throw new ToolError("It has already started or finished (or doesn't exist), so it can't be canceled.");
+    return { targetId: scheduled_id, data: { result: "Canceled." } };
   });
 
   defineTool(server, ctx, "email_history", {

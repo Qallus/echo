@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { AlertTriangle, FlaskConical, Pencil, Send, Users } from "lucide-react";
+import { AlertTriangle, CalendarClock, FlaskConical, Pencil, Send, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { previewEmail, saveAudience, sendEmails, sendTestEmail } from "@/lib/admin/actions/comms";
+import { previewEmail, saveAudience, scheduleEmail, sendEmails, sendTestEmail } from "@/lib/admin/actions/comms";
 import { audienceLabel, type Audience } from "@/lib/comms/audience";
 import { MERGE_FIELDS, applyMerge, plainToSchema, renderTemplate } from "@/lib/comms/blocks";
 import type { Preview } from "@/lib/comms/email";
 import type { SavedAudience, Template } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
+import { ScheduleDialog } from "../schedule-dialog";
 import { AudienceBuilder } from "./audience-builder";
 import { EmailPreview } from "./email-preview";
 import { PeopleField, type Person } from "./people-field";
@@ -24,8 +25,8 @@ export const SAMPLE = { first_name: "Dana", last_name: "Whitfield", full_name: "
 // Send an email: To (people or an audience), Subject with the Templates picker
 // beside it, then the email itself. The server checks every send (counts,
 // unsubscribes, a test before bulk sends) and the preview shows that live.
-export function SendPanel({ templates, people, audiences, knownTags, canCustomers, onEditTemplate }: {
-  templates: Template[]; people: Person[]; audiences: SavedAudience[]; knownTags: string[]; canCustomers: boolean; onEditTemplate: (t: Template) => void;
+export function SendPanel({ templates, people, audiences, knownTags, canCustomers, cronReady, onEditTemplate }: {
+  templates: Template[]; people: Person[]; audiences: SavedAudience[]; knownTags: string[]; canCustomers: boolean; cronReady: boolean; onEditTemplate: (t: Template) => void;
 }) {
   const [mode, setMode] = useState<"people" | "audience">("people");
   const [to, setTo] = useState<Person[]>([]);
@@ -38,6 +39,7 @@ export function SendPanel({ templates, people, audiences, knownTags, canCustomer
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
   const template = templates.find((t) => t.id === templateId) ?? null;
@@ -137,6 +139,7 @@ export function SendPanel({ templates, people, audiences, knownTags, canCustomer
         {(msg.ok || msg.error) && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-emerald-700 dark:text-emerald-300"}>{msg.error ?? msg.ok}</p>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="outline" disabled={pending || !hasContent} onClick={test} title="Sends a copy to your own email, filled in for the first recipient"><FlaskConical /> Send test to me</Button>
+          <Button variant="outline" disabled={pending || blocked} onClick={() => setScheduling(true)} title="Send it later"><CalendarClock /> Schedule</Button>
           <Button disabled={pending || blocked} onClick={() => (preview && preview.total > 1 ? setConfirming(true) : send())}>
             <Send /> {ready ? `Send to ${preview.sendable.toLocaleString()} ${preview.sendable === 1 ? "person" : "people"}` : "Send"}
           </Button>
@@ -145,6 +148,17 @@ export function SendPanel({ templates, people, audiences, knownTags, canCustomer
 
       <EmailPreview html={shownHtml || "<p style='font-family:sans-serif;color:#71717a;padding:24px'>Pick a template or write a message.</p>"}
         note={ready && preview.sample[0] ? `as ${preview.sample[0].name || preview.sample[0].email} will see it` : "example contact"} />
+
+      {scheduling && preview && (
+        <ScheduleDialog title="Schedule this email" cronReady={cronReady}
+          summary={<>
+            <p className="font-medium">{preview.firstSubject}</p>
+            <p>To <span className="font-medium">{preview.sendable.toLocaleString()} {preview.sendable === 1 ? "person" : "people"}</span> · {mode === "audience" ? audienceLabel(audience) : preview.label}</p>
+            <p className="mt-1 text-xs text-muted-foreground">It goes to the people above, captured now. Anyone who unsubscribes or bounces before then is skipped. If the template is edited or set to Draft before then, it&apos;s held instead of sent.</p>
+          </>}
+          onSchedule={(sendAt) => scheduleEmail({ ...content, ...target, sendAt })}
+          onClose={(done) => { setScheduling(false); if (done) { setTo([]); setTyped(""); setMsg({ ok: "Scheduled. See the Scheduled tab." }); } }} />
+      )}
 
       {confirming && preview && (
         <Dialog open onOpenChange={(o) => !o && setConfirming(false)}>

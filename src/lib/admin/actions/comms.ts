@@ -5,7 +5,8 @@ import { adminAudit } from "@/lib/admin/audit";
 import { queueAutomations } from "@/lib/comms/automations";
 import { requireStaff } from "@/lib/admin/guard";
 import { plainToSchema, renderTemplate } from "@/lib/comms/blocks";
-import { deliver, previewSend, saveAudienceRow, saveTemplateRow, sendTest, type Content, type Preview, type SendOutcome, type Target, type TemplateInput } from "@/lib/comms/email";
+import { deliver, prepareSchedule, previewSend, saveAudienceRow, saveTemplateRow, sendTest, type Content, type Preview, type SendOutcome, type Target, type TemplateInput } from "@/lib/comms/email";
+import { checkSendAt } from "@/lib/comms/schedule";
 import { sendToRecipients } from "@/lib/comms/send";
 import { email as cleanEmail, ref, refresh, text, uuids, type Result } from "@/lib/crm/validate";
 import { isUuid, requireUser } from "@/lib/data";
@@ -69,6 +70,37 @@ export async function sendEmails(input: Content & Target & { maxTotal?: number }
   await requireStaff("comms.manage");
   const res = await deliver(await createClient(), input, input, { via: "admin", me: await sender(), maxTotal: input.maxTotal });
   return done(res as Result & SendOutcome);
+}
+
+// Schedule an email for later: checked like sending now (including the test
+// rule), with the recipient list captured now. The 5-minute job sends it.
+export async function scheduleEmail(input: Content & Target & { sendAt: string }): Promise<Result> {
+  await requireStaff("comms.manage");
+  const when = checkSendAt(input.sendAt);
+  if ("error" in when) return when;
+  const supabase = await createClient();
+  const prep = await prepareSchedule(supabase, input, input, await sender());
+  if ("error" in prep) return prep;
+  const { data, error } = await supabase.from("scheduled_sends").insert({
+    channel: "email", send_at: when.at.toISOString(), label: prep.label.slice(0, 300), subject: prep.subject.slice(0, 300),
+    content: prep.content, recipients: prep.recipients, total: prep.recipients.length, via: "admin",
+  }).select("id").single();
+  if (error) return { error: error.message };
+  await adminAudit(supabase, "comms.email.schedule", { type: "scheduled_send", id: data.id }, { send_at: when.at.toISOString(), total: prep.recipients.length, audience: prep.label });
+  return done({ ok: `Scheduled for ${prep.recipients.length.toLocaleString()} ${prep.recipients.length === 1 ? "person" : "people"}.` });
+}
+
+// Cancel an email or text send that hasn't started yet.
+export async function cancelScheduled(id: string): Promise<Result> {
+  await requireStaff("comms.manage");
+  if (!isUuid(id)) return { error: "Not found." };
+  const me = await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("scheduled_sends").update({ status: "canceled", canceled_by: me.id }).eq("id", id).eq("status", "scheduled").select("id, channel, total").maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: "It has already started or finished, so it can't be canceled." };
+  await adminAudit(supabase, "comms.scheduled.cancel", { type: "scheduled_send", id }, { channel: data.channel, total: data.total });
+  return done({ ok: "Canceled." });
 }
 
 export async function resubscribe(email: string): Promise<Result> {

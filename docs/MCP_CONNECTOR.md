@@ -177,9 +177,11 @@ Listed only for staff whose role has `comms.view` (owner, admin, support, market
 | `email_audience_list` | Saved audiences and the CRM contact tags | — |
 | `email_audience_save` | Save a named audience filter | `audience_id?`, `name`, `audience` |
 | `email_send_test` | One `[Test]` copy to the signed-in person | `content`, `to?` |
-| `email_send_prepare` | Who it goes to (count, sample, subject, excerpt, problems). Sends nothing; returns a `confirmation_id` | `content`, `to` |
-| `email_send_confirm` | Sends what was prepared. Only after the person says yes | `confirmation_id` |
-| `email_history` | Recent bulk sends and emails | `limit` |
+| `email_send_prepare` | Who it goes to (count, sample, subject, excerpt, problems). Sends nothing; returns a `confirmation_id`. With `send_at`, confirming schedules it instead | `content`, `to`, `send_at?` |
+| `email_send_confirm` | Sends (or schedules) what was prepared. Only after the person says yes | `confirmation_id` |
+| `email_scheduled_list` | Scheduled email sends, upcoming first, with results | `limit` |
+| `email_scheduled_cancel` | Cancel a scheduled email that hasn't started | `scheduled_id` |
+| `email_history` | Recent bulk sends and emails, with delivered/opened/clicked/bounced tracking | `limit` |
 
 Sending rules (the same in the admin):
 - **Two steps through Claude.** `prepare` stores the exact email and audience in `mcp_confirmations`. `confirm` claims it once, within 15 minutes, for the same person and Claude connection. If the audience grew since the preview, nothing is sent.
@@ -187,6 +189,7 @@ Sending rules (the same in the admin):
 - **Limits.** At most 5,000 people per send, and 5,000 a day through Claude.
 - **Only Active templates are sent.** Drafts can be tested. Automations skip drafts and archived templates.
 - **Unsubscribed people are always skipped,** and each skip is logged with its reason.
+- **Scheduled sends** are checked the same way when they're scheduled; the recipient list is captured then. At send time the template must still be Active and unchanged (otherwise it's held), and anyone who unsubscribed or bounced since is skipped. Scheduled sends count toward Claude's daily limit.
 
 Later phases add tools as features land (uploads and signed audio URLs, transcription jobs, templates, AutoFlow rules, agents, Twilio/Resend messaging, admin), following the same rules.
 

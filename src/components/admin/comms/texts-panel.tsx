@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { ArrowLeft, MessageSquare, Paperclip, Phone, Plus, Send } from "lucide-react";
+import { ArrowLeft, CalendarClock, Megaphone, MessageSquare, Paperclip, Phone, Plus, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { markThreadRead, sendText } from "@/lib/admin/actions/comms-phone";
-import type { Text } from "@/lib/comms/data";
+import { markThreadRead, scheduleTexts, sendText } from "@/lib/admin/actions/comms-phone";
+import type { Scheduled, Text } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { EmptyState, SearchBox } from "@/components/admin/crm/crm-kit";
+import { BulkTextDialog } from "./bulk-text-dialog";
+import { ScheduleDialog } from "./schedule-dialog";
+import { ScheduledList } from "./scheduled-list";
 import { startCall } from "./softphone";
 
 export type PhonePerson = { id: string; name: string; phone: string | null };
@@ -18,8 +22,8 @@ const last10 = (p: string | null | undefined) => (p ?? "").replace(/\D/g, "").sl
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 // Text conversations on Echo's number, one thread per phone number.
-export function TextsPanel({ texts, people, optOuts, ready, readOnly }: {
-  texts: Text[]; people: PhonePerson[]; optOuts: string[]; ready: boolean; readOnly: boolean;
+export function TextsPanel({ texts, people, optOuts, ready, readOnly, scheduled, cronReady }: {
+  texts: Text[]; people: PhonePerson[]; optOuts: string[]; ready: boolean; readOnly: boolean; scheduled: Scheduled[]; cronReady: boolean;
 }) {
   const [openNumber, setOpenNumber] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -27,6 +31,8 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly }: {
   const [newTo, setNewTo] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
+  const [panel, setPanel] = useState<"bulk" | "scheduled" | "later" | null>(null);
+  const upcoming = scheduled.filter((x) => x.status === "scheduled" || x.status === "sending").length;
 
   const byPhone = useMemo(() => new Map(people.filter((p) => p.phone).map((p) => [last10(p.phone), p])), [people]);
   const threads = useMemo(() => {
@@ -54,6 +60,23 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly }: {
     if (!res.error) { setDraft(""); if (newTo !== null) setNewTo(null); } // the new thread appears in the list
   });
 
+  const dialogs = <>
+    {panel === "bulk" && <BulkTextDialog cronReady={cronReady} onClose={() => setPanel(null)} />}
+    {panel === "later" && to && (
+      <ScheduleDialog title={`Text ${person?.name ?? to} later`} cronReady={cronReady}
+        summary={<p className="rounded-2xl bg-muted p-3 whitespace-pre-wrap break-words">{draft}</p>}
+        onSchedule={(sendAt) => scheduleTexts(person ? { contactIds: [person.id], body: draft, sendAt } : { to: [to], body: draft, sendAt })}
+        onClose={(done) => { setPanel(null); if (done) { setDraft(""); setMsg({ ok: "Scheduled. See Scheduled." }); } }} />
+    )}
+    <Sheet open={panel === "scheduled"} onOpenChange={(o) => !o && setPanel(null)}>
+      <SheetContent className="w-full overflow-y-auto p-5 sm:max-w-lg">
+        <SheetTitle className="pt-4 pr-6">Scheduled texts</SheetTitle>
+        <SheetDescription>Upcoming texts can be canceled until they start.</SheetDescription>
+        <ScheduledList items={scheduled} readOnly={readOnly} empty="Nothing scheduled. Use the clock button in a conversation, or Text the waitlist." />
+      </SheetContent>
+    </Sheet>
+  </>;
+
   if (!ready) return <EmptyState message="Texting isn't set up yet. Add the Twilio settings in Coolify (see the setup notes) and this tab comes alive." />;
 
   return (
@@ -62,6 +85,12 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly }: {
         <div className="flex gap-2">
           <SearchBox value={search} onChange={setSearch} placeholder="Search texts…" />
           {!readOnly && <Button onClick={() => { setNewTo(""); setOpenNumber(null); }}><Plus /> New</Button>}
+        </div>
+        <div className="flex gap-2">
+          {!readOnly && <Button size="sm" variant="outline" className="flex-1" onClick={() => setPanel("bulk")}><Megaphone /> Text the waitlist</Button>}
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => setPanel("scheduled")}>
+            <CalendarClock /> Scheduled{upcoming > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{upcoming}</span>}
+          </Button>
         </div>
         {threads.length === 0 ? <EmptyState message="No texts yet." /> : (
           <ul className="divide-y overflow-hidden rounded-xl border bg-card">
@@ -117,6 +146,7 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly }: {
                 <div className="flex items-end gap-2">
                   <Textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Text message" maxLength={1600} aria-label="Message"
                     onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && draft.trim() && to) send(); }} />
+                  <Button variant="outline" disabled={pending || !draft.trim() || !to || optedOut} onClick={() => setPanel("later")} aria-label="Send later" title="Send later"><CalendarClock /></Button>
                   <Button disabled={pending || !draft.trim() || !to || optedOut} onClick={send} aria-label="Send"><Send /></Button>
                 </div>
                 <p className="flex justify-between text-[11px] text-muted-foreground"><span>{msg.error ?? msg.ok ?? "Ctrl+Enter to send"}</span><span>{draft.length}/1600</span></p>
@@ -125,6 +155,7 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly }: {
           </div>
         )}
       </div>
+      {dialogs}
     </div>
   );
 }
