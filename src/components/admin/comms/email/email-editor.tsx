@@ -1,24 +1,24 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import dynamic from "next/dynamic";
-import {
-  ArrowLeft, BadgeCheck, Check, Code, Columns2, Copy, Eye, FlaskConical, Heading, HelpCircle, Image as ImageIcon, LayoutTemplate, List,
-  Megaphone, Minus, Monitor, MousePointerClick, MoveVertical, PanelBottom, PanelTop, PenLine, Quote, Share2, Smartphone, SquareStack,
-  Table2, Tag, Ticket, Trash2, TrendingUp, Type, Video,
-} from "lucide-react";
+import { ArrowLeft, Check, Code, Copy, Eye, FlaskConical, LayoutTemplate, Monitor, PanelRightClose, PanelRightOpen, SlidersHorizontal, Smartphone, Trash2 } from "lucide-react";
+import type { PanelImperativeHandle } from "react-resizable-panels";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { saveTemplate, sendTestEmail } from "@/lib/admin/actions/comms";
 import {
-  BLOCKS, BLOCK_GROUPS, CATEGORIES, STATUSES, applyMerge, blockId, createBlock, defaultSchema, htmlTemplate, schemaToEditableHtml, schemaToHtml,
+  BLOCKS, CATEGORIES, STATUSES, applyMerge, blockId, createBlock, defaultSchema, htmlTemplate, schemaToEditableHtml, schemaToHtml,
   type BlockType, type EmailBlock, type EmailSchema, type TemplateMode, type TemplateStatus,
 } from "@/lib/comms/blocks";
 import type { Template } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { BlockInspector, StyleInspector } from "./block-inspector";
-import { EmailCanvas, NEW_BLOCK } from "./email-canvas";
+import { BlockPalette } from "./block-palette";
+import { EmailCanvas } from "./email-canvas";
 import { EmailPreview } from "./email-preview";
 import type { HtmlEditorHandle } from "./html-editor";
 import { MergeFieldsBar } from "./merge-fields-bar";
@@ -27,18 +27,20 @@ import { SAMPLE } from "./send-panel";
 
 const HtmlEditor = dynamic(() => import("./html-editor").then((m) => m.HtmlEditor), { ssr: false, loading: () => <div className="m-3 h-[480px] rounded-xl border" /> });
 
-const ICONS: Record<BlockType, typeof Type> = {
-  header: PanelTop, heading: Heading, text: Type, button: MousePointerClick, image: ImageIcon, columns: Columns2, divider: Minus, spacer: MoveVertical, footer: PanelBottom,
-  buttons: SquareStack, card: BadgeCheck, list: List, quote: Quote, callout: Megaphone, badge: Tag, stats: TrendingUp, details: Table2, faq: HelpCircle,
-  social: Share2, video: Video, code: Ticket, signature: PenLine,
-};
+// Blocks per row in the palette, remembered in this browser (kept in memory
+// too, in case storage is blocked).
+const COLS_KEY = "echo.email.paletteCols";
+const colsListeners = new Set<() => void>();
+let colsMemory: 1 | 2 | null = null;
+const readCols = (): 1 | 2 => { if (colsMemory) return colsMemory; try { return localStorage.getItem(COLS_KEY) === "2" ? 2 : 1; } catch { return 1; } };
+const onColsChange = (fn: () => void) => { colsListeners.add(fn); return () => { colsListeners.delete(fn); }; };
+const saveCols = (c: 1 | 2) => { colsMemory = c; try { localStorage.setItem(COLS_KEY, String(c)); } catch {} colsListeners.forEach((fn) => fn()); };
 const TEXT_BLOCKS: BlockType[] = ["heading", "text", "button", "footer", "callout", "quote", "badge", "card", "signature"];
-// Sticky side columns: they stay put while the email scrolls.
-const SIDE = "lg:sticky lg:top-2 lg:max-h-[calc(100dvh-1rem)] lg:self-start lg:overflow-y-auto";
 
-// Ctrl-P style template editor: name, subject and status on top, the fields
-// row above the canvas, the block palette on the left and the selected
-// block's settings on the right. Click a block in the email to edit it, drag
+// Ctrl-P style template editor: name, subject and status on top, then a
+// fixed-height workspace: the block palette on the left, the fields row and
+// canvas in the middle (it scrolls on its own), and the selected block's
+// settings on the right. Both side columns can be dragged wider or collapsed. Click a block in the email to edit it, drag
 // it to move it, or drop new blocks between blocks. Saves are checked against
 // the revision it opened at, so nobody's changes are silently overwritten.
 export function EmailEditor({ template, onDone }: { template?: Template; onDone: () => void }) {
@@ -60,6 +62,12 @@ export function EmailEditor({ template, onDone }: { template?: Template; onDone:
   const [pending, start] = useTransition();
   const lastField = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const htmlEditor = useRef<HtmlEditorHandle>(null);
+  const isMobile = useIsMobile();
+  const leftRef = useRef<PanelImperativeHandle>(null);
+  const rightRef = useRef<PanelImperativeHandle>(null);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const paletteCols = useSyncExternalStore(onColsChange, readCols, () => 1 as const);
   const edit = <T,>(fn: (v: T) => void) => (v: T) => { fn(v); setDirty(true); };
 
   const blocks = schema.blocks;
@@ -78,6 +86,8 @@ export function EmailEditor({ template, onDone }: { template?: Template; onDone:
   // Clicking a palette item adds the block under the selected one (or at the end).
   const add = (type: BlockType) => insert(type, sel ? blocks.findIndex((x) => x.id === sel.id) + 1 : blocks.length);
   const duplicate = (i: number) => { const c = { ...structuredClone(blocks[i]), id: blockId() }; setBlocks([...blocks.slice(0, i + 1), c, ...blocks.slice(i + 1)]); setSelected(c.id); };
+  // Clicking a block opens its settings (expanding that column if it's collapsed).
+  const selectBlock = (bid: string | null) => { setSelected(bid); lastField.current = null; if (bid && rightRef.current?.isCollapsed()) rightRef.current.expand(); };
   const remove = (bid: string) => { setBlocks(blocks.filter((x) => x.id !== bid)); if (selected === bid) setSelected(null); };
 
   // A merge field goes where the cursor was (subject, preview text or any
@@ -122,6 +132,32 @@ export function EmailEditor({ template, onDone }: { template?: Template; onDone:
   });
   const toggle = (on: boolean) => cn("flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium", on ? "bg-primary text-primary-foreground" : "border bg-background text-muted-foreground hover:text-foreground");
 
+  const fieldsBar = (
+    <MergeFieldsBar onInsert={insertField}>
+      <div className="flex shrink-0 rounded-lg border p-0.5">
+        <Button size="icon-xs" variant={device === "desktop" ? "secondary" : "ghost"} aria-label="Desktop width" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor /></Button>
+        <Button size="icon-xs" variant={device === "phone" ? "secondary" : "ghost"} aria-label="Phone width" aria-pressed={device === "phone"} onClick={() => setDevice("phone")}><Smartphone /></Button>
+      </div>
+    </MergeFieldsBar>
+  );
+  const canvas = (
+    <EmailCanvas schema={schema} sample={SAMPLE} device={device} selected={selected} onSelect={selectBlock}
+      onMove={move} onInsert={insert} onDuplicate={duplicate} onDelete={remove} />
+  );
+  const settings = <>
+    <div className="mb-3 flex items-center gap-1">
+      <h3 className="flex-1 text-sm font-semibold">{sel ? `${BLOCKS[sel.type].label} settings` : "Email style"}</h3>
+      {sel && <>
+        <Button size="icon-xs" variant="ghost" aria-label="Duplicate block" onClick={() => duplicate(blocks.indexOf(sel))}><Copy /></Button>
+        <Button size="icon-xs" variant="ghost" className="text-destructive" aria-label="Delete block" onClick={() => remove(sel.id)}><Trash2 /></Button>
+      </>}
+      {!isMobile && <Button size="icon-xs" variant="ghost" aria-label="Collapse settings" title="Collapse" onClick={() => rightRef.current?.collapse()}><PanelRightClose /></Button>}
+    </div>
+    {sel ? <BlockInspector key={sel.id} b={sel} set={(patch) => update(sel.id, patch)} />
+      : <StyleInspector s={schema.settings} set={(patch) => { setSchema((s) => ({ ...s, settings: { ...s.settings, ...patch } })); setDirty(true); }} />}
+    {sel && <Button variant="ghost" size="sm" className="mt-3 w-full" onClick={() => setSelected(null)}>Done: back to email style</Button>}
+  </>;
+
   return (
     <div className="rounded-xl border bg-card" onFocusCapture={trackField}>
       <div className="space-y-2 border-b p-3">
@@ -154,54 +190,36 @@ export function EmailEditor({ template, onDone }: { template?: Template; onDone:
           <HtmlEditor value={html} onChange={edit(setHtml)} handle={htmlEditor} />
         </div>
       ) : (
-        <div className="grid lg:grid-cols-[200px_minmax(0,1fr)_280px]">
-          <aside className={cn("border-b p-2 lg:border-r lg:border-b-0", SIDE)} aria-label="Add a block">
-            {BLOCK_GROUPS.map((g) => (
-              <div key={g.label} className="mb-2">
-                <h3 className="px-2 pt-1 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{g.label}</h3>
-                <div className="grid grid-cols-2 gap-0.5 sm:grid-cols-3 lg:grid-cols-1">
-                  {g.types.map((t) => {
-                    const Icon = ICONS[t];
-                    return (
-                      <button key={t} type="button" draggable onDragStart={(e) => { e.dataTransfer.setData(NEW_BLOCK, t); e.dataTransfer.effectAllowed = "copy"; }}
-                        onClick={() => add(t)} title="Click to add, or drag into the email"
-                        className="flex w-full cursor-grab items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted active:cursor-grabbing">
-                        <Icon className="size-4 shrink-0 text-primary" />
-                        <span className="min-w-0"><span className="block text-sm font-medium">{BLOCKS[t].label}</span><span className="block truncate text-[11px] text-muted-foreground">{BLOCKS[t].hint}</span></span>
-                      </button>
-                    );
-                  })}
+        isMobile ? (
+          <div>
+            <BlockPalette cols={2} setCols={() => {}} collapsed={false} onToggle={() => {}} onAdd={add} />
+            <div className="border-y bg-muted/40">{fieldsBar}{canvas}</div>
+            <div className="p-3">{settings}</div>
+          </div>
+        ) : (
+          <ResizablePanelGroup className="h-[calc(100dvh-6rem)] min-h-[560px] rounded-b-xl">
+            <ResizablePanel panelRef={leftRef} defaultSize={232} minSize={170} maxSize={460} collapsible collapsedSize={48}
+              onResize={(size) => setLeftCollapsed(size.inPixels < 100)} className="overflow-y-auto">
+              <BlockPalette cols={paletteCols} setCols={saveCols} collapsed={leftCollapsed} onAdd={add}
+                onToggle={() => (leftRef.current?.isCollapsed() ? leftRef.current.expand() : leftRef.current?.collapse())} />
+            </ResizablePanel>
+            <ResizableHandle withHandle className="w-1.5 bg-border transition-colors hover:bg-primary/40 data-[separator=active]:bg-primary/60" />
+            <ResizablePanel minSize={360} className="overflow-y-auto bg-muted/40">
+              <div className="sticky top-0 z-20">{fieldsBar}</div>
+              {canvas}
+            </ResizablePanel>
+            <ResizableHandle withHandle className="w-1.5 bg-border transition-colors hover:bg-primary/40 data-[separator=active]:bg-primary/60" />
+            <ResizablePanel panelRef={rightRef} defaultSize={300} minSize={240} maxSize={560} collapsible collapsedSize={48}
+              onResize={(size) => setRightCollapsed(size.inPixels < 120)} className="overflow-y-auto">
+              {rightCollapsed ? (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <Button size="icon-sm" variant="ghost" aria-label="Expand settings" title="Expand settings" onClick={() => rightRef.current?.expand()}><PanelRightOpen /></Button>
+                  <SlidersHorizontal className="size-4 text-muted-foreground" aria-hidden />
                 </div>
-              </div>
-            ))}
-          </aside>
-
-          <section className="min-w-0 bg-muted/40">
-            <div className="sticky top-0 z-20">
-              <MergeFieldsBar onInsert={insertField}>
-                <div className="flex shrink-0 rounded-lg border p-0.5">
-                  <Button size="icon-xs" variant={device === "desktop" ? "secondary" : "ghost"} aria-label="Desktop width" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")}><Monitor /></Button>
-                  <Button size="icon-xs" variant={device === "phone" ? "secondary" : "ghost"} aria-label="Phone width" aria-pressed={device === "phone"} onClick={() => setDevice("phone")}><Smartphone /></Button>
-                </div>
-              </MergeFieldsBar>
-            </div>
-            <EmailCanvas schema={schema} sample={SAMPLE} device={device} selected={selected} onSelect={(bid) => { setSelected(bid); lastField.current = null; }}
-              onMove={move} onInsert={insert} onDuplicate={duplicate} onDelete={remove} />
-          </section>
-
-          <aside className={cn("border-t p-3 lg:border-t-0 lg:border-l", SIDE)} aria-label="Settings">
-            <div className="mb-3 flex items-center gap-1">
-              <h3 className="flex-1 text-sm font-semibold">{sel ? `${BLOCKS[sel.type].label} settings` : "Email style"}</h3>
-              {sel && <>
-                <Button size="icon-xs" variant="ghost" aria-label="Duplicate block" onClick={() => duplicate(blocks.indexOf(sel))}><Copy /></Button>
-                <Button size="icon-xs" variant="ghost" className="text-destructive" aria-label="Delete block" onClick={() => remove(sel.id)}><Trash2 /></Button>
-              </>}
-            </div>
-            {sel ? <BlockInspector key={sel.id} b={sel} set={(patch) => update(sel.id, patch)} />
-              : <StyleInspector s={schema.settings} set={(patch) => { setSchema((s) => ({ ...s, settings: { ...s.settings, ...patch } })); setDirty(true); }} />}
-            {sel && <Button variant="ghost" size="sm" className="mt-3 w-full" onClick={() => setSelected(null)}>Done: back to email style</Button>}
-          </aside>
-        </div>
+              ) : <div className="p-3">{settings}</div>}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )
       )}
 
       <Dialog open={previewing} onOpenChange={setPreviewing}>

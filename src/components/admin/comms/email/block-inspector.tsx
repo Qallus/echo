@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CALLOUTS, createBlock, type Align, type BlockItem, type EmailBlock, type EmailSettings } from "@/lib/comms/blocks";
 import { cn } from "@/lib/utils";
-import { LogoField } from "./logo-field";
+import { ImageField, LogoField } from "./image-field";
 import { Pick, cap } from "./pick";
 
 export function F({ label, children }: { label: string; children: React.ReactNode }) {
@@ -45,6 +45,28 @@ function AlignField({ value, onChange }: { value?: Align; onChange: (v: Align) =
         {ALIGNS.map(({ value: v, icon: Icon }) => (
           <Button key={v} type="button" size="icon-sm" variant={(value ?? "left") === v ? "secondary" : "outline"} aria-label={cap(v)} aria-pressed={(value ?? "left") === v} onClick={() => onChange(v)}><Icon /></Button>
         ))}
+      </div>
+    </F>
+  );
+}
+
+// Button width: fit the label, a share of the row, or full width.
+const WIDTHS = [{ v: 0, label: "Auto" }, { v: 25, label: "25%" }, { v: 50, label: "50%" }, { v: 75, label: "75%" }, { v: 100, label: "Full" }];
+function ButtonWidthField({ value, onChange, pair }: { value?: number; onChange: (v: number) => void; pair?: boolean }) {
+  const w = value ?? 0;
+  return (
+    <F label={pair ? "Width of the pair" : "Button width"}>
+      <div className="space-y-1.5">
+        <div className="grid grid-cols-5 gap-1" role="group" aria-label="Button width">
+          {WIDTHS.map((o) => (
+            <Button key={o.v} type="button" size="xs" variant={w === o.v ? "secondary" : "outline"} aria-pressed={w === o.v} onClick={() => onChange(o.v)}>{o.label}</Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Input type="number" min={0} max={100} value={w || ""} placeholder="Auto" onChange={(e) => onChange(Math.max(0, Math.min(100, Number(e.target.value) || 0)))} className="h-8" aria-label="Button width percent" />
+          <span className="text-xs text-muted-foreground">%</span>
+        </div>
+        {pair && w > 0 && <p className="text-[11px] text-muted-foreground">The two buttons share this width equally.</p>}
       </div>
     </F>
   );
@@ -103,7 +125,8 @@ export function BlockInspector({ b, set }: { b: EmailBlock; set: (patch: Partial
           <TextField label="Outline link" value={b.secondaryUrl} onChange={(secondaryUrl) => set({ secondaryUrl })} placeholder="https://" />
         </>}
         {(t === "image" || t === "card" || t === "video") && <>
-          <TextField label={t === "video" ? "Thumbnail URL (https, optional)" : `Image URL (https${t === "card" ? ", optional" : ""})`} value={b.url} onChange={(url) => set({ url })} placeholder="https://…" />
+          <ImageField label={t === "video" ? "Thumbnail (optional)" : t === "card" ? "Image (optional)" : "Image"} value={b.url}
+            onChange={(url, name) => set({ url, ...(name && !b.alt ? { alt: name } : {}) })} />
           <TextField label="Alt text (read aloud, shown if images are off)" value={b.alt} onChange={(alt) => set({ alt })} />
         </>}
         {t === "image" && <TextField label="Link (optional)" value={b.linkUrl} onChange={(linkUrl) => set({ linkUrl })} placeholder="https://" />}
@@ -126,7 +149,7 @@ export function BlockInspector({ b, set }: { b: EmailBlock; set: (patch: Partial
           <TextField label="Quote" value={b.text} onChange={(text) => set({ text })} rows={3} />
           <TextField label="Name" value={b.title} onChange={(title) => set({ title })} />
           <TextField label="Role or company" value={b.label} onChange={(label) => set({ label })} />
-          <TextField label="Photo URL (https, optional)" value={b.url} onChange={(url) => set({ url })} placeholder="https://…" />
+          <ImageField label="Photo (optional)" folder="photos" value={b.url} onChange={(url) => set({ url })} hint="A square photo works best. PNG, JPG or WebP, up to 2 MB." />
         </>}
         {t === "callout" && <>
           <TextField label="Title (optional)" value={b.title} onChange={(title) => set({ title })} />
@@ -158,7 +181,7 @@ export function BlockInspector({ b, set }: { b: EmailBlock; set: (patch: Partial
           <TextField label="Name" value={b.title} onChange={(title) => set({ title })} />
           <TextField label="Role" value={b.label} onChange={(label) => set({ label })} />
           <TextField label="Contact lines" value={b.text} onChange={(text) => set({ text })} rows={2} />
-          <TextField label="Photo URL (https, optional)" value={b.url} onChange={(url) => set({ url })} placeholder="https://…" />
+          <ImageField label="Photo (optional)" folder="photos" value={b.url} onChange={(url) => set({ url })} hint="A square photo works best. PNG, JPG or WebP, up to 2 MB." />
         </>}
         {t === "columns" && <>
           <F label="Columns">
@@ -184,7 +207,7 @@ export function BlockInspector({ b, set }: { b: EmailBlock; set: (patch: Partial
           {(t === "header" || t === "badge" || t === "code" || t === "callout") && <ColorField label="Background" value={b.backgroundColor} onChange={(v) => set({ backgroundColor: v })} />}
           {(t === "quote" || t === "callout" || t === "card" || t === "details" || t === "social" || t === "code") && <ColorField label={t === "quote" ? "Accent line" : "Border"} value={b.borderColor} onChange={(v) => set({ borderColor: v })} />}
           {t !== "header" && t !== "button" && t !== "buttons" && t !== "image" && t !== "columns" && textColor}
-          {(t === "button" || t === "buttons" || t === "card") && buttonColors}
+          {(t === "button" || t === "buttons" || t === "card") && <>{buttonColors}<ButtonWidthField value={b.buttonWidth} pair={t === "buttons"} onChange={(buttonWidth) => set({ buttonWidth })} /></>}
         </Group>
       )}
 

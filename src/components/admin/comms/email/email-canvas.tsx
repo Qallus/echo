@@ -94,7 +94,7 @@ export function EmailCanvas({ schema, sample, device, selected, onSelect, onMove
               >
                 {html
                   ? <div dangerouslySetInnerHTML={{ __html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${applyMerge(html, sample, true)}</table>` }} />
-                  : <div className="m-4 flex items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-300 p-6 text-xs text-zinc-500"><ImageIcon className="size-4" /> Add an image URL on the right</div>}
+                  : <div className="m-4 flex items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-300 p-6 text-xs text-zinc-500"><ImageIcon className="size-4" /> Upload an image on the right</div>}
                 <div className={cn("absolute top-1 right-1 z-10 items-center gap-0.5 rounded-md bg-primary p-0.5 text-primary-foreground shadow-sm", active ? "flex" : "hidden group-hover:flex group-focus-within:flex")}>
                   <span className="px-1.5 text-[10px] font-semibold lowercase">{BLOCKS[b.type].label}</span>
                   <span className="cursor-grab rounded p-0.5 hover:bg-white/20" title="Drag to move" aria-hidden><GripVertical className="size-3.5" /></span>

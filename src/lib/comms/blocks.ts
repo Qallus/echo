@@ -17,6 +17,8 @@ export type EmailBlock = {
   // second label and link (card button, second button, role or caption), a
   // border or accent color, and numbered lists.
   items?: BlockItem[]; label?: string; secondaryUrl?: string; borderColor?: string; ordered?: boolean;
+  // Button width as a percent of the row (blank = fits its label, 100 = full width).
+  buttonWidth?: number;
 };
 export type EmailSettings = { width: number; backgroundColor: string; contentColor: string; textColor: string; fontFamily: string };
 export type EmailSchema = { version: 1; settings: EmailSettings; blocks: EmailBlock[] };
@@ -121,6 +123,10 @@ export const defaultSchema = (): EmailSchema => ({
 
 const pad = (b: EmailBlock) => `padding:${num(b.padTop, 0, 200)}px ${num(b.padX, 0, 200)}px ${num(b.padBottom, 0, 200)}px`;
 const items = (b: EmailBlock) => (Array.isArray(b.items) ? b.items : []).slice(0, 20);
+// Button sizing: a percent width makes the button a block of that width.
+const btnWidth = (b: EmailBlock) => { const w = num(b.buttonWidth, 0, 100); return w >= 10 ? w : 0; };
+const btnTable = (w: number, extra = "") => (w ? `width="${w}%" style="width:${w}%;display:inline-table${extra}"` : `style="display:inline-table${extra}"`);
+const btnLink = (w: number) => (w ? "display:block;text-align:center" : "display:inline-block");
 const align = (b: EmailBlock) => (b.align === "center" || b.align === "right" ? b.align : "left");
 
 function renderBlock(b: EmailBlock, s: EmailSettings, origin: string): string {
@@ -134,7 +140,7 @@ function renderBlock(b: EmailBlock, s: EmailSettings, origin: string): string {
     case "text":
       return `<tr><td style="${pad(b)};text-align:${align(b)}"><div style="color:${color(b.textColor, s.textColor)};font-size:${num(b.fontSize, 16, 40)}px;line-height:1.6;white-space:pre-wrap">${esc(b.text)}</div></td></tr>`;
     case "button":
-      return `<tr><td style="${pad(b)};text-align:${align(b)}"><table role="presentation" cellpadding="0" cellspacing="0" style="display:inline-table"><tr><td style="border-radius:8px;background:${color(b.buttonColor, "#18181b")}"><a href="${esc(href(b.linkUrl))}" style="display:inline-block;padding:11px 20px;color:${color(b.buttonTextColor, "#ffffff")};font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">${esc(b.text || "Learn more")}</a></td></tr></table></td></tr>`;
+      return `<tr><td style="${pad(b)};text-align:${align(b)}"><table role="presentation" cellpadding="0" cellspacing="0" ${btnTable(btnWidth(b))}><tr><td style="border-radius:8px;background:${color(b.buttonColor, "#18181b")}"><a href="${esc(href(b.linkUrl))}" style="${btnLink(btnWidth(b))};padding:11px 20px;color:${color(b.buttonTextColor, "#ffffff")};font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">${esc(b.text || "Learn more")}</a></td></tr></table></td></tr>`;
     case "image": {
       const u = src(b.url, origin);
       if (!u) return "";
@@ -153,9 +159,12 @@ function renderBlock(b: EmailBlock, s: EmailSettings, origin: string): string {
     }
     case "buttons": {
       const fill = color(b.buttonColor, "#18181b");
+      // With a width, the pair fills that share of the row and splits it evenly.
+      const w = btnWidth(b);
+      const two = !!b.label;
       const btn = (label: string | undefined, link: string | undefined, solid: boolean) =>
-        `<td style="padding:0 6px 8px 0"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:8px;${solid ? `background:${fill}` : `border:1px solid ${fill}`}"><a href="${esc(href(link))}" style="display:inline-block;padding:${solid ? 11 : 10}px 20px;color:${solid ? color(b.buttonTextColor, "#ffffff") : fill};font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">${esc(label || "Learn more")}</a></td></tr></table></td>`;
-      return `<tr><td style="${pad(b)};text-align:${align(b)}"><table role="presentation" cellpadding="0" cellspacing="0" style="display:inline-table"><tr>${btn(b.text, b.linkUrl, true)}${b.label ? btn(b.label, b.secondaryUrl, false) : ""}</tr></table></td></tr>`;
+        `<td style="padding:0 ${two && solid ? 6 : 0}px 8px 0"${w ? ` width="${two ? 50 : 100}%"` : ""}><table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate"${w ? ' width="100%"' : ""}><tr><td style="border-radius:8px;${solid ? `background:${fill}` : `border:1px solid ${fill}`}"><a href="${esc(href(link))}" style="${btnLink(w)};padding:${solid ? 11 : 10}px 20px;color:${solid ? color(b.buttonTextColor, "#ffffff") : fill};font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">${esc(label || "Learn more")}</a></td></tr></table></td>`;
+      return `<tr><td style="${pad(b)};text-align:${align(b)}"><table role="presentation" cellpadding="0" cellspacing="0" ${btnTable(w)}><tr>${btn(b.text, b.linkUrl, true)}${b.label ? btn(b.label, b.secondaryUrl, false) : ""}</tr></table></td></tr>`;
     }
     case "card": {
       const u = src(b.url, origin);
@@ -164,7 +173,7 @@ function renderBlock(b: EmailBlock, s: EmailSettings, origin: string): string {
         u ? `<tr><td><img src="${esc(u)}" alt="${esc(b.alt)}" width="100%" style="width:100%;display:block;border:0" /></td></tr>` : ""}<tr><td style="padding:20px;text-align:${align(b)}">${
         b.title ? `<div style="color:${fg};font-size:18px;font-weight:700;line-height:1.3">${esc(b.title)}</div>` : ""}${
         b.text ? `<div style="margin-top:6px;color:${fg};opacity:.8;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(b.text)}</div>` : ""}${
-        b.label ? `<table role="presentation" cellpadding="0" cellspacing="0" style="display:inline-table;margin-top:14px"><tr><td style="border-radius:8px;background:${color(b.buttonColor, "#18181b")}"><a href="${esc(href(b.linkUrl))}" style="display:inline-block;padding:9px 16px;color:${color(b.buttonTextColor, "#ffffff")};font-size:13px;font-weight:600;text-decoration:none;border-radius:8px">${esc(b.label)}</a></td></tr></table>` : ""}</td></tr></table></td></tr>`;
+        b.label ? `<table role="presentation" cellpadding="0" cellspacing="0" ${btnTable(btnWidth(b), ";margin-top:14px")}><tr><td style="border-radius:8px;background:${color(b.buttonColor, "#18181b")}"><a href="${esc(href(b.linkUrl))}" style="${btnLink(btnWidth(b))};padding:9px 16px;color:${color(b.buttonTextColor, "#ffffff")};font-size:13px;font-weight:600;text-decoration:none;border-radius:8px">${esc(b.label)}</a></td></tr></table>` : ""}</td></tr></table></td></tr>`;
     }
     case "list": {
       const tag = b.ordered ? "ol" : "ul";
