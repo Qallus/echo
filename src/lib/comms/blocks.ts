@@ -41,6 +41,15 @@ export const BLOCKS: Record<BlockType, { label: string; hint: string }> = {
 };
 export const BLOCK_ORDER: BlockType[] = ["header", "heading", "text", "button", "image", "columns", "divider", "spacer", "footer",
   "buttons", "card", "list", "quote", "callout", "badge", "stats", "details", "faq", "social", "video", "code", "signature"];
+// Built-in header logos (in public/email/logos). "Dark" logos are dark ink
+// for light headers; "light" logos are white for dark headers.
+export const LOGOS = [
+  { url: "/email/logos/echo-dark.png", label: "Echo", tone: "dark", alt: "Echo" },
+  { url: "/email/logos/echo-light.png", label: "Echo", tone: "light", alt: "Echo" },
+  { url: "/email/logos/redial-dark.png", label: "Redial", tone: "dark", alt: "Redial" },
+  { url: "/email/logos/redial-light.png", label: "Redial", tone: "light", alt: "Redial" },
+] as const;
+
 // How the builder's palette groups them.
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: "Layout", types: ["header", "columns", "divider", "spacer", "footer"] },
@@ -80,7 +89,7 @@ export const blockId = () => `blk_${Date.now().toString(36)}_${(seq++).toString(
 export function createBlock(type: BlockType): EmailBlock {
   const base: EmailBlock = { id: blockId(), type, align: "left", padTop: 0, padBottom: 24, padX: 32 };
   switch (type) {
-    case "header": return { ...base, title: "ECHO", backgroundColor: "#18181b", padTop: 18, padBottom: 18 };
+    case "header": return { ...base, title: "", url: LOGOS[1].url, alt: LOGOS[1].alt, height: 28, backgroundColor: "#18181b", padTop: 18, padBottom: 18 };
     case "heading": return { ...base, text: "Your heading", headingLevel: "h2", fontSize: 22, textColor: "#18181b", padTop: 24 };
     case "text": return { ...base, text: "Hi {{first_name}},\n\nWrite your message here.", fontSize: 16, textColor: "#3f3f46" };
     case "button": return { ...base, text: "Learn more", linkUrl: "https://echo.redial.si", buttonColor: "#18181b", buttonTextColor: "#ffffff" };

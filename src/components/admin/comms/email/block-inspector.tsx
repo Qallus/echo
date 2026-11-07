@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CALLOUTS, createBlock, type Align, type BlockItem, type EmailBlock, type EmailSettings } from "@/lib/comms/blocks";
 import { cn } from "@/lib/utils";
+import { LogoField } from "./logo-field";
 import { Pick, cap } from "./pick";
 
 export function F({ label, children }: { label: string; children: React.ReactNode }) {
@@ -83,9 +84,12 @@ export function BlockInspector({ b, set }: { b: EmailBlock; set: (patch: Partial
     <div className="space-y-4">
       <Group label="Content">
         {t === "header" && <>
-          <TextField label="Brand text" value={b.title} onChange={(title) => set({ title })} />
-          <TextField label="Logo URL (https, optional)" value={b.url} onChange={(url) => set({ url })} placeholder="https://…/logo.png" />
-          <NumField label="Logo height" value={b.height} max={200} onChange={(height) => set({ height })} />
+          <LogoField b={b} set={set} />
+          {b.url && <>
+            <TextField label="Logo alt text (read aloud, shown if images are off)" value={b.alt} onChange={(alt) => set({ alt })} />
+            <NumField label="Logo height (px)" value={b.height ?? 28} max={120} onChange={(height) => set({ height })} />
+          </>}
+          <TextField label={b.url ? "Text beside the logo (optional)" : "Brand text"} value={b.title} onChange={(title) => set({ title })} />
         </>}
         {t === "heading" && <TextField label="Text" value={b.text} onChange={(text) => set({ text })} rows={2} />}
         {(t === "text" || t === "footer") && <TextField label="Text" value={b.text} onChange={(text) => set({ text })} rows={t === "text" ? 7 : 3} />}
