@@ -4,15 +4,15 @@ import { useMemo, useState, useTransition } from "react";
 import { Bot, Copy, Mail, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteAudience, deleteTemplate, resubscribe, saveTemplate } from "@/lib/admin/actions/comms";
 import { audienceLabel } from "@/lib/comms/audience";
 import { CATEGORIES, STATUSES } from "@/lib/comms/blocks";
-import type { Automation, Campaign, SavedAudience, Send, Template } from "@/lib/comms/data";
+import type { Automation, Campaign, SavedAudience, Send, Template, Unsubscribe } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { AutomationsPanel } from "./automations-panel";
 import { EmailEditor } from "./email/email-editor";
+import { History } from "./email/history";
 import { type Person } from "./email/people-field";
 import { Pick, cap, optionsOf } from "./email/pick";
 import { SendPanel } from "./email/send-panel";
@@ -22,7 +22,7 @@ const SUB = ["send", "templates", "audiences", "automations", "history", "unsubs
 const STATUS_TONE: Record<string, string> = { draft: "text-amber-700 dark:text-amber-300", archived: "text-muted-foreground", active: "text-emerald-700 dark:text-emerald-300" };
 
 export function EmailPanel({ templates, sends, campaigns, audiences, unsubscribes, people, knownTags, canCustomers, readOnly, automations, cronReady }: {
-  templates: Template[]; sends: Send[]; campaigns: Campaign[]; audiences: SavedAudience[]; unsubscribes: { email: string; created_at: string }[];
+  templates: Template[]; sends: Send[]; campaigns: Campaign[]; audiences: SavedAudience[]; unsubscribes: Unsubscribe[];
   people: Person[]; knownTags: string[]; canCustomers: boolean; readOnly: boolean; automations: Automation[]; cronReady: boolean;
 }) {
   const [sub, setSub] = useState<(typeof SUB)[number]>(readOnly ? "templates" : "send");
@@ -68,8 +68,9 @@ export function EmailPanel({ templates, sends, campaigns, audiences, unsubscribe
           {unsubscribes.map((u) => (
             <li key={u.email} className="flex items-center gap-3 p-3 text-sm">
               <span className="min-w-0 flex-1 truncate">{u.email}</span>
+              {u.reason !== "unsubscribed" && <Badge variant="outline" className="text-destructive" title={u.reason === "bounced" ? "The address doesn't exist or rejected the email permanently" : "They marked an email as spam"}>{u.reason === "bounced" ? "Bounced" : "Marked as spam"}</Badge>}
               <span className="text-xs text-muted-foreground">{when(u.created_at)}</span>
-              {!readOnly && <Button size="sm" variant="ghost" disabled={pending} onClick={() => confirm(`Only do this if ${u.email} asked to receive emails again.`) && run(() => resubscribe(u.email))}>Resubscribe</Button>}
+              {!readOnly && <Button size="sm" variant="ghost" disabled={pending} onClick={() => confirm(u.reason === "bounced" ? `Only do this if you've confirmed ${u.email} works again. Sending to addresses that bounce hurts delivery for everyone.` : `Only do this if ${u.email} asked to receive emails again.`) && run(() => resubscribe(u.email))}>Resubscribe</Button>}
             </li>
           ))}
         </ul>
@@ -138,62 +139,3 @@ function TemplateList({ templates, automations, readOnly, pending, onEdit, onDup
   );
 }
 
-function History({ sends, campaigns, templates }: { sends: Send[]; campaigns: Campaign[]; templates: Template[] }) {
-  const [status, setStatus] = useState("all");
-  const names = new Map(templates.map((t) => [t.id, t.name]));
-  const shown = sends.filter((s) => status === "all" || s.status === status);
-  return (
-    <div className="space-y-4">
-      {campaigns.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Bulk sends</h3>
-          <div className="rounded-xl border bg-card px-2">
-            <Table>
-              <TableHeader><TableRow><TableHead>When</TableHead><TableHead>Subject</TableHead><TableHead>Audience</TableHead><TableHead className="text-right">Sent</TableHead><TableHead className="text-right">Skipped</TableHead><TableHead className="text-right">Failed</TableHead><TableHead>By</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {campaigns.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">{when(c.created_at)}</TableCell>
-                    <TableCell className="max-w-64 truncate">{c.subject}<span className="block text-xs text-muted-foreground">{c.template_id ? names.get(c.template_id) ?? "Deleted template" : "Message"}</span></TableCell>
-                    <TableCell className="max-w-56 truncate text-muted-foreground">{c.audience_label}</TableCell>
-                    <TableCell className="text-right tabular-nums">{c.sent.toLocaleString()}<span className="text-muted-foreground"> / {c.total.toLocaleString()}</span></TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">{c.skipped}</TableCell>
-                    <TableCell className={cn("text-right tabular-nums", c.failed && "text-destructive")}>{c.failed}</TableCell>
-                    <TableCell>{c.via === "claude" ? <span className="flex items-center gap-1 text-xs"><Bot className="size-3" />Claude</span> : <span className="text-xs text-muted-foreground">Admin</span>}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </section>
-      )}
-      <section className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Every email</h3>
-          <Pick label="Status" className="ml-auto w-36" value={status} onChange={setStatus} options={[{ value: "all", label: "All" }, ...optionsOf(["sent", "test", "skipped", "failed"] as const)]} />
-        </div>
-        {shown.length === 0 ? <EmptyState message="Nothing here yet." /> : (
-          <div className="rounded-xl border bg-card px-2">
-            <Table>
-              <TableHeader><TableRow><TableHead>When</TableHead><TableHead>To</TableHead><TableHead>Subject</TableHead><TableHead>Template</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {shown.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">{when(s.created_at)}</TableCell>
-                    <TableCell>{s.to_email}</TableCell>
-                    <TableCell className="max-w-64 truncate">{s.subject}</TableCell>
-                    <TableCell className="text-muted-foreground">{s.template_id ? names.get(s.template_id) ?? "Deleted" : "Message"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn(s.status === "failed" && "text-destructive", s.status === "skipped" && "text-muted-foreground")}>{s.status}</Badge>
-                      {s.error && <span className="ml-2 text-xs text-muted-foreground">{s.error}</span>}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}

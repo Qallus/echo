@@ -236,15 +236,21 @@ export function registerEmailTools(server: McpServer, ctx: McpContext, permissio
 
   defineTool(server, ctx, "email_history", {
     title: "Email history",
-    description: "Recent bulk sends (with totals) and recent individual emails, newest first.",
+    description: "Recent bulk sends (with totals, and delivered/opened/clicked/bounced counts from Resend) and recent individual emails with their tracking, newest first. Opens are estimates (some apps block or prefetch the tracking image).",
     inputSchema: z.object({ limit: limitArg }),
     annotations: READ,
   }, async ({ limit }) => {
     const [c, s] = await Promise.all([
       ctx.supabase.from("email_campaigns").select("id, subject, audience_label, total, sent, skipped, failed, status, via, created_at").order("created_at", { ascending: false }).limit(limit),
-      ctx.supabase.from("email_sends").select("to_email, subject, status, error, template_id, created_at").order("created_at", { ascending: false }).limit(limit),
+      ctx.supabase.from("email_sends").select("to_email, subject, status, error, template_id, created_at, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, complained_at")
+        .order("created_at", { ascending: false }).limit(limit),
     ]);
     check(c.error); check(s.error);
-    return { data: { bulk_sends: c.data, emails: s.data } };
+    const ids = (c.data ?? []).map((x) => x.id);
+    const stats = ids.length ? await ctx.supabase.from("email_campaign_stats").select("campaign_id, delivered, opened, clicked, bounced, complained").in("campaign_id", ids) : { data: [], error: null };
+    check(stats.error);
+    const by = new Map((stats.data ?? []).map((x) => [x.campaign_id, x]));
+    const bulk = (c.data ?? []).map((x) => { const t = by.get(x.id); return { ...x, delivered: t?.delivered ?? 0, opened: t?.opened ?? 0, clicked: t?.clicked ?? 0, bounced: t?.bounced ?? 0, complained: t?.complained ?? 0 }; });
+    return { data: { bulk_sends: bulk, emails: s.data } };
   });
 }

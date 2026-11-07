@@ -1,9 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { secrets } from "@/lib/secrets";
+import { isTrackingEvent, trackEvent, type ResendEvent } from "@/lib/comms/track";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Resend inbound email (event "email.received") -> the admin Inbox. No user
-// session: the request must carry a valid Svix signature made with
+// Resend webhook. Inbound email (event "email.received") -> the admin Inbox;
+// delivery events (delivered, opened, clicked, bounced, complained, …) ->
+// email tracking (src/lib/comms/track.ts). No user session: the request must carry a valid Svix signature made with
 // RESEND_WEBHOOK_SECRET, and only then is the service-role client used.
 // The webhook has metadata only, so the body is fetched from Resend.
 // Message content is stored as text and shown as text; it's never executed.
@@ -35,6 +37,10 @@ export async function POST(req: Request) {
   const conf = await secrets("RESEND_WEBHOOK_SECRET", "RESEND_API_KEY");
   if (!verify(body, req.headers, conf.RESEND_WEBHOOK_SECRET)) return new Response("Invalid signature", { status: 403 });
   const event = JSON.parse(body) as { type?: string; data?: { email_id?: string; from?: string; to?: string[]; subject?: string } };
+  if (isTrackingEvent(event.type)) {
+    const res = await trackEvent(createAdminClient(), req.headers.get("svix-id")!, event as ResendEvent);
+    return res.ok ? Response.json(res) : new Response(res.error, { status: 500 });
+  }
   if (event.type !== "email.received" || !event.data?.email_id) return Response.json({ ok: true, ignored: true });
 
   const emailId = event.data.email_id;

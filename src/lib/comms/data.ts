@@ -13,9 +13,14 @@ export type Template = {
 export type Campaign = {
   id: string; template_id: string | null; subject: string; audience_label: string | null; total: number; sent: number; skipped: number; failed: number;
   status: "sending" | "sent" | "partial" | "failed"; via: "admin" | "claude"; created_by: string | null; created_at: string; finished_at: string | null;
+  stats: CampaignStats;
 };
+export type CampaignStats = { delivered: number; opened: number; clicked: number; bounced: number; complained: number };
 export type SavedAudience = { id: string; name: string; description: string | null; definition: Audience; updated_at: string };
-export type Send = { id: string; template_id: string | null; to_email: string; subject: string; status: "sent" | "failed" | "skipped" | "test"; error: string | null; campaign_id: string | null; contact_id: string | null; deal_id: string | null; sent_by: string | null; created_at: string };
+export type Send = { id: string; template_id: string | null; to_email: string; subject: string; status: "sent" | "failed" | "skipped" | "test"; error: string | null; campaign_id: string | null; contact_id: string | null; deal_id: string | null; sent_by: string | null; created_at: string;
+  delivered_at: string | null; opened_at: string | null; clicked_at: string | null; bounced_at: string | null; complained_at: string | null;
+  open_count: number; click_count: number; last_event: string | null };
+export type Unsubscribe = { email: string; reason: "unsubscribed" | "bounced" | "complained"; created_at: string };
 export type InboxMessage = {
   id: string; channel: "email" | "form"; from_name: string | null; from_email: string | null; phone: string | null; company: string | null; to_email: string | null;
   subject: string | null; body: string; topic: string | null; status: "new" | "read" | "archived"; contact_id: string | null; meta: { attachments?: { name?: string; type?: string; size?: number }[] }; created_at: string;
@@ -38,7 +43,15 @@ export async function listCampaigns(limit = 100): Promise<Campaign[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("email_campaigns").select("id, template_id, subject, audience_label, total, sent, skipped, failed, status, via, created_by, created_at, finished_at")
     .order("created_at", { ascending: false }).limit(limit);
-  return (data ?? []) as Campaign[];
+  const rows = data ?? [];
+  // Delivery and engagement totals from Resend's events, per bulk send.
+  const { data: stats } = rows.length ? await supabase.from("email_campaign_stats").select("campaign_id, delivered, opened, clicked, bounced, complained").in("campaign_id", rows.map((c) => c.id)) : { data: [] };
+  const by = new Map((stats ?? []).map((x) => [x.campaign_id as string, x]));
+  const zero = { delivered: 0, opened: 0, clicked: 0, bounced: 0, complained: 0 };
+  return rows.map((c) => {
+    const x = by.get(c.id);
+    return { ...c, stats: x ? { delivered: Number(x.delivered), opened: Number(x.opened), clicked: Number(x.clicked), bounced: Number(x.bounced), complained: Number(x.complained) } : zero };
+  }) as Campaign[];
 }
 
 export async function listAudiences(): Promise<SavedAudience[]> {
@@ -53,10 +66,10 @@ export async function listInbox(): Promise<InboxMessage[]> {
   return (data ?? []) as InboxMessage[];
 }
 
-export async function listUnsubscribes(): Promise<{ email: string; created_at: string }[]> {
+export async function listUnsubscribes(): Promise<Unsubscribe[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("email_unsubscribes").select("*").order("created_at", { ascending: false }).limit(500);
-  return data ?? [];
+  return (data ?? []) as Unsubscribe[];
 }
 
 export async function listDeliveries(): Promise<Delivery[]> {
