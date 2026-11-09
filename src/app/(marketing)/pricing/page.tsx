@@ -23,7 +23,7 @@ export default function PricingPage() {
 
       <section className="mt-12"><PlanSection /></section>
 
-      <section className="mt-24 space-y-6">
+      <section id="bolt-ons" className="mt-24 scroll-mt-24 space-y-6">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bolt-ons</h2>
           <p className="mt-1 text-muted-foreground">Add to any paid plan. Billed monthly, cancel any time.</p>

@@ -91,8 +91,8 @@ export default function LandingPage() {
       <section id="how" className="scroll-mt-20 border-t bg-muted/30">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
           <h2 className="text-3xl font-semibold tracking-tight">How it works</h2>
-          {[{ name: "Echo", icon: Mic, steps: STEPS }, { name: "Redial", icon: PhoneIncoming, steps: REDIAL_STEPS }].map(({ name, icon: Icon, steps }) => (
-            <div key={name} className="mt-10">
+          {[{ name: "Redial", icon: PhoneIncoming, steps: REDIAL_STEPS }, { name: "Echo", icon: Mic, steps: STEPS }].map(({ name, icon: Icon, steps }) => (
+            <div key={name} id={`how-${name.toLowerCase()}`} className="mt-10 scroll-mt-24">
               <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><Icon className="size-4" /> {name}</h3>
               <ol className="mt-4 grid gap-8 md:grid-cols-3">
                 {steps.map((s) => (

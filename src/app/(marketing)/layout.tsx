@@ -3,6 +3,7 @@ import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppBadges } from "@/components/marketing/app-badges";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
+import { SiteNav } from "@/components/marketing/site-nav";
 import { CartButton } from "@/components/store/store";
 import { CatalogSync } from "@/components/store/catalog-sync";
 import { loadCatalog } from "@/lib/billing/catalog-server";
@@ -25,15 +26,8 @@ export default async function MarketingLayout({ children }: { children: React.Re
           {/* Right side, left to right: navigation, cart, Sign in, Get started, theme
               (the phone menu replaces the navigation below lg). */}
           <div className="ml-auto flex items-center gap-2">
-            <nav className="mr-3 hidden items-center gap-5 text-sm text-muted-foreground lg:flex">
-              <Link href="/#features" className="hover:text-foreground">Features</Link>
-              <Link href="/#redial" className="hover:text-foreground">Redial</Link>
-              <Link href="/#how" className="hover:text-foreground">How it works</Link>
-              <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
-              <Link href="/faq" className="hover:text-foreground">FAQ</Link>
-              <Link href="/developers" className="hover:text-foreground">Developers</Link>
-              <Link href="/contact" className="hover:text-foreground">Contact</Link>
-            </nav>
+            <SiteNav />
+            <span className="mx-1 hidden h-5 w-px bg-border lg:block" />
             <CartButton />
             {user ? (
               <Button nativeButton={false} render={<Link href="/" />}>Open Echo</Button>
@@ -88,7 +82,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
             </div>
           </nav>
         </div>
-        <div className="mx-auto w-full max-w-6xl px-4 pb-8 text-xs text-muted-foreground sm:px-6">© {new Date().getFullYear()} Qallus LLC. Echo is a product of Qallus LLC.</div>
+        <div className="mx-auto w-full max-w-6xl px-4 pb-8 text-xs text-muted-foreground sm:px-6">© {new Date().getFullYear()} Qallus LLC. Redial is a product of Qallus LLC.</div>
       </footer>
     </div>
   );
