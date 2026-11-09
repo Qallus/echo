@@ -19,7 +19,7 @@ const LINES = [
 const ACTIONS = ["Design finishes the panel (this week)", "Ship the recorder on Friday", "Send the announcement on Monday"];
 
 export function Stage({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("flex h-full items-center justify-center p-4 sm:p-8", className)}>{children}</div>;
+  return <div className={cn("flex h-full items-center justify-center p-4 @md:p-8", className)}>{children}</div>;
 }
 
 // Always rendered so its space is reserved: content appearing never shifts the

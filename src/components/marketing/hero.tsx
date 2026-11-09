@@ -18,13 +18,13 @@ const PRODUCTS = {
     name: "Echo", icon: AudioLines, eyebrow: "Recordings, transcripts and summaries in one place",
     title: "Every call and meeting, captured and searchable.",
     sub: "Record in your browser, take notes as you talk, and get speaker-labelled transcripts automatically. Share with your team or keep it private.",
-    more: { href: "/#how", label: "See how it works" }, scenes: ECHO_SCENES, demoTitle: "Launch plan review",
+    more: { href: "/#how", label: "See how it works" }, scenes: ECHO_SCENES, demoTitle: "Launch plan review", phone: false,
   },
   redial: {
     name: "Redial", icon: PhoneCall, eyebrow: "AI call screening with you in control",
     title: "Your assistant answers. You take the calls that matter.",
     sub: "Redial screens unknown callers, takes messages and books callbacks. Listen in, guide it, take over or transfer, all on the same call.",
-    more: { href: "/#redial", label: "See what Redial does" }, scenes: REDIAL_SCENES, demoTitle: "Call from (480) 555-0142",
+    more: { href: "/#redial", label: "See what Redial does" }, scenes: REDIAL_SCENES, demoTitle: "Call from (480) 555-0142", phone: true,
   },
 } as const;
 type Product = keyof typeof PRODUCTS;
@@ -82,7 +82,7 @@ export function Hero() {
       </section>
 
       <section className="px-4 pb-20 sm:px-6" aria-label={`${p.name} demo`}>
-        <DeviceDemo key={product} scenes={p.scenes} title={p.demoTitle} Logo={p.icon} onLoop={next} />
+        <DeviceDemo key={product} scenes={p.scenes} title={p.demoTitle} Logo={p.icon} phone={p.phone} onLoop={next} />
       </section>
     </>
   );

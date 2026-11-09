@@ -53,7 +53,7 @@ function IncomingScene({ t }: SceneProps) {
 
 function ScreenScene({ t }: SceneProps) {
   return (
-    <Stage className="items-start sm:items-center">
+    <Stage className="items-start @md:items-center">
       <div className="w-full max-w-lg space-y-2.5">
         <In show={t > 200}><Bubble who="ai">Hi, this is Ava, Jordan&apos;s assistant. Jordan can&apos;t pick up right now. Who&apos;s calling, and what&apos;s it about?</Bubble></In>
         <In show={t > 1300}><Bubble who="caller">Hi, it&apos;s Dana from Summit Roofing, about tomorrow&apos;s install.</Bubble></In>

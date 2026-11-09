@@ -8,7 +8,7 @@ import {
 } from "./scenes";
 
 // Looping product demos for the landing page hero, drawn in a phone (below
-// md) or a monitor (md up). Echo: record -> transcribe -> Claude -> email ->
+// md, or always with `phone`) or a monitor (md up). Echo: record -> transcribe -> Claude -> email ->
 // connections -> PDF -> web report -> save. Redial's scenes are in
 // redial-scenes.tsx. Visitors can jump to a step. With reduced motion on, it
 // holds each step's finished frame and doesn't advance.
@@ -52,13 +52,17 @@ type DemoProps = {
   // Called each time the demo finishes its last step on its own (not after
   // the visitor picked a step).
   onLoop?: () => void;
+  // Always a phone, at every screen size (Redial is a phone app).
+  phone?: boolean;
 };
 
 export function HeroDemo(props: Partial<DemoProps>) {
   return <DeviceDemo scenes={ECHO_SCENES} title="Launch plan review" {...props} />;
 }
 
-export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop }: DemoProps) {
+export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, phone = false }: DemoProps) {
+  // Classes that turn the phone into a monitor from md up.
+  const desk = (cls: string) => (phone ? "" : cls);
   const reduced = useSyncExternalStore(
     subscribeReducedMotion,
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -127,32 +131,35 @@ export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop }:
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      {/* Device body: a phone below md, a monitor from md up. */}
-      <div className="relative mx-auto w-full max-w-[420px] rounded-[3.25rem] bg-neutral-900 p-[3%] shadow-2xl shadow-black/20 ring-1 ring-black/10 dark:ring-white/15 md:max-w-[min(72rem,calc((100svh-9rem)*1.5))] md:rounded-[1.25rem] md:p-[1.1%] md:pb-[2.8%]">
-        <span className="absolute top-[18%] -left-[3px] h-[7%] w-[3px] rounded-l bg-neutral-700 md:hidden" />
-        <span className="absolute top-[28%] -left-[3px] h-[11%] w-[3px] rounded-l bg-neutral-700 md:hidden" />
-        <span className="absolute top-[24%] -right-[3px] h-[14%] w-[3px] rounded-r bg-neutral-700 md:hidden" />
+      {/* Device body: a phone below md, a monitor from md up (unless `phone`). */}
+      <div className={cn(
+        "relative mx-auto w-full max-w-[420px] rounded-[3.25rem] bg-neutral-900 p-[3%] shadow-2xl shadow-black/20 ring-1 ring-black/10 dark:ring-white/15",
+        phone ? "md:max-w-[min(400px,calc((100svh-9rem)*0.47))] md:p-3" : "md:max-w-[min(72rem,calc((100svh-9rem)*1.5))] md:rounded-[1.25rem] md:p-[1.1%] md:pb-[2.8%]",
+      )}>
+        <span className={cn("absolute top-[18%] -left-[3px] h-[7%] w-[3px] rounded-l bg-neutral-700", desk("md:hidden"))} />
+        <span className={cn("absolute top-[28%] -left-[3px] h-[11%] w-[3px] rounded-l bg-neutral-700", desk("md:hidden"))} />
+        <span className={cn("absolute top-[24%] -right-[3px] h-[14%] w-[3px] rounded-r bg-neutral-700", desk("md:hidden"))} />
 
-        <div ref={screenRef} className="relative aspect-[375/812] overflow-hidden rounded-[2.6rem] bg-background md:aspect-[16/10] md:rounded-md">
-          <div ref={canvasRef} className="absolute top-0 left-0 flex h-[812px] w-[375px] origin-top-left flex-col md:h-[525px] md:w-[840px]">
+        <div ref={screenRef} className={cn("relative aspect-[375/812] overflow-hidden rounded-[2.6rem] bg-background", desk("md:aspect-[16/10] md:rounded-md"))}>
+          <div ref={canvasRef} className={cn("@container absolute top-0 left-0 flex h-[812px] w-[375px] origin-top-left flex-col", desk("md:h-[525px] md:w-[840px]"))}>
             {/* Phone: status bar and app header. */}
-            <div className="flex h-12 shrink-0 items-end justify-between px-8 pb-1.5 text-[13px] font-semibold md:hidden">
+            <div className={cn("flex h-12 shrink-0 items-end justify-between px-8 pb-1.5 text-[13px] font-semibold", desk("md:hidden"))}>
               <span>9:41</span>
               <span className="flex items-center gap-1.5"><Signal className="size-3.5" /><Wifi className="size-3.5" /><BatteryFull className="size-4" /></span>
             </div>
-            <div className="flex h-11 shrink-0 items-center gap-2 border-b px-4 md:hidden">
+            <div className={cn("flex h-11 shrink-0 items-center gap-2 border-b px-4", desk("md:hidden"))}>
               <Logo className="size-4" />
               <span className="min-w-0 truncate text-sm font-medium">{title}</span>
               <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{label}</span>
             </div>
             {/* Desktop: browser bar. */}
-            <div className="hidden h-9 shrink-0 items-center gap-1.5 border-b bg-muted/40 px-4 md:flex">
+            {!phone && <div className="hidden h-9 shrink-0 items-center gap-1.5 border-b bg-muted/40 px-4 md:flex">
               <span className="size-2.5 rounded-full bg-muted-foreground/20" />
               <span className="size-2.5 rounded-full bg-muted-foreground/20" />
               <span className="size-2.5 rounded-full bg-muted-foreground/20" />
               <span className="ml-3 flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground"><Lock className="size-3 shrink-0" /> {title}</span>
               <span className="ml-auto text-xs font-medium">{label}</span>
-            </div>
+            </div>}
 
             <div ref={stageRef} aria-hidden className="relative min-h-0 flex-1 overflow-hidden">
               <div key={scene} className="hero-in h-full">
@@ -170,21 +177,21 @@ export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop }:
             </div>
 
             {/* Phone: home indicator. */}
-            <div className="flex h-7 shrink-0 items-center justify-center md:hidden"><span className="h-1.5 w-32 rounded-full bg-foreground/80" /></div>
+            <div className={cn("flex h-7 shrink-0 items-center justify-center", desk("md:hidden"))}><span className="h-1.5 w-32 rounded-full bg-foreground/80" /></div>
           </div>
           {/* Phone: Dynamic Island. */}
-          <span className="absolute top-[1.4%] left-1/2 h-[3.4%] w-[30%] -translate-x-1/2 rounded-full bg-neutral-900 md:hidden" />
+          <span className={cn("absolute top-[1.4%] left-1/2 h-[3.4%] w-[30%] -translate-x-1/2 rounded-full bg-neutral-900", desk("md:hidden"))} />
         </div>
 
         {/* Monitor: logo on the chin. */}
-        <Logo className="absolute bottom-[0.7%] left-1/2 hidden size-[1.6%] min-h-3 min-w-3 -translate-x-1/2 text-neutral-500 md:block" />
+        {!phone && <Logo className="absolute bottom-[0.7%] left-1/2 hidden size-[1.6%] min-h-3 min-w-3 -translate-x-1/2 text-neutral-500 md:block" />}
       </div>
 
       {/* Monitor: stand. */}
-      <div aria-hidden className="hidden md:block">
+      {!phone && <div aria-hidden className="hidden md:block">
         <div className="mx-auto h-[clamp(28px,4vw,56px)] w-[14%] bg-gradient-to-b from-neutral-400 to-neutral-300 [clip-path:polygon(14%_0,86%_0,100%_100%,0_100%)]" />
         <div className="mx-auto h-3 w-[30%] rounded-t-sm rounded-b-xl bg-gradient-to-b from-neutral-300 to-neutral-400 shadow-md" />
-      </div>
+      </div>}
 
       <nav aria-label="Demo steps" className="mt-6 flex flex-wrap justify-center gap-2">
         {SCENES.map((s, i) => (
