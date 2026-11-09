@@ -5,25 +5,21 @@ import { Body, Button, Card, Choice, ErrorText, Label, Loading, Screen, Steps, T
 import { useTheme } from "@/hooks/use-theme";
 import { phone } from "@/lib/format";
 import { useSetup } from "@/lib/setup";
+import { CARRIERS, carrier as findCarrier, forwardingCode } from "@shared/carriers";
 
 // Forward only the calls you don't answer, so your cell still rings first.
-// Codes can differ by plan; the screen says so.
-const CARRIERS = [
-  { id: "verizon", label: "Verizon", on: (n: string) => `*71${n}`, off: "*73" },
-  { id: "att", label: "AT&T", on: (n: string) => `**004*1${n}#`, off: "##004#" },
-  { id: "tmobile", label: "T-Mobile", on: (n: string) => `**004*1${n}#`, off: "##004#" },
-  { id: "other", label: "Another carrier", on: null, off: null },
-] as const;
+// Carriers and codes are shared with the website (src/lib/redial/carriers.ts);
+// codes can differ by plan, and the screen says so.
 
 // Onboarding 3: your Redial number, and how calls reach it.
 export default function NumberStep() {
   const c = useTheme();
   const { me, line, error, reload } = useSetup();
-  const [carrier, setCarrier] = useState<(typeof CARRIERS)[number]["id"] | null>(null);
+  const [carrier, setCarrier] = useState<string | null>(null);
   if (!me && !error) return <Loading />;
   const steps = line ? 5 : 2;
-  const digits = line?.number.replace(/^\+1/, "") ?? "";
-  const pick = CARRIERS.find((x) => x.id === carrier);
+  const pick = findCarrier(carrier);
+  const code = forwardingCode(carrier, "missed", line?.number);
 
   return (
     <Screen>
@@ -46,16 +42,16 @@ export default function NumberStep() {
           </View>
           {pick && (
             <Card style={{ gap: 8 }}>
-              {pick.on ? (
+              {code ? (
                 <>
                   <Body>On your cell, dial this code and press Call:</Body>
-                  <Pressable accessibilityRole="button" onPress={() => Linking.openURL(`tel:${encodeURIComponent(pick.on(digits))}`)}>
-                    <Text selectable style={{ color: c.text, fontSize: 22, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{pick.on(digits)}</Text>
+                  <Pressable accessibilityRole="button" onPress={() => Linking.openURL(`tel:${encodeURIComponent(code.on)}`)}>
+                    <Text selectable style={{ color: c.text, fontSize: 22, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{code.on}</Text>
                   </Pressable>
-                  <Body muted>To turn it off later, dial {pick.off}. Codes can differ by plan; your carrier can confirm.</Body>
+                  <Body muted>To turn it off later, dial {code.off}. Codes can differ by plan; your carrier can confirm.{pick.note ? ` ${pick.note}` : ""}</Body>
                 </>
               ) : (
-                <Body>Look up &ldquo;conditional call forwarding&rdquo; or &ldquo;forward unanswered calls&rdquo; in your carrier&apos;s help, and forward to {phone(line.number)}.</Body>
+                <Body>{pick.note ? `${pick.note} ` : ""}Look up &ldquo;conditional call forwarding&rdquo; or &ldquo;forward unanswered calls&rdquo; in your carrier&apos;s help, and forward to {phone(line.number)}.</Body>
               )}
             </Card>
           )}
