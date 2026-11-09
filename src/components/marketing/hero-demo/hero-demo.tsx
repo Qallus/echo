@@ -22,14 +22,20 @@ export type DemoScene = {
 };
 
 export const ECHO_SCENES: DemoScene[] = [
-  { label: "Record", ms: 3600, Scene: RecordScene },
-  { label: "Transcribe", ms: 3800, Scene: TranscribeScene },
-  { label: "Ask Claude", ms: 3800, Scene: ClaudeScene },
   {
-    label: "Email", ms: 3400, Scene: EmailScene,
-    cursor: [{ at: 700, target: "send" }, { at: 2000, target: "send", click: true }],
+    label: "Record", ms: 4400, Scene: RecordScene,
+    cursor: [{ at: 2200, target: "flag" }, { at: 2900, target: "flag", click: true }],
   },
-  { label: "Connect", ms: 3400, Scene: ConnectScene },
+  { label: "Transcribe", ms: 5600, Scene: TranscribeScene },
+  { label: "Ask Claude", ms: 5800, Scene: ClaudeScene },
+  {
+    label: "Email", ms: 5000, Scene: EmailScene,
+    cursor: [{ at: 2500, target: "send" }, { at: 3300, target: "send", click: true }],
+  },
+  {
+    label: "Connect", ms: 4400, Scene: ConnectScene,
+    cursor: [{ at: 2500, target: "auto" }, { at: 3200, target: "auto", click: true }],
+  },
   {
     label: "PDF report", ms: 4600, Scene: PdfScene,
     cursor: [{ at: 500, target: "play" }, { at: 1300, target: "play", click: true }],
@@ -40,7 +46,7 @@ export const ECHO_SCENES: DemoScene[] = [
   },
   {
     label: "Save", ms: 4200, Scene: SaveScene,
-    cursor: [{ at: 500, target: "personal" }, { at: 1400, target: "business" }, { at: 2000, target: "business", click: true }],
+    cursor: [{ at: 500, target: "personal" }, { at: 1300, target: "business" }, { at: 2000, target: "business", click: true }],
   },
 ];
 
