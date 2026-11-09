@@ -1,17 +1,19 @@
 import Link from "next/link";
 import {
-  Briefcase, CalendarClock, FileAudio, Gavel, Headphones, Lock, MessageSquareLock, MessageSquareText, Mic, PhoneForwarded, PhoneIncoming,
-  PictureInPicture2, Plug, Search, ShieldCheck, Sparkles, UsersRound,
+  Briefcase, CalendarClock, FileAudio, Lock, MessageSquareText, Mic, PhoneIncoming, PictureInPicture2, Plug, Search, ShieldCheck, Sparkles, UsersRound,
 } from "lucide-react";
 import { Hero } from "@/components/marketing/hero";
+import { CallFlowSection } from "@/components/marketing/home/call-flow";
+import { LiveControlsSection } from "@/components/marketing/home/live-controls";
+import { ProblemSection } from "@/components/marketing/home/problem";
+import { UseCasesSection } from "@/components/marketing/home/use-cases";
 import { MobileAppSection } from "@/components/marketing/mobile-app-section";
-import { FEATURES as REDIAL } from "@/lib/redial/features";
 import { ALL_FAQ } from "@/lib/faq";
 
 export const metadata = {
-  title: "Echo · Record every meeting. Let your AI assistant screen every call.",
+  title: "Redial · Your AI assistant answers. You take the calls that matter.",
   description:
-    "Echo records meetings and calls and turns them into transcripts, summaries and action items. Redial, its AI call assistant, screens callers, takes messages and lets you listen in, guide it, take over or transfer.",
+    "Redial's AI assistant, DJ, answers your calls, finds out who's calling and why, and only interrupts you when it matters. Listen in, guide it, take over or transfer, all on the same call. Every call is recorded, transcribed and summarized with Echo.",
 };
 
 const FEATURES = [
@@ -23,23 +25,14 @@ const FEATURES = [
   { icon: FileAudio, title: "Bring your audio", desc: "Drag audio files from your computer anywhere onto Echo. MP3, M4A, WAV and more." },
 ];
 
-const REDIAL_FEATURES = [
-  { icon: PhoneIncoming, title: "AI call screening", desc: "Your assistant answers, asks who's calling and why, then takes a message or puts the call through to you." },
+// Everything else Redial does, beyond the live call controls.
+const REDIAL_MORE = [
+  { icon: PhoneIncoming, title: "AI call screening", desc: "DJ answers, asks who's calling and why, then takes a message or puts the call through to you." },
   { icon: ShieldCheck, title: "Rules, VIPs and blocks", desc: "Screen unknown callers or everyone. VIPs ring straight through, and blocked numbers never get through." },
-  { icon: Headphones, title: `${REDIAL.insider.name}: listen live`, desc: "Hear the call as it happens. You're muted by the phone system, so nobody can hear you." },
-  { icon: MessageSquareLock, title: `${REDIAL.audible.name}: guide your assistant`, desc: "Type private directions while it talks, like \u201cask which project this is about.\u201d The caller never sees them." },
-  { icon: Gavel, title: `${REDIAL.gavel.name}: take over`, desc: "Take the call yourself, on the same call. The assistant steps away and the caller never has to redial." },
-  { icon: PhoneForwarded, title: `${REDIAL.directory.name}: transfer`, desc: "Send the caller to a saved person or number. They hear who's calling and press 1 to take it." },
-  { icon: Sparkles, title: `${REDIAL.mirror.name}: a second brain on your calls`, desc: "While you talk, it suggests answers from your notes and drafts follow-up texts and emails you approve." },
   { icon: CalendarClock, title: "Messages and callbacks", desc: "Every call ends as a summary, message or voicemail transcript, with callback reminders when you need them." },
   { icon: UsersRound, title: "Share a line", desc: "Give a teammate or family member exactly what they need: summaries, transcripts, listening or taking over." },
 ];
 
-const REDIAL_STEPS = [
-  { n: "1", title: "Send calls to Redial", desc: "Use your Redial number, or forward your cell to it when you don't pick up." },
-  { n: "2", title: "Choose who gets screened", desc: "Unknown callers, or everyone except your VIPs. Pause it any time." },
-  { n: "3", title: "Step in, or read the summary", desc: "Listen, guide, take over or transfer live, or catch up later with the message and summary." },
-];
 
 const STEPS = [
   { n: "1", title: "Record or drop a file", desc: "Choose Business or Personal first, so every recording lands in the right place." },
@@ -53,12 +46,33 @@ export default function LandingPage() {
   return (
     <>
       <Hero />
+      <ProblemSection />
+      <CallFlowSection />
+      <LiveControlsSection />
+      <UseCasesSection />
+
+      <section className="border-t">
+        <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
+          <h2 className="text-xl font-semibold tracking-tight">Everything else Redial does</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {REDIAL_MORE.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-xl border bg-background p-5">
+                <Icon className="mb-3 size-5" />
+                <h3 className="font-medium">{title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <MobileAppSection />
 
       <section id="features" className="scroll-mt-20 border-t bg-muted/30">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-          <p className="text-sm font-medium text-muted-foreground">Echo</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Everything from the conversation, kept</h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">Echo handles the recording and the paperwork, so you can pay attention to the people.</p>
+          <p className="text-sm font-medium text-muted-foreground">Echo, built into Redial</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Every call and meeting, kept</h2>
+          <p className="mt-2 max-w-2xl text-muted-foreground">Echo records, transcribes and summarizes every call, and your meetings too, so you can pay attention to the people.</p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="rounded-xl border bg-background p-5">
@@ -71,27 +85,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="redial" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <p className="text-sm font-medium text-muted-foreground">Redial</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight">An assistant on every call, and you in control</h2>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Redial answers in the cloud, so your phone stays quiet until a call deserves you. When it does, step in on the same call.
-        </p>
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {REDIAL_FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="rounded-xl border bg-background p-5">
-              <Icon className="mb-3 size-5" />
-              <h3 className="font-medium">{title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section id="how" className="scroll-mt-20 border-t bg-muted/30">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-          <h2 className="text-3xl font-semibold tracking-tight">How it works</h2>
-          {[{ name: "Redial", icon: PhoneIncoming, steps: REDIAL_STEPS }, { name: "Echo", icon: Mic, steps: STEPS }].map(({ name, icon: Icon, steps }) => (
+          <h2 className="text-3xl font-semibold tracking-tight">How Echo works</h2>
+          {[{ name: "Echo", icon: Mic, steps: STEPS }].map(({ name, icon: Icon, steps }) => (
             <div key={name} id={`how-${name.toLowerCase()}`} className="mt-10 scroll-mt-24">
               <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><Icon className="size-4" /> {name}</h3>
               <ol className="mt-4 grid gap-8 md:grid-cols-3">
@@ -107,8 +104,6 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
-
-      <MobileAppSection />
 
       <section className="border-y bg-muted/30">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6 md:grid-cols-2">

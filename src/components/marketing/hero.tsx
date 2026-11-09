@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { AudioLines, PhoneCall } from "lucide-react";
+import { AudioLines, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeviceDemo, ECHO_SCENES } from "./hero-demo/hero-demo";
 import { REDIAL_SCENES } from "./hero-demo/redial-scenes";
@@ -14,13 +14,13 @@ import { cn } from "@/lib/utils";
 
 const PRODUCTS = {
   redial: {
-    name: "Redial", icon: PhoneCall, eyebrow: "AI call screening with you in control",
+    name: "Redial", icon: AudioLines, eyebrow: "AI call screening with you in control",
     title: "Your assistant answers. You take the calls that matter.",
     sub: "Redial screens unknown callers, takes messages and books callbacks. Listen in, guide it, take over or transfer, all on the same call.",
     more: { href: "/#redial", label: "See what Redial does" }, scenes: REDIAL_SCENES, demoTitle: "Call from (480) 555-0142", phone: true,
   },
   echo: {
-    name: "Echo", icon: AudioLines, eyebrow: "Recordings, transcripts and summaries in one place",
+    name: "Echo", icon: Mic, eyebrow: "Recordings, transcripts and summaries in one place",
     title: "Every call and meeting, captured and searchable.",
     sub: "Record in your browser, take notes as you talk, and get speaker-labelled transcripts automatically. Share with your team or keep it private.",
     more: { href: "/#how", label: "See how it works" }, scenes: ECHO_SCENES, demoTitle: "Launch plan review", phone: false,

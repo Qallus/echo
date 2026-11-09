@@ -1,5 +1,5 @@
 import {
-  AudioLines, CircleHelp, FileAudio, PhoneCall, ShieldCheck, Tag, Waypoints, type LucideIcon,
+  AudioLines, CircleHelp, FileAudio, Mic, ShieldCheck, Tag, Waypoints, type LucideIcon,
 } from "lucide-react";
 
 // The public site's product navigation, shared by the desktop mega menu and
@@ -11,7 +11,7 @@ export type NavProduct = { name: string; tagline: string; icon: LucideIcon; link
 
 export const NAV_PRODUCTS: NavProduct[] = [
   {
-    name: "Redial", tagline: "AI call screening", icon: PhoneCall,
+    name: "Redial", tagline: "AI call screening", icon: AudioLines,
     links: [
       { href: "/#redial", title: "What Redial does", desc: "Screening, live controls, Mirror", icon: ShieldCheck },
       { href: "/#how-redial", title: "How a call is handled", desc: "From the first ring to the summary", icon: Waypoints },
@@ -20,7 +20,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
     ],
   },
   {
-    name: "Echo", tagline: "Recordings and transcripts", icon: AudioLines,
+    name: "Echo", tagline: "Recordings and transcripts", icon: Mic,
     links: [
       { href: "/#features", title: "What Echo captures", desc: "Recordings, transcripts, summaries", icon: FileAudio },
       { href: "/#how-echo", title: "From meeting to report", desc: "Record, transcribe, share", icon: Waypoints },

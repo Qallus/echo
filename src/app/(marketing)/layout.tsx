@@ -21,7 +21,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
             <AudioLines className="size-5" />
-            <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
+            <span className="text-lg font-semibold tracking-[0.2em]">REDIAL</span>
           </Link>
           {/* Right side, left to right: navigation, cart, Sign in, Get started, theme
               (the phone menu replaces the navigation below lg). */}
@@ -50,9 +50,9 @@ export default async function MarketingLayout({ children }: { children: React.Re
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <AudioLines className="size-4" />
-              <span className="font-semibold tracking-[0.2em]">ECHO</span>
+              <span className="font-semibold tracking-[0.2em]">REDIAL</span>
             </div>
-            <p className="max-w-xs text-muted-foreground">Recordings, transcripts and summaries in one place.</p>
+            <p className="max-w-xs text-muted-foreground">Your AI assistant answers. You take the calls that matter. With Echo recordings and transcripts built in.</p>
             <AppBadges source="footer" signedIn={!!user} className="pt-2" />
           </div>
           <nav className="grid grid-cols-2 gap-x-10 gap-y-6 sm:ml-auto sm:flex">

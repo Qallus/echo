@@ -65,13 +65,15 @@ type DemoProps = {
   onLoop?: () => void;
   // Always a phone, at every screen size (Redial is a phone app).
   phone?: boolean;
+  // Hide the step buttons under the device (a single-scene demo).
+  hideNav?: boolean;
 };
 
 export function HeroDemo(props: Partial<DemoProps>) {
   return <DeviceDemo scenes={ECHO_SCENES} title="Launch plan review" {...props} />;
 }
 
-export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, phone = false }: DemoProps) {
+export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, phone = false, hideNav = false }: DemoProps) {
   // Classes that turn the phone into a monitor from md up.
   const desk = (cls: string) => (phone ? "" : cls);
   const reduced = useSyncExternalStore(
@@ -207,7 +209,7 @@ export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, p
         <div className="mx-auto h-3 w-[30%] rounded-t-sm rounded-b-xl bg-gradient-to-b from-neutral-300 to-neutral-400 shadow-md" />
       </div>}
 
-      <nav aria-label="Demo steps" className="mt-6 flex flex-wrap justify-center gap-2">
+      {!hideNav && <nav aria-label="Demo steps" className="mt-6 flex flex-wrap justify-center gap-2">
         {SCENES.map((s, i) => (
           <button
             key={s.label}
@@ -225,7 +227,7 @@ export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, p
             <span className="relative">{s.label}</span>
           </button>
         ))}
-      </nav>
+      </nav>}
     </div>
   );
 }

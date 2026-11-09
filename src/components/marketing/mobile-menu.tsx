@@ -19,7 +19,7 @@ export function MarketingMobileMenu({ signedIn }: { signedIn: boolean }) {
         <Menu className="size-5" />
       </SheetTrigger>
       <SheetContent side="right" className="w-80 gap-0 p-0 pt-[env(safe-area-inset-top)]">
-        <SheetTitle className="border-b px-5 py-4 text-sm font-semibold tracking-[0.2em]">ECHO</SheetTitle>
+        <SheetTitle className="border-b px-5 py-4 text-sm font-semibold tracking-[0.2em]">REDIAL</SheetTitle>
         <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto p-3">
           {NAV_PRODUCTS.map(({ name, icon: Icon, links }) => (
             <div key={name}>

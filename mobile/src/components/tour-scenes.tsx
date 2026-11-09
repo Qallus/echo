@@ -55,7 +55,7 @@ function Screening({ active }: { active: boolean }) {
   const t = useClock(active, 3200);
   return (
     <View style={s.col}>
-      {t >= 200 && <Bubble who="ai">Hi, this is Ava, Jordan&apos;s assistant. Who&apos;s calling, and what&apos;s it about?</Bubble>}
+      {t >= 200 && <Bubble who="ai">Hi, this is DJ, Jordan&apos;s assistant. Who&apos;s calling, and what&apos;s it about?</Bubble>}
       {t >= 1400 && <Bubble who="caller">It&apos;s Dana from Summit Roofing, about tomorrow&apos;s install.</Bubble>}
       {t >= 2600 && <Chip>Message taken · summary sent to you</Chip>}
     </View>
