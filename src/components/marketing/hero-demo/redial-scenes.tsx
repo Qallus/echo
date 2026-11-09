@@ -1,13 +1,15 @@
 import {
-  Bell, Bot, CalendarClock, Check, Gavel, Headphones, MessageSquare, MessageSquareLock, Mic, PhoneForwarded, PhoneIncoming, ShieldCheck, Sparkles, User,
+  AlarmClock, Bot, CalendarClock, Check, Gavel, Headphones, MessageSquare, MessageSquareLock, Mic, Phone, PhoneCall, PhoneForwarded, PhoneOff,
+  ShieldCheck, Sparkles, User,
 } from "lucide-react";
 import { FEATURES } from "@/lib/redial/features";
 import { cn } from "@/lib/utils";
 import { In, Stage, Waveform } from "./scenes";
 import type { DemoScene } from "./hero-demo";
 
-// Redial's hero demo: a call comes in -> the assistant screens it -> live
-// controls -> take over -> Mirror -> the summary. Same rules as scenes.tsx:
+// Redial's hero demo: an unknown number rings (the problem) -> Redial's agent
+// answers and finds out who it is (the fix) -> live controls -> take over ->
+// Mirror -> the summary. The first two fill the phone's whole screen. Same rules as scenes.tsx:
 // drawn from `t`, and data-cursor marks what the cursor clicks.
 
 type SceneProps = { t: number };
@@ -28,39 +30,118 @@ function Bubble({ who, children }: { who: "ai" | "caller" | "you"; children: Rea
   );
 }
 
-function IncomingScene({ t }: SceneProps) {
+// The problem: a real incoming-call screen from a number you don't know.
+// Then Redial picks up for you and the ringing stops.
+function UnknownCallScene({ t }: SceneProps) {
+  const picked = t > 2900;
+  const doubts = [{ at: 700, text: "Spam?" }, { at: 1100, text: "A new client?" }, { at: 1500, text: "Your kid's school?" }];
   return (
-    <Stage>
-      <Card className="max-w-sm">
-        <div className="space-y-4 p-5 text-center">
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10"><PhoneIncoming className="size-5" /></span>
-          <div>
-            <p className="text-lg font-semibold">{NUMBER}</p>
-            <p className="text-xs text-muted-foreground">Calling your Redial number · your phone stays quiet</p>
-          </div>
-          <In show={t > 900} className="flex items-center justify-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-            <ShieldCheck className="size-3.5" /> Unknown caller · your rules say screen it
-          </In>
-          <In show={t > 1900} className="space-y-2">
-            <div className="flex items-center gap-2 text-left text-xs font-medium"><Bot className="size-3.5" /> Ava is answering</div>
-            <Waveform live bars={24} />
-          </In>
+    <div className="relative flex h-full flex-col items-center overflow-hidden bg-[radial-gradient(130%_75%_at_50%_0%,#3f3f46_0%,#18181b_55%,#09090b_100%)] px-6 pt-20 text-center text-white">
+      <p className="text-sm text-white/60">{picked ? "Redial is answering…" : "Incoming call"}</p>
+      <p className="mt-1 text-[34px] leading-tight font-semibold">Unknown caller</p>
+      <p className="text-lg text-white/85">{NUMBER}</p>
+      <p className="mt-0.5 text-xs text-white/45">Phoenix, AZ · not in your contacts</p>
+
+      <div className="relative mt-10 flex size-28 items-center justify-center">
+        {!picked && <>
+          <span className="absolute inset-0 animate-ping rounded-full bg-white/15" />
+          <span className="absolute -inset-5 animate-ping rounded-full bg-white/[0.07] [animation-delay:0.4s]" />
+        </>}
+        <span className="relative flex size-28 items-center justify-center rounded-full bg-white/10 text-5xl font-light text-white/80 ring-1 ring-white/20">?</span>
+      </div>
+
+      <div className="mt-9 flex flex-wrap justify-center gap-2">
+        {doubts.map((d) => (
+          <In key={d.text} show={t > d.at} className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/85 ring-1 ring-white/15">{d.text}</In>
+        ))}
+      </div>
+      <In show={t > 2000} className="mt-4 max-w-[17rem] text-[15px] leading-snug text-white/75">
+        Answer and risk spam. Ignore it and risk missing the call that matters.
+      </In>
+
+      {/* The phone's answer controls. */}
+      <div className="absolute inset-x-0 bottom-14 px-10">
+        <div className="mb-7 flex justify-between text-xs text-white/70">
+          <span className="flex flex-col items-center gap-1.5"><AlarmClock className="size-5" />Remind me</span>
+          <span className="flex flex-col items-center gap-1.5"><MessageSquare className="size-5" />Message</span>
         </div>
-      </Card>
-    </Stage>
+        <div className="flex justify-between text-xs text-white/80">
+          <span className="flex flex-col items-center gap-2"><span className="flex size-[70px] items-center justify-center rounded-full bg-red-500"><PhoneOff className="size-7" /></span>Decline</span>
+          <span className="flex flex-col items-center gap-2"><span className={cn("flex size-[70px] items-center justify-center rounded-full bg-emerald-500", !picked && "animate-bounce")}><Phone className="size-7" /></span>Accept</span>
+        </div>
+      </div>
+
+      {/* The fix: Redial picks up instead. */}
+      <div className={cn(
+        "absolute inset-x-0 bottom-0 rounded-t-[2rem] bg-background px-6 pt-6 pb-12 text-left text-foreground shadow-[0_-12px_40px_rgba(0,0,0,0.45)] transition-transform duration-700 ease-out",
+        picked ? "translate-y-0" : "translate-y-full",
+      )}>
+        <div className="flex items-center gap-3">
+          <span className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+            <span className="absolute inset-0 animate-ping rounded-full bg-foreground/30" />
+            <PhoneCall className="relative size-5" />
+          </span>
+          <div>
+            <p className="text-lg font-semibold">Redial picked up</p>
+            <p className="text-sm text-muted-foreground">Your agent is answering. Your phone stops ringing.</p>
+          </div>
+        </div>
+        <div className="mt-5 space-y-2.5 text-sm">
+          <p className="flex items-center gap-2"><ShieldCheck className="size-4 shrink-0" /> Unknown number: your rule says screen it</p>
+          <p className="flex items-center gap-2"><Check className="size-4 shrink-0" /> You stay focused. No guessing.</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function ScreenScene({ t }: SceneProps) {
+// The solution: your Redial agent is on the call, finds out who's calling and
+// why, then tells you quietly.
+function AgentAnswersScene({ t }: SceneProps) {
+  const lines: { at: number; who: "ai" | "caller"; text: string }[] = [
+    { at: 300, who: "ai", text: "Hi, this is Ava, Jordan's assistant. Who's calling, and what's it about?" },
+    { at: 1500, who: "caller", text: "Hi, it's Dana from Summit Roofing, about tomorrow's install." },
+    { at: 2700, who: "ai", text: "Thanks, Dana. Let me see if Jordan can take it now." },
+  ];
+  const speaking = (t > 300 && t < 1400) || (t > 2700 && t < 3500);
   return (
-    <Stage className="items-start @md:items-center">
-      <div className="w-full max-w-lg space-y-2.5">
-        <In show={t > 200}><Bubble who="ai">Hi, this is Ava, Jordan&apos;s assistant. Jordan can&apos;t pick up right now. Who&apos;s calling, and what&apos;s it about?</Bubble></In>
-        <In show={t > 1300}><Bubble who="caller">Hi, it&apos;s Dana from Summit Roofing, about tomorrow&apos;s install.</Bubble></In>
-        <In show={t > 2400}><Bubble who="ai">Thanks, Dana. Let me see if Jordan can take it now.</Bubble></In>
-        <In show={t > 3000} className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground"><Bell className="size-3.5" /> Jordan gets a quiet alert: your assistant is screening a call</In>
+    <div className="relative flex h-full flex-col bg-gradient-to-b from-muted/70 to-background px-5 pt-16">
+      <div className="flex items-center justify-center gap-2 text-xs font-medium">
+        <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
+        Redial is on the call · 0:{String(Math.floor(t / 1000) + 1).padStart(2, "0")}
       </div>
-    </Stage>
+
+      <div className="mt-6 flex flex-col items-center text-center">
+        <div className="relative flex size-24 items-center justify-center">
+          {speaking && <span className="absolute inset-0 animate-ping rounded-full bg-foreground/15" />}
+          <span className="relative flex size-24 items-center justify-center rounded-full bg-foreground text-background shadow-xl"><Bot className="size-10" /></span>
+        </div>
+        <p className="mt-3 text-xl font-semibold">Ava answered for you</p>
+        <p className="text-sm text-muted-foreground">Your Redial agent · talking with {NUMBER}</p>
+        <div className="mt-3 flex w-44"><Waveform live bars={22} /></div>
+      </div>
+
+      <div className="mt-5 space-y-2.5">
+        {lines.map((l) => <In key={l.at} show={t > l.at}><Bubble who={l.who}>{l.text}</Bubble></In>)}
+      </div>
+
+      <In show={t > 3400} className="mt-4 rounded-xl border bg-background p-3.5 shadow-lg">
+        <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Caller identified</p>
+        <p className="mt-1 font-semibold">Dana Ortiz · Summit Roofing</p>
+        <p className="text-sm text-muted-foreground">About tomorrow&apos;s roof install</p>
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400"><ShieldCheck className="size-3.5" /> Real business, not spam</p>
+      </In>
+
+      {/* Jordan's quiet heads-up. */}
+      <div className={cn(
+        "absolute inset-x-3 top-12 rounded-2xl border bg-background/95 p-3 shadow-xl backdrop-blur transition-[transform,opacity] duration-500 ease-out",
+        t > 4300 ? "translate-y-0 opacity-100" : "-translate-y-6 opacity-0",
+      )}>
+        <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><PhoneCall className="size-3" /> REDIAL · now</p>
+        <p className="mt-0.5 text-sm font-semibold">Dana Ortiz, Summit Roofing</p>
+        <p className="text-[13px] text-muted-foreground">About tomorrow&apos;s install. Listen in, guide Ava, or take the call.</p>
+      </div>
+    </div>
   );
 }
 
@@ -187,20 +268,20 @@ function SummaryScene({ t }: SceneProps) {
 // to read, so the whole demo plays this many times slower.
 const SLOW = 1.8;
 
-function slowed({ Scene, ms, cursor, label }: DemoScene): DemoScene {
+function slowed({ Scene, ms, cursor, ...rest }: DemoScene): DemoScene {
   return {
-    label,
+    ...rest,
     ms: ms * SLOW,
     Scene: function SlowScene({ t }: SceneProps) { return <Scene t={t / SLOW} />; },
     cursor: cursor?.map((c) => ({ ...c, at: c.at * SLOW })),
   };
 }
 
-export const REDIAL_SCENES: DemoScene[] = [
-  { label: "Call comes in", ms: 3600, Scene: IncomingScene },
-  { label: "AI screens", ms: 4200, Scene: ScreenScene },
+export const REDIAL_SCENES: DemoScene[] = ([
+  { label: "Unknown caller", ms: 4400, Scene: UnknownCallScene, screen: "dark" },
+  { label: "Redial answers", ms: 5600, Scene: AgentAnswersScene, screen: "light" },
   { label: "Guide live", ms: 4400, Scene: ControlsScene },
   { label: "Take over", ms: 4400, Scene: TakeOverScene, cursor: [{ at: 400, target: "takeover" }, { at: 1100, target: "takeover", click: true }] },
   { label: FEATURES.mirror.name, ms: 4800, Scene: MirrorScene, cursor: [{ at: 2900, target: "send" }, { at: 3400, target: "send", click: true }] },
   { label: "Summary", ms: 4200, Scene: SummaryScene },
-].map(slowed);
+] satisfies DemoScene[]).map(slowed);

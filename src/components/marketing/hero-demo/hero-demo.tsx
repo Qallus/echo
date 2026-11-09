@@ -14,7 +14,12 @@ import {
 // holds each step's finished frame and doesn't advance.
 
 type CursorStep = { at: number; target: string; click?: boolean };
-export type DemoScene = { label: string; ms: number; Scene: React.ComponentType<{ t: number }>; cursor?: CursorStep[] };
+export type DemoScene = {
+  label: string; ms: number; Scene: React.ComponentType<{ t: number }>; cursor?: CursorStep[];
+  // Phone only: the scene fills the whole screen (no app header), like the
+  // phone's own call screen. "dark" turns the status bar text white.
+  screen?: "dark" | "light";
+};
 
 export const ECHO_SCENES: DemoScene[] = [
   { label: "Record", ms: 3600, Scene: RecordScene },
@@ -91,6 +96,7 @@ export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, p
   }, [scene, SCENES.length, onLoop]);
 
   const { Scene, cursor, label } = SCENES[scene];
+  const full = phone ? SCENES[scene].screen : undefined;
   const shownT = reduced ? SCENES[scene].ms : t;
   const step = reduced ? undefined : cursor?.filter((c) => c.at <= t).at(-1);
   const clicking = step?.click && t - step.at < 500;
@@ -143,11 +149,11 @@ export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, p
         <div ref={screenRef} className={cn("relative aspect-[375/812] overflow-hidden rounded-[2.6rem] bg-background", desk("md:aspect-[16/10] md:rounded-md"))}>
           <div ref={canvasRef} className={cn("@container absolute top-0 left-0 flex h-[812px] w-[375px] origin-top-left flex-col", desk("md:h-[525px] md:w-[840px]"))}>
             {/* Phone: status bar and app header. */}
-            <div className={cn("flex h-12 shrink-0 items-end justify-between px-8 pb-1.5 text-[13px] font-semibold", desk("md:hidden"))}>
+            <div className={cn("flex h-12 shrink-0 items-end justify-between px-8 pb-1.5 text-[13px] font-semibold", desk("md:hidden"), full && "absolute inset-x-0 top-0 z-10", full === "dark" && "text-white")}>
               <span>9:41</span>
               <span className="flex items-center gap-1.5"><Signal className="size-3.5" /><Wifi className="size-3.5" /><BatteryFull className="size-4" /></span>
             </div>
-            <div className={cn("flex h-11 shrink-0 items-center gap-2 border-b px-4", desk("md:hidden"))}>
+            <div className={cn("flex h-11 shrink-0 items-center gap-2 border-b px-4", desk("md:hidden"), full && "hidden")}>
               <Logo className="size-4" />
               <span className="min-w-0 truncate text-sm font-medium">{title}</span>
               <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{label}</span>
@@ -177,7 +183,9 @@ export function DeviceDemo({ scenes: SCENES, title, Logo = AudioLines, onLoop, p
             </div>
 
             {/* Phone: home indicator. */}
-            <div className={cn("flex h-7 shrink-0 items-center justify-center", desk("md:hidden"))}><span className="h-1.5 w-32 rounded-full bg-foreground/80" /></div>
+            <div className={cn("flex h-7 shrink-0 items-center justify-center", desk("md:hidden"), full && "absolute inset-x-0 bottom-0 z-10")}>
+              <span className={cn("h-1.5 w-32 rounded-full", full === "dark" ? "bg-white/80" : "bg-foreground/80")} />
+            </div>
           </div>
           {/* Phone: Dynamic Island. */}
           <span className={cn("absolute top-[1.4%] left-1/2 h-[3.4%] w-[30%] -translate-x-1/2 rounded-full bg-neutral-900", desk("md:hidden"))} />
