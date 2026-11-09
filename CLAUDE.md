@@ -30,7 +30,7 @@ Jeremy adds items from his phone through the Echo connector (`dev_requests` tabl
 2. Ask which to take on. When starting one, set it to `in_progress` and comment. When done, set `review` and comment with a summary and the commit hash.
 
 ## Current next steps
-The full ordered list is in `docs/ARCHITECTURE.md` (Build status). In short:
-1. Echo MCP connector: see `docs/MCP_CONNECTOR.md` (phases 1–2 done; 3–5 next).
-2. Recording capture with the in-call panel and drag-and-drop upload to Supabase Storage (`recordings` bucket, path `<workspace_id>/<recording_id>/<file>`), then transcription jobs.
-3. Share (link + invite), then the remaining app pages, then the public marketing site.
+The working plan is `docs/REDIAL_GROWTH_AND_AUTOMATION_PLAN.md`: three tracks built in parallel, one approval-gated step at a time.
+1. Track A: a Redial-led homepage (REDIAL brand with the equalizer mark; the assistant is named DJ) and separate Redial plans.
+2. Track B: the 8-step Redial setup wizard at `/setup`, with answers flowing to the dashboard, Admin → Redial and the CRM.
+3. Track C: the automation MCP (registry-driven CRUD, risk levels with confirm, agent accounts with keys and dashboard-set limits).
