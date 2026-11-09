@@ -4,7 +4,12 @@ import { clientForToken } from "@/lib/supabase/token";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 
 export type McpUser = { id: string; email: string | null; clientId: string };
-export type McpContext = { supabase: SupabaseClient; user: McpUser };
+// Every tool registered for this request, for tool_search.
+export type ToolInfo = { name: string; title: string; description: string; risk: Risk; domain: string };
+// read: runs and changes nothing. write: changes something, audited.
+// high: deletes, sends to many, money, access: needs a preview and confirm.
+export type Risk = "read" | "write" | "high";
+export type McpContext = { supabase: SupabaseClient; user: McpUser; catalog: ToolInfo[] };
 
 
 // Validates `Authorization: Bearer <Supabase access token>`. Returns null for a
@@ -36,6 +41,7 @@ export function contextFromAuth(auth: AuthInfo | undefined): McpContext {
   return {
     supabase: clientForToken(auth.token),
     user: { id: userId, email: (auth.extra?.email as string | null) ?? null, clientId: auth.clientId },
+    catalog: [],
   };
 }
 

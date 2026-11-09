@@ -12,7 +12,8 @@ type Setup = { factorId: string; qr: string; secret: string };
 // Verifies an existing authenticator factor, or enrolls one first (QR code +
 // setup key). A verified code upgrades the session to aal2, which the
 // database requires for every admin permission.
-export function MfaForm() {
+// After it, goes to `next` (e.g. back to a connector's consent page) or /admin.
+export function MfaForm({ next = "/admin" }: { next?: string }) {
   const router = useRouter();
   const [factorId, setFactorId] = useState<string | null>(null);
   const [setup, setSetup] = useState<Setup | null>(null);
@@ -53,7 +54,7 @@ export function MfaForm() {
       setBusy(false);
       return;
     }
-    router.replace("/admin");
+    router.replace(next);
     router.refresh();
   };
 

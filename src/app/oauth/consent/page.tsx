@@ -1,6 +1,7 @@
 import { AudioLines, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { getStaff } from "@/lib/admin/guard";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Allow access · Echo" };
@@ -29,6 +30,11 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   if (!claims?.claims) redirect(`/login?next=${encodeURIComponent(`/oauth/consent?authorization_id=${encodeURIComponent(id)}`)}`);
+
+  // The connection's tokens carry this sign-in's two-step level, so staff
+  // finish two-step first; otherwise their admin tools wouldn't appear.
+  const staff = await getStaff();
+  if (staff && !staff.mfaVerified) redirect(`/admin/mfa?next=${encodeURIComponent(`/oauth/consent?authorization_id=${encodeURIComponent(id)}`)}`);
 
   const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(id);
   if (error || !data) return <Shell><Problem text="This request has expired or was already used. Start the connection again from the app you're connecting." /></Shell>;

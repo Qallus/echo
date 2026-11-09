@@ -30,8 +30,9 @@ async function rpc(method, params, token = TOKEN) {
   return { status: res.status, json };
 }
 
-async function call(name, args = {}) {
-  const r = await rpc("tools/call", { name: `echo_${name}`, arguments: args });
+// Tools are echo_<name>; the automation tools have plain names (pass raw).
+async function call(name, args = {}, raw = false) {
+  const r = await rpc("tools/call", { name: raw ? name : `echo_${name}`, arguments: args });
   if (r.json?.error) throw new Error(`${name}: ${r.json.error.message}`);
   const result = r.json?.result;
   const text = result?.content?.[0]?.text ?? "";
@@ -57,7 +58,10 @@ async function main() {
   await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "echo-smoke", version: "1" } });
   const list = await rpc("tools/list", {});
   const names = (list.json?.result?.tools ?? []).map((t) => t.name);
-  check(`tools/list (${names.length} tools)`, names.length >= 35 && names.every((n) => n.startsWith("echo_")), names);
+  const plain = ["tool_search", "confirm_action", "confirm_status", "resource_types", "resource_list", "resource_get", "resource_create", "resource_update", "resource_delete"];
+  check(`tools/list (${names.length} tools)`, names.length >= 35 && names.every((n) => n.startsWith("echo_") || plain.includes(n)), names);
+  const tools = list.json?.result?.tools ?? [];
+  check("every tool has a risk hint", tools.every((t) => typeof t.annotations?.readOnlyHint === "boolean"));
 
   const me = await call("whoami");
   check("whoami", me.ok && me.data.workspace?.is_personal, me.data);
@@ -137,6 +141,27 @@ async function main() {
   const fp = await call("folder_delete", { folder_id: fid });
   check("folder_delete preview", fp.ok && fp.data.preview === true);
   check("folder_delete confirm", (await call("folder_delete", { folder_id: fid, confirm: true })).ok);
+
+  // Automation tools: search, resources, and delete via confirm_action.
+  const searched = await call("tool_search", { query: "delete" }, true);
+  check("tool_search finds delete tools", searched.ok && searched.data.tools.some((t) => t.name === "resource_delete" && t.risk === "high"), searched.data);
+  const types = await call("resource_types", {}, true);
+  check("resource_types includes calendar_event", types.ok && types.data.resources.some((r) => r.resource === "calendar_event"), types.data);
+  const start = new Date(Date.now() + 864e5).toISOString();
+  const ev = await call("resource_create", { resource: "calendar_event", data: { title: "MCP smoke test event", starts_at: start, ends_at: start } }, true);
+  check("resource_create calendar_event", ev.ok && ev.data.created?.id, ev.data);
+  const eid = ev.data.created?.id;
+  check("resource_create rejects unknown fields", !(await call("resource_create", { resource: "calendar_event", data: { title: "x", starts_at: start, ends_at: start, bogus: 1 } }, true)).ok);
+  const evl = await call("resource_list", { resource: "calendar_event", q: "smoke test" }, true);
+  check("resource_list search", evl.ok && evl.data.rows.some((r) => r.id === eid), evl.data);
+  check("resource_update", (await call("resource_update", { resource: "calendar_event", id: eid, data: { location: "Room 1" } }, true)).data.updated?.location === "Room 1");
+  const del = await call("resource_delete", { resource: "calendar_event", id: eid }, true);
+  check("resource_delete only prepares", del.ok && del.data.needs_confirmation && del.data.confirmation_id, del.data);
+  check("record still there before confirm", (await call("resource_get", { resource: "calendar_event", id: eid }, true)).ok);
+  check("confirm_status pending", (await call("confirm_status", { confirmation_id: del.data.confirmation_id }, true)).data.status === "pending");
+  check("confirm_action deletes", (await call("confirm_action", { confirmation_id: del.data.confirmation_id }, true)).ok);
+  check("confirm_action can't be reused", !(await call("confirm_action", { confirmation_id: del.data.confirmation_id }, true)).ok);
+  check("record gone after confirm", !(await call("resource_get", { resource: "calendar_event", id: eid }, true)).ok);
 
   const audit = await call("audit_log_list", { limit: 100 });
   check("audit_log_list has this run's calls", audit.ok && audit.data.activity.some((a) => a.tool === "echo_folder_delete"));

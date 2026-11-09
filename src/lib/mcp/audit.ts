@@ -1,7 +1,7 @@
 import "server-only";
 import type { CallToolResult, McpServer, ToolAnnotations } from "@modelcontextprotocol/server";
 import type { z } from "zod";
-import type { McpContext } from "./auth";
+import type { McpContext, Risk } from "./auth";
 
 const MAX_RESULT_CHARS = 20_000;
 
@@ -37,20 +37,32 @@ function text(value: unknown, isError = false): CallToolResult {
   return { content: [{ type: "text", text: body }], ...(isError ? { isError: true } : {}) };
 }
 
-// Registers an `echo_`-prefixed tool whose every call is audited and whose
-// errors come back as plain sentences (never SQL or stack traces).
+const HINTS: Record<Risk, ToolAnnotations> = {
+  read: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  write: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  high: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+};
+
+// Registers a tool whose every call is audited and whose errors come back as
+// plain sentences (never SQL or stack traces). Names get the `echo_` prefix
+// unless `prefix` says otherwise (the automation tools use plain
+// <domain>_<action> names). Pass `risk` (annotations follow from it) or, for
+// older tools, `annotations`.
 export function defineTool<S extends z.ZodObject>(
   server: McpServer,
   ctx: McpContext,
   name: string,
-  config: { title: string; description: string; inputSchema: S; annotations: ToolAnnotations },
+  config: { title: string; description: string; inputSchema: S; annotations?: ToolAnnotations; risk?: Risk; domain?: string; prefix?: string },
   run: (args: z.infer<S>) => Promise<ToolOutput>,
 ) {
-  const tool = `echo_${name}`;
+  const tool = `${config.prefix ?? "echo_"}${name}`;
+  const risk: Risk = config.risk ?? (config.annotations?.readOnlyHint ? "read" : config.annotations?.destructiveHint ? "high" : "write");
+  const annotations = { ...HINTS[risk], ...config.annotations };
+  ctx.catalog.push({ name: tool, title: config.title, description: config.description, risk, domain: config.domain ?? name.split("_")[0] });
   // Widened to a concrete ZodObject so the SDK's overloads resolve; the SDK has
   // already validated args against this schema when the callback runs.
   const inputSchema: z.ZodObject = config.inputSchema;
-  server.registerTool(tool, { ...config, inputSchema }, async (args) => {
+  server.registerTool(tool, { title: config.title, description: config.description, annotations, inputSchema }, async (args) => {
     try {
       const out = await run(args as z.infer<S>);
       await audit(ctx, { tool, ok: true, targetId: out.targetId, workspaceId: out.workspaceId });

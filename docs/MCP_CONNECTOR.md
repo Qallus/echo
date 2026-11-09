@@ -191,7 +191,47 @@ Sending rules (the same in the admin):
 - **Unsubscribed people are always skipped,** and each skip is logged with its reason.
 - **Scheduled sends** are checked the same way when they're scheduled; the recipient list is captured then. At send time the template must still be Active and unchanged (otherwise it's held), and anyone who unsubscribed or bounced since is skipped. Scheduled sends count toward Claude's daily limit.
 
-Later phases add tools as features land (uploads and signed audio URLs, transcription jobs, templates, AutoFlow rules, agents, Twilio/Resend messaging, admin), following the same rules.
+### Automation tools (records, search, confirm)
+The start of the automation MCP (`docs/REDIAL_GROWTH_AND_AUTOMATION_PLAN.md`, Track C). These tools have plain names, without `echo_`.
+
+**Risk levels.** Every tool is one of these, and its MCP annotations follow from it:
+- **read:** changes nothing.
+- **write:** changes something, and the change is audited.
+- **high:** deletes, and later bulk sends, refunds and access changes. A high-risk tool never acts on the first call. It returns `needs_confirmation`, a preview and a `confirmation_id`, and the action runs only after `confirm_action`.
+
+Confirmations are stored in `mcp_confirmations`. Each one works once, within 15 minutes, and only for the same person and connected app.
+
+**Records come from one registry.** `src/lib/mcp/registry.ts` declares each table once: the columns returned, the writable fields (matching the table's grants and checks), the filters, the search fields and the permission. The generic tools in `src/lib/mcp/tools/resources.ts` serve every resource. RLS still decides access, because every call runs as the caller. Resources a caller can't use are hidden.
+
+Resources so far:
+
+| Resource | Table | Access |
+|---|---|---|
+| `contact` | `crm_contacts` | Staff: `crm.view` to read, `crm.manage` to change |
+| `company` | `crm_companies` | Staff: `crm.view` to read, `crm.manage` to change |
+| `deal` | `crm_deals` | Staff: `crm.view` to read, `crm.manage` to change |
+| `calendar_event` | `calendar_events` | Everyone, in their own workspaces |
+
+| Tool | Risk | Does | Key inputs |
+|---|---|---|---|
+| `tool_search` | read | Find tools by keyword, domain or risk | `query?`, `domain?`, `risk?` |
+| `resource_types` | read | The resources you can use, with fields, required fields and filters. Call first | — |
+| `resource_list` | read | Records, newest first, with search, exact filters and paging | `resource`, `q?`, `filters?`, `limit`, `cursor?` |
+| `resource_get` | read | One record | `resource`, `id` |
+| `resource_create` | write | Create a record. Unknown fields are refused. Workspace resources go in Personal unless `workspace_id` is given | `resource`, `data`, `workspace_id?` |
+| `resource_update` | write | Change some fields | `resource`, `id`, `data` |
+| `resource_delete` | high | Preview and a `confirmation_id`. Nothing is deleted yet | `resource`, `id` |
+| `confirm_action` | high | Runs a prepared high-risk action after the person says yes | `confirmation_id` |
+| `confirm_status` | read | pending, used or expired | `confirmation_id` |
+
+**Two-step sign-in and the connector.** Supabase OAuth access tokens carry the `aal` level of the sign-in that approved them. So when two-step is required for staff (Admin → Settings → Security), the consent page sends staff to two-step first and then back. That way the connection's tokens are `aal2` and the staff tools appear.
+
+To add a resource:
+1. Add an entry to `RESOURCES`.
+2. Check the fields against the table's column grants.
+3. Add a step to `scripts/mcp-smoke.mjs`.
+
+Later phases add more resources and action tools: CRM, communications, Redial, users, billing, the user dashboard, content, integrations, and agent keys. See the plan.
 
 ---
 
