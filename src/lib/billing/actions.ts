@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getUser, requireUser } from "@/lib/data";
 import { siteOrigin } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
-import { findPrice } from "./catalog";
+import { LINE_NAME, findPrice, lineOf, type Line } from "./catalog";
 import { loadCatalog } from "./catalog-server";
 import { getBillingSettings } from "./settings";
 import { stripe } from "./stripe";
@@ -50,7 +50,21 @@ export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> 
   await loadCatalog();
   const items = lines.map((l) => ({ ...l, hit: findPrice(l.key) })).filter((l) => l.hit && l.quantity > 0);
   if (!items.length) return { error: "Your cart is empty." };
-  if (items.filter((l) => l.hit!.product.kind === "plan").length > 1) return { error: "Choose one plan." };
+  const planLines = items.filter((l) => l.hit!.product.kind === "plan").map((l) => lineOf(l.hit!.product));
+  if (new Set(planLines).size !== planLines.length) return { error: "Choose one Redial plan and at most one Echo plan." };
+  // A second plan in the same line would be a second subscription; change the
+  // current one in Billing instead.
+  if (planLines.length) {
+    const supabase = await createClient();
+    const { data: subs } = await supabase.from("subscriptions").select("items").eq("user_id", user.id).in("status", ["active", "trialing", "past_due"]);
+    const held = new Set<Line>();
+    for (const s of subs ?? []) for (const i of (s.items ?? []) as { price_key: string }[]) {
+      const p = findPrice(i.price_key)?.product;
+      if (p?.kind === "plan") held.add(lineOf(p));
+    }
+    const clash = planLines.find((l) => held.has(l));
+    if (clash) return { error: `You already have a ${LINE_NAME[clash]} plan. Change it in Billing instead.` };
+  }
 
   const keys = items.map((l) => l.key);
   const prices = await s.prices.list({ lookup_keys: keys, active: true, limit: 100 });

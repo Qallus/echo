@@ -15,7 +15,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
     links: [
       { href: "/#redial", title: "What Redial does", desc: "Screening, live controls, Mirror", icon: ShieldCheck },
       { href: "/#how-redial", title: "How a call is handled", desc: "From the first ring to the summary", icon: Waypoints },
-      { href: "/pricing#bolt-ons", title: "Redial pricing", desc: "Add call screening to any plan", icon: Tag },
+      { href: "/pricing", title: "Redial pricing", desc: "Free, Personal, Business and Team", icon: Tag },
       { href: "/faq#topic-redial", title: "Redial questions", desc: "Screening, live calls, sharing a line", icon: CircleHelp },
     ],
   },
@@ -24,7 +24,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
     links: [
       { href: "/#features", title: "What Echo captures", desc: "Recordings, transcripts, summaries", icon: FileAudio },
       { href: "/#how-echo", title: "From meeting to report", desc: "Record, transcribe, share", icon: Waypoints },
-      { href: "/pricing", title: "Echo plans", desc: "Free to start, monthly or annual", icon: Tag },
+      { href: "/pricing?product=echo", title: "Echo plans", desc: "Free to start, monthly or annual", icon: Tag },
       { href: "/faq#topic-recording", title: "Echo questions", desc: "Recording, AI, workspaces", icon: CircleHelp },
     ],
   },

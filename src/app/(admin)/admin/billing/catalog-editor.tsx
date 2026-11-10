@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { addProduct, savePrice, saveProduct, syncCatalogToStripe } from "@/lib/admin/actions/billing";
-import { KIND_LABEL, money, per, type Interval, type Kind, type Price, type Product, type Tier } from "@/lib/billing/catalog";
+import { KIND_LABEL, LINE_NAME, lineOf, money, per, type Interval, type Kind, type Price, type Product, type Tier } from "@/lib/billing/catalog";
 import { cn } from "@/lib/utils";
 
 type Msg = { ok?: string; error?: string };
@@ -62,7 +62,8 @@ export function CatalogEditor({ products, stripeReady, readOnly }: { products: P
 
 function ProductRow({ product: p, readOnly }: { product: Product; readOnly: boolean }) {
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ name: p.name, tagline: p.tagline, features: (p.features ?? []).join("\n"), minutes: p.minutes?.toString() ?? "", active: p.active !== false, sort: 0 });
+  const [f, setF] = useState({ name: p.name, tagline: p.tagline, features: (p.features ?? []).join("\n"), minutes: p.minutes?.toString() ?? "", echoMinutes: p.echoMinutes?.toString() ?? "", active: p.active !== false });
+  const redialPlan = p.kind === "plan" && lineOf(p) === "redial";
   const [msg, setMsg] = useState<Msg>({});
   const [pending, start] = useTransition();
   const showMinutes = p.kind === "plan" || p.kind === "pack" || p.meter === "redial";
@@ -74,6 +75,7 @@ function ProductRow({ product: p, readOnly }: { product: Product; readOnly: bool
           <span className="font-medium">{p.name}</span> <code className="text-xs text-muted-foreground">{p.id}</code>
           <span className="block truncate text-xs text-muted-foreground">{p.prices.filter((x) => x.active !== false).map(priceLabel).join(" · ") || "No active price"}</span>
         </span>
+        <Badge variant="outline">{LINE_NAME[lineOf(p)]}</Badge>
         {p.active === false && <Badge variant="outline">Hidden</Badge>}
         {showMinutes && p.minutes ? <Badge variant="outline">{p.minutes.toLocaleString()} min</Badge> : null}
         <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
@@ -83,13 +85,21 @@ function ProductRow({ product: p, readOnly }: { product: Product; readOnly: bool
         <div className="mt-4 space-y-5">
           <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => {
             e.preventDefault();
-            start(async () => setMsg(await saveProduct(p.id, { name: f.name, tagline: f.tagline, features: f.features.split("\n"), minutes: f.minutes === "" ? null : Number(f.minutes), active: f.active, sort: f.sort })));
+            start(async () => setMsg(await saveProduct(p.id, {
+              name: f.name, tagline: f.tagline, features: f.features.split("\n"), minutes: f.minutes === "" ? null : Number(f.minutes), active: f.active,
+              ...(redialPlan ? { echoMinutes: f.echoMinutes === "" ? null : Number(f.echoMinutes) } : {}),
+            })));
           }}>
             <fieldset disabled={readOnly} className="contents">
               <label className="space-y-1 text-sm">Name<Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
               {showMinutes && (
                 <label className="space-y-1 text-sm">{p.meter === "redial" ? (p.kind === "pack" ? "Screening minutes in the pack" : "Screening minutes per month") : p.kind === "plan" ? `Minutes per month${p.perSeat ? " (per seat)" : ""}` : "Minutes in the pack"}
                   <Input type="number" min={0} value={f.minutes} onChange={(e) => setF({ ...f, minutes: e.target.value })} />
+                </label>
+              )}
+              {redialPlan && (
+                <label className="space-y-1 text-sm">Echo transcription minutes included{p.perSeat ? " (per line)" : ""}
+                  <Input type="number" min={0} placeholder="None" value={f.echoMinutes} onChange={(e) => setF({ ...f, echoMinutes: e.target.value })} />
                 </label>
               )}
               <label className="space-y-1 text-sm sm:col-span-2">Tagline<Input value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} /></label>

@@ -31,11 +31,17 @@ fs.unlinkSync(tmp);
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// "Redial ..." or "Echo ...", as in src/lib/billing/stripe-sync.ts.
+const nameOf = (p) => {
+  const brand = (p.line ?? (p.meter === "redial" ? "redial" : "echo")) === "redial" ? "Redial" : "Echo";
+  return p.name.startsWith(brand) ? p.name : `${brand} ${p.name}`;
+};
+
 for (const p of PRODUCTS) {
   const found = await stripe.products.search({ query: `metadata['echo_id']:'${p.id}'` });
   const product = found.data[0]
-    ? await stripe.products.update(found.data[0].id, { name: `Echo ${p.name}`, description: p.tagline, active: true })
-    : await stripe.products.create({ name: `Echo ${p.name}`, description: p.tagline, metadata: { echo_id: p.id, echo_kind: p.kind } });
+    ? await stripe.products.update(found.data[0].id, { name: nameOf(p), description: p.tagline, active: true })
+    : await stripe.products.create({ name: nameOf(p), description: p.tagline, metadata: { echo_id: p.id, echo_kind: p.kind } });
 
   for (const price of p.prices) {
     const existing = (await stripe.prices.list({ lookup_keys: [price.key], expand: ["data.tiers"], limit: 1 })).data[0];

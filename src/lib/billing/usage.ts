@@ -27,8 +27,11 @@ export async function minutesUsage(supabase: SupabaseClient, userId: string): Pr
   for (const s of subs.data ?? []) {
     for (const item of (s.items ?? []) as { price_key: string; quantity: number }[]) {
       const hit = findPrice(item.price_key);
-      if (hit?.product.kind !== "plan" || hit.product.meter === "redial" || !hit.product.minutes) continue;
-      plan += hit.product.minutes * (hit.product.perSeat ? item.quantity ?? 1 : 1);
+      if (hit?.product.kind !== "plan") continue;
+      // Echo plans count their minutes; Redial plans count any Echo minutes they include.
+      const echo = hit.product.meter === "redial" ? hit.product.echoMinutes : hit.product.minutes;
+      if (!echo) continue;
+      plan += echo * (hit.product.perSeat ? item.quantity ?? 1 : 1);
       planName = hit.product.name;
     }
   }

@@ -1,11 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { findPrice } from "./catalog";
+import { findPrice, lineOf } from "./catalog";
 
 // The cart lives in localStorage so it survives sign-in and reloads. Rules:
-// one plan at most (adding another replaces it), one of each bolt-on, any
-// quantity of packs and services. For Business, quantity = seats.
+// one plan per product line, Redial or Echo (adding another replaces it), one
+// of each bolt-on, any quantity of packs and services. For per-seat plans,
+// quantity = seats (lines for Redial).
 
 export type CartLine = { key: string; quantity: number };
 
@@ -47,7 +48,8 @@ export function addToCart(key: string, quantity = 1) {
   if (!hit) return;
   let lines = read().slice();
   if (hit.product.kind === "plan") {
-    lines = lines.filter((l) => findPrice(l.key)?.product.kind !== "plan");
+    const line = lineOf(hit.product);
+    lines = lines.filter((l) => { const p = findPrice(l.key)?.product; return !(p?.kind === "plan" && lineOf(p) === line && p.id !== hit.product.id); });
   }
   const same = lines.find((l) => findPrice(l.key)?.product.id === hit.product.id);
   if (same && (hit.product.kind === "bolt_on" || hit.product.kind === "plan")) {

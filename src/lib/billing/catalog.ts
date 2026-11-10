@@ -9,6 +9,8 @@ export type Interval = "month" | "year";
 export type Kind = "plan" | "bolt_on" | "pack" | "service";
 // What a product's minutes count: Echo transcription, or Redial AI screening.
 export type Meter = "transcription" | "redial";
+// Which product it belongs to. Someone can hold one plan in each line.
+export type Line = "echo" | "redial";
 
 // Graduated per-seat tiers (Stripe "graduated" tiered pricing).
 export type Tier = { upTo: number | null; unitAmount: number };
@@ -30,11 +32,36 @@ export type Product = {
   perSeat?: boolean;
   minutes?: number | null; // plans: per month (per seat when perSeat); packs: minutes added; Redial bolt-on: screening minutes a month
   meter?: Meter;
+  line?: Line; // default: redial when meter is redial, else echo
+  echoMinutes?: number | null; // a Redial plan's included Echo transcription minutes (per seat when perSeat)
   active?: boolean;
   prices: Price[];
 };
 
+export const lineOf = (p: Product): Line => p.line ?? (p.meter === "redial" ? "redial" : "echo");
+export const LINE_NAME: Record<Line, string> = { redial: "Redial", echo: "Echo" };
+
 export const SEED_PRODUCTS: Product[] = [
+  {
+    id: "redial_personal", kind: "plan", line: "redial", meter: "redial", minutes: 100, name: "Redial Personal", tagline: "Your own cell, without the interruptions.",
+    features: ["100 AI screening minutes a month", "DJ answers unknown callers for you", "Listen in, guide DJ, take over or transfer", "Callbacks and a summary of every call", "VIP and block lists", "Echo recordings and transcripts included"],
+    prices: [{ key: "redial_personal_monthly", interval: "month", unitAmount: 1200 }, { key: "redial_personal_annual", interval: "year", unitAmount: 12000 }],
+  },
+  {
+    id: "redial_business", kind: "plan", line: "redial", meter: "redial", minutes: 300, perSeat: true, name: "Redial Business", tagline: "An assistant on the line for every customer.",
+    features: ["300 AI screening minutes a month per line", "DJ knows your services, hours and FAQs", "Transfer calls to your team", "Share a line with teammates", "Summaries ready for your CRM", "Everything in Personal"],
+    prices: [{ key: "redial_business_monthly", interval: "month", unitAmount: 2900 }, { key: "redial_business_annual", interval: "year", unitAmount: 29000 }],
+  },
+  {
+    id: "redial_team", kind: "plan", line: "redial", meter: "redial", minutes: 1000, name: "Redial Team", tagline: "Five lines for a growing team.",
+    features: ["5 lines sharing 1,000 AI minutes a month", "Everything in Business", "Priority support"],
+    prices: [{ key: "redial_team_monthly", interval: "month", unitAmount: 6900 }, { key: "redial_team_annual", interval: "year", unitAmount: 69000 }],
+  },
+  {
+    id: "redial_business_pro", kind: "plan", line: "redial", meter: "redial", minutes: 300, echoMinutes: 2000, perSeat: true, name: "Redial Business + Echo Pro", tagline: "Every call screened, every meeting recorded.",
+    features: ["Everything in Redial Business, per line", "Echo Pro: 2,000 transcription minutes a month per line", "Branded PDF reports, Ask Echo with Claude, ChatGPT and Grok", "Save $5 a month per line"],
+    prices: [{ key: "redial_bundle_monthly", interval: "month", unitAmount: 3900 }, { key: "redial_bundle_annual", interval: "year", unitAmount: 39000 }],
+  },
   {
     id: "pro", kind: "plan", name: "Pro", tagline: "For your own calls and meetings.",
     features: ["2,000 transcription minutes a month", "Unlimited history and storage", "Claude, ChatGPT and Grok in Ask Echo", "Branded PDF reports", "Claude connector"],
@@ -60,7 +87,7 @@ export const SEED_PRODUCTS: Product[] = [
   { id: "min500", kind: "pack", name: "500 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_500", interval: null, unitAmount: 1000 }] },
   { id: "min2000", kind: "pack", name: "2,000 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_2000", interval: null, unitAmount: 3500 }] },
   { id: "min5000", kind: "pack", name: "5,000 minutes", tagline: "Extra transcription minutes. Valid for 12 months.", prices: [{ key: "pack_minutes_5000", interval: null, unitAmount: 7500 }] },
-  { id: "redial", kind: "bolt_on", meter: "redial", minutes: 50, name: "Redial call screening", tagline: "An AI assistant answers your Redial number, screens unknown callers and takes messages. 50 screening minutes a month.", prices: [{ key: "redial_monthly", interval: "month", unitAmount: 2900 }, { key: "redial_annual", interval: "year", unitAmount: 29000 }] },
+  { id: "redial", kind: "bolt_on", active: false, meter: "redial", minutes: 50, name: "Redial call screening", tagline: "An AI assistant answers your Redial number, screens unknown callers and takes messages. 50 screening minutes a month.", prices: [{ key: "redial_monthly", interval: "month", unitAmount: 2900 }, { key: "redial_annual", interval: "year", unitAmount: 29000 }] },
   { id: "redial_min100", kind: "pack", meter: "redial", minutes: 100, name: "100 screening minutes", tagline: "Extra Redial screening minutes. Valid for 12 months.", prices: [{ key: "pack_redial_100", interval: null, unitAmount: 1500 }] },
   { id: "onboarding", kind: "service", name: "Guided onboarding", tagline: "A 60-minute session to set up workspaces, templates and the Claude connector for your team.", prices: [{ key: "svc_onboarding", interval: null, unitAmount: 29900 }] },
   { id: "templates", kind: "service", name: "Custom template pack", tagline: "Three summary templates written for your calls (sales, support, interviews…).", prices: [{ key: "svc_templates", interval: null, unitAmount: 14900 }] },

@@ -7,7 +7,7 @@ import { OrderStatusBadge } from "@/components/billing/status-badge";
 import { LocalDate } from "@/components/local-date";
 import { listOrders, listRecordings, listSubscriptions, requireUser } from "@/lib/data";
 import { openBillingPortal } from "@/lib/billing/actions";
-import { findPrice, money } from "@/lib/billing/catalog";
+import { LINE_NAME, findPrice, lineOf, money } from "@/lib/billing/catalog";
 import { loadCatalog } from "@/lib/billing/catalog-server";
 import { minutesUsage } from "@/lib/billing/usage";
 import { createClient } from "@/lib/supabase/server";
@@ -27,7 +27,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
   const active = subs.filter((s) => ACTIVE.includes(s.status));
   const lines = active.flatMap((s) => s.items.map((i) => ({ ...i, sub: s, hit: i.price_key ? findPrice(i.price_key) : null })));
-  const plan = lines.find((l) => l.hit?.product.kind === "plan");
+  // One plan per product line: Redial first, then Echo.
+  const plans = lines.filter((l) => l.hit?.product.kind === "plan").sort((a, b) => (lineOf(a.hit!.product) === "redial" ? -1 : 1) - (lineOf(b.hit!.product) === "redial" ? -1 : 1));
+  const plan = plans[0];
   const boltOns = lines.filter((l) => l.hit?.product.kind === "bolt_on");
 
   const mine = recordings.filter((r) => r.createdBy === user.id && !r.deletedAt);
@@ -74,14 +76,23 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <Card>
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2">
-            <CreditCard className="size-4" /> Plan
-            <Badge variant="outline">{plan?.hit ? `${plan.hit.product.name}${plan.hit.product.perSeat ? ` · ${plan.quantity} seats` : ""}` : "Free"}</Badge>
-            {plan?.sub.status === "past_due" && <Badge variant="outline" className="text-destructive">Payment due</Badge>}
+            <CreditCard className="size-4" /> {plans.length > 1 ? "Plans" : "Plan"}
+            {!plans.length && <Badge variant="outline">Free</Badge>}
           </CardTitle>
           <CardDescription>
-            {plan?.hit
-              ? <>Billed {plan.hit.price.interval === "year" ? "annually" : "monthly"}. {plan.sub.currentPeriodEnd && <>{plan.sub.cancelAtPeriodEnd ? "Ends" : "Renews"} on <LocalDate iso={plan.sub.currentPeriodEnd} short />.</>}</>
-              : "You're on the free plan. Upgrade for more minutes, a shared Business workspace and bolt-ons."}
+            {plans.length
+              ? <span className="block space-y-1">{plans.map((p) => {
+                  const unit = lineOf(p.hit!.product) === "redial" ? "lines" : "seats";
+                  return (
+                    <span key={p.price_key} className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">{LINE_NAME[lineOf(p.hit!.product)]}</Badge>
+                      <span className="font-medium text-foreground">{p.hit!.product.name}{p.hit!.product.perSeat ? ` · ${p.quantity} ${unit}` : ""}</span>
+                      <span>Billed {p.hit!.price.interval === "year" ? "annually" : "monthly"}.{p.sub.currentPeriodEnd && <> {p.sub.cancelAtPeriodEnd ? "Ends" : "Renews"} on <LocalDate iso={p.sub.currentPeriodEnd} short />.</>}</span>
+                      {p.sub.status === "past_due" && <Badge variant="outline" className="text-destructive">Payment due</Badge>}
+                    </span>
+                  );
+                })}</span>
+              : "You're on the free plans. Get a Redial plan for more screening minutes, or an Echo plan for more transcription minutes."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

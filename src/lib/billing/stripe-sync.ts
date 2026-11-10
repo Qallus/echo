@@ -1,6 +1,6 @@
 import "server-only";
 import type Stripe from "stripe";
-import type { Product } from "./catalog";
+import { lineOf, type Product } from "./catalog";
 
 // Makes Stripe match one catalog product: the product (found by metadata
 // echo_id) and each price (found by lookup_key). Stripe prices can't change,
@@ -12,12 +12,19 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 export type SyncResult = { created: string[]; updated: string[]; unchanged: string[] };
 
+// Name on receipts and in Stripe: "Redial ..." or "Echo ...".
+const stripeName = (p: Product) => {
+  const brand = lineOf(p) === "redial" ? "Redial" : "Echo";
+  return p.name.startsWith(brand) ? p.name : `${brand} ${p.name}`;
+};
+
 export async function syncProductToStripe(s: Stripe, p: Product, result: SyncResult = { created: [], updated: [], unchanged: [] }) {
   const found = await s.products.search({ query: `metadata['echo_id']:'${p.id}'` });
   const active = p.active !== false;
+  const name = stripeName(p);
   const product = found.data[0]
-    ? await s.products.update(found.data[0].id, { name: `Echo ${p.name}`, description: p.tagline || undefined, active })
-    : await s.products.create({ name: `Echo ${p.name}`, description: p.tagline || undefined, active, metadata: { echo_id: p.id, echo_kind: p.kind } });
+    ? await s.products.update(found.data[0].id, { name, description: p.tagline || undefined, active })
+    : await s.products.create({ name, description: p.tagline || undefined, active, metadata: { echo_id: p.id, echo_kind: p.kind } });
 
   for (const price of p.prices) {
     const existing = (await s.prices.list({ lookup_keys: [price.key], expand: ["data.tiers"], limit: 1 })).data[0];

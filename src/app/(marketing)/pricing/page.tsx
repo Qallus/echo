@@ -1,27 +1,33 @@
 import { AppBadges } from "@/components/marketing/app-badges";
-import { PlanSection, ProductGrid } from "@/components/store/store";
+import { PricingPlans, ProductGrid } from "@/components/store/store";
+import { getBillingSettings } from "@/lib/billing/settings";
 import { ALL_FAQ } from "@/lib/faq";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Pricing and plans · Echo",
-  description: "Echo plans for individuals and teams, monthly or annual, plus Redial call screening, a phone line, minute packs and setup services.",
+  title: "Pricing · Redial and Echo",
+  description: "Redial call screening plans for you and your business, from free, plus Echo plans for recordings and transcripts. Monthly or annual, with minute packs and setup services.",
   alternates: { canonical: "/pricing" },
 };
 
 const FAQ = ALL_FAQ.filter((f) => f.pricing);
 
-export default function PricingPage() {
+// ?product=echo opens on the Echo plans.
+export default async function PricingPage({ searchParams }: { searchParams: Promise<{ product?: string }> }) {
+  const [{ product }, settings] = await Promise.all([searchParams, createClient().then(getBillingSettings)]);
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
       <header className="text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Simple plans that grow with your team</h1>
-        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Start free. Upgrade when you need more minutes, a shared workspace or to plug Echo into the rest of your stack.</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Let DJ take the calls. Pay for what you need.</h1>
+        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Start free with Redial. Upgrade for more screening minutes, business features and more lines. Echo plans cover recordings and transcripts.</p>
         <p className="mt-6 text-sm text-muted-foreground">One account on the web and on your phone</p>
         <AppBadges source="pricing" className="mt-3 justify-center" />
       </header>
 
-      <section className="mt-12"><PlanSection /></section>
+      <section className="mt-12">
+        <PricingPlans initial={product === "echo" ? "echo" : "redial"} redialFreeMinutes={settings.redialFreeMinutes} echoFreeMinutes={settings.freeMinutes} />
+      </section>
 
       <section id="bolt-ons" className="mt-24 scroll-mt-24 space-y-6">
         <div>
@@ -34,7 +40,7 @@ export default function PricingPage() {
       <section id="packs" className="mt-20 scroll-mt-24 space-y-6">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Minute packs</h2>
-          <p className="mt-1 text-muted-foreground">One-time top-ups for busy months.</p>
+          <p className="mt-1 text-muted-foreground">One-time top-ups for busy months: Redial screening minutes or Echo transcription minutes.</p>
         </div>
         <ProductGrid kind="pack" />
       </section>
@@ -42,7 +48,7 @@ export default function PricingPage() {
       <section className="mt-20 space-y-6">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Services</h2>
-          <p className="mt-1 text-muted-foreground">Hands-on help from the Echo team.</p>
+          <p className="mt-1 text-muted-foreground">Hands-on help from our team.</p>
         </div>
         <ProductGrid kind="service" />
       </section>
