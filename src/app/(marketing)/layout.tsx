@@ -58,7 +58,9 @@ export default async function MarketingLayout({ children }: { children: React.Re
           <nav className="grid grid-cols-2 gap-x-10 gap-y-6 sm:ml-auto sm:flex">
             <div className="space-y-2">
               <p className="font-medium">Product</p>
-              <Link href="/#features" className="block text-muted-foreground hover:text-foreground">Features</Link>
+              <Link href="/#redial" className="block text-muted-foreground hover:text-foreground">Features</Link>
+              <Link href="/redial/business" className="block text-muted-foreground hover:text-foreground">For business</Link>
+              <Link href="/compatibility" className="block text-muted-foreground hover:text-foreground">Compatibility</Link>
               <Link href="/pricing" className="block text-muted-foreground hover:text-foreground">Pricing</Link>
               <Link href="/faq" className="block text-muted-foreground hover:text-foreground">FAQ</Link>
               <Link href="/developers" className="block text-muted-foreground hover:text-foreground">Developers</Link>

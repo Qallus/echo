@@ -1,6 +1,5 @@
-import Link from "next/link";
 import {
-  Briefcase, CalendarClock, FileAudio, Lock, MessageSquareText, Mic, PhoneIncoming, PictureInPicture2, Plug, Search, ShieldCheck, Sparkles, UsersRound,
+  CalendarClock, FileAudio, MessageSquareText, Mic, PhoneIncoming, PictureInPicture2, Plug, Search, ShieldCheck, Sparkles, UsersRound,
 } from "lucide-react";
 import { Hero } from "@/components/marketing/hero";
 import { CallFlowSection } from "@/components/marketing/home/call-flow";
@@ -8,7 +7,12 @@ import { LiveControlsSection } from "@/components/marketing/home/live-controls";
 import { ProblemSection } from "@/components/marketing/home/problem";
 import { UseCasesSection } from "@/components/marketing/home/use-cases";
 import { MobileAppSection } from "@/components/marketing/mobile-app-section";
-import { ALL_FAQ } from "@/lib/faq";
+import { FaqSection } from "@/components/marketing/faq-list";
+import { FinalCta } from "@/components/marketing/home/final-cta";
+import { KeepNumberSection } from "@/components/marketing/home/keep-number";
+import { PricingPreviewSection } from "@/components/marketing/home/pricing-preview";
+import { TrustSection } from "@/components/marketing/home/trust";
+import { FAQ_TOPICS } from "@/lib/faq";
 
 export const metadata = {
   title: "Redial · Your AI assistant answers. You take the calls that matter.",
@@ -40,7 +44,9 @@ const STEPS = [
   { n: "3", title: "Find, ask and share", desc: "Search across everything, ask questions in plain words, and keep your team in the loop." },
 ];
 
-const FAQ = ALL_FAQ.filter((f) => f.home);
+// Home questions, Redial first.
+const ORDER = ["redial", "live", "sharing", "billing"];
+const FAQ = [...FAQ_TOPICS].sort((x, y) => (ORDER.indexOf(x.id) + 1 || 99) - (ORDER.indexOf(y.id) + 1 || 99)).flatMap((t) => t.items).filter((f) => f.home);
 
 export default function LandingPage() {
   return (
@@ -50,6 +56,7 @@ export default function LandingPage() {
       <CallFlowSection />
       <LiveControlsSection />
       <UseCasesSection />
+      <KeepNumberSection />
 
       <section className="border-t">
         <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
@@ -66,13 +73,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <MobileAppSection />
-
       <section id="features" className="scroll-mt-20 border-t bg-muted/30">
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
           <p className="text-sm font-medium text-muted-foreground">Echo, built into Redial</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Every call and meeting, kept</h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">Echo records, transcribes and summarizes every call, and your meetings too, so you can pay attention to the people.</p>
+          <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Every call becomes notes. Your meetings too.</h2>
+          <p className="mt-3 max-w-2xl text-muted-foreground">Every call DJ handles comes with a recording, a transcript and a summary. Echo does the same for your meetings, so you can pay attention to the people.</p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="rounded-xl border bg-background p-5">
@@ -82,89 +87,49 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          <div id="how-echo" className="mt-14 scroll-mt-24">
+            <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><Mic className="size-4" /> How Echo works</h3>
+            <ol className="mt-4 grid gap-8 md:grid-cols-3">
+              {STEPS.map((s) => (
+                <li key={s.n} className="space-y-2">
+                  <span className="flex size-8 items-center justify-center rounded-full border bg-background text-sm font-medium">{s.n}</span>
+                  <h4 className="font-medium">{s.title}</h4>
+                  <p className="text-sm text-muted-foreground">{s.desc}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </section>
 
-      <section id="how" className="scroll-mt-20 border-t bg-muted/30">
-        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-          <h2 className="text-3xl font-semibold tracking-tight">How Echo works</h2>
-          {[{ name: "Echo", icon: Mic, steps: STEPS }].map(({ name, icon: Icon, steps }) => (
-            <div key={name} id={`how-${name.toLowerCase()}`} className="mt-10 scroll-mt-24">
-              <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><Icon className="size-4" /> {name}</h3>
-              <ol className="mt-4 grid gap-8 md:grid-cols-3">
-                {steps.map((s) => (
-                  <li key={s.n} className="space-y-2">
-                    <span className="flex size-8 items-center justify-center rounded-full border bg-background text-sm font-medium">{s.n}</span>
-                    <h4 className="font-medium">{s.title}</h4>
-                    <p className="text-sm text-muted-foreground">{s.desc}</p>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
-        </div>
-      </section>
+      <PricingPreviewSection />
+      <TrustSection />
+      <MobileAppSection />
 
-      <section className="border-y bg-muted/30">
+      <section className="border-t">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6 md:grid-cols-2">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight">For your team, and just for you</h2>
+            <Plug className="mb-3 size-5" />
+            <h2 className="text-3xl font-semibold tracking-tight">Use Redial and Echo from Claude</h2>
             <p className="mt-3 text-muted-foreground">
-              Every account has a private Personal space. Add a Business workspace for your company, invite your team,
-              and decide recording by recording who hears what.
+              Connect your account to Claude on the web, on your phone, or in Claude Code. Claude can find recordings, read
+              transcripts, track action items and manage your calendar, with exactly the access you have.
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border bg-background p-5">
-              <Briefcase className="mb-3 size-5" />
-              <h3 className="font-medium">Business</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Shared with everyone you invite. Owners and admins manage the team.</p>
-            </div>
-            <div className="rounded-xl border bg-background p-5">
-              <Lock className="mb-3 size-5" />
-              <h3 className="font-medium">Personal</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Only you. Move a recording to Business when you&apos;re ready to share it.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6 md:grid-cols-2">
-        <div>
-          <Plug className="mb-3 size-5" />
-          <h2 className="text-3xl font-semibold tracking-tight">Use Echo from Claude</h2>
-          <p className="mt-3 text-muted-foreground">
-            Connect Echo to Claude on the web, on your phone, or in Claude Code. Claude can find recordings, read
-            transcripts, write summaries and track action items, with exactly the access you have.
-          </p>
-        </div>
-        <ul className="space-y-3 text-sm">
-          {[
-            "What did we decide about the launch date?",
-            "Mark the first two action items from yesterday's planning call as done.",
-            "Move every recording with “Acme” in the title into the Clients folder.",
-          ].map((q) => (
-            <li key={q} className="rounded-xl border bg-muted/30 px-4 py-3">&ldquo;{q}&rdquo;</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="border-t bg-muted/30">
-        <div className="mx-auto w-full max-w-3xl px-4 py-20 sm:px-6">
-          <h2 className="text-3xl font-semibold tracking-tight">Questions</h2>
-          <div className="mt-8 divide-y rounded-xl border bg-background">
-            {FAQ.map((f) => (
-              <details key={f.q} className="group px-5 py-4">
-                <summary className="cursor-pointer list-none font-medium marker:hidden">
-                  <span className="flex items-center justify-between gap-4">{f.q}<span className="text-muted-foreground transition-transform group-open:rotate-45">+</span></span>
-                </summary>
-                <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>
-              </details>
+          <ul className="space-y-3 text-sm">
+            {[
+              "What did we decide about the launch date?",
+              "Put a call with Dana on my calendar for tomorrow at 10.",
+              "Mark the first two action items from yesterday's planning call as done.",
+            ].map((q) => (
+              <li key={q} className="rounded-xl border bg-muted/30 px-4 py-3">&ldquo;{q}&rdquo;</li>
             ))}
-          </div>
-          <p className="mt-6 text-sm text-muted-foreground"><Link href="/faq" className="font-medium text-foreground underline underline-offset-2">See all questions</Link>, searchable by topic.</p>
+          </ul>
         </div>
       </section>
+
+      <FaqSection items={FAQ} />
+      <FinalCta />
     </>
   );
 }

@@ -53,7 +53,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
         <ProductGrid kind="service" />
       </section>
 
-      <section className="mx-auto mt-24 max-w-3xl">
+      <section className="mt-24">
         <h2 className="text-2xl font-semibold tracking-tight">Questions</h2>
         <div className="mt-6 divide-y rounded-xl border">
           {FAQ.map((f) => (

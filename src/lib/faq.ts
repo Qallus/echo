@@ -60,10 +60,10 @@ export const FAQ_TOPICS: FaqTopic[] = [
   {
     id: "redial", title: "Redial: your call assistant", short: "Redial",
     items: [
-      { q: "How do calls reach Redial?", a: "Through your Redial number. Give it out directly, or set your cell to forward calls you don't answer to it. We set up the number for you when you add Redial.", tags: "phone number forward forwarding", home: true },
+      { q: "How do calls reach Redial?", a: "You keep your number. Set your phone to forward the calls you miss (or every call) to your Redial number, or give out a Redial number of your own. Setup shows you the exact code for your carrier, and we set up the number for you.", tags: "phone number forward forwarding", home: true },
       { q: "Does Redial answer calls to my regular cell number?", a: "Only calls that reach your Redial number, including calls your cell forwards to it. Installing the app doesn't intercept ordinary cell calls.", home: true },
       { q: "What does the assistant say to callers?", a: "It greets them as your assistant, asks who's calling and why, then either puts the call through to you or takes a message and a callback number. It keeps calls short, never pretends to be you, and tells callers to hang up and call 911 in an emergency.", tags: "greeting script message" },
-      { q: "Does the assistant say it's an AI?", a: "That's up to you. You write how your assistant greets callers in your Redial settings, so you decide how it introduces itself. It never claims to be you, and if a caller asks whether it's an AI, it says so.", tags: "disclosure robot bot human greeting" },
+      { q: "Does the assistant say it's an AI?", a: "That's up to you. You write how your assistant greets callers in your Redial settings, so you decide how it introduces itself. It never claims to be you, and if a caller asks whether it's an AI, it says so.", tags: "disclosure robot bot human greeting", home: true },
       { q: "Who gets screened?", a: "You choose: screen unknown callers (the default), screen every call except your VIPs, or turn screening off. VIPs ring straight through, people on your allow list skip screening, and blocked numbers never get through. You can pause screening at any time.", tags: "rules vip block allow list unknown pause" },
       { q: "How do I hear about a call?", a: "Each call ends as a message with a summary, sorted as personal, business, sales or unknown and marked by urgency. You're notified in the app and by email, and you can turn on text and push alerts too.", tags: "notification alert sms email summary" },
       { q: "Does Redial take voicemail?", a: "Yes. When a call goes to voicemail, the message is recorded, stored privately and transcribed, so you can read it instead of listening.", tags: "voicemail transcription" },
@@ -95,7 +95,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     id: "billing", title: "Plans and billing", short: "Billing",
     blurb: "Current prices are on the Pricing page.",
     items: [
-      { q: "Is there a free plan?", a: "Yes. The Free plan includes transcription minutes every month and needs no card. Upgrade to Pro or Business when you need more.", tags: "free price cost", home: true },
+      { q: "Is there a free plan?", a: "Yes. Redial Free includes AI screening minutes every month, and Echo's free plan includes transcription minutes. Neither needs a card. Upgrade when you need more.", tags: "free price cost", home: true },
       { q: "How does Business pricing work?", a: "You pay per seat, and the price per seat drops as your team grows: seats 1–5, 6–20 and 21+ are each billed at a lower rate. Add seats any time; they're charged pro rata.", tags: "seats team per user", pricing: true },
       { q: "Is there a discount for paying yearly?", a: "Yes. Annual plans cost less than paying month to month.", tags: "annual yearly" },
       { q: "How much is Redial?", a: "Redial starts free with a few screening minutes a month. Redial Personal, Business (priced per line) and Team plans add more minutes and features, monthly or annually, and there's a Redial Business + Echo Pro bundle. See Pricing for current prices, and Redial minute packs for busy months.", tags: "price cost plan personal business team bundle" },
