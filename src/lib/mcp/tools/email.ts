@@ -226,7 +226,7 @@ export function registerEmailTools(server: McpServer, ctx: McpContext, permissio
     title: "Send (after the person said yes)",
     description: "Sends the email prepared by echo_email_send_prepare. Only call this after showing the person the preview and getting a clear yes. Each confirmation_id works once, for 15 minutes, for the person who prepared it. If the audience grew since the preview, nothing is sent.",
     inputSchema: z.object({ confirmation_id: id("Confirmation") }),
-    annotations: SEND,
+    annotations: SEND, risk: "high",
   }, async ({ confirmation_id }) => {
     manage();
     // Claim it: RLS only allows the owner to mark an unused, unexpired one.

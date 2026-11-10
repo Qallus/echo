@@ -231,7 +231,9 @@ To add a resource:
 2. Check the fields against the table's column grants.
 3. Add a step to `scripts/mcp-smoke.mjs`.
 
-Later phases add more resources and action tools: CRM, communications, Redial, users, billing, the user dashboard, content, integrations, and agent keys. See the plan.
+**AI agents** (Paperclip, Hermes, OpenClaw, Herdr, ...) connect with their own `rdk_` key instead of OAuth. Their permissions and limits are set in Admin → AI → Agents, and high-risk actions wait for a person's approval. See `docs/AGENTS.md`.
+
+Later phases add more resources and action tools: CRM, communications, Redial, users, billing, the user dashboard, content and integrations. See the plan.
 
 ---
 

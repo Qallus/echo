@@ -117,7 +117,7 @@ export function registerResourceTools(server: McpServer, ctx: McpContext, perms:
   });
 
   defineTool(server, ctx, "resource_delete", {
-    ...base, risk: "high", title: "Delete a record",
+    ...base, risk: "high", previewOnly: true, title: "Delete a record",
     description: "Permanently delete a record. Nothing is deleted yet: this returns a preview and a confirmation_id. Show the person, and only after a clear yes call confirm_action.",
     inputSchema: z.object({ resource: nameArg, id: id("Record") }),
   }, async ({ resource: name, id: rowId }) => {

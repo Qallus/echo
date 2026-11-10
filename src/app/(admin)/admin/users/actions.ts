@@ -12,6 +12,7 @@ export async function setStaffRole(email: string, role: StaffRole | null): Promi
   const clean = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) return { error: "Enter a valid email address." };
   if (role && !STAFF_ROLES.some((r) => r.role === role)) return { error: "Choose a role." };
+  if (clean.endsWith("@agents.redial.si")) return { error: "That's an AI agent. Manage it in Admin > AI > Agents." };
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_set_staff_role", { p_email: clean, p_role: role });
   if (error) return { error: error.message };

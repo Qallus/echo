@@ -1,6 +1,7 @@
 import "server-only";
 import type { CallToolResult, McpServer, ToolAnnotations } from "@modelcontextprotocol/server";
 import type { z } from "zod";
+import { agentGate } from "./agent-gate";
 import type { McpContext, Risk } from "./auth";
 
 const MAX_RESULT_CHARS = 20_000;
@@ -47,23 +48,32 @@ const HINTS: Record<Risk, ToolAnnotations> = {
 // plain sentences (never SQL or stack traces). Names get the `echo_` prefix
 // unless `prefix` says otherwise (the automation tools use plain
 // <domain>_<action> names). Pass `risk` (annotations follow from it) or, for
-// older tools, `annotations`.
+// older tools, `annotations`. `previewOnly`: a high-risk tool that only
+// prepares (the action runs through confirm_action), so agents don't need an
+// approval to call it. Agents' limits are checked before every call.
 export function defineTool<S extends z.ZodObject>(
   server: McpServer,
   ctx: McpContext,
   name: string,
-  config: { title: string; description: string; inputSchema: S; annotations?: ToolAnnotations; risk?: Risk; domain?: string; prefix?: string },
+  config: { title: string; description: string; inputSchema: S; annotations?: ToolAnnotations; risk?: Risk; domain?: string; prefix?: string; previewOnly?: boolean },
   run: (args: z.infer<S>) => Promise<ToolOutput>,
 ) {
   const tool = `${config.prefix ?? "echo_"}${name}`;
   const risk: Risk = config.risk ?? (config.annotations?.readOnlyHint ? "read" : config.annotations?.destructiveHint ? "high" : "write");
   const annotations = { ...HINTS[risk], ...config.annotations };
-  ctx.catalog.push({ name: tool, title: config.title, description: config.description, risk, domain: config.domain ?? name.split("_")[0] });
+  const domain = config.domain ?? name.split("_")[0];
+  ctx.catalog.push({ name: tool, title: config.title, description: config.description, risk, domain });
   // Widened to a concrete ZodObject so the SDK's overloads resolve; the SDK has
   // already validated args against this schema when the callback runs.
   const inputSchema: z.ZodObject = config.inputSchema;
-  server.registerTool(tool, { title: config.title, description: config.description, annotations, inputSchema }, async (args) => {
+  const invoke = async (args: Record<string, unknown>) => {
     try {
+      const held = ctx.agent ? await agentGate(ctx, { name: tool, title: config.title, risk, domain, previewOnly: config.previewOnly }, args) : null;
+      if (held) {
+        // Waiting for a person: logged as the request, not as a use of the tool.
+        await audit(ctx, { tool: "approval_request", ok: true, targetId: held.targetId });
+        return text(held.data);
+      }
       const out = await run(args as z.infer<S>);
       await audit(ctx, { tool, ok: true, targetId: out.targetId, workspaceId: out.workspaceId });
       return text(out.data);
@@ -73,5 +83,7 @@ export function defineTool<S extends z.ZodObject>(
       await audit(ctx, { tool, ok: false, error: e instanceof Error ? e.message : String(e) });
       return text(message, true);
     }
-  });
+  };
+  ctx.handlers.set(tool, invoke);
+  server.registerTool(tool, { title: config.title, description: config.description, annotations, inputSchema }, (args) => invoke(args as Record<string, unknown>));
 }
