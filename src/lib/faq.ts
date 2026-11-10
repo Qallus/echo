@@ -92,6 +92,21 @@ export const FAQ_TOPICS: FaqTopic[] = [
     ],
   },
   {
+    id: "phones", title: "Redial phone service: home and business", short: "Phone service",
+    blurb: "Redial Home Phone and Business Phone give you a full phone line, with desk and cordless phones, and DJ screening built in.",
+    items: [
+      { q: "What is Redial phone service?", a: "A complete home or business phone line that runs over your internet connection. You get a number (new, or the one you have), calling in the US and Canada, desk, cordless or Wi-Fi phones that ring together with the Redial app, and DJ answering the calls you don't want to.", tags: "home phone landline business phone voip line" },
+      { q: "Which phones work with Redial?", a: "Standard SIP phones from Grandstream (including the WP826 Wi-Fi cordless), Yealink and Poly, plus most other SIP desk phones. To keep a corded phone you already own, plug it into a SIP adapter (an ATA). The Redial app on your mobile rings too.", tags: "grandstream wp826 yealink poly sip desk cordless wifi ata adapter compatible" },
+      { q: "What is SIP?", a: "SIP is the standard way internet phones connect to a phone service. You don't need to know the details: add your phone in Redial, type the setup address it gives you into the phone once, and the phone sets itself up. Phones we don't set up automatically can be set up by hand with the server, username and password Redial shows you.", tags: "sip provisioning auto setup server username password" },
+      { q: "Can I keep my current home or business number?", a: "Yes. Most US numbers can be moved to Redial (this is called porting). Tell us the number and your current provider, and we handle the move. It usually takes one to two weeks, and your old service keeps working until the move is done. You can also start with a new local number straight away.", tags: "port porting transfer keep number landline" },
+      { q: "Does 911 work?", a: "Yes, once you register the address where your phones are. 911 calls from your Redial number are sent with that address so responders know where to go. Internet phone service needs power and an internet connection, so 911 won't work during an outage unless your router and phones have backup power. Update your address in Redial whenever you move your phones. Your mobile phone is always a backup for 911.", tags: "911 emergency e911 address outage" },
+      { q: "What happens if my internet or power goes out?", a: "Calls to your number still reach DJ and the Redial app on your mobile, so nothing is missed. Your desk and Wi-Fi phones come back as soon as your internet does. A small battery backup for your router keeps them working through short outages.", tags: "outage internet down power backup battery" },
+      { q: "Do I need special internet?", a: "No. Any home or office broadband works. Each call uses about as much data as streaming music.", tags: "internet bandwidth wifi broadband" },
+      { q: "Will my alarm system or fax machine work?", a: "Many newer alarm systems use their own cellular connection and aren't affected. Older alarm panels and fax machines that need a traditional landline may not work over internet phone service. Check with your alarm company before you switch.", tags: "alarm fax security panel" },
+      { q: "Is there a contract?", a: "No. Phone service is month to month, or yearly for a lower price, and you can cancel any time. If you've moved your number to Redial, you can move it out again.", tags: "contract cancel commitment" },
+    ],
+  },
+  {
     id: "billing", title: "Plans and billing", short: "Billing",
     blurb: "Current prices are on the Pricing page.",
     items: [

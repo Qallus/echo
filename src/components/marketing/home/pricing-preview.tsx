@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export async function PricingPreviewSection() {
   await loadCatalog();
   const settings = await getBillingSettings(await createClient());
-  const plans = products().filter((p) => p.kind === "plan" && lineOf(p) === "redial" && !p.echoMinutes).slice(0, 3);
+  const plans = products().filter((p) => p.kind === "plan" && lineOf(p) === "redial" && !p.echoMinutes && !p.phones).slice(0, 3);
   const cards = [
     { id: "free", name: "Redial Free", price: "$0", per: "", tagline: "Try DJ on the calls you miss.", features: [`${settings.redialFreeMinutes} AI screening minutes a month`, "VIP and block lists", "A summary of every call"], featured: false },
     ...plans.map((p) => {

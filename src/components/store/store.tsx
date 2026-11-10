@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AudioLines, Briefcase, Check, Lock, Mic, Minus, Plus, ShoppingCart, Sparkles, UsersRound } from "lucide-react";
+import { AudioLines, Briefcase, Building2, Check, House, Lock, Mic, Minus, Plus, ShoppingCart, Sparkles, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addToCart, useCart } from "@/lib/billing/cart";
 import { amountFor, lineOf, money, per, products, type Interval, type Line, type Product } from "@/lib/billing/catalog";
@@ -53,7 +53,7 @@ function SeatPicker({ seats, onChange, unit = { one: "seat", many: "seats" } }: 
 }
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  redial_personal: Lock, redial_business: Briefcase, redial_team: UsersRound, business: Briefcase,
+  redial_personal: Lock, redial_business: Briefcase, redial_team: UsersRound, business: Briefcase, redial_home_phone: House, redial_business_phone: Building2,
 };
 
 function PlanCard({ product, interval, featured }: { product: Product; interval: Interval; featured?: boolean }) {
@@ -146,7 +146,8 @@ export function PlanSection({ line = "echo", freeMinutes, interval: fixed }: { l
   const interval = fixed ?? own;
   const plans = products().filter((p) => p.kind === "plan" && lineOf(p) === line);
   const bundles = plans.filter((p) => p.echoMinutes);
-  const main = plans.filter((p) => !p.echoMinutes);
+  const phone = plans.filter((p) => p.phones && !p.echoMinutes);
+  const main = plans.filter((p) => !p.echoMinutes && !p.phones);
   const free = line === "redial"
     ? { title: "Redial Free", sub: "Try DJ on the calls you miss.", features: [`${freeMinutes ?? 10} AI screening minutes a month`, "Forward the calls you miss", "VIP and block lists", "A summary of every call"] }
     : { title: "Free", sub: "Try Echo on your own calls.", features: [`${(freeMinutes ?? 300).toLocaleString()} transcription minutes a month`, "30 days of history", "Browser recording with notes and flags", "Search and Ask Echo"] };
@@ -158,6 +159,23 @@ export function PlanSection({ line = "echo", freeMinutes, interval: fixed }: { l
         {main.map((p) => <PlanCard key={p.id} product={p} interval={interval} featured={p.perSeat} />)}
       </div>
       {bundles.map((p) => <BundleCard key={p.id} product={p} interval={interval} />)}
+      {phone.length > 0 && (
+        <div id="phone-service" className="scroll-mt-24 space-y-4 pt-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="text-xl font-semibold">Phone service</h3>
+              <p className="text-sm text-muted-foreground">A full home or business phone line, with desk and cordless phones, and DJ screening built in.</p>
+            </div>
+            <div className="flex gap-4 text-sm">
+              <Link href="/home-phone" className="underline underline-offset-4">Home phone</Link>
+              <Link href="/business-phone" className="underline underline-offset-4">Business phone</Link>
+            </div>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            {phone.map((p) => <PlanCard key={p.id} product={p} interval={interval} />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

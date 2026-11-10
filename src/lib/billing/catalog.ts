@@ -34,6 +34,7 @@ export type Product = {
   meter?: Meter;
   line?: Line; // default: redial when meter is redial, else echo
   echoMinutes?: number | null; // a Redial plan's included Echo transcription minutes (per seat when perSeat)
+  phones?: number | null; // Redial phone service: desk, cordless or Wi-Fi phones included (per line when perSeat)
   active?: boolean;
   prices: Price[];
 };
@@ -61,6 +62,16 @@ export const SEED_PRODUCTS: Product[] = [
     id: "redial_business_pro", kind: "plan", line: "redial", meter: "redial", minutes: 300, echoMinutes: 2000, perSeat: true, name: "Redial Business + Echo Pro", tagline: "Every call screened, every meeting recorded.",
     features: ["Everything in Redial Business, per line", "Echo Pro: 2,000 transcription minutes a month per line", "Branded PDF reports, Ask Echo with Claude, ChatGPT and Grok", "Save $5 a month per line"],
     prices: [{ key: "redial_bundle_monthly", interval: "month", unitAmount: 3900 }, { key: "redial_bundle_annual", interval: "year", unitAmount: 39000 }],
+  },
+  {
+    id: "redial_home_phone", kind: "plan", line: "redial", meter: "redial", minutes: 100, phones: 4, name: "Redial Home Phone", tagline: "A home phone that screens its own calls.",
+    features: ["A local number, or bring your own", "Unlimited calling in the US and Canada", "Up to 4 cordless or desk phones, plus the Redial app", "100 AI screening minutes a month", "Spam never rings, family always gets through", "Voicemail and a summary of every call", "911 with your registered address"],
+    prices: [{ key: "redial_home_phone_monthly", interval: "month", unitAmount: 1500 }, { key: "redial_home_phone_annual", interval: "year", unitAmount: 15000 }],
+  },
+  {
+    id: "redial_business_phone", kind: "plan", line: "redial", meter: "redial", minutes: 300, phones: 3, perSeat: true, name: "Redial Business Phone", tagline: "A business phone system with DJ at the front desk.",
+    features: ["A business number per line, or bring yours", "Unlimited calling in the US and Canada", "Up to 3 desk or Wi-Fi phones per line", "300 AI screening minutes a month per line", "Extensions and transfers through Directory", "Listen in, guide DJ, take over", "Summaries ready for your CRM"],
+    prices: [{ key: "redial_business_phone_monthly", interval: "month", unitAmount: 2500 }, { key: "redial_business_phone_annual", interval: "year", unitAmount: 25000 }],
   },
   {
     id: "pro", kind: "plan", name: "Pro", tagline: "For your own calls and meetings.",

@@ -9,7 +9,7 @@ import { SEED_PRODUCTS, setCatalog, type Interval, type Kind, type Line, type Me
 
 type ProductRow = {
   id: string; kind: Kind; name: string; tagline: string; features: string[]; per_seat: boolean; minutes: number | null; sort: number; active: boolean;
-  meter?: Meter; product_line?: Line; echo_minutes?: number | null;
+  meter?: Meter; product_line?: Line; echo_minutes?: number | null; phones?: number | null;
 };
 type PriceRow = { key: string; product_id: string; interval: Interval | null; unit_amount: number | null; tiers: Tier[] | null; active: boolean };
 
@@ -26,7 +26,7 @@ export function toProducts(products: ProductRow[], prices: PriceRow[]): Product[
     .map((p) => ({
       id: p.id, kind: p.kind, name: p.name, tagline: p.tagline, features: p.features?.length ? p.features : undefined,
       perSeat: p.per_seat || undefined, minutes: p.minutes, meter: p.meter === "redial" ? "redial" : undefined, active: p.active,
-      line: p.product_line === "redial" ? "redial" : "echo", echoMinutes: p.echo_minutes ?? null,
+      line: p.product_line === "redial" ? "redial" : "echo", echoMinutes: p.echo_minutes ?? null, phones: p.phones ?? null,
       prices: prices.filter((x) => x.product_id === p.id).map((x) => ({
         key: x.key, interval: x.interval, unitAmount: x.unit_amount ?? undefined, tiers: x.tiers ?? undefined, active: x.active,
       })),
@@ -35,7 +35,7 @@ export function toProducts(products: ProductRow[], prices: PriceRow[]): Product[
 
 async function fetchCatalog(supabase: SupabaseClient, includeInactive: boolean): Promise<Product[] | null> {
   const [products, prices] = await Promise.all([
-    supabase.from("catalog_products").select("id, kind, name, tagline, features, per_seat, minutes, sort, active, meter, product_line, echo_minutes"),
+    supabase.from("catalog_products").select("id, kind, name, tagline, features, per_seat, minutes, sort, active, meter, product_line, echo_minutes, phones"),
     supabase.from("catalog_prices").select("key, product_id, interval, unit_amount, tiers, active"),
   ]);
   if (products.error || prices.error || !products.data?.length) return null;

@@ -1,5 +1,5 @@
 import {
-  AudioLines, Briefcase, CircleHelp, FileAudio, Mic, ShieldCheck, Tag, Waypoints, type LucideIcon,
+  AudioLines, Briefcase, Building2, CircleHelp, FileAudio, House, Mic, ShieldCheck, Tag, Waypoints, type LucideIcon,
 } from "lucide-react";
 
 // The public site's product navigation, shared by the desktop mega menu and
@@ -16,6 +16,8 @@ export const NAV_PRODUCTS: NavProduct[] = [
       { href: "/#redial", title: "What Redial does", desc: "Screening, live controls, Mirror", icon: ShieldCheck },
       { href: "/#how-redial", title: "How a call is handled", desc: "From the first ring to the summary", icon: Waypoints },
       { href: "/redial/business", title: "Redial for business", desc: "Leads, transfers, a line for the team", icon: Briefcase },
+      { href: "/home-phone", title: "Home phone", desc: "Replace your landline, keep your number", icon: House },
+      { href: "/business-phone", title: "Business phone", desc: "Desk phones, extensions, DJ at the front desk", icon: Building2 },
       { href: "/pricing", title: "Redial pricing", desc: "Free, Personal, Business and Team", icon: Tag },
       { href: "/faq#topic-redial", title: "Redial questions", desc: "Screening, live calls, sharing a line", icon: CircleHelp },
     ],

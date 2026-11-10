@@ -36,7 +36,7 @@ async function pushToStripe(productId: string): Promise<string> {
 }
 
 // sort is only changed when given (it orders the plans on /pricing).
-export async function saveProduct(id: string, input: { name: string; tagline: string; features: string[]; minutes: number | null; echoMinutes?: number | null; active: boolean; sort?: number }): Promise<Result> {
+export async function saveProduct(id: string, input: { name: string; tagline: string; features: string[]; minutes: number | null; echoMinutes?: number | null; phones?: number | null; active: boolean; sort?: number }): Promise<Result> {
   await requireStaff("billing.manage");
   const name = input.name.trim().slice(0, 80);
   if (!name) return { error: "Give the product a name." };
@@ -47,6 +47,7 @@ export async function saveProduct(id: string, input: { name: string; tagline: st
     active: input.active,
     ...(input.sort === undefined ? {} : { sort: Math.round(input.sort) || 0 }),
     ...(input.echoMinutes === undefined ? {} : { echo_minutes: input.echoMinutes == null || Number.isNaN(input.echoMinutes) ? null : Math.max(0, Math.round(input.echoMinutes)) }),
+    ...(input.phones === undefined ? {} : { phones: input.phones == null || Number.isNaN(input.phones) ? null : Math.min(100, Math.max(1, Math.round(input.phones))) }),
   };
   const supabase = await createClient();
   const { error } = await supabase.from("catalog_products").update(row).eq("id", id);

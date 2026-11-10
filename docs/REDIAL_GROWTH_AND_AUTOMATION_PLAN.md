@@ -324,6 +324,13 @@ Each phase includes any migrations, the tools, an RLS test, a smoke test and doc
 
 ---
 
+## Track D: Redial phone service (home and business)
+Redial as a full phone line: Redial Home Phone (landline replacement) and Redial Business Phone (desk phones and extensions), with DJ screening built in. Desk, cordless and Wi-Fi SIP phones (Grandstream WP826, Yealink, Poly) register to a Twilio SIP Domain and set themselves up.
+
+- **P1 (done):** `/home-phone` and `/business-phone` pages (drawn phones, how it works, supported phones, comparison tables, plan comparison, 911 notice, FAQ topic `phones`); `catalog_products.phones` and the two phone plans; a Phone service row on `/pricing`; nav, footer and `/compatibility` links. Supported phones live in `src/lib/redial/phone-models.ts`.
+- **P2:** `redial_devices`, the SIP Domain and credentials (`src/lib/comms/sip.ts`), a Phones tab in Calls, the auto-setup route `/api/provision/[token]/[file]`, and desk phones ringing with the mobile in `ringOwner()`.
+- **P3:** calling out from desk phones (`twilio/redial/sip`), 911 addresses registered with Twilio (required before phone service starts), number porting requests, and wizard hooks.
+
 ## Order of work
 Steps alternate A → B → C. Each one is built, checked, committed and pushed, then waits for approval.
 

@@ -77,6 +77,12 @@ export default function CompatibilityPage() {
         </section>
 
         <section className="mt-16 grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border p-6 md:col-span-2">
+            <h2 className="text-lg font-semibold">Desk, cordless and Wi-Fi phones (SIP)</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              With Redial <Link href="/home-phone" className="underline underline-offset-4">Home Phone</Link> or <Link href="/business-phone" className="underline underline-offset-4">Business Phone</Link>, Redial is your phone line. Standard SIP phones from Grandstream (including the WP826 Wi-Fi cordless), Yealink and Poly set themselves up from Redial, and most other SIP phones work with the settings Redial shows you.
+            </p>
+          </div>
           <div className="rounded-2xl border p-6">
             <h2 className="text-lg font-semibold">Landlines and business phone services</h2>
             <p className="mt-2 text-sm text-muted-foreground">

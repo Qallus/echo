@@ -62,7 +62,7 @@ export function CatalogEditor({ products, stripeReady, readOnly }: { products: P
 
 function ProductRow({ product: p, readOnly }: { product: Product; readOnly: boolean }) {
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ name: p.name, tagline: p.tagline, features: (p.features ?? []).join("\n"), minutes: p.minutes?.toString() ?? "", echoMinutes: p.echoMinutes?.toString() ?? "", active: p.active !== false });
+  const [f, setF] = useState({ name: p.name, tagline: p.tagline, features: (p.features ?? []).join("\n"), minutes: p.minutes?.toString() ?? "", echoMinutes: p.echoMinutes?.toString() ?? "", phones: p.phones?.toString() ?? "", active: p.active !== false });
   const redialPlan = p.kind === "plan" && lineOf(p) === "redial";
   const [msg, setMsg] = useState<Msg>({});
   const [pending, start] = useTransition();
@@ -87,7 +87,7 @@ function ProductRow({ product: p, readOnly }: { product: Product; readOnly: bool
             e.preventDefault();
             start(async () => setMsg(await saveProduct(p.id, {
               name: f.name, tagline: f.tagline, features: f.features.split("\n"), minutes: f.minutes === "" ? null : Number(f.minutes), active: f.active,
-              ...(redialPlan ? { echoMinutes: f.echoMinutes === "" ? null : Number(f.echoMinutes) } : {}),
+              ...(redialPlan ? { echoMinutes: f.echoMinutes === "" ? null : Number(f.echoMinutes), phones: f.phones === "" ? null : Number(f.phones) } : {}),
             })));
           }}>
             <fieldset disabled={readOnly} className="contents">
@@ -100,6 +100,11 @@ function ProductRow({ product: p, readOnly }: { product: Product; readOnly: bool
               {redialPlan && (
                 <label className="space-y-1 text-sm">Echo transcription minutes included{p.perSeat ? " (per line)" : ""}
                   <Input type="number" min={0} placeholder="None" value={f.echoMinutes} onChange={(e) => setF({ ...f, echoMinutes: e.target.value })} />
+                </label>
+              )}
+              {redialPlan && (
+                <label className="space-y-1 text-sm">Phones included (phone service){p.perSeat ? " (per line)" : ""}
+                  <Input type="number" min={1} max={100} placeholder="Not phone service" value={f.phones} onChange={(e) => setF({ ...f, phones: e.target.value })} />
                 </label>
               )}
               <label className="space-y-1 text-sm sm:col-span-2">Tagline<Input value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} /></label>
