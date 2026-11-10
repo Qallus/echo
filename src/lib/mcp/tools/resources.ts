@@ -4,7 +4,8 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import type { McpContext } from "../auth";
 import { ToolError, defineTool } from "../audit";
 import { confirmable, prepare } from "../confirm";
-import { RESOURCES, canRead, canWrite, describe, resource, type Resource } from "../registry";
+import { adminAudit } from "@/lib/admin/audit";
+import { RESOURCES, canRead, canWrite, describe, resource, updateFields, type Resource } from "../registry";
 import { resolveWorkspace } from "../workspace";
 import { check, cursorArg, cursorFilter, decodeCursor, found, id, limitArg, nextCursor } from "./shared";
 
@@ -22,10 +23,15 @@ function pick(name: string, perms: string[]): Resource {
 function writable(r: Resource, perms: string[]) {
   if (!canWrite(r, perms)) throw new ToolError(`You can read ${r.title.toLowerCase()} but not change them.`);
 }
+// Staff resources also go to the admin audit log, like dashboard changes.
+async function logAdmin(ctx: McpContext, r: Resource, op: string, id: string, detail: Record<string, unknown>) {
+  if (r.access.write) await adminAudit(ctx.supabase, `${r.audit ?? r.name}.${op}`, { type: r.table, id }, { ...detail, via: "mcp" });
+}
 function parse<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
   const res = schema.safeParse(data);
   if (res.success) return res.data;
   const i = res.error.issues[0];
+  if (i?.code === "unrecognized_keys") throw new ToolError(`${i.keys.join(", ")} can't be set here. resource_types lists each resource's fields and which ones update can change.`);
   throw new ToolError(`${i?.path.length ? `${i.path.join(".")}: ` : ""}${i?.message ?? "Those values aren't allowed."}`);
 }
 
@@ -33,9 +39,12 @@ function parse<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
 confirmable("resource_delete", async (ctx, payload) => {
   const r = resource(String(payload.resource));
   if (!r) throw new ToolError("That resource no longer exists.");
-  const { error, count } = await ctx.supabase.from(r.table).delete({ count: "exact" }).eq("id", String(payload.id));
+  const { data, error } = await ctx.supabase.from(r.table).delete().eq("id", String(payload.id)).select(r.select);
   check(error);
-  if (!count) throw new ToolError(`That ${r.name} was already deleted or you don't have access.`);
+  const row = (data as unknown as Record<string, unknown>[] | null)?.[0];
+  if (!row) throw new ToolError(`That ${r.name.replace("_", " ")} was already deleted or you don't have access.`);
+  await r.afterDelete?.(ctx, row);
+  await logAdmin(ctx, r, "delete", String(payload.id), { label: payload.label });
   return { targetId: String(payload.id), data: { deleted: { resource: r.name, id: payload.id, label: payload.label } } };
 });
 
@@ -60,7 +69,7 @@ export function registerResourceTools(server: McpServer, ctx: McpContext, perms:
     }),
   }, async ({ resource: name, q, filters, limit, cursor }) => {
     const r = pick(name, perms);
-    let query = ctx.supabase.from(r.table).select(r.select);
+    let query = ctx.supabase.from(r.table).select(r.listSelect ?? r.select);
     if (filters && Object.keys(filters).length) {
       const allowed = z.object(r.filters ?? {}).partial().strict();
       for (const [k, v] of Object.entries(parse(allowed, filters))) query = query.eq(k, v as string);
@@ -88,32 +97,38 @@ export function registerResourceTools(server: McpServer, ctx: McpContext, perms:
 
   defineTool(server, ctx, "resource_create", {
     ...base, risk: "write", title: "Create a record",
-    description: "Create a record. data must match the resource's fields (resource_types). Workspace resources go in your personal workspace unless you pass workspace_id; ask before using a Business workspace.",
+    description: "Create a record. data must match the resource's fields (resource_types; some resources can't be created here). Workspace resources go in your personal workspace unless you pass workspace_id; ask before using a Business workspace.",
     inputSchema: z.object({ resource: nameArg, data: z.record(z.string(), z.unknown()), workspace_id: z.uuid().optional() }),
   }, async ({ resource: name, data, workspace_id }) => {
     const r = pick(name, perms);
     writable(r, perms);
-    const row: Record<string, unknown> = parse(r.fields.strict(), data);
+    if (r.create === false) throw new ToolError(`${r.title} can't be created here. See resource_types for what you can do with them.`);
+    const row = await (r.prepare ?? (async (_c, x) => x))(ctx, parse(r.fields.strict(), data), "create");
     let ws: string | undefined;
     if (r.workspaceScoped) row.workspace_id = ws = (await resolveWorkspace(ctx, workspace_id)).id;
     const { data: created, error } = await ctx.supabase.from(r.table).insert(row).select(r.select).single();
     check(error);
     const out = created as unknown as Record<string, unknown>;
+    await r.afterCreate?.(ctx, out);
+    await logAdmin(ctx, r, "create", String(out.id), { label: r.label(out) });
     return { targetId: String(out.id), workspaceId: ws, data: { resource: r.name, created: out } };
   });
 
   defineTool(server, ctx, "resource_update", {
     ...base, risk: "write", title: "Update a record",
-    description: "Change some fields of a record. Only pass the fields to change.",
+    description: "Change some fields of a record. Only pass the fields to change; resource_types lists which fields each resource lets you update.",
     inputSchema: z.object({ resource: nameArg, id: id("Record"), data: z.record(z.string(), z.unknown()) }),
   }, async ({ resource: name, id: rowId, data }) => {
     const r = pick(name, perms);
     writable(r, perms);
-    const patch = parse(r.fields.partial().strict(), data);
-    if (!Object.keys(patch).length) throw new ToolError("Pass at least one field to change.");
+    const fields = parse(updateFields(r).strict(), data);
+    if (!Object.keys(fields).length) throw new ToolError("Pass at least one field to change.");
+    const patch = r.prepare ? await r.prepare(ctx, fields, "update", rowId) : fields;
     const { data: updated, error } = await ctx.supabase.from(r.table).update(patch).eq("id", rowId).select(r.select).maybeSingle();
     check(error);
-    return { targetId: rowId, data: { resource: r.name, updated: found(updated, "Record") } };
+    const row = found(updated, "Record") as unknown as Record<string, unknown>;
+    await logAdmin(ctx, r, "update", rowId, { label: r.label(row), fields: Object.keys(fields) });
+    return { targetId: rowId, data: { resource: r.name, updated: row } };
   });
 
   defineTool(server, ctx, "resource_delete", {

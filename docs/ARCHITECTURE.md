@@ -29,7 +29,7 @@
 - Membership checks live in the non-exposed `private` schema.
 
 ## Build status
-Current plan (Nov 9): `docs/REDIAL_GROWTH_AND_AUTOMATION_PLAN.md` (Redial-led homepage and plans, the Redial setup wizard, the automation MCP).
+Current plan (Nov 9): `docs/REDIAL_GROWTH_AND_AUTOMATION_PLAN.md` (Redial-led homepage and plans, the Redial setup wizard, the automation MCP). Automation MCP: foundation and agents (phase 1) and admin CRM and operations (phase 2: 18 registry resources and the CRM, bookings, plans, reports, analytics and waitlist tools) are done.
 
 1. App shell, library, recording detail: done
 2. AI model connections (Claude, ChatGPT, Grok, Kimi K3): done

@@ -58,8 +58,8 @@ async function main() {
   await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "echo-smoke", version: "1" } });
   const list = await rpc("tools/list", {});
   const names = (list.json?.result?.tools ?? []).map((t) => t.name);
-  const plain = ["tool_search", "confirm_action", "confirm_status", "resource_types", "resource_list", "resource_get", "resource_create", "resource_update", "resource_delete"];
-  check(`tools/list (${names.length} tools)`, names.length >= 35 && names.every((n) => n.startsWith("echo_") || plain.includes(n)), names);
+  const plain = /^(tool_search|confirm_|resource_|agent_|approval_|crm_|bookings_|plans?_|document_|reports_|analytics_|waitlist_)/;
+  check(`tools/list (${names.length} tools)`, names.length >= 35 && names.every((n) => n.startsWith("echo_") || plain.test(n)), names);
   const tools = list.json?.result?.tools ?? [];
   check("every tool has a risk hint", tools.every((t) => typeof t.annotations?.readOnlyHint === "boolean"));
 
@@ -162,6 +162,28 @@ async function main() {
   check("confirm_action deletes", (await call("confirm_action", { confirmation_id: del.data.confirmation_id }, true)).ok);
   check("confirm_action can't be reused", !(await call("confirm_action", { confirmation_id: del.data.confirmation_id }, true)).ok);
   check("record gone after confirm", !(await call("resource_get", { resource: "calendar_event", id: eid }, true)).ok);
+
+  // CRM and operations (staff only).
+  if (names.includes("crm_pipeline_stages")) {
+    const stages = await call("crm_pipeline_stages", {}, true);
+    check("crm_pipeline_stages", stages.ok && stages.data.stages.length === 9, stages.data);
+    check("resource_list contact", (await call("resource_list", { resource: "contact", limit: 1 }, true)).ok);
+    check("resource_update can't move a deal stage", !(await call("resource_update", { resource: "deal", id: "00000000-0000-4000-8000-000000000000", data: { stage: "closed_won" } }, true)).ok);
+    if (names.includes("reports_run")) {
+      const rep = await call("reports_run", { kind: "pipeline_by_stage", range: "90d" }, true);
+      check("reports_run", rep.ok && Array.isArray(rep.data.rows), rep.data);
+      const series = await call("analytics_series", { metrics: ["signups"], range: "7d" }, true);
+      check("analytics_series", series.ok && series.data.series[0].points.length === 7, series.data);
+    }
+    const plan = await call("plans_create", { name: "MCP smoke test plan", template: "simple" }, true);
+    check("plans_create", plan.ok && plan.data.plan_id, plan.data);
+    if (plan.ok) {
+      const got = await call("plan_get", { plan_id: plan.data.plan_id }, true);
+      check("plan_get has the template's groups", got.ok && got.data.groups.length > 0, got.data);
+      const del = await call("resource_delete", { resource: "plan", id: plan.data.plan_id }, true);
+      check("plan deleted after confirm", del.ok && (await call("confirm_action", { confirmation_id: del.data.confirmation_id }, true)).ok);
+    }
+  }
 
   const audit = await call("audit_log_list", { limit: 100 });
   check("audit_log_list has this run's calls", audit.ok && audit.data.activity.some((a) => a.tool === "echo_folder_delete"));

@@ -5,7 +5,7 @@ import { adminAudit } from "@/lib/admin/audit";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { date, list, ref, text, uuids, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
-import { PLAN_TEMPLATES } from "@/lib/plans/templates";
+import { createPlanFromTemplate, type NewPlan } from "@/lib/plans/create";
 import { isPriority, isTaskStatus, type ChecklistItem, type Priority, type TaskStatus } from "@/lib/plans/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,32 +17,9 @@ async function guard() {
   if (!can(staff, "crm.manage") && !can(staff, "projects.manage")) throw new Error("You can view plans but not change them.");
 }
 const done = <T extends Result>(r: T, planId?: string): T => { revalidatePath("/admin/plans"); if (planId) revalidatePath(`/admin/plans/${planId}`); return r; };
-const addDays = (start: string, days: number) => { const d = new Date(`${start}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
-
-export async function createPlan(input: { name: string; template: string; description?: string; company_id?: string | null; deal_id?: string | null; owner_id?: string | null; start_date?: string; color?: string }): Promise<Result> {
+export async function createPlan(input: NewPlan & { template: string }): Promise<Result> {
   await guard();
-  const name = text(input.name, 160);
-  if (!name) return { error: "Name the plan." };
-  const tpl = PLAN_TEMPLATES.find((t) => t.id === input.template) ?? PLAN_TEMPLATES[0];
-  const start = date(input.start_date) ?? new Date().toLocaleDateString("en-CA");
-  const maxDue = Math.max(0, ...tpl.tasks.map((t) => t.due ?? 0));
-  const supabase = await createClient();
-  const { data: plan, error } = await supabase.from("plans").insert({
-    name, description: text(input.description, 5000) ?? tpl.description, color: text(input.color, 20) ?? "slate", company_id: ref(input.company_id),
-    deal_id: ref(input.deal_id), owner_id: ref(input.owner_id), start_date: start, due_date: maxDue ? addDays(start, maxDue) : null,
-  }).select("id").single();
-  if (error) return { error: error.message };
-  const { data: groups, error: gErr } = await supabase.from("plan_groups").insert(tpl.groups.map((g, i) => ({ plan_id: plan.id, name: g, position: i }))).select("id, name");
-  if (gErr) return { error: gErr.message };
-  const byName = new Map((groups ?? []).map((g) => [g.name, g.id]));
-  if (tpl.tasks.length) {
-    await supabase.from("plan_tasks").insert(tpl.tasks.map((t, i) => ({
-      plan_id: plan.id, group_id: byName.get(t.group) ?? null, title: t.title, priority: t.priority ?? "medium", position: i,
-      due_date: t.due != null ? addDays(start, t.due) : null, is_milestone: Boolean(t.milestone), assignee_id: ref(input.owner_id),
-    })));
-  }
-  await adminAudit(supabase, "plans.create", { type: "plan", id: plan.id }, { name, template: tpl.id });
-  return done({ ok: "Plan created.", id: plan.id });
+  return done(await createPlanFromTemplate(await createClient(), input));
 }
 
 export async function updatePlan(id: string, patch: { name?: string; description?: string | null; color?: string; status?: string; default_view?: string; company_id?: string | null; deal_id?: string | null; owner_id?: string | null; start_date?: string | null; due_date?: string | null }): Promise<Result> {

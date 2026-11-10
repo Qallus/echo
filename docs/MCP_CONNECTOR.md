@@ -203,14 +203,25 @@ Confirmations are stored in `mcp_confirmations`. Each one works once, within 15 
 
 **Records come from one registry.** `src/lib/mcp/registry.ts` declares each table once: the columns returned, the writable fields (matching the table's grants and checks), the filters, the search fields and the permission. The generic tools in `src/lib/mcp/tools/resources.ts` serve every resource. RLS still decides access, because every call runs as the caller. Resources a caller can't use are hidden.
 
-Resources so far:
+Resources (`src/lib/mcp/registry.ts`). Some fields are update-only or create-only, matching the table's column grants; `resource_types` lists them:
 
 | Resource | Table | Access |
 |---|---|---|
-| `contact` | `crm_contacts` | Staff: `crm.view` to read, `crm.manage` to change |
-| `company` | `crm_companies` | Staff: `crm.view` to read, `crm.manage` to change |
-| `deal` | `crm_deals` | Staff: `crm.view` to read, `crm.manage` to change |
+| `contact` | `crm_contacts` | Staff: `crm.view` to read, `crm.manage` to change. Leads are contacts with role `lead` |
+| `company` | `crm_companies` | Same (Admin → Clients) |
+| `deal` | `crm_deals` | Same. `stage` only on create; moves go through `crm_deal_move_stage` |
+| `activity` | `crm_activities` | Same. Notes, tasks and logged calls, emails, texts and meetings; only `body`, `due_at`, `done_at` change later |
+| `booking_type`, `booking` | `booking_types`, `bookings` | Same. Bookings link the contact by email and go on their timeline |
+| `event`, `event_registration` | `events`, `event_registrations` | Same |
+| `plan`, `plan_task` | `plans`, `plan_tasks` | `crm.view` to read; `crm.manage` or `projects.manage` to change |
+| `workspace_doc`, `workspace_comment` | `workspace_docs`, `workspace_comments` | `crm.view`; editing someone else's team doc needs `crm.manage` or `projects.manage` (RLS). Docs are written as plain text (`body`) |
+| `doc_folder`, `document` | `doc_folders`, `documents` | Like plans. Documents can't be uploaded here; deleting one also removes the file |
+| `business_card`, `card_lead` | `business_cards`, `card_leads` | `crm.view` for your own cards, `crm.manage` for everyone's |
+| `waitlist_entry` | `app_waitlist` | `comms.view` to read, `comms.manage` to change status (and preferences, only when the person asks) |
+| `saved_report` | `saved_reports` | `analytics.view`; only the author changes theirs |
 | `calendar_event` | `calendar_events` | Everyone, in their own workspaces |
+
+Changes to staff resources are also written to the admin audit log (`<area>.<create|update|delete>`, with `via: "mcp"`).
 
 | Tool | Risk | Does | Key inputs |
 |---|---|---|---|
@@ -224,6 +235,24 @@ Resources so far:
 | `confirm_action` | high | Runs a prepared high-risk action after the person says yes | `confirmation_id` |
 | `confirm_status` | read | pending, used or expired | `confirmation_id` |
 
+CRM and operations actions (staff, `src/lib/mcp/tools/crm.ts` and `insights.ts`). They run the same code as the dashboard (`src/lib/crm/ops.ts`, `src/lib/plans/create.ts`):
+
+| Tool | Risk | Does | Key inputs |
+|---|---|---|---|
+| `crm_pipeline_stages` | read | Stages in order, with probability, goal, actions and Next Steps | — |
+| `crm_deal_checklist` | read | A deal's Next Steps for its stage, done or not, and what blocks it | `deal_id` |
+| `crm_deal_step_set` | write | Tick or untick a Next Step | `deal_id`, `key` (`stage:step`), `done` |
+| `crm_deal_move_stage` | write | Move a deal. Moving forward is refused while required steps are open (they're listed). Probability resets; stage automations run | `deal_id`, `stage`, `won_summary?`, `lost_reason?`, `lost_notes?` |
+| `crm_lead_convert` | write | Contacts or leads → deals in New / Working (skips anyone with an open deal) | `contact_ids` |
+| `crm_import_contacts` | high | Preview of an import of up to 500 people; runs after `confirm_action` | `rows`, `role` |
+| `bookings_confirm`, `bookings_cancel` | write | Set booking status. Nothing is sent to the person | `booking_ids` |
+| `plans_create` | write | A plan from a template, with its groups and tasks | `name`, `template`, `start_date?` |
+| `plan_get` | read | A plan with its groups and tasks | `plan_id` |
+| `document_link` | read | A one-hour view link, or a 1–7 day download link (logged) | `document_id`, `download_days?` |
+| `reports_run` | read | An Admin → Reports report, or a saved one | `kind` or `saved_report_id`, `range` |
+| `analytics_series` | read | Admin → Analytics numbers over time | `metrics`, `range` |
+| `waitlist_export` | read | Waitlist counts, plus 50 people per page as CSV | `status?`, `offset` |
+
 **Two-step sign-in and the connector.** Supabase OAuth access tokens carry the `aal` level of the sign-in that approved them. So when two-step is required for staff (Admin → Settings → Security), the consent page sends staff to two-step first and then back. That way the connection's tokens are `aal2` and the staff tools appear.
 
 To add a resource:
@@ -233,7 +262,7 @@ To add a resource:
 
 **AI agents** (Paperclip, Hermes, OpenClaw, Herdr, ...) connect with their own `rdk_` key instead of OAuth. Their permissions and limits are set in Admin → AI → Agents, and high-risk actions wait for a person's approval. See `docs/AGENTS.md`.
 
-Later phases add more resources and action tools: CRM, communications, Redial, users, billing, the user dashboard, content and integrations. See the plan.
+Later phases add more resources and action tools: communications, Redial, users, billing, the user dashboard, content and integrations. See the plan.
 
 ---
 

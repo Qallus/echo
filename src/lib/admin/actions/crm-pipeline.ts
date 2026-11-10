@@ -1,12 +1,11 @@
 "use server";
 
 import { adminAudit } from "@/lib/admin/audit";
-import { queueAutomations } from "@/lib/comms/automations";
 import { requireStaff } from "@/lib/admin/guard";
-import { STAGES, isNextStepType, isStage, newId, type CustomField, type ExtraStep } from "@/lib/crm/deals";
+import { isNextStepType, isStage, newId, type CustomField, type ExtraStep } from "@/lib/crm/deals";
 import { parseStageConfig, type StageConfig } from "@/lib/crm/guidance";
-import { contactName } from "@/lib/crm/types";
-import { cents, date, list, ref, refresh, text, uuids, type Result } from "@/lib/crm/validate";
+import { contactsToDeals } from "@/lib/crm/ops";
+import { cents, date, list, ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
@@ -93,47 +92,12 @@ export async function saveStageConfig(config: StageConfig): Promise<Result> {
   return { ok: "Pipeline stages updated." };
 }
 
-// Contacts or leads -> opportunities. Links each deal to the existing contact
-// (never copies the person), carries over source, owner and notes, skips anyone
-// who already has an open deal, and marks them prospect / in pipeline.
+// Contacts or leads -> opportunities (see contactsToDeals).
 export async function addToPipeline(contactIds: string[]): Promise<Result & { created?: number; dealIds?: string[] }> {
   await requireStaff("crm.manage");
-  const ids = uuids(contactIds);
-  if (!ids.length) return { error: "Choose at least one contact." };
-  const supabase = await createClient();
-  const [{ data: contacts }, { data: open }] = await Promise.all([
-    supabase.from("crm_contacts").select("id, first_name, last_name, company_id, source, owner_id, notes, interest, role, company:crm_companies(name)").in("id", ids),
-    supabase.from("crm_deals").select("id, contact_id").in("contact_id", ids).not("stage", "in", "(closed_won,closed_lost)"),
-  ]);
-  const busy = new Set((open ?? []).map((d) => d.contact_id));
-  const fresh = (contacts ?? []).filter((c) => !busy.has(c.id));
-  const close = new Date(Date.now() + 30 * 86400_000).toLocaleDateString("en-CA");
-  const rows = fresh.map((c) => {
-    const company = (c.company as unknown as { name: string } | null)?.name;
-    const person = contactName(c);
-    return {
-      title: company ? `${company}: ${person}` : person, stage: "new_working", probability: STAGES.new_working.prob,
-      contact_id: c.id, company_id: c.company_id, owner_id: c.owner_id, source: c.source ?? "Existing contact",
-      expected_close: close, notes: [c.notes, c.interest && `Interest: ${c.interest}`].filter(Boolean).join("\n\n") || null,
-    };
-  });
-  let dealIds: string[] = [];
-  if (rows.length) {
-    const { data, error } = await supabase.from("crm_deals").insert(rows).select("id");
-    if (error) return { error: error.message };
-    dealIds = (data ?? []).map((d) => d.id);
-    const promote = fresh.filter((c) => c.role === "contact" || c.role === "lead").map((c) => c.id);
-    await supabase.from("crm_contacts").update({ lead_status: "in_pipeline" }).in("id", fresh.map((c) => c.id));
-    if (promote.length) await supabase.from("crm_contacts").update({ role: "prospect" }).in("id", promote);
-    await queueAutomations(supabase, "added_to_pipeline", dealIds.map((dealId) => ({ dealId })));
-    await adminAudit(supabase, "crm.pipeline.add", { type: "crm_deal", id: dealIds[0] }, { contacts: fresh.length, deals: dealIds });
-  }
+  const result = await contactsToDeals(await createClient(), contactIds);
   refresh();
-  const skipped = (contacts ?? []).length - fresh.length;
-  return {
-    ok: `${rows.length ? `${rows.length} added to the pipeline.` : "Nothing new added."}${skipped ? ` ${skipped} already had an open deal.` : ""}`,
-    created: rows.length, dealIds, id: dealIds[0],
-  };
+  return result;
 }
 
 // A per-deal Next Step, added from the workspace.

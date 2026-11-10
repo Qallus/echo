@@ -1,34 +1,14 @@
 import Link from "next/link";
 import { AdminPage, Section } from "@/components/admin/admin-ui";
-import { BarChart, type Unit } from "@/components/admin/bar-chart";
+import { BarChart } from "@/components/admin/bar-chart";
 import { can, requireStaff } from "@/lib/admin/guard";
-import type { Permission } from "@/lib/admin/permissions";
+import { METRIC_GROUPS as GROUPS } from "@/lib/admin/metrics";
 import { RANGES, isRange, rangeDates } from "@/lib/admin/ranges";
 import { loadOrganization } from "@/lib/settings/organization";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Analytics · Admin · Echo" };
-
-type Metric = { id: string; title: string; unit: Unit; needs?: Permission };
-const GROUPS: { title: string; metrics: Metric[] }[] = [
-  { title: "Growth and usage", metrics: [
-    { id: "signups", title: "Signups", unit: "count" }, { id: "active_users", title: "Users who recorded", unit: "count" },
-    { id: "recordings", title: "Recordings", unit: "count" }, { id: "minutes", title: "Minutes recorded", unit: "minutes" },
-  ] },
-  { title: "Revenue", metrics: [
-    { id: "revenue", title: "Revenue", unit: "money", needs: "billing.view" }, { id: "orders", title: "Paid orders", unit: "count", needs: "billing.view" },
-  ] },
-  { title: "Sales pipeline", metrics: [
-    { id: "leads", title: "New leads", unit: "count", needs: "crm.view" }, { id: "deals_created", title: "Deals added", unit: "count", needs: "crm.view" },
-    { id: "deals_won", title: "Deals won", unit: "count", needs: "crm.view" }, { id: "won_value", title: "Won value", unit: "money", needs: "crm.view" },
-  ] },
-  { title: "Communications", metrics: [
-    { id: "calls", title: "Calls", unit: "count", needs: "comms.view" }, { id: "texts", title: "Texts", unit: "count", needs: "comms.view" },
-    { id: "emails", title: "Emails sent", unit: "count", needs: "comms.view" }, { id: "inbound", title: "Inbox messages", unit: "count", needs: "comms.view" },
-  ] },
-  { title: "AI", metrics: [{ id: "ai_cost", title: "AI cost", unit: "money", needs: "ai.view" }] },
-];
 
 // Real numbers over time, in the organization's time zone.
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {

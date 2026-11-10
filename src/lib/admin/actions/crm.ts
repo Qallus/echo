@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { adminAudit } from "@/lib/admin/audit";
 import { queueAutomations } from "@/lib/comms/automations";
 import { geocode } from "@/lib/crm/geocode";
+import { moveDealStage } from "@/lib/crm/ops";
 import { requireStaff } from "@/lib/admin/guard";
 import { STAGES } from "@/lib/crm/deals";
 import { isActivityKind, isCompanyStatus, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
@@ -146,19 +147,9 @@ export async function saveDeal(id: string | null, input: DealInput): Promise<Res
 // carry the won summary or the lost reason and notes.
 export async function moveDeal(id: string, stage: DealStage, outcome?: { won_summary?: string; lost_reason?: string; lost_notes?: string }): Promise<Result> {
   await requireStaff("crm.manage");
-  if (!isUuid(id) || !isStage(stage)) return { error: "Not found." };
-  const patch: Record<string, unknown> = { stage, probability: STAGES[stage].prob };
-  if (stage === "closed_won" && outcome) patch.won_summary = text(outcome.won_summary, 2000);
-  if (stage === "closed_lost" && outcome) { patch.lost_reason = text(outcome.lost_reason, 500); patch.lost_notes = text(outcome.lost_notes, 2000); }
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("crm_deals").update(patch).eq("id", id).select("title").maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Not found." };
-  await adminAudit(supabase, "crm.deal.stage", { type: "crm_deal", id }, { title: data.title, stage });
-  await queueAutomations(supabase, "stage_changed", [{ dealId: id, stage }]);
-  if (stage === "closed_won" || stage === "closed_lost") await queueAutomations(supabase, stage, [{ dealId: id }]);
-  refresh();
-  return { ok: `Moved to ${STAGES[stage].label}.` };
+  const result = await moveDealStage(await createClient(), id, stage, outcome);
+  if (result.ok) refresh();
+  return result;
 }
 
 export async function deleteDeal(id: string): Promise<Result> {

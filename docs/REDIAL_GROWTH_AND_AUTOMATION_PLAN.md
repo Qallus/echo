@@ -207,7 +207,7 @@ Each phase includes any migrations, the tools, an RLS test, a smoke test and doc
 - Admin UI: agents, keys, limits, approvals
 - The aal2 fix
 
-**Phase 2: admin CRM and operations** (registry resources plus a few actions)
+**Phase 2: admin CRM and operations** (registry resources plus a few actions). **Done** (Nov 9). Built as resources `contact`, `company`, `deal`, `activity`, `booking_type`, `booking`, `event`, `event_registration`, `plan`, `plan_task`, `workspace_doc`, `workspace_comment`, `doc_folder`, `document`, `business_card`, `card_lead`, `waitlist_entry`, `saved_report`, plus `crm_deal_checklist` and `crm_deal_step_set` (so agents can clear a stage's Next Steps), `plans_create`, `plan_get` and `document_link`. Plan groups are read through `plan_get`; document uploads stay in the dashboard.
 - Resources: contacts, companies, leads, deals, pipeline stages, clients, booking types, bookings, events, plans, plan tasks, workspace docs and comments, documents and folders, business cards and card leads, waitlist entries, saved reports.
 - Actions:
   - `crm_lead_convert` (W): lead to deal
@@ -337,7 +337,7 @@ Steps alternate A → B → C. Each one is built, checked, committed and pushed,
 
 Then:
 - A1b: the remaining homepage sections, `/compatibility`, `/redial/business`, the "Call DJ yourself" line.
-- MCP phases 2–9, alternating with homepage and onboarding follow-ups.
+- MCP phases 2–9, alternating with homepage and onboarding follow-ups. Phase 2 is done.
 
 ## How each step is checked
 - **Code:** type-check, lint and a production build. After any package change, `npm run lock:linux`.
