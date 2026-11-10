@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { AudioLines, Check } from "lucide-react";
+import { AudioLines, Check, Info } from "lucide-react";
 import { SETUP_STEPS } from "@/lib/redial/setup";
 import { cn } from "@/lib/utils";
 
 // The frame around each setup step: progress across the top (steps you've
 // reached are links), and a way out.
-export function SetupShell({ step, reached, children }: { step: number; reached: number; children: React.ReactNode }) {
+export function SetupShell({ step, reached, note, children }: { step: number; reached: number; note?: string | null; children: React.ReactNode }) {
   const current = SETUP_STEPS.find((s) => s.n === step)!;
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:py-12">
@@ -28,6 +28,7 @@ export function SetupShell({ step, reached, children }: { step: number; reached:
           );
         })}
       </ol>
+      {note && <p className="mt-6 flex gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm"><Info className="mt-0.5 size-4 shrink-0" />{note}</p>}
       <p className="mt-8 text-sm text-muted-foreground">Step {step} of {SETUP_STEPS.length}</p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{current.title}</h1>
       <div className="mt-6">{children}</div>

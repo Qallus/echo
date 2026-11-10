@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { PhoneIncoming } from "lucide-react";
 import { CallsView } from "@/components/redial/calls-view";
 import { getMyProfile, requireUser } from "@/lib/data";
@@ -15,7 +15,8 @@ export const metadata = { title: "Calls · Echo" };
 export default async function CallsPage({ searchParams }: { searchParams: Promise<{ line?: string; call?: string; tab?: string }> }) {
   const user = await requireUser();
   const [{ line: lineId, call, tab }, lines, profile] = await Promise.all([searchParams, myLines(), getMyProfile()]);
-  if (!lines.length) notFound();
+  // No line yet: set Redial up first.
+  if (!lines.length) redirect("/setup");
   const line = lines.find((l) => l.id === lineId) ?? lines[0];
   const [detail, usage] = await Promise.all([lineDetail(line.id, line.access), line.access.owner ? createClient().then((s) => redialUsage(s, user.id)) : Promise.resolve(null)]);
   const pretty = line.number.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");

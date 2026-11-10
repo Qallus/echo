@@ -4,6 +4,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { LoadSampleButton } from "@/components/load-sample-button";
 import { QuickStart } from "@/components/recorder/quick-start";
 import { RecordingsTable } from "@/components/recordings-table";
+import { RedialSetupCard } from "@/components/redial/setup/setup-card";
 import { listFolders, listRecordings, listWorkspaces } from "@/lib/data";
 
 const highlights = [
@@ -18,6 +19,7 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-14 px-6 py-10">
+      <RedialSetupCard />
       <section className="space-y-4">
         <div className="flex items-end justify-between">
           <h1 className="text-3xl font-semibold tracking-tight">Recent files</h1>

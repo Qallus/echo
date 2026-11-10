@@ -190,7 +190,9 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
           <SidebarMenu>
             {main.map((i) => <NavItem key={i.href} {...i} />)}
             {phoneLine && <NavItem href="/phone" label="Phone" icon={Phone} exact />}
-            {callsUnread !== null && <NavItem href="/calls" label="Calls" icon={PhoneIncoming} n={callsUnread || undefined} />}
+            {callsUnread !== null
+              ? <NavItem href="/calls" label="Calls" icon={PhoneIncoming} n={callsUnread || undefined} />
+              : <NavItem href="/setup" label="Set up Redial" icon={PhoneIncoming} />}
           </SidebarMenu>
         </SidebarGroup>
         {workspaces.map((ws) => {

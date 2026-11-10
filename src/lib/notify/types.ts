@@ -7,6 +7,7 @@ export const NOTIFICATION_TYPES = [
   { type: "summary_ready", label: "Summary added", desc: "A summary was written for one of your recordings." },
   { type: "member_joined", label: "Teammate joined", desc: "Someone joined a Business workspace you manage." },
   { type: "recording_shared", label: "Recording shared with you", desc: "Someone shared one of their recordings with you." },
+  { type: "redial_call", label: "Screened call", desc: "Your Redial assistant answered a call on your line." },
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]["type"] | "test";

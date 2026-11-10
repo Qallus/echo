@@ -20,7 +20,7 @@ export async function assignRedialLine(email: string, rawNumber: string, label: 
   if (error) return { error: error.code === "23505" ? "That number is already assigned." : error.message };
   await adminAudit(supabase, "redial.line.assign", { type: "redial_line", id: data as string }, { email: email.trim().toLowerCase(), number });
   revalidatePath("/admin/redial");
-  return { ok: "Line assigned. The member sees Calls in their sidebar." };
+  return { ok: "Line assigned. Their setup answers were applied, and they see Calls in their sidebar." };
 }
 
 export async function removeRedialLine(id: string): Promise<Result> {
@@ -44,4 +44,15 @@ export async function setRedialRouting(id: string, on: boolean): Promise<Result>
   await adminAudit(supabase, "redial.line.routing", { type: "redial_line", id }, { live_routing: on });
   revalidatePath("/admin/redial");
   return { ok: on ? "Conference routing on." : "Conference routing off." };
+}
+
+// Setup requests: ask the member for more information (they see the note),
+// or put it back in the queue. Assigning a number makes it active.
+export async function setRedialSetupStatus(userId: string, status: "needs_info" | "submitted", note: string): Promise<Result> {
+  await requireStaff("users.manage");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_redial_setup_status", { p_user: userId, p_status: status, p_note: note });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/redial");
+  return { ok: status === "needs_info" ? "Sent back to the member with your note." : "Back in the queue." };
 }

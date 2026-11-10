@@ -10,11 +10,11 @@ import { StepActions } from "./step-actions";
 // Step 3: how calls reach Redial. Keeping your number means forwarding on
 // your carrier; this shows the code you'll dial once your Redial number is
 // ready (or where to set it when there's no code).
-export function RouteStep({ initial, carrierId, lineType }: { initial?: Partial<RouteAnswers>; carrierId?: string; lineType?: string }) {
+export function RouteStep({ initial, carrierId, lineType, redialNumber }: { initial?: Partial<RouteAnswers>; carrierId?: string; lineType?: string; redialNumber?: string | null }) {
   const [method, setMethod] = useState(initial?.method ?? "missed");
   const c = carrier(carrierId);
   const mobile = !lineType || lineType === "mobile";
-  const code = mobile && (method === "missed" || method === "all") ? forwardingCode(carrierId, method) : null;
+  const code = mobile && (method === "missed" || method === "all") ? forwardingCode(carrierId, method, redialNumber) : null;
 
   return (
     <div className="space-y-6">
@@ -31,7 +31,7 @@ export function RouteStep({ initial, carrierId, lineType }: { initial?: Partial<
         ) : code ? (
           <div className="space-y-2">
             <p className="flex gap-2 font-medium"><PhoneForwarded className="mt-0.5 size-4 shrink-0" />What you&apos;ll do on your {c?.label ?? "phone"}</p>
-            <p className="text-muted-foreground">Once your Redial number is ready, open your phone app, dial this and press Call:</p>
+            <p className="text-muted-foreground">{code.ready ? "Open your phone app, dial this and press Call:" : "Once your Redial number is ready, open your phone app, dial this and press Call:"}</p>
             <p className="font-mono text-base font-semibold tabular-nums">{code.on}</p>
             <p className="text-muted-foreground">To turn it off later, dial <span className="font-mono">{code.off}</span>. Codes can differ by plan; your carrier can confirm.</p>
             {c?.note && <p className="text-muted-foreground">{c.note}</p>}

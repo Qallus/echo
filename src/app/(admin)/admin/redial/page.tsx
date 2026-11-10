@@ -7,6 +7,7 @@ import { redialUsage, type RedialUsage } from "@/lib/redial/usage";
 import { siteUrl } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { AssignLine, RemoveLine, RoutingSwitch } from "./line-forms";
+import { SetupQueue, type SetupRow } from "./setup-queue";
 
 export const metadata = { title: "Redial · Admin · Echo" };
 
@@ -18,8 +19,8 @@ const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$
 export default async function RedialAdminPage() {
   const staff = await requireStaff("users.view");
   const supabase = await createClient();
-  const [{ data, error }, gw, { data: routing }] = await Promise.all([
-    supabase.rpc("admin_redial_lines"), gatewayConfig(), supabase.from("redial_lines").select("id, live_routing"),
+  const [{ data, error }, gw, { data: routing }, { data: setups }] = await Promise.all([
+    supabase.rpc("admin_redial_lines"), gatewayConfig(), supabase.from("redial_lines").select("id, live_routing"), supabase.rpc("admin_redial_setups"),
   ]);
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Row[];
@@ -29,7 +30,8 @@ export default async function RedialAdminPage() {
 
   return (
     <AdminPage title="Redial" description="AI call screening lines. Call content stays private to each member.">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatCard label="Waiting for a number" value={((setups ?? []) as SetupRow[]).filter((x) => x.status === "submitted").length} />
         <StatCard label="Lines" value={rows.length} />
         <StatCard label="Calls (30 days)" value={rows.reduce((n, r) => n + Number(r.calls_30d), 0)} />
         <StatCard label="Voice gateway" value={gw.ready ? "Set up" : "Not set up"} hint={gw.ready ? gw.url : "Unknown callers go to voicemail until it is"} />
@@ -42,6 +44,10 @@ export default async function RedialAdminPage() {
           <Link href="/admin/settings?tab=integrations" className="underline">Settings → Integrations</Link>.
         </p>
       )}
+
+      <Section title="Setup requests" description="Members' answers from the setup wizard. Assigning a number applies them to the new line.">
+        <SetupQueue rows={((setups ?? []) as SetupRow[]).filter((x) => x.status !== "active")} manage={manage} />
+      </Section>
 
       <Section title="Lines">
         {rows.length === 0 ? <p className="rounded-xl border p-6 text-center text-sm text-muted-foreground">No lines yet.</p> : (
