@@ -23,6 +23,7 @@ export const CAPABILITIES = [
   { id: "manage_directory", label: `${FEATURES.directory.name}: edit the transfer list`, live: false },
   { id: "dial_custom_destination", label: `${FEATURES.directory.name}: transfer to a one-time number`, live: false },
   { id: "mirror", label: `${FEATURES.mirror.name}: get suggestions during calls`, live: false },
+  { id: "manage_flows", label: "Flow Studio: edit phone menus, extensions and call flows", live: true },
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number]["id"];
 export const SHAREABLE = CAPABILITIES.filter((c) => !c.live);

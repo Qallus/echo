@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
+    "test": "node --test \"src/**/*.test.ts\"",
     "lint": "eslint",
     "email:build": "node scripts/email-templates.mjs",
     "email:push": "node --env-file=.env.local scripts/email-templates.mjs --push",
