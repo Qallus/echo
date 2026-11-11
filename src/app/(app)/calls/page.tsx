@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { PhoneIncoming } from "lucide-react";
+import { Phone, PhoneIncoming, Workflow } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { CallsView } from "@/components/redial/calls-view";
 import { getMyProfile, requireUser } from "@/lib/data";
 import { lineDetail, myLines } from "@/lib/redial/data";
@@ -29,6 +30,10 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-muted-foreground">
             Your assistant answers <span className="font-medium text-foreground">{pretty}</span>, screens callers and takes messages.
           </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {line.access.owner && <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/calls/phones" />}><Phone /> Phones</Button>}
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/call-tree" />}><Workflow /> Call Tree</Button>
         </div>
         {lines.length > 1 && (
           <nav aria-label="Lines" className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">

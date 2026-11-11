@@ -328,7 +328,7 @@ Each phase includes any migrations, the tools, an RLS test, a smoke test and doc
 Redial as a full phone line: Redial Home Phone (landline replacement) and Redial Business Phone (desk phones and extensions), with DJ screening built in. Desk, cordless and Wi-Fi SIP phones (Grandstream WP826, Yealink, Poly) register to a Twilio SIP Domain and set themselves up.
 
 - **P1 (done):** `/home-phone` and `/business-phone` pages (drawn phones, how it works, supported phones, comparison tables, plan comparison, 911 notice, FAQ topic `phones`); `catalog_products.phones` and the two phone plans; a Phone service row on `/pricing`; nav, footer and `/compatibility` links. Supported phones live in `src/lib/redial/phone-models.ts`.
-- **P2:** `redial_devices`, the SIP Domain and credentials (`src/lib/comms/sip.ts`), a Phones tab in Calls, the auto-setup route `/api/provision/[token]/[file]`, and desk phones ringing with the mobile in `ringOwner()`.
+- **P2 (built 2026-11-11):** `redial_devices` (migration `20261111150000_redial_devices.sql`), the SIP domain and per-phone logins (`src/lib/comms/sip.ts`, Admin → Redial → Set up desk phones), the Phones page `/calls/phones`, auto-setup `/api/provision/[token]/[file]` (Grandstream, Yealink, Poly), desk phones ringing with the mobile (`ringOwner()` `<Sip>` legs), and calls out from desk phones (`/api/webhooks/twilio/redial/sip`, caller ID is the line's number, extensions, 911 straight out). The 911 address registration is still P3.
 - **P3:** calling out from desk phones (`twilio/redial/sip`), 911 addresses registered with Twilio (required before phone service starts), number porting requests, and wizard hooks.
 
 ## Order of work

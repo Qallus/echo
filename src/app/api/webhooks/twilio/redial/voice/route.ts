@@ -1,6 +1,6 @@
 import { e164, twiml, verifyTwilio } from "@/lib/comms/twilio";
 import { callToken, gatewayConfig } from "@/lib/redial/gateway";
-import { conference, conferenceName, ringOwner, stream, voicemail } from "@/lib/redial/twiml";
+import { conference, conferenceName, lineSipUris, ringOwner, stream, voicemail } from "@/lib/redial/twiml";
 import { lineFlow, startFlowRun } from "@/lib/flows/runner";
 import { decide, type Line } from "@/lib/redial/types";
 import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
@@ -24,7 +24,9 @@ export async function POST(req: Request) {
 
   const from = e164(p.From);
   const { data: entries } = from ? await db.from("redial_list_entries").select("number, kind").eq("line_id", line.id) : { data: [] };
-  const decision = decide(line, from, entries ?? []);
+  // Desk phones count as somewhere to ring, like the member's own number.
+  const sipUris = await lineSipUris(db, line.id);
+  const decision = decide({ ...line, forward_to: line.forward_to ?? (sipUris.length ? "sip" : null) }, from, entries ?? []);
 
   // A published call tree answers everyone except blocked callers and VIPs.
   const vip = Boolean(from && (entries ?? []).some((e) => e.number === from && e.kind === "vip"));
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
 
   switch (action) {
     case "block": return twiml(`<Reject reason="busy"/>`);
-    case "forward": return twiml(ringOwner(line, call.id, false));
+    case "forward": return twiml(ringOwner(line, call.id, false, sipUris));
     case "screen": {
       if (line.live_routing && gw.aiApp) {
         const { error: e } = await db.from("redial_live_sessions").upsert(

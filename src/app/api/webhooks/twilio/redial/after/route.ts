@@ -1,6 +1,6 @@
 import { twiml, verifyTwilio } from "@/lib/comms/twilio";
 import { isUuid } from "@/lib/data";
-import { ringOwner, voicemail } from "@/lib/redial/twiml";
+import { lineSipUris, ringOwner, voicemail } from "@/lib/redial/twiml";
 import type { Line } from "@/lib/redial/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -18,9 +18,10 @@ export async function POST(req: Request) {
   const line = call?.line as unknown as Line | null;
   if (!call || !line) return twiml("<Hangup/>");
 
-  if (call.connect_requested && line.allow_connect && line.forward_to && !line.paused) {
+  const sipUris = call.connect_requested ? await lineSipUris(db, line.id) : [];
+  if (call.connect_requested && line.allow_connect && (line.forward_to || sipUris.length) && !line.paused) {
     await db.from("redial_calls").update({ status: "connecting" }).eq("id", id);
-    return twiml(ringOwner(line, id, true));
+    return twiml(ringOwner(line, id, true, sipUris));
   }
   if (call.status === "screening" && !call.summary && !call.message) {
     await db.from("redial_calls").update({ reason: "The assistant couldn't take the call; voicemail instead" }).eq("id", id);

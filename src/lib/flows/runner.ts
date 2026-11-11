@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { xml } from "@/lib/comms/twilio";
+import { phoneNumber, xml } from "@/lib/comms/twilio";
 import { siteUrl, toE164 } from "@/lib/notify/senders";
 import { assistantTwiml, VOICEMAIL_PROMPT } from "@/lib/redial/screen";
 import { redialUrl, voicemail } from "@/lib/redial/twiml";
@@ -20,8 +20,10 @@ const MAX_HOPS = 25;
 const MAX_TRIES = 2;
 const BUCKET = "studio-audio";
 
-type Run = { id: string; flow_id: string; version_id: string | null; line_id: string; call_id: string; call_sid: string; vars: Vars; current_node: string | null };
-type Ctx = { db: SupabaseClient; run: Run; flow: Flow; ownerId: string; line: Line; seq: number };
+type Run = { id: string; flow_id: string; version_id: string | null; line_id: string | null; call_id: string | null; call_sid: string; vars: Vars; current_node: string | null };
+// `test`: a browser test call of the draft (no version). AI, voicemail and
+// callbacks are stood in for; nothing is saved to the line's calls.
+type Ctx = { db: SupabaseClient; run: Run; flow: Flow; ownerId: string; line: Line; seq: number; test: boolean };
 
 const stepUrl = (run: string, node: string, ev: string, extra = "") => siteUrl(`/api/webhooks/twilio/flow/step?run=${run}&node=${encodeURIComponent(node)}&ev=${ev}${extra}`);
 const hook = (run: string, node: string, ev: string, extra = "") => xml(stepUrl(run, node, ev, extra));
@@ -51,22 +53,53 @@ export async function startFlowRun(db: SupabaseClient, f: { id: string; owner_id
     console.error("[call tree] start", error?.message);
     return assistantTwiml(db, line, call.id, call.sid);
   }
-  const ctx: Ctx = { db, run: run as Run, flow, ownerId: f.owner_id, line, seq: 0 };
+  const ctx: Ctx = { db, run: run as Run, flow, ownerId: f.owner_id, line, seq: 0, test: false };
   return finish(ctx, await advance(ctx, flow.start));
+}
+
+// The line a test call uses: the owner's first line (so extensions and the
+// Directory work), or a stand-in on the platform number.
+async function testLine(db: SupabaseClient, ownerId: string, name: string): Promise<Line> {
+  const { data } = await db.from("redial_lines").select("*").eq("owner_id", ownerId).order("created_at").limit(1).maybeSingle<Line>();
+  return data ?? ({ id: "", owner_id: ownerId, label: name, number: (await phoneNumber()) ?? "", forward_to: null, live_routing: false } as unknown as Line);
+}
+
+async function loadDraft(db: SupabaseClient, flowId: string): Promise<{ flow: Flow; ownerId: string } | null> {
+  const { data } = await db.from("call_flows").select("owner_id, draft").eq("id", flowId).maybeSingle();
+  const parsed = data ? flowSchema.safeParse(data.draft) : null;
+  return parsed?.success && data ? { flow: parsed.data, ownerId: data.owner_id } : null;
+}
+
+// A browser test call of a call tree's current draft.
+export async function startTestRun(db: SupabaseClient, flowId: string, callSid: string): Promise<string> {
+  const d = await loadDraft(db, flowId);
+  if (!d) return "<Say>That call tree couldn't be loaded.</Say><Hangup/>";
+  const line = await testLine(db, d.ownerId, d.flow.name);
+  const vars = emptyVars({ from: "test", callerName: "Test call", to: line.number }, { name: line.label, number: line.number });
+  const { data: run, error } = await db.from("call_flow_runs").insert({
+    flow_id: flowId, version_id: null, line_id: line.id || null, call_id: null, call_sid: callSid, from_number: "Test call", vars,
+  }).select("id, flow_id, version_id, line_id, call_id, call_sid, vars, current_node").single();
+  if (error || !run) return "<Say>The test call couldn't start.</Say><Hangup/>";
+  const ctx: Ctx = { db, run: run as Run, flow: d.flow, ownerId: d.ownerId, line, seq: 0, test: true };
+  return finish(ctx, `<Say>Test call of ${xml(d.flow.name)}.</Say>${await advance(ctx, d.flow.start)}`);
 }
 
 // Twilio came back from a caller-facing block (`ev` says which kind).
 export async function stepFlowRun(db: SupabaseClient, runId: string, nodeId: string, ev: string, p: Record<string, string>, extra: URLSearchParams): Promise<string> {
   const { data: run } = await db.from("call_flow_runs").select("id, flow_id, version_id, line_id, call_id, call_sid, vars, current_node").eq("id", runId).maybeSingle();
-  if (!run?.version_id || !run.line_id) return "<Hangup/>";
-  const [{ data: line }, { data: flowRow }, flow, { count }] = await Promise.all([
-    db.from("redial_lines").select("*").eq("id", run.line_id).maybeSingle<Line>(),
-    db.from("call_flows").select("owner_id").eq("id", run.flow_id).maybeSingle(),
-    loadVersion(db, run.version_id),
+  if (!run) return "<Hangup/>";
+  const test = !run.version_id;
+  const [{ data: flowRow }, flow, { count }] = await Promise.all([
+    db.from("call_flows").select("owner_id, name").eq("id", run.flow_id).maybeSingle(),
+    run.version_id ? loadVersion(db, run.version_id) : loadDraft(db, run.flow_id).then((d) => d?.flow ?? null),
     db.from("call_flow_run_steps").select("id", { count: "exact", head: true }).eq("run_id", runId),
   ]);
-  if (!line || !flowRow || !flow) return "<Hangup/>";
-  const ctx: Ctx = { db, run: run as Run, flow, ownerId: flowRow.owner_id, line, seq: count ?? 0 };
+  if (!flowRow || !flow) return "<Hangup/>";
+  const line = run.line_id
+    ? (await db.from("redial_lines").select("*").eq("id", run.line_id).maybeSingle<Line>()).data
+    : test ? await testLine(db, flowRow.owner_id, flowRow.name) : null;
+  if (!line) return "<Hangup/>";
+  const ctx: Ctx = { db, run: run as Run, flow, ownerId: flowRow.owner_id, line, seq: count ?? 0, test };
   const node = flow.nodes.find((n) => n.id === nodeId);
   if (!node) return finish(ctx, await unconnected(ctx));
   return finish(ctx, await resume(ctx, node, ev, p, extra));
@@ -135,16 +168,23 @@ async function advance(ctx: Ctx, start: string | undefined, hops = 0): Promise<s
   }
   console.error("[call tree] too many steps without the caller", ctx.run.id);
   await complete(ctx, "failed");
-  return `<Say>Sorry, something went wrong.</Say>${voicemail(ctx.run.call_id, VOICEMAIL_PROMPT)}`;
+  return `<Say>Sorry, something went wrong.</Say>${lineVoicemail(ctx, VOICEMAIL_PROMPT)}`;
 }
+
+const TEST_AI = "<Say>This is where your AI assistant takes the call. The test call ends here.</Say><Hangup/>";
+const testVoicemail = (prompt = "") => `${prompt || "<Say>This is where callers leave a message.</Say>"}<Record maxLength="20" playBeep="true" trim="trim-silence"/><Say>On a real call, that message would be saved and transcribed. Goodbye.</Say><Hangup/>`;
+
+// The AI assistant and voicemail, or their stand-ins on a test call.
+const assistant = (ctx: Ctx) => (ctx.test ? Promise.resolve(TEST_AI) : assistantTwiml(ctx.db, ctx.line, ctx.run.call_id!, ctx.run.call_sid));
+const lineVoicemail = (ctx: Ctx, prompt: string) => (ctx.test ? testVoicemail() : voicemail(ctx.run.call_id!, prompt));
 
 // An output with nothing connected: the call tree's fallback setting.
 async function unconnected(ctx: Ctx): Promise<string> {
   const mode = ctx.flow.settings.onUnconnected;
   if (mode === "goodbye") { await complete(ctx); return "<Say>Thanks for calling. Goodbye.</Say><Hangup/>"; }
   await complete(ctx);
-  if (mode === "voicemail") return voicemail(ctx.run.call_id, VOICEMAIL_PROMPT);
-  return assistantTwiml(ctx.db, ctx.line, ctx.run.call_id, ctx.run.call_sid);
+  if (mode === "voicemail") return lineVoicemail(ctx, VOICEMAIL_PROMPT);
+  return assistant(ctx);
 }
 
 type Prompt = { audioId?: string; text?: string } | undefined;
@@ -187,11 +227,12 @@ async function enter(ctx: Ctx, node: FlowNode): Promise<string> {
     case "connect": return dialTargets(ctx, node, 0);
     case "voicemail": {
       const prompt = (await promptTwiml(ctx, cfg.prompt as Prompt)) || `<Say>${xml(VOICEMAIL_PROMPT)}</Say>`;
-      return `${prompt}<Record maxLength="${Number(cfg.maxSeconds) || 120}" playBeep="true" trim="trim-silence" action="${hook(run, node.id, "record")}" recordingStatusCallback="${xml(redialUrl("recording", ctx.run.call_id))}" recordingStatusCallbackEvent="completed"/>`;
+      if (ctx.test) { await logStep(ctx, node, "recorded", { test: true }); await complete(ctx); return testVoicemail(prompt); }
+      return `${prompt}<Record maxLength="${Number(cfg.maxSeconds) || 120}" playBeep="true" trim="trim-silence" action="${hook(run, node.id, "record")}" recordingStatusCallback="${xml(redialUrl("recording", ctx.run.call_id!))}" recordingStatusCallbackEvent="completed"/>`;
     }
     case "callback": {
       const from = ctx.run.vars.call.from;
-      await ctx.db.from("redial_callbacks").insert({
+      if (!ctx.test && ctx.line.id) await ctx.db.from("redial_callbacks").insert({
         owner_id: ctx.line.owner_id, line_id: ctx.line.id, call_id: ctx.run.call_id, number: from || null, name: ctx.run.vars.call.callerName || null,
         due_at: new Date().toISOString(), timezone: ctx.flow.settings.timezone, note: `Callback requested in the call tree "${ctx.flow.name}".`,
       });
@@ -202,7 +243,7 @@ async function enter(ctx: Ctx, node: FlowNode): Promise<string> {
     case "ai":
       await logStep(ctx, node, "handoff");
       await complete(ctx);
-      return assistantTwiml(ctx.db, ctx.line, ctx.run.call_id, ctx.run.call_sid);
+      return assistant(ctx);
     case "hangup":
       await logStep(ctx, node, null);
       await complete(ctx);
@@ -307,9 +348,10 @@ async function resume(ctx: Ctx, node: FlowNode, ev: string, p: Record<string, st
         await logStep(ctx, node, "extension_voicemail", { status, extension: e?.name });
         await complete(ctx);
         const greeting = e?.line_id === ctx.line.id && e.voicemail_audio_id ? await promptTwiml(ctx, { audioId: e.voicemail_audio_id }) : "";
+        if (ctx.test) return testVoicemail(greeting);
         return greeting
-          ? `${greeting}<Record maxLength="120" playBeep="true" trim="trim-silence" recordingStatusCallback="${xml(redialUrl("recording", ctx.run.call_id))}" recordingStatusCallbackEvent="completed"/><Hangup/>`
-          : voicemail(ctx.run.call_id, `${e?.name ?? "They"} can't take your call right now. Please leave a message after the tone.`);
+          ? `${greeting}<Record maxLength="120" playBeep="true" trim="trim-silence" recordingStatusCallback="${xml(redialUrl("recording", ctx.run.call_id!))}" recordingStatusCallbackEvent="completed"/><Hangup/>`
+          : voicemail(ctx.run.call_id!, `${e?.name ?? "They"} can't take your call right now. Please leave a message after the tone.`);
       }
       const out = status === "busy" ? "busy" : status === "no-answer" ? "noAnswer" : "failed";
       return go(out, { status });

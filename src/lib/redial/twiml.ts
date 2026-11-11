@@ -1,4 +1,6 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { sipConfig, sipUri } from "@/lib/comms/sip";
 import { xml } from "@/lib/comms/twilio";
 import { siteUrl } from "@/lib/notify/senders";
 import type { Line } from "./types";
@@ -9,10 +11,23 @@ import type { Line } from "./types";
 export const redialUrl = (path: string, call: string, extra = "") => siteUrl(`/api/webhooks/twilio/redial/${path}?call=${call}${extra}`);
 const hook = (path: string, call: string, extra = "") => xml(redialUrl(path, call, extra));
 
-// Ring the member's phone with our number as caller ID, so they know it's a
-// Redial call; a whisper asks them to press 1 before the caller is joined.
-export function ringOwner(line: Line, callId: string, announce: boolean) {
-  return `${announce ? `<Say>One moment while I connect you.</Say>` : ""}<Dial timeout="20" callerId="${xml(line.number)}" action="${hook("dial", callId)}"><Number url="${hook("whisper", callId)}">${xml(line.forward_to!)}</Number></Dial>`;
+// Ring the member's phone, and any desk phones on the line (SIP URIs), with
+// our number as caller ID, so they know it's a Redial call; a whisper asks
+// them to press 1 before the caller is joined.
+export function ringOwner(line: Line, callId: string, announce: boolean, sip: string[] = []) {
+  const legs = [
+    ...(line.forward_to ? [`<Number url="${hook("whisper", callId)}">${xml(line.forward_to)}</Number>`] : []),
+    ...sip.map((uri) => `<Sip url="${hook("whisper", callId)}">${xml(uri)}</Sip>`),
+  ].join("");
+  return `${announce ? `<Say>One moment while I connect you.</Say>` : ""}<Dial timeout="20" callerId="${xml(line.number)}" action="${hook("dial", callId)}">${legs}</Dial>`;
+}
+
+// Desk phones on a line that ring for calls, as SIP URIs.
+export async function lineSipUris(db: SupabaseClient, lineId: string): Promise<string[]> {
+  const sip = await sipConfig();
+  if (!sip.domain) return [];
+  const { data } = await db.from("redial_devices").select("sip_username").eq("line_id", lineId).eq("ring", true).limit(10);
+  return (data ?? []).map((d) => sipUri(d.sip_username, sip.domain!));
 }
 
 export function voicemail(callId: string, prompt: string) {

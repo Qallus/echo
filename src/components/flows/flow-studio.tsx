@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ReactFlowProvider } from "@xyflow/react";
-import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Hash, History, MoreHorizontal, PhoneIncoming, Rocket, Sparkles, Upload, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Hash, History, MoreHorizontal, Phone, PhoneIncoming, Rocket, Sparkles, Upload, Workflow } from "lucide-react";
 import { AiBuilder } from "@/components/flows/ai-builder";
 import { BlockLibrary } from "@/components/flows/block-library";
 import { BuilderProvider } from "@/components/flows/builder-context";
 import { ExtensionsSheet } from "@/components/flows/extensions-sheet";
 import { PublishDialog } from "@/components/flows/publish-dialog";
+import { TestCall } from "@/components/flows/test-call";
 import { VersionsSheet } from "@/components/flows/versions-sheet";
 import { CallsSheet } from "@/components/flows/calls-sheet";
 import { ConfigPanel } from "@/components/flows/config-panel";
@@ -52,6 +53,7 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
   const [publishOpen, setPublishOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [callsOpen, setCallsOpen] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [run, setRun] = useState<FlowRun | null>(null);
   // The path a picked call took: the blocks it visited and the links between them.
   const path = useMemo(() => {
@@ -184,6 +186,7 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
             </PopoverContent>
           </Popover>
           <Button variant="outline" size="sm" onClick={() => setExtOpen(true)}><Hash /> Extensions</Button>
+          <Button variant="outline" size="sm" onClick={() => setTesting(true)}><Phone /> Test call</Button>
           <Button variant="outline" size="sm" onClick={() => setCallsOpen(true)}><PhoneIncoming /> Calls</Button>
           <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}><History /> Versions</Button>
           <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={(e) => void importJson(e.target.files?.[0] ?? null)} />
@@ -245,7 +248,12 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
       </ResizablePanelGroup>
       <ExtensionsSheet open={extOpen} onOpenChange={setExtOpen} />
       <CallsSheet open={callsOpen} onOpenChange={setCallsOpen} flowId={initial.id} flow={flow} picked={run?.id ?? null} onPick={(r) => { setRun(r); if (r) setCallsOpen(false); }} />
-      {run && (
+      {testing && (
+        <div className="pointer-events-none fixed right-[21rem] bottom-6 z-30">
+          <TestCall flowId={initial.id} saved={save === "saved"} onClose={() => setTesting(false)} onRun={setRun} />
+        </div>
+      )}
+      {run && !testing && (
         <div className="pointer-events-none fixed bottom-6 left-1/2 z-20 -translate-x-1/2">
           <div className="pointer-events-auto flex items-center gap-3 rounded-full border bg-background px-4 py-2 text-sm shadow-lg">
             Showing the path of a call from {run.from ?? "an unknown caller"}

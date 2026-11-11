@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/data";
+import { voiceToken } from "@/lib/comms/twilio";
 import { toE164 } from "@/lib/notify/senders";
+import { memberIdentity } from "@/lib/redial/live";
 import { createClient } from "@/lib/supabase/server";
 import { sampleFlow, starterFlow } from "./blocks";
 import { flowRuns } from "./data";
+import { makeTestTicket } from "./test-call";
 import { canPublish, flowSchema, validateFlow } from "./schema";
 
 // Call Tree edits, as the signed-in person (RLS decides who can edit).
@@ -141,4 +144,16 @@ export async function detachFlowLine(id: string, lineId: string): Promise<{ ok?:
 export async function loadFlowRuns(id: string) {
   await requireUser();
   return flowRuns(id);
+}
+
+// A browser test call of the draft: a voice token that can only place calls,
+// and a ticket naming this call tree (checked by the voice webhook).
+export async function startTestCall(id: string): Promise<{ token?: string; ticket?: string; error?: string }> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { data } = await supabase.from("call_flows").select("id").eq("id", id).maybeSingle();
+  if (!data) return { error: "This call tree was deleted, or you no longer have access." };
+  const [token, ticket] = await Promise.all([voiceToken(memberIdentity(user.id), { incoming: false }), makeTestTicket(id)]);
+  if (!token || !ticket) return { error: "Test calls need the browser phone set up (Twilio API key and TwiML App in Admin → Settings → Integrations)." };
+  return { token, ticket };
 }

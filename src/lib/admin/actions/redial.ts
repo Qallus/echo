@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
 import { requireStaff } from "@/lib/admin/guard";
+import { encryptKey } from "@/lib/ai/keys";
+import { ensureSipDomain, sipConfig } from "@/lib/comms/sip";
 import { toE164 } from "@/lib/notify/senders";
+import { invalidateSecrets, secret } from "@/lib/secrets";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { ok?: string; error?: string };
@@ -55,4 +58,23 @@ export async function setRedialSetupStatus(userId: string, status: "needs_info" 
   if (error) return { error: error.message };
   revalidatePath("/admin/redial");
   return { ok: status === "needs_info" ? "Sent back to the member with your note." : "Back in the queue." };
+}
+
+// Creates (or repairs) the Twilio SIP domain desk phones sign in to, and
+// saves its IDs in Settings > Integrations (settings.manage: it writes keys).
+export async function setUpSipDomain(): Promise<Result> {
+  await requireStaff("settings.manage");
+  const accountSid = await secret("TWILIO_ACCOUNT_SID");
+  if (!accountSid) return { error: "Add the Twilio account in Settings → Integrations first." };
+  const r = await ensureSipDomain(await sipConfig(), accountSid);
+  if (!r.config) return { error: r.error };
+  const supabase = await createClient();
+  for (const [key, value] of [["TWILIO_SIP_DOMAIN", r.config.domain], ["TWILIO_SIP_DOMAIN_SID", r.config.domainSid], ["TWILIO_SIP_CREDENTIAL_LIST_SID", r.config.listSid]] as const) {
+    const { error } = await supabase.rpc("admin_save_secret", { p_key: key, p_ciphertext: encryptKey(value), p_hint: value.slice(0, 200) });
+    if (error) return { error: error.message };
+  }
+  invalidateSecrets();
+  await adminAudit(supabase, "redial.sip.setup", { type: "integration", id: "twilio" }, { domain: r.config.domain });
+  revalidatePath("/admin/redial");
+  return { ok: `Desk phones are set up on ${r.config.domain}.` };
 }

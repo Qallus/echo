@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { assignRedialLine, removeRedialLine, setRedialRouting } from "@/lib/admin/actions/redial";
+import { assignRedialLine, removeRedialLine, setRedialRouting, setUpSipDomain } from "@/lib/admin/actions/redial";
 
 export function AssignLine() {
   const [email, setEmail] = useState("");
@@ -49,5 +49,24 @@ export function RoutingSwitch({ id, on, ready }: { id: string; on: boolean; read
       }} />
       Conference
     </label>
+  );
+}
+
+// Admin > Redial: create or repair the SIP domain desk phones sign in to.
+export function SipSetup({ domain }: { domain: string | null }) {
+  const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4 text-sm">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{domain ? `Desk phones sign in to ${domain}` : "Desk phones aren't set up yet"}</p>
+        <p className="text-xs text-muted-foreground">{domain ? "Run it again any time to repair the domain's settings." : "Creates Redial's Twilio SIP domain and the list of phone logins."}</p>
+        {msg && <p className={msg.error ? "mt-1 text-xs text-destructive" : "mt-1 text-xs text-muted-foreground"}>{msg.text}</p>}
+      </div>
+      <Button size="sm" variant={domain ? "outline" : "default"} disabled={pending} onClick={() => start(async () => {
+        const r = await setUpSipDomain();
+        setMsg(r.error ? { text: r.error, error: true } : { text: r.ok ?? "Done." });
+      })}>{pending ? "Working…" : domain ? "Repair" : "Set up desk phones"}</Button>
+    </div>
   );
 }
