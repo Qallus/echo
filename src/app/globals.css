@@ -160,6 +160,32 @@
 .hero-bar { animation: hero-bar 0.9s ease-in-out infinite; transform-origin: bottom; }
 .hero-dot { animation: hero-dot 1.2s ease-in-out infinite; }
 .hero-click { animation: hero-click 0.5s ease-out both; }
+/* Call Tree canvas (src/components/flows/flow-canvas.tsx): React Flow's
+   colors mapped to the design tokens, so it follows light and dark mode. */
+.flow-canvas .react-flow {
+  --xy-background-color: var(--muted);
+  --xy-background-pattern-dots-color: var(--border);
+  --xy-edge-stroke: var(--muted-foreground);
+  --xy-edge-stroke-selected: var(--foreground);
+  --xy-connectionline-stroke: var(--foreground);
+  --xy-handle-background-color: var(--foreground);
+  --xy-handle-border-color: var(--background);
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: color-mix(in oklch, var(--muted) 70%, transparent);
+  --xy-minimap-node-background-color: var(--border);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--muted);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-color-hover: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-controls-box-shadow: none;
+  --xy-selection-background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+  --xy-selection-border: 1px dashed var(--muted-foreground);
+}
+.flow-canvas .react-flow__node { background: transparent; border: 0; padding: 0; box-shadow: none; }
+.flow-canvas .react-flow__controls { border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; }
+.flow-canvas .react-flow__minimap { border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; }
+
 /* The rotating assistant name (src/components/marketing/agent-name.tsx). */
 @keyframes agent-name {
   from { opacity: 0; transform: translateY(0.25em); }

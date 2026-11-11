@@ -3,7 +3,7 @@ import { StudioView } from "@/components/studio/studio-view";
 import { requireUser } from "@/lib/data";
 import { myStudioAudio } from "@/lib/studio/data";
 
-export const metadata = { title: "Studio · Echo" };
+export const metadata = { title: "Recording Studio · Echo" };
 
 // Recording Studio: greetings, extension prompts, phone menus and hold
 // messages, recorded, uploaded or made with an AI voice, with music.

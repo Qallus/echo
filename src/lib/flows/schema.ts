@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Flow Studio's flow format (docs/IVR/REDIAL_FLOW_STUDIO_PLAN.md §4 and §6):
+// Call Tree's flow format (docs/IVR/REDIAL_FLOW_STUDIO_PLAN.md §4 and §6):
 // one JSON document per draft or published version. The studio, the publish
 // step and the call runner all read flows through this file. No "@/" imports,
 // so `node --test` can load it directly.

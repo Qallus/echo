@@ -1,18 +1,18 @@
-# Redial Flow Studio: Visual IVR / Call-Flow Builder
+# Redial Call Tree: Visual IVR / Call-Flow Builder
 
 > Status: **Approved v1.1** (2026-11-11). Approval-gated: build one step, show it, stop.
 > Steps 1 and 2 are built: `supabase/migrations/20261111120000_call_flows.sql` and `src/lib/flows/schema.ts` (14 tests, `npm test`).
 
 ## 0. Decisions (2026-11-11)
 
-1. **Name:** Flow Studio.
+1. **Name:** Call Tree (renamed from Flow Studio on 2026-11-11; "Studio" is the Recording Studio). Routes are `/call-tree`.
 2. **Canvas:** React Flow (`@xyflow/react`, MIT). Run `npm run lock:linux` after adding it.
 3. **Lines:** a flow can run on several lines; each line runs at most one flow (`call_flow_lines.line_id` is the primary key).
 4. **Unconnected outputs:** go to the AI receptionist when the line has AI minutes left, otherwise to voicemail (`settings.onUnconnected = "ai_or_voicemail"`, the default). "voicemail" and "goodbye" can be chosen per flow.
 5. **Speech matching:** Twilio speech recognition with keyword hints in v1. Unclear speech goes to the AI later, with the AI receptionist block (step 9).
 
 **Changes from the review:**
-- **Routes:** dashboard pages have no `/app` prefix, so the routes are `/flows`, `/flows/[id]`, `/flows/[id]/runs` and `/flows/[id]/versions`, linked from Calls.
+- **Routes:** dashboard pages have no `/app` prefix, so the routes are `/call-tree`, `/call-tree/[id]`, `/call-tree/[id]/runs` and `/call-tree/[id]/versions`, linked from Calls.
 - **Look:** Echo's design tokens (black and neutral primary, light and dark), plus the REDIAL equalizer mark. The mockup's blue and "R" logo are not used.
 - **Audio:** Say / Play, Queue and Voicemail use **Recording Studio** clips (`studio_audio`). There is no `call_flow_assets` table. The runner signs a short-lived URL for Twilio at call time.
 - **Extensions:** a new `redial_extensions` table (101 → Sales) holds a Directory entry or number, ring time and a voicemail greeting from Studio. Gather can let callers dial an extension at any time, and the desk phones (SIP) will use the same list.
@@ -41,13 +41,13 @@
 
 | Route | Screen |
 |---|---|
-| `/flows` | Flow list: name, line(s) attached, status (Draft / Published v4), last edited, calls this week |
-| `/flows/[id]` | **Flow Studio** (canvas builder) |
-| `/flows/[id]/runs` | Call log for this flow, each run opens the path view |
-| `/flows/[id]/versions` | Version history, diff, roll back |
-| `/admin/redial/flows` | Super Admin: all flows, templates, error rates |
+| `/call-tree` | Flow list: name, line(s) attached, status (Draft / Published v4), last edited, calls this week |
+| `/call-tree/[id]` | **Call Tree** (canvas builder) |
+| `/call-tree/[id]/runs` | Call log for this flow, each run opens the path view |
+| `/call-tree/[id]/versions` | Version history, diff, roll back |
+| `/admin/redial/call-tree` | Super Admin: all flows, templates, error rates |
 
-Navigation: from Calls in the sidebar (Calls → Flow Studio).
+Navigation: from Calls in the sidebar (Calls → Call Tree).
 
 ---
 
@@ -241,7 +241,7 @@ SMS/chat flows · outbound campaign flows · custom code block (sandboxed) · A/
 
 ## 13. Decisions needed from Jeremy (answered in §0)
 
-1. Name: **Flow Studio** (as in the mockup)?
+1. Name: **Call Tree** (as in the mockup)?
 2. Canvas library: React Flow (`@xyflow/react`) — OK to add the dependency?
 3. One published flow per line, or allow a flow on several lines (proposed: yes, several lines, one flow per line)?
 4. Default for unconnected outputs: polite goodbye, or send to AI receptionist?
