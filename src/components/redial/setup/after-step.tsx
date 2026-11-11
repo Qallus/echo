@@ -8,7 +8,7 @@ import type { AfterAnswers } from "@/lib/redial/setup";
 import { NumberList, toE164 } from "./number-list";
 import { StepActions } from "./step-actions";
 
-// Step 6: where DJ rings you, whether it can put important calls through, how
+// Step 6: where your assistant rings you, whether it can put important calls through, how
 // you hear about calls, and (for businesses) who it can transfer to.
 export function AfterStep({ initial, mobile, forwarding, business }: {
   initial?: Partial<AfterAnswers>; mobile: string; forwarding: boolean; business: boolean;
@@ -22,11 +22,11 @@ export function AfterStep({ initial, mobile, forwarding, business }: {
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground">What happens once DJ knows who&apos;s calling.</p>
+      <p className="text-muted-foreground">What happens once your assistant knows who&apos;s calling.</p>
 
       <div className="space-y-2 rounded-xl border p-4">
         <label className="flex items-center justify-between gap-4">
-          <span><span className="block text-sm font-medium">Put important calls through to me</span><span className="block text-sm text-muted-foreground">Family, expected calls and urgent matters. Otherwise DJ takes a message.</span></span>
+          <span><span className="block text-sm font-medium">Put important calls through to me</span><span className="block text-sm text-muted-foreground">Family, expected calls and urgent matters. Otherwise your assistant takes a message.</span></span>
           <Switch checked={putThrough} onCheckedChange={setPutThrough} />
         </label>
         {putThrough && (
@@ -59,7 +59,7 @@ export function AfterStep({ initial, mobile, forwarding, business }: {
       {business && (
         <div className="space-y-2">
           <Label>Transfer to</Label>
-          <p className="text-sm text-muted-foreground">Teammates or numbers DJ can send callers to. They hear who&apos;s calling first.</p>
+          <p className="text-sm text-muted-foreground">Teammates or numbers your assistant can send callers to. They hear who&apos;s calling first.</p>
           <NumberList items={directory} onChange={setDirectory} max={10} named addLabel="Add" />
         </div>
       )}

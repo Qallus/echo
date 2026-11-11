@@ -13,11 +13,12 @@ import { KeepNumberSection } from "@/components/marketing/home/keep-number";
 import { PricingPreviewSection } from "@/components/marketing/home/pricing-preview";
 import { TrustSection } from "@/components/marketing/home/trust";
 import { FAQ_TOPICS } from "@/lib/faq";
+import { AgentName, Named } from "@/components/marketing/agent-name";
 
 export const metadata = {
   title: "Redial · Your AI assistant answers. You take the calls that matter.",
   description:
-    "Redial's AI assistant, DJ, answers your calls, finds out who's calling and why, and only interrupts you when it matters. Listen in, guide it, take over or transfer, all on the same call. Every call is recorded, transcribed and summarized with Echo.",
+    "Redial's AI assistant answers your calls, finds out who's calling and why, and only interrupts you when it matters. Listen in, guide it, take over or transfer, all on the same call. Every call is recorded, transcribed and summarized with Echo.",
 };
 
 const FEATURES = [
@@ -31,7 +32,7 @@ const FEATURES = [
 
 // Everything else Redial does, beyond the live call controls.
 const REDIAL_MORE = [
-  { icon: PhoneIncoming, title: "AI call screening", desc: "DJ answers, asks who's calling and why, then takes a message or puts the call through to you." },
+  { icon: PhoneIncoming, title: "AI call screening", desc: "{agent} answers, asks who's calling and why, then takes a message or puts the call through to you." },
   { icon: ShieldCheck, title: "Rules, VIPs and blocks", desc: "Screen unknown callers or everyone. VIPs ring straight through, and blocked numbers never get through." },
   { icon: CalendarClock, title: "Messages and callbacks", desc: "Every call ends as a summary, message or voicemail transcript, with callback reminders when you need them." },
   { icon: UsersRound, title: "Share a line", desc: "Give a teammate or family member exactly what they need: summaries, transcripts, listening or taking over." },
@@ -66,7 +67,7 @@ export default function LandingPage() {
               <div key={title} className="rounded-xl border bg-background p-5">
                 <Icon className="mb-3 size-5" />
                 <h3 className="font-medium">{title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+                <p className="mt-1 text-sm text-muted-foreground"><Named text={desc} /></p>
               </div>
             ))}
           </div>
@@ -77,13 +78,13 @@ export default function LandingPage() {
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
           <p className="text-sm font-medium text-muted-foreground">Echo, built into Redial</p>
           <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Every call becomes notes. Your meetings too.</h2>
-          <p className="mt-3 max-w-2xl text-muted-foreground">Every call DJ handles comes with a recording, a transcript and a summary. Echo does the same for your meetings, so you can pay attention to the people.</p>
+          <p className="mt-3 max-w-2xl text-muted-foreground">Every call <AgentName /> handles comes with a recording, a transcript and a summary. Echo does the same for your meetings, so you can pay attention to the people.</p>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="rounded-xl border bg-background p-5">
                 <Icon className="mb-3 size-5" />
                 <h3 className="font-medium">{title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+                <p className="mt-1 text-sm text-muted-foreground"><Named text={desc} /></p>
               </div>
             ))}
           </div>

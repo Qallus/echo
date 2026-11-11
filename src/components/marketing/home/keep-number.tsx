@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowRight, PhoneForwarded, PhoneIncoming, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CARRIERS } from "@/lib/redial/carriers";
+import { Named } from "@/components/marketing/agent-name";
 
 const WAYS = [
-  { icon: PhoneForwarded, title: "Forward the calls you miss", desc: "Your phone rings first. Anything you don't pick up goes to DJ instead of voicemail." },
-  { icon: Smartphone, title: "Forward everything", desc: "Your phone stays quiet. DJ answers every call and puts the right ones through." },
-  { icon: PhoneIncoming, title: "Get a Redial number", desc: "A separate number for your business or one part of your life. Calls to it always reach DJ." },
+  { icon: PhoneForwarded, title: "Forward the calls you miss", desc: "Your phone rings first. Anything you don't pick up goes to {agent} instead of voicemail." },
+  { icon: Smartphone, title: "Forward everything", desc: "Your phone stays quiet. {agent} answers every call and puts the right ones through." },
+  { icon: PhoneIncoming, title: "Get a Redial number", desc: "A separate number for your business or one part of your life. Calls to it always reach {agent}." },
 ];
 
 // Homepage: works with the phone and number you already have.
@@ -22,7 +23,7 @@ export function KeepNumberSection() {
             {WAYS.map(({ icon: Icon, title, desc }) => (
               <li key={title} className="flex gap-4">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full border bg-muted/40"><Icon className="size-5" /></span>
-                <span><span className="block font-semibold">{title}</span><span className="block text-sm text-muted-foreground">{desc}</span></span>
+                <span><span className="block font-semibold">{title}</span><span className="block text-sm text-muted-foreground"><Named text={desc} /></span></span>
               </li>
             ))}
           </ul>

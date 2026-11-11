@@ -7,9 +7,11 @@ import {
 import { cn } from "@/lib/utils";
 import { AppleLogo, PlayLogo } from "./app-badges";
 import { NAV_MORE, NAV_PRODUCTS } from "./nav-links";
+import { Named } from "@/components/marketing/agent-name";
 
 // Desktop header navigation (lg up): a Features mega menu with a column each
-// for Redial and Echo plus a get-the-app card, then the other pages.
+// for Redial, phone service and Echo plus a get-the-app card, then the other
+// pages.
 export function SiteNav() {
   const plain = cn(navigationMenuTriggerStyle(), "bg-transparent font-normal text-muted-foreground hover:text-foreground");
   return (
@@ -18,7 +20,7 @@ export function SiteNav() {
         <NavigationMenuItem>
           <NavigationMenuTrigger className="bg-transparent font-normal text-muted-foreground hover:text-foreground data-popup-open:text-foreground">Features</NavigationMenuTrigger>
           <NavigationMenuContent>
-            <div className="grid w-[min(800px,calc(100vw-2rem))] grid-cols-[1fr_1fr_15rem] gap-2 p-2">
+            <div className="grid w-[min(1060px,calc(100vw-2rem))] grid-cols-[1fr_1fr_1fr_14rem] gap-2 p-2">
               {NAV_PRODUCTS.map(({ name, tagline, icon: Icon, links }) => (
                 <div key={name} className="p-1">
                   <div className="flex items-center gap-2.5 px-2 pt-1 pb-3">
@@ -33,9 +35,9 @@ export function SiteNav() {
                       <li key={href}>
                         <NavigationMenuLink render={<Link href={href} />} className="items-start gap-3 px-2 py-2">
                           <LinkIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                          <span>
+                          <span className="min-w-0">
                             <span className="block font-medium">{title}</span>
-                            <span className="block text-xs text-muted-foreground">{desc}</span>
+                            <span className="block truncate text-xs text-muted-foreground"><Named text={desc} /></span>
                           </span>
                         </NavigationMenuLink>
                       </li>

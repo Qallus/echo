@@ -9,8 +9,8 @@ import { NumberList } from "./number-list";
 import { Choice } from "./setup-shell";
 import { StepActions } from "./step-actions";
 
-// Step 4: who DJ answers for, who always gets through, who never does, and
-// (for businesses) the hours DJ can tell callers.
+// Step 4: who your assistant answers for, who always gets through, who never does, and
+// (for businesses) the hours your assistant can tell callers.
 export function ScreeningStep({ initial, business }: { initial?: Partial<ScreeningAnswers>; business: boolean }) {
   const [mode, setMode] = useState(initial?.mode ?? "unknown");
   const [vip, setVip] = useState((initial?.vip ?? []).map((number) => ({ number })));
@@ -21,7 +21,7 @@ export function ScreeningStep({ initial, business }: { initial?: Partial<Screeni
 
   return (
     <div className="space-y-7">
-      <p className="text-muted-foreground">Choose which calls DJ answers first. VIPs always ring straight through.</p>
+      <p className="text-muted-foreground">Choose which calls your assistant answers first. VIPs always ring straight through.</p>
       <div role="radiogroup" aria-label="Who gets screened" className="grid gap-2">
         {SCREEN_MODES.map((m) => <Choice key={m.id} selected={mode === m.id} onSelect={() => setMode(m.id)} title={m.label} detail={m.detail} tag={"tag" in m ? m.tag : undefined} />)}
       </div>
@@ -40,7 +40,7 @@ export function ScreeningStep({ initial, business }: { initial?: Partial<Screeni
       {business && (
         <div className="space-y-3 rounded-xl border p-4">
           <label className="flex items-center justify-between gap-4">
-            <span><span className="block text-sm font-medium">Business hours</span><span className="block text-sm text-muted-foreground">DJ can tell callers when you&apos;re open.</span></span>
+            <span><span className="block text-sm font-medium">Business hours</span><span className="block text-sm text-muted-foreground">Your assistant can tell callers when you&apos;re open.</span></span>
             <Switch checked={hoursOn} onCheckedChange={setHoursOn} />
           </label>
           {hoursOn && (

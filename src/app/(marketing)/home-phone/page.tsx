@@ -10,25 +10,26 @@ import { PlanCompare } from "@/components/marketing/phones/plan-compare";
 import { EmergencyNotice, FaqJsonLd, FeatureGrid, SectionHead, StepsSection, SupportedPhones } from "@/components/marketing/phones/sections";
 import { Button } from "@/components/ui/button";
 import { FAQ_TOPICS } from "@/lib/faq";
+import { AgentName } from "@/components/marketing/agent-name";
 
 export const metadata = {
   title: "Redial Home Phone · A home phone that screens its own calls",
-  description: "Replace your landline with Redial Home Phone: keep your number or get a new one, use cordless and Wi-Fi phones like the Grandstream WP826, and let DJ answer spam and unknown callers. Unlimited US and Canada calling, 911 with your address.",
+  description: "Replace your landline with Redial Home Phone: keep your number or get a new one, use cordless and Wi-Fi phones like the Grandstream WP826, and let your AI assistant answer spam and unknown callers. Unlimited US and Canada calling, 911 with your address.",
   alternates: { canonical: "/home-phone" },
 };
 
 const FRAMES: ScreenFrame[] = [
   { tag: "Incoming", title: "(602) 555-0142", detail: "Unknown caller", tone: "call" },
-  { tag: "DJ is answering", title: "Dr. Patel's office", detail: "“Calling to confirm Tuesday's appointment.”", tone: "dj" },
-  { tag: "DJ screened it", title: "Dr. Patel's office", detail: "Appointment reminder. Press 1 to take it.", action: "Press 1", tone: "dj" },
-  { tag: "Blocked", title: "Car warranty robocall", detail: "DJ hung up. Your phones never rang.", tone: "blocked" },
+  { tag: "{agent} is answering", title: "Dr. Patel's office", detail: "“Calling to confirm Tuesday's appointment.”", tone: "dj" },
+  { tag: "{agent} screened it", title: "Dr. Patel's office", detail: "Appointment reminder. Press 1 to take it.", action: "Press 1", tone: "dj" },
+  { tag: "Blocked", title: "Car warranty robocall", detail: "{agent} hung up. Your phones never rang.", tone: "blocked" },
 ];
 
 const STEPS = [
   { title: "Pick your number", desc: "Get a new local number in minutes, or bring the home number you've had for years." },
   { title: "Connect your phone", desc: "Set a Wi-Fi cordless like the WP826 on its stand, or plug a desk phone into your router." },
   { title: "It sets itself up", desc: "Type in the setup address Redial gives you once. The phone downloads its settings and is ready." },
-  { title: "DJ answers for you", desc: "Family rings straight through. Unknown callers meet DJ first, and spam never rings at all." },
+  { title: "{agent} answers for you", desc: "Family rings straight through. Unknown callers meet {agent} first, and spam never rings at all." },
 ];
 
 const FEATURES = [
@@ -36,7 +37,7 @@ const FEATURES = [
   { icon: HeartHandshake, title: "Family always gets through", desc: "Put family, school and the doctor on your VIP list and they ring right away." },
   { icon: BellRing, title: "Every phone rings together", desc: "Cordless handsets around the house, the desk phone and the Redial app on your mobile." },
   { icon: Voicemail, title: "Voicemail you can read", desc: "Messages are transcribed and summarized, so you know what's urgent without listening." },
-  { icon: CalendarClock, title: "Callbacks, booked", desc: "When you can't take a call, DJ takes a message and a good time to call back." },
+  { icon: CalendarClock, title: "Callbacks, booked", desc: "When you can't take a call, {agent} takes a message and a good time to call back." },
   { icon: UsersRound, title: "Share the line", desc: "Give your partner or a parent their own access, and choose what they can do." },
 ];
 
@@ -59,12 +60,12 @@ export default function HomePhonePage() {
   return (
     <>
       <FaqJsonLd items={FAQ} />
-      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pt-16 pb-16 sm:px-6 sm:pt-24 md:grid-cols-[1fr_auto]">
+      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pt-16 pb-16 sm:px-6 sm:pt-24 lg:grid-cols-[1fr_auto] lg:gap-16">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Redial Home Phone</p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">Your home phone, with DJ on the line.</h1>
+          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">Your home phone, with <AgentName /> on the line.</h1>
           <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-            A home phone line that runs over your internet, on real cordless and desk phones. DJ answers unknown callers, stops spam before it rings, and tells you who&apos;s calling and why.
+            A home phone line that runs over your internet, on real cordless and desk phones. <AgentName /> answers unknown callers, stops spam before it rings, and tells you who&apos;s calling and why.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" nativeButton={false} render={<Link href="/pricing#phone-service" />}>Get Redial Home Phone <ArrowRight /></Button>
@@ -110,7 +111,7 @@ export default function HomePhonePage() {
         </div>
       </section>
 
-      <PlanCompare ids={["redial_home_phone", "redial_personal", "free"]} title="A full phone line, or screening for your cell." sub="Home Phone is a complete phone line with phones in the house. Personal and Free put DJ on your mobile number instead." />
+      <PlanCompare ids={["redial_home_phone", "redial_personal", "free"]} title="A full phone line, or screening for your cell." sub="Home Phone is a complete phone line with phones in the house. Personal and Free put {agent} on your mobile number instead." />
 
       <section className="border-t">
         <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-16 sm:px-6 md:grid-cols-3">
@@ -130,7 +131,7 @@ export default function HomePhonePage() {
 
       <EmergencyNotice />
       <FaqSection items={FAQ} title="Home phone questions" />
-      <FinalCta title="Hang up on spam for good." sub="Keep your number, use phones you love, and let DJ answer the rest." />
+      <FinalCta title="Hang up on spam for good." sub="Keep your number, use phones you love, and let {agent} answer the rest." />
     </>
   );
 }

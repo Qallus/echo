@@ -27,7 +27,7 @@ export async function RedialSetupCard() {
               ? "Your setup is in. Your number shows up here and in Calls as soon as it's ready, with the code to forward your calls."
               : setup.status === "needs_info"
                 ? setup.staff_note ?? "Check your answers and finish setup again."
-                : "Let DJ answer the calls you can't, so the ones that matter still reach you. It takes about five minutes."}
+                : "Let your assistant answer the calls you can't, so the ones that matter still reach you. It takes about five minutes."}
           </p>
           {!waiting && (
             <div className="flex items-center gap-3 pt-1">

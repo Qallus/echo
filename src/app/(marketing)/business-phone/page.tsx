@@ -11,17 +11,18 @@ import { PlanCompare } from "@/components/marketing/phones/plan-compare";
 import { EmergencyNotice, FaqJsonLd, FeatureGrid, SectionHead, StepsSection, SupportedPhones } from "@/components/marketing/phones/sections";
 import { Button } from "@/components/ui/button";
 import { ALL_FAQ, FAQ_TOPICS } from "@/lib/faq";
+import { AgentName } from "@/components/marketing/agent-name";
 
 export const metadata = {
-  title: "Redial Business Phone · A phone system with DJ at the front desk",
-  description: "A business phone system on desk and Wi-Fi phones from Grandstream, Yealink and Poly that set themselves up. DJ answers as your receptionist, transfers to the right extension, catches leads after hours and summarizes every call.",
+  title: "Redial Business Phone · A phone system with an AI receptionist",
+  description: "A business phone system on desk and Wi-Fi phones from Grandstream, Yealink and Poly that set themselves up. An AI assistant you name answers as your receptionist, transfers to the right extension, catches leads after hours and summarizes every call.",
   alternates: { canonical: "/business-phone" },
 };
 
 const FRAMES: ScreenFrame[] = [
   { tag: "Incoming · Main line", title: "(480) 555-0187", detail: "New caller", tone: "call" },
-  { tag: "DJ is answering", title: "Dana Ortiz · Summit Roofing", detail: "“Looking for a quote on a roof repair.”", tone: "dj" },
-  { tag: "Transfer from DJ", title: "Dana Ortiz → Sales (101)", detail: "Wants a roof repair quote this week. Press 1 to take it.", action: "Press 1", tone: "dj" },
+  { tag: "{agent} is answering", title: "Dana Ortiz · Summit Roofing", detail: "“Looking for a quote on a roof repair.”", tone: "dj" },
+  { tag: "Transfer from {agent}", title: "Dana Ortiz → Sales (101)", detail: "Wants a roof repair quote this week. Press 1 to take it.", action: "Press 1", tone: "dj" },
   { tag: "After hours", title: "Callback booked", detail: "Dana Ortiz, 8:30 AM tomorrow. Summary sent to the team.", tone: "dj" },
 ];
 
@@ -29,13 +30,13 @@ const STEPS = [
   { title: "Choose your numbers", desc: "Bring your main business number, or pick new local numbers for each line." },
   { title: "Plug in your phones", desc: "Connect desk phones to the office network, or set Wi-Fi phones on their stands." },
   { title: "They set themselves up", desc: "Each phone gets its settings from Redial: your number, extension and line keys." },
-  { title: "DJ runs the front desk", desc: "DJ greets callers, answers questions about your business and transfers to the right person." },
+  { title: "{agent} runs the front desk", desc: "{agent} greets callers, answers questions about your business and transfers to the right person." },
 ];
 
 const FEATURES = [
   { icon: BookOpen, title: "A receptionist that knows you", desc: "Your services, prices, hours and service area, so callers get real answers on the first ring." },
   { icon: PhoneForwarded, title: "Extensions and transfers", desc: "Sales, the office or the crew, by extension. They hear who's calling before they pick up." },
-  { icon: Clock, title: "After hours, handled", desc: "DJ takes the late calls, qualifies the lead and books a callback for the morning." },
+  { icon: Clock, title: "After hours, handled", desc: "{agent} takes the late calls, qualifies the lead and books a callback for the morning." },
   { icon: ShieldBan, title: "No more spam at the desk", desc: "Robocalls and cold pitches are screened out before a single desk phone rings." },
   { icon: FileText, title: "Every call summarized", desc: "Who called, what they need and what was promised, ready for your CRM." },
   { icon: UsersRound, title: "Desk phones and mobiles together", desc: "A call rings the desk phone and the Redial app at once, so nobody is tied to a desk." },
@@ -69,20 +70,20 @@ export default function BusinessPhonePage() {
   return (
     <>
       <FaqJsonLd items={FAQ} />
-      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pt-16 pb-16 sm:px-6 sm:pt-24 lg:grid-cols-[1fr_28rem]">
-        <div>
+      <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-20 sm:px-6 sm:pt-24">
+        <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-medium text-muted-foreground">Redial Business Phone</p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">A business phone system with DJ at the front desk.</h1>
-          <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-6xl">A business phone system with <AgentName /> at the front desk.</h1>
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
             Real desk and Wi-Fi phones that set themselves up, extensions for your team, and an assistant that answers every call, knows your business and puts the right ones through.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button size="lg" nativeButton={false} render={<Link href="/pricing#phone-service" />}>Get Redial Business Phone <ArrowRight /></Button>
             <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/contact" />}>Talk to us</Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">Per line pricing. Unlimited US and Canada calling. No contract.</p>
         </div>
-        <DeskPhone frames={FRAMES} />
+        <DeskPhone frames={FRAMES} className="mt-16 max-w-2xl" />
       </section>
 
       <StepsSection id="how" eyebrow="How it works" title="A phone system without the phone closet." steps={STEPS} />
@@ -118,7 +119,7 @@ export default function BusinessPhonePage() {
         </div>
       </section>
 
-      <PlanCompare ids={["redial_business_phone", "redial_business", "redial_team"]} title="A full phone system, or DJ on the number you have." sub="Business Phone replaces your phone system with desk phones and extensions. Business and Team put DJ on your existing business number." />
+      <PlanCompare ids={["redial_business_phone", "redial_business", "redial_team"]} title="A full phone system, or {agent} on the number you have." sub="Business Phone replaces your phone system with desk phones and extensions. Business and Team put {agent} on your existing business number." />
 
       <section className="border-t">
         <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-16 sm:px-6 md:grid-cols-3">
@@ -138,7 +139,7 @@ export default function BusinessPhonePage() {
 
       <EmergencyNotice />
       <FaqSection items={FAQ} title="Business phone questions" />
-      <FinalCta title="Give every caller a front desk." sub="Desk phones that set themselves up, and DJ answering every call." business />
+      <FinalCta title="Give every caller a front desk." sub="Desk phones that set themselves up, and {agent} answering every call." business />
     </>
   );
 }

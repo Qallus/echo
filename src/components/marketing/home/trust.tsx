@@ -1,7 +1,8 @@
 import { Ban, Eye, Hand, MessageSquareQuote } from "lucide-react";
+import { Named } from "@/components/marketing/agent-name";
 
 const POINTS = [
-  { icon: MessageSquareQuote, title: "You choose how DJ introduces itself", desc: "Write its greeting and decide whether it says it's an AI assistant. It never pretends to be you." },
+  { icon: MessageSquareQuote, title: "You choose how {agent} introduces itself", desc: "Write its greeting and decide whether it says it's an AI assistant. It never pretends to be you." },
   { icon: Eye, title: "Your calls stay yours", desc: "Only you see your calls and summaries, unless you share a line. Then each person gets only what you allow." },
   { icon: Hand, title: "You're always in control", desc: "VIPs ring straight through. Pause screening, take over or transfer any call, any time." },
   { icon: Ban, title: "Spam stops at the door", desc: "Blocked numbers never get through, and anyone who asks to stop hearing from you is honored." },
@@ -18,7 +19,7 @@ export function TrustSection() {
           {POINTS.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="rounded-2xl border bg-background p-6">
               <Icon className="size-5" />
-              <h3 className="mt-4 font-semibold">{title}</h3>
+              <h3 className="mt-4 font-semibold"><Named text={title} /></h3>
               <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
             </div>
           ))}

@@ -60,7 +60,7 @@ export function AboutStep({ ctx }: { ctx: SetupContext }) {
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground">A few details so DJ knows who it&apos;s answering for.</p>
+      <p className="text-muted-foreground">A few details so your assistant knows who it&apos;s answering for.</p>
 
       <div className="space-y-1.5">
         <Label htmlFor="su-name">Your name</Label>

@@ -1,5 +1,6 @@
 import { Check, Minus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Named } from "@/components/marketing/agent-name";
 
 // A feature comparison. Each cell is yes, no, or a short note, always with a
 // text label so the meaning never rests on the icon alone. The first column
@@ -29,7 +30,7 @@ export function CompareTable({ columns, rows, caption }: { columns: string[]; ro
         <tbody className="divide-y">
           {rows.map((r) => (
             <tr key={r.feature} className="align-top">
-              <th scope="row" className="px-4 py-3 text-left font-medium">{r.feature}</th>
+              <th scope="row" className="px-4 py-3 text-left font-medium"><Named text={r.feature} /></th>
               {r.cells.map((v, i) => <td key={i} className={cn("px-4 py-3", i === 0 && "bg-muted/40 font-medium")}><Value v={v} /></td>)}
             </tr>
           ))}

@@ -45,12 +45,12 @@ export const LINE_NAME: Record<Line, string> = { redial: "Redial", echo: "Echo" 
 export const SEED_PRODUCTS: Product[] = [
   {
     id: "redial_personal", kind: "plan", line: "redial", meter: "redial", minutes: 100, name: "Redial Personal", tagline: "Your own cell, without the interruptions.",
-    features: ["100 AI screening minutes a month", "DJ answers unknown callers for you", "Listen in, guide DJ, take over or transfer", "Callbacks and a summary of every call", "VIP and block lists", "Echo recordings and transcripts included"],
+    features: ["100 AI screening minutes a month", "Your assistant answers unknown callers for you", "Listen in, guide your assistant, take over or transfer", "Callbacks and a summary of every call", "VIP and block lists", "Echo recordings and transcripts included"],
     prices: [{ key: "redial_personal_monthly", interval: "month", unitAmount: 1200 }, { key: "redial_personal_annual", interval: "year", unitAmount: 12000 }],
   },
   {
     id: "redial_business", kind: "plan", line: "redial", meter: "redial", minutes: 300, perSeat: true, name: "Redial Business", tagline: "An assistant on the line for every customer.",
-    features: ["300 AI screening minutes a month per line", "DJ knows your services, hours and FAQs", "Transfer calls to your team", "Share a line with teammates", "Summaries ready for your CRM", "Everything in Personal"],
+    features: ["300 AI screening minutes a month per line", "Your assistant knows your services, hours and FAQs", "Transfer calls to your team", "Share a line with teammates", "Summaries ready for your CRM", "Everything in Personal"],
     prices: [{ key: "redial_business_monthly", interval: "month", unitAmount: 2900 }, { key: "redial_business_annual", interval: "year", unitAmount: 29000 }],
   },
   {
@@ -69,8 +69,8 @@ export const SEED_PRODUCTS: Product[] = [
     prices: [{ key: "redial_home_phone_monthly", interval: "month", unitAmount: 1500 }, { key: "redial_home_phone_annual", interval: "year", unitAmount: 15000 }],
   },
   {
-    id: "redial_business_phone", kind: "plan", line: "redial", meter: "redial", minutes: 300, phones: 3, perSeat: true, name: "Redial Business Phone", tagline: "A business phone system with DJ at the front desk.",
-    features: ["A business number per line, or bring yours", "Unlimited calling in the US and Canada", "Up to 3 desk or Wi-Fi phones per line", "300 AI screening minutes a month per line", "Extensions and transfers through Directory", "Listen in, guide DJ, take over", "Summaries ready for your CRM"],
+    id: "redial_business_phone", kind: "plan", line: "redial", meter: "redial", minutes: 300, phones: 3, perSeat: true, name: "Redial Business Phone", tagline: "A business phone system with an AI receptionist.",
+    features: ["A business number per line, or bring yours", "Unlimited calling in the US and Canada", "Up to 3 desk or Wi-Fi phones per line", "300 AI screening minutes a month per line", "Extensions and transfers through Directory", "Listen in, guide your assistant, take over", "Summaries ready for your CRM"],
     prices: [{ key: "redial_business_phone_monthly", interval: "month", unitAmount: 2500 }, { key: "redial_business_phone_annual", interval: "year", unitAmount: 25000 }],
   },
   {

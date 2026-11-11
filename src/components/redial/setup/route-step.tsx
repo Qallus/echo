@@ -18,7 +18,7 @@ export function RouteStep({ initial, carrierId, lineType, redialNumber }: { init
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground">Pick how DJ gets your calls. You can change this any time.</p>
+      <p className="text-muted-foreground">Pick how your assistant gets your calls. You can change this any time.</p>
       <div role="radiogroup" aria-label="How calls reach Redial" className="grid gap-2">
         {ROUTES.map((r) => (
           <Choice key={r.id} selected={method === r.id} onSelect={() => setMethod(r.id)} title={r.label} detail={r.detail} tag={"tag" in r ? r.tag : undefined} />

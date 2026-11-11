@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { money, products, type Product } from "@/lib/billing/catalog";
 import { loadCatalog } from "@/lib/billing/catalog-server";
 import { getBillingSettings } from "@/lib/billing/settings";
+import { plainAgent } from "@/lib/redial/agent-names";
 import { createClient } from "@/lib/supabase/server";
 import { CompareTable, type Cell, type CompareRow } from "./compare-table";
+import { Named } from "@/components/marketing/agent-name";
 
 // Phone service plans next to the screening-only Redial plans. Prices,
 // minutes and phone counts come from the live catalog (Admin > Billing); what
@@ -37,8 +39,8 @@ export async function PlanCompare({ ids, title, sub }: { ids: string[]; title: s
     row("Unlimited US and Canada calling", (p) => p !== "free" && Boolean(p.phones)),
     row("Desk, cordless and Wi-Fi phones", (p) => (p !== "free" && p.phones ? `Up to ${p.phones}${p.perSeat ? " per line" : ""}` : false)),
     row("AI screening minutes a month", (p) => (p === "free" ? String(settings.redialFreeMinutes) : `${(p.minutes ?? 0).toLocaleString()}${p.perSeat ? " per line" : p.id === "redial_team" ? " shared" : ""}`)),
-    row("DJ knows your business (services, hours, FAQs)", (p) => t(p).business),
-    row("Listen in, guide DJ, take over", (p) => t(p).live),
+    row("{agent} knows your business (services, hours, FAQs)", (p) => t(p).business),
+    row("Listen in, guide {agent}, take over", (p) => t(p).live),
     row("Transfers and extensions", (p) => t(p).transfers),
     row("Share the line with family or a team", (p) => t(p).share),
     row("911 from your Redial number", (p) => (t(p).e911 ? "With your registered address" : "Use your cell for 911")),
@@ -51,12 +53,12 @@ export async function PlanCompare({ ids, title, sub }: { ids: string[]; title: s
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Compare plans</p>
-            <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{title}</h2>
-            <p className="mt-2 max-w-2xl text-muted-foreground">{sub}</p>
+            <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl"><Named text={title} /></h2>
+            <p className="mt-2 max-w-2xl text-muted-foreground"><Named text={sub} /></p>
           </div>
           <Button variant="outline" nativeButton={false} render={<Link href="/pricing#phone-service" />}>Choose a plan <ArrowRight /></Button>
         </div>
-        <div className="mt-10"><CompareTable caption={title} columns={columns} rows={rows} /></div>
+        <div className="mt-10"><CompareTable caption={plainAgent(title)} columns={columns} rows={rows} /></div>
         <p className="mt-4 text-sm text-muted-foreground">Monthly prices. Annual plans get two months free. Unlimited calling is for normal personal and business use.</p>
       </div>
     </section>

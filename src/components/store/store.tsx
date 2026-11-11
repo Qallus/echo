@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { addToCart, useCart } from "@/lib/billing/cart";
 import { amountFor, lineOf, money, per, products, type Interval, type Line, type Product } from "@/lib/billing/catalog";
 import { cn } from "@/lib/utils";
+import { Named } from "@/components/marketing/agent-name";
 
 function AddButton({ priceKey, quantity = 1, label = "Add to cart", className }: { priceKey: string; quantity?: number; label?: string; className?: string }) {
   const cart = useCart();
@@ -130,7 +131,7 @@ function FreeCard({ title, sub, features }: { title: string; sub: string; featur
   return (
     <div className="flex flex-col rounded-2xl border p-6">
       <h3 className="text-xl font-semibold">{title}</h3>
-      <p className="text-sm text-muted-foreground">{sub}</p>
+      <p className="text-sm text-muted-foreground"><Named text={sub} /></p>
       <p className="mt-5 text-4xl font-semibold">$0</p>
       <ul className="mt-6 flex-1 space-y-2 text-sm">
         {features.map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0" /> {f}</li>)}
@@ -149,7 +150,7 @@ export function PlanSection({ line = "echo", freeMinutes, interval: fixed }: { l
   const phone = plans.filter((p) => p.phones && !p.echoMinutes);
   const main = plans.filter((p) => !p.echoMinutes && !p.phones);
   const free = line === "redial"
-    ? { title: "Redial Free", sub: "Try DJ on the calls you miss.", features: [`${freeMinutes ?? 10} AI screening minutes a month`, "Forward the calls you miss", "VIP and block lists", "A summary of every call"] }
+    ? { title: "Redial Free", sub: "Try {agent} on the calls you miss.", features: [`${freeMinutes ?? 10} AI screening minutes a month`, "Forward the calls you miss", "VIP and block lists", "A summary of every call"] }
     : { title: "Free", sub: "Try Echo on your own calls.", features: [`${(freeMinutes ?? 300).toLocaleString()} transcription minutes a month`, "30 days of history", "Browser recording with notes and flags", "Search and Ask Echo"] };
   return (
     <div className="space-y-8">
@@ -164,7 +165,7 @@ export function PlanSection({ line = "echo", freeMinutes, interval: fixed }: { l
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
               <h3 className="text-xl font-semibold">Phone service</h3>
-              <p className="text-sm text-muted-foreground">A full home or business phone line, with desk and cordless phones, and DJ screening built in.</p>
+              <p className="text-sm text-muted-foreground">A full home or business phone line, with desk and cordless phones, and AI screening built in.</p>
             </div>
             <div className="flex gap-4 text-sm">
               <Link href="/home-phone" className="underline underline-offset-4">Home phone</Link>

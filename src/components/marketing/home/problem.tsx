@@ -1,4 +1,5 @@
 import { BellOff, PhoneMissed, ShieldAlert } from "lucide-react";
+import { AgentName } from "@/components/marketing/agent-name";
 
 const CARDS = [
   { icon: ShieldAlert, title: "Spam and sales calls", desc: "Robocalls, “quick questions” and pitches look exactly like a real caller on your screen." },
@@ -27,7 +28,7 @@ export function ProblemSection() {
         </div>
         <p className="mt-10 max-w-2xl text-lg">
           <span className="font-semibold">Redial fixes that.</span>{" "}
-          <span className="text-muted-foreground">Your AI assistant, DJ, answers first, finds out who&apos;s calling and why, and only interrupts you when it matters.</span>
+          <span className="text-muted-foreground">Your AI assistant, <AgentName />, answers first, finds out who&apos;s calling and why, and only interrupts you when it matters.</span>
         </p>
       </div>
     </section>

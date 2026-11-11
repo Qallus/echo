@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Siren, type LucideIcon } from "lucide-react";
 import type { Faq } from "@/lib/faq";
 import { PHONE_MODELS, VENDORS, type PhoneVendor } from "@/lib/redial/phone-models";
+import { Named } from "@/components/marketing/agent-name";
 
 // Sections the home phone and business phone pages share.
 
@@ -9,8 +10,8 @@ export function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: s
   return (
     <>
       <p className="text-sm font-medium text-muted-foreground">{eyebrow}</p>
-      <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{title}</h2>
-      {sub && <p className="mt-3 max-w-2xl text-muted-foreground">{sub}</p>}
+      <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl"><Named text={title} /></h2>
+      {sub && <p className="mt-3 max-w-2xl text-muted-foreground"><Named text={sub} /></p>}
     </>
   );
 }
@@ -24,8 +25,8 @@ export function StepsSection({ id, eyebrow, title, steps }: { id?: string; eyebr
           {steps.map((s, i) => (
             <li key={s.title} className="rounded-2xl border p-6">
               <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-sm font-semibold text-background">{i + 1}</span>
-              <h3 className="mt-4 font-semibold">{s.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{s.desc}</p>
+              <h3 className="mt-4 font-semibold"><Named text={s.title} /></h3>
+              <p className="mt-1 text-sm text-muted-foreground"><Named text={s.desc} /></p>
             </li>
           ))}
         </ol>
@@ -43,8 +44,8 @@ export function FeatureGrid({ eyebrow, title, items, muted = true }: { eyebrow: 
           {items.map(({ icon: Icon, title: t, desc }) => (
             <div key={t} className="rounded-2xl border bg-background p-6">
               <Icon className="size-5" />
-              <h3 className="mt-4 font-semibold">{t}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+              <h3 className="mt-4 font-semibold"><Named text={t} /></h3>
+              <p className="mt-1 text-sm text-muted-foreground"><Named text={desc} /></p>
             </div>
           ))}
         </div>

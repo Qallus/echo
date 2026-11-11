@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Briefcase, CalendarClock, Check, Clock, Heart, PhoneForwarded, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Named } from "@/components/marketing/agent-name";
 
 const PERSONAL = [
   { icon: Heart, text: "Family and friends on your VIP list always ring straight through." },
@@ -10,7 +11,7 @@ const PERSONAL = [
 ];
 const BUSINESS = [
   { icon: Clock, text: "Never miss a lead after hours, on a job or in a meeting." },
-  { icon: Briefcase, text: "DJ knows your services, hours and common questions." },
+  { icon: Briefcase, text: "{agent} knows your services, hours and common questions." },
   { icon: PhoneForwarded, text: "Calls go to the right teammate, with a heads-up first." },
   { icon: UsersRound, text: "Every call is summarized and shared with your team." },
 ];
@@ -42,7 +43,7 @@ function Column({ title, sub, items, cta, dark }: {
         {items.map(({ icon: Icon, text }) => (
           <li key={text} className="flex gap-3 text-sm">
             <span className={dark ? "flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10" : "flex size-8 shrink-0 items-center justify-center rounded-full bg-muted"}><Icon className="size-4" /></span>
-            <span className="pt-1.5">{text}</span>
+            <span className="pt-1.5"><Named text={text} /></span>
           </li>
         ))}
       </ul>

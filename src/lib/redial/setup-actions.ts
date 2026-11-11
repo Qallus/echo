@@ -42,7 +42,7 @@ export async function saveSetupStep(n: number, values: unknown): Promise<Result>
 
   if (step.key === "assistant") {
     const a = ANSWERS.assistant.parse(values);
-    // No greeting written: if they chose to say DJ is an AI assistant, keep a greeting that does.
+    // No greeting written: if they chose to say the assistant is an AI, keep a greeting that does.
     if (!a.greeting && a.disclose) data = { ...a, greeting: setupGreeting(a.name, (saved.about?.fullName ?? "").split(" ")[0], true) };
   }
 

@@ -6,6 +6,7 @@ import { FEATURES } from "@/lib/redial/features";
 import { cn } from "@/lib/utils";
 import { Caret, In, Waveform, clock, typed } from "./scenes";
 import type { DemoScene } from "./hero-demo";
+import { AgentName, Named } from "@/components/marketing/agent-name";
 
 // Redial's hero demo, every step a full phone screen: an unknown number rings
 // (the problem) -> Redial's agent answers and finds out who it is (the fix) ->
@@ -19,11 +20,11 @@ const COMPANY = "Summit Roofing";
 const NUMBER = "(480) 555-0142";
 
 function Bubble({ who, children }: { who: "ai" | "caller" | "you"; children: React.ReactNode }) {
-  const label = who === "ai" ? "DJ · your agent" : who === "caller" ? CALLER : "You";
+  const label = who === "ai" ? "{agent} · your agent" : who === "caller" ? CALLER : "You";
   return (
     <div className={cn("flex max-w-[88%] gap-2 rounded-2xl px-3 py-2 text-[13px] leading-snug", who === "caller" ? "ml-auto rounded-br-sm bg-primary/10" : who === "you" ? "rounded-bl-sm bg-emerald-500/10" : "rounded-bl-sm bg-muted")}>
       {who === "ai" ? <Bot className="mt-0.5 size-3.5 shrink-0" /> : <User className="mt-0.5 size-3.5 shrink-0" />}
-      <span><span className="block text-[10px] font-medium text-muted-foreground">{label}</span>{children}</span>
+      <span><span className="block text-[10px] font-medium text-muted-foreground"><Named text={label} /></span>{children}</span>
     </div>
   );
 }
@@ -97,7 +98,7 @@ function UnknownCallScene({ t }: SceneProps) {
 // why, then tells you quietly.
 function AgentAnswersScene({ t }: SceneProps) {
   const lines: { at: number; who: "ai" | "caller"; text: string }[] = [
-    { at: 400, who: "ai", text: "Hi, this is DJ, Jordan's assistant. Who's calling, and what's it about?" },
+    { at: 400, who: "ai", text: "Hi, this is {agent}, Jordan's assistant. Who's calling, and what's it about?" },
     { at: 2300, who: "caller", text: "Hi, it's Dana from Summit Roofing, about tomorrow's install." },
     { at: 4200, who: "ai", text: "Thanks, Dana. Let me see if Jordan can take it now." },
   ];
@@ -114,13 +115,13 @@ function AgentAnswersScene({ t }: SceneProps) {
           {speaking && <span className="absolute inset-0 animate-ping rounded-full bg-foreground/15" />}
           <span className="relative flex size-24 items-center justify-center rounded-full bg-foreground text-background shadow-xl"><Bot className="size-10" /></span>
         </div>
-        <p className="mt-3 text-xl font-semibold">DJ answered for you</p>
+        <p className="mt-3 text-xl font-semibold"><AgentName /> answered for you</p>
         <p className="text-sm text-muted-foreground">Your Redial agent · talking with {NUMBER}</p>
         <div className="mt-3 flex w-44"><Waveform live bars={22} /></div>
       </div>
 
       <div className="mt-5 space-y-2.5">
-        {lines.map((l) => <In key={l.at} show={t > l.at}><Bubble who={l.who}>{l.text}</Bubble></In>)}
+        {lines.map((l) => <In key={l.at} show={t > l.at}><Bubble who={l.who}><Named text={l.text} /></Bubble></In>)}
       </div>
 
       <In show={t > 5400} className="mt-4 rounded-xl border bg-background p-3.5 shadow-lg">
@@ -137,7 +138,7 @@ function AgentAnswersScene({ t }: SceneProps) {
       )}>
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><AudioLines className="size-3" /> REDIAL · now</p>
         <p className="mt-0.5 text-sm font-semibold">{CALLER}, {COMPANY}</p>
-        <p className="text-[13px] text-muted-foreground">About tomorrow&apos;s install. Listen in, guide DJ, or take the call.</p>
+        <p className="text-[13px] text-muted-foreground">About tomorrow&apos;s install. Listen in, guide <AgentName />, or take the call.</p>
       </div>
     </div>
   );
@@ -157,7 +158,7 @@ function CallScreen({ status, you, seconds, children, footer }: {
           <p className="text-xs text-muted-foreground">{COMPANY} · <span className="tabular-nums">{clock(seconds)}</span></p>
         </div>
         <span className={cn("flex shrink-0 items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-[11px] font-medium", you && "border-emerald-500/40 text-emerald-800 dark:text-emerald-300")}>
-          <span className={cn("size-1.5 animate-pulse rounded-full", you ? "bg-emerald-500" : "bg-foreground")} />{status}
+          <span className={cn("size-1.5 animate-pulse rounded-full", you ? "bg-emerald-500" : "bg-foreground")} /><Named text={status} />
         </span>
       </div>
       <div className="mt-5 flex min-h-0 flex-1 flex-col gap-2.5">{children}</div>
@@ -194,7 +195,7 @@ function YourControls() {
   return (
     <div className="mt-3 grid grid-cols-4 gap-2 text-[11px]">
       {[{ icon: MicOff, label: "Mute" }, { icon: Grid3x3, label: "Keypad" }, { icon: Volume2, label: "Speaker" }].map(({ icon: Icon, label }) => (
-        <span key={label} className="flex flex-col items-center gap-1.5"><span className="flex size-14 items-center justify-center rounded-full bg-muted"><Icon className="size-5" /></span>{label}</span>
+        <span key={label} className="flex flex-col items-center gap-1.5"><span className="flex size-14 items-center justify-center rounded-full bg-muted"><Icon className="size-5" /></span><Named text={label} /></span>
       ))}
       <span className="flex flex-col items-center gap-1.5"><span className="flex size-14 items-center justify-center rounded-full bg-red-500 text-white"><PhoneOff className="size-5" /></span>End</span>
     </div>
@@ -207,13 +208,13 @@ function GuideScene({ t }: SceneProps) {
   const direction = "Ask what time the crew arrives, and for the gate code.";
   const sent = t > 4300;
   return (
-    <CallScreen status="DJ is talking" seconds={18 + t / 1000} footer={<AgentControls active={open ? "guide" : undefined} />}>
+    <CallScreen status="{agent} is talking" seconds={18 + t / 1000} footer={<AgentControls active={open ? "guide" : undefined} />}>
       <Bubble who="ai">Jordan&apos;s just finishing a meeting. Can I help with the install?</Bubble>
       <In show={t > 600}><Bubble who="caller">Sure. I need to confirm when the crew should arrive.</Bubble></In>
       <In show={t > 5600}><Bubble who="ai">Happy to. What time works for the crew, and is there a gate code?</Bubble></In>
       <div className="mt-auto" />
       <In show={open} className="space-y-2 rounded-2xl border bg-background p-3 shadow-lg">
-        <p className="flex items-center gap-1.5 text-xs font-medium"><MessageSquareLock className="size-3.5" /> Guide DJ privately <span className="font-normal text-muted-foreground">· Dana can&apos;t hear this</span></p>
+        <p className="flex items-center gap-1.5 text-xs font-medium"><MessageSquareLock className="size-3.5" /> Guide <AgentName /> privately <span className="font-normal text-muted-foreground">· Dana can&apos;t hear this</span></p>
         <div className="flex items-end gap-2">
           <p className="min-h-10 flex-1 rounded-lg bg-muted/60 px-2.5 py-2 text-[13px]">{typed(direction, t, 2000, 26)}<Caret on={t > 2000 && !sent} /></p>
           <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full transition-colors", sent ? "bg-emerald-600 text-white" : "bg-foreground text-background")}>
@@ -221,7 +222,7 @@ function GuideScene({ t }: SceneProps) {
           </span>
         </div>
         <p className={cn("text-[11px]", t > 5000 ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground")}>
-          {t > 5000 ? "Delivered. DJ asks at the next pause." : sent ? "Waiting for a pause…" : "DJ follows it on the next turn"}
+          <Named text={t > 5000 ? "Delivered. {agent} asks at the next pause." : sent ? "Waiting for a pause…" : "{agent} follows it on the next turn"} />
         </p>
       </In>
     </CallScreen>
@@ -233,12 +234,12 @@ function TakeOverScene({ t }: SceneProps) {
   const handing = t > 1200 && t < 2200;
   const yours = t >= 2200;
   return (
-    <CallScreen status={yours ? "You're on the call" : handing ? "Handing over…" : "DJ is talking"} you={yours} seconds={41 + t / 1000}
+    <CallScreen status={yours ? "You're on the call" : handing ? "Handing over…" : "{agent} is talking"} you={yours} seconds={41 + t / 1000}
       footer={yours ? <YourControls /> : <AgentControls active={handing ? "takeover" : undefined} />}>
       <Bubble who="caller">8am works, and the gate code is 4417.</Bubble>
       <Bubble who="ai">Perfect, thank you, Dana.</Bubble>
       <In show={yours} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
-        <Mic className="size-3.5 shrink-0" /> DJ left the call. Same call, Dana never hung up.
+        <Mic className="size-3.5 shrink-0" /> <AgentName /> left the call. Same call, Dana never hung up.
       </In>
       <In show={t > 2800}><Bubble who="you">Hi Dana, it&apos;s Jordan. 8am is perfect, thanks for the code.</Bubble></In>
       <In show={t > 4500}><Bubble who="caller">Great, the crew will see you tomorrow!</Bubble></In>
@@ -283,7 +284,7 @@ function SummaryScene({ t }: SceneProps) {
       <div className="flex flex-col items-center text-center">
         <span className="flex size-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="size-6" /></span>
         <p className="mt-2 text-lg font-semibold">Call ended · 3:12</p>
-        <p className="text-xs text-muted-foreground">Screened by DJ, then taken over by you</p>
+        <p className="text-xs text-muted-foreground">Screened by <AgentName />, then taken over by you</p>
       </div>
       <div className="mt-5 space-y-3">
         <div className="rounded-xl border bg-background p-3.5 shadow-sm">
@@ -317,7 +318,7 @@ function SummaryScene({ t }: SceneProps) {
 function ListenScene({ t }: SceneProps) {
   const on = t > 1100;
   return (
-    <CallScreen status="DJ is talking" seconds={12 + t / 1000} footer={<AgentControls active={on ? "listen" : undefined} />}>
+    <CallScreen status="{agent} is talking" seconds={12 + t / 1000} footer={<AgentControls active={on ? "listen" : undefined} />}>
       <Bubble who="caller">Hi, it&apos;s Dana from Summit Roofing. Is Jordan around?</Bubble>
       <In show={t > 400}><Bubble who="ai">Jordan&apos;s in a meeting. What&apos;s it about?</Bubble></In>
       <In show={on} className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-800 dark:text-sky-300">
@@ -336,7 +337,7 @@ function TransferScene({ t }: SceneProps) {
   const picked = t > 2800;
   const people = [{ name: "Sam Lee", role: "Install crew" }, { name: "Priya Shah", role: "Billing" }, { name: "Front desk", role: "Office line" }];
   return (
-    <CallScreen status={t > 4600 ? "Transferred" : "DJ is talking"} seconds={30 + t / 1000} footer={<AgentControls active={open ? "transfer" : undefined} />}>
+    <CallScreen status={t > 4600 ? "Transferred" : "{agent} is talking"} seconds={30 + t / 1000} footer={<AgentControls active={open ? "transfer" : undefined} />}>
       <Bubble who="caller">Actually, can I talk to someone about the invoice?</Bubble>
       <In show={t > 600}><Bubble who="ai">Of course. One moment while I connect you.</Bubble></In>
       <div className="mt-auto" />

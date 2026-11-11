@@ -31,6 +31,6 @@ Jeremy adds items from his phone through the Echo connector (`dev_requests` tabl
 
 ## Current next steps
 The working plan is `docs/REDIAL_GROWTH_AND_AUTOMATION_PLAN.md`: three tracks built in parallel, one approval-gated step at a time.
-1. Track A: a Redial-led homepage (REDIAL brand with the equalizer mark; the assistant is named DJ) and separate Redial plans.
+1. Track A: a Redial-led homepage (REDIAL brand with the equalizer mark; users name the assistant, and the site rotates Ara, Rex, Eve and Leo) and separate Redial plans.
 2. Track B: the 8-step Redial setup wizard at `/setup`, with answers flowing to the dashboard, Admin → Redial and the CRM.
 3. Track C: the automation MCP (registry-driven CRUD, risk levels with confirm, agent accounts with keys and dashboard-set limits).

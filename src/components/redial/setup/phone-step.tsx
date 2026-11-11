@@ -21,7 +21,7 @@ export function PhoneStep({ initial, accountType }: { initial?: Partial<PhoneAns
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground">This tells us how to send your calls to DJ without changing your number.</p>
+      <p className="text-muted-foreground">This tells us how to send your calls to your assistant without changing your number.</p>
 
       <div className="space-y-2">
         <Label>What kind of line is it?</Label>

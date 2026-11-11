@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SMS_FREQUENCIES } from "@/lib/waitlist-options";
 import { CARRIERS } from "./carriers";
+import { DEFAULT_AGENT } from "./agent-names";
 import { VOICES } from "./types";
 
 // The Redial setup wizard (/setup): its steps and the answers each one saves
@@ -38,14 +39,14 @@ export const LINE_TYPES = [
   { id: "voip", label: "Business phone service", detail: "For example RingCentral, Google Voice, Zoom Phone or Dialpad." },
 ] as const;
 export const ROUTES = [
-  { id: "missed", label: "Keep my number, forward the calls I miss", detail: "Your phone rings first. Calls you don't answer, decline or can't get go to DJ.", tag: "Most popular" },
-  { id: "all", label: "Keep my number, send every call to DJ", detail: "Your phone stays quiet. DJ answers everything and puts the right calls through." },
-  { id: "new_number", label: "Give me a new Redial number", detail: "A separate number to share. Calls to it always reach DJ first." },
+  { id: "missed", label: "Keep my number, forward the calls I miss", detail: "Your phone rings first. Calls you don't answer, decline or can't get go to your assistant.", tag: "Most popular" },
+  { id: "all", label: "Keep my number, send every call to your assistant", detail: "Your phone stays quiet. Your assistant answers everything and puts the right calls through." },
+  { id: "new_number", label: "Give me a new Redial number", detail: "A separate number to share. Calls to it always reach your assistant first." },
 ] as const;
 
 export const SCREEN_MODES = [
-  { id: "unknown", label: "Unknown callers", detail: "Contacts and VIPs ring straight through. Everyone else talks to DJ first.", tag: "Recommended" },
-  { id: "all", label: "Every call", detail: "DJ answers every call except your VIPs." },
+  { id: "unknown", label: "Unknown callers", detail: "Contacts and VIPs ring straight through. Everyone else talks to your assistant first.", tag: "Recommended" },
+  { id: "all", label: "Every call", detail: "Your assistant answers every call except your VIPs." },
   { id: "off", label: "Not yet", detail: "Calls ring straight through for now. Turn screening on any time." },
 ] as const;
 export const UPDATES = [{ id: "none", label: "No thanks" }, ...SMS_FREQUENCIES] as const;
@@ -116,10 +117,10 @@ export type SetupAnswers = {
   assistant?: Partial<AssistantAnswers>; after?: Partial<AfterAnswers>; plan?: Partial<PlanAnswers>; review?: Partial<ReviewAnswers>;
 };
 
-// The greeting DJ uses when the person doesn't write one. Saying it's an AI
+// The greeting your assistant uses when the person doesn't write one. Saying it's an AI
 // assistant is their choice.
 export function setupGreeting(name: string, first: string, disclose: boolean) {
   const whose = first ? `${first}'s` : "your";
-  return `Hi, this is ${name || "DJ"}, ${whose} ${disclose ? "AI assistant" : "assistant"}. ${first || "They"} can't pick up right now. May I ask who's calling and what it's about?`;
+  return `Hi, this is ${name || DEFAULT_AGENT.name}, ${whose} ${disclose ? "AI assistant" : "assistant"}. ${first || "They"} can't pick up right now. May I ask who's calling and what it's about?`;
 }
 export type Setup = { step: number; status: "draft" | "submitted" | "active" | "needs_info"; answers: SetupAnswers; line_id: string | null; staff_note: string | null };

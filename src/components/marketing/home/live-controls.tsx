@@ -6,11 +6,12 @@ import { DeviceDemo } from "@/components/marketing/hero-demo/hero-demo";
 import { REDIAL_CONTROL_SCENES } from "@/components/marketing/hero-demo/redial-scenes";
 import { FEATURES } from "@/lib/redial/features";
 import { cn } from "@/lib/utils";
+import { AgentName, Named } from "@/components/marketing/agent-name";
 
 const CONTROLS = [
   { key: "listen", icon: Headphones, f: FEATURES.insider, benefit: "Hear the call live without saying a word. Your microphone is never sent." },
-  { key: "guide", icon: MessageSquareLock, f: FEATURES.audible, benefit: "Type private directions while DJ talks. The caller never hears them." },
-  { key: "takeover", icon: Gavel, f: FEATURES.gavel, benefit: "Take the call yourself, on the same call. DJ steps away; the caller never hangs up." },
+  { key: "guide", icon: MessageSquareLock, f: FEATURES.audible, benefit: "Type private directions while {agent} talks. The caller never hears them." },
+  { key: "takeover", icon: Gavel, f: FEATURES.gavel, benefit: "Take the call yourself, on the same call. {agent} steps away; the caller never hangs up." },
   { key: "transfer", icon: PhoneForwarded, f: FEATURES.directory, benefit: "Send the caller to the right teammate or number. They hear who's calling first." },
   { key: "mirror", icon: Sparkles, f: FEATURES.mirror, benefit: "While you talk, it quietly suggests answers from your notes and drafts follow-ups." },
 ] as const;
@@ -25,7 +26,7 @@ export function LiveControlsSection() {
         <div>
           <p className="text-sm font-medium text-muted-foreground">Live call controls</p>
           <h2 className="mt-2 max-w-xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Step in whenever you want. Or don&apos;t.</h2>
-          <p className="mt-3 max-w-xl text-muted-foreground">DJ handles the call, and you stay in control the whole time, from your phone or the web.</p>
+          <p className="mt-3 max-w-xl text-muted-foreground"><AgentName /> handles the call, and you stay in control the whole time, from your phone or the web.</p>
           <div role="tablist" aria-label="Live call controls" className="mt-8 grid gap-2">
             {CONTROLS.map(({ key, icon: Icon, f, benefit }) => {
               const on = key === active;
@@ -35,7 +36,7 @@ export function LiveControlsSection() {
                   <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", on ? "bg-foreground text-background" : "bg-muted")}><Icon className="size-5" /></span>
                   <span>
                     <span className="block font-semibold">{f.name} <span className="font-normal text-muted-foreground">· {f.action}</span></span>
-                    <span className={cn("block text-sm text-muted-foreground", !on && "line-clamp-1")}>{benefit}</span>
+                    <span className={cn("block text-sm text-muted-foreground", !on && "line-clamp-1")}><Named text={benefit} /></span>
                   </span>
                 </button>
               );

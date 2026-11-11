@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Building2, Info, PhoneIncoming, Smartphone } from "lucide-react";
 import { FinalCta } from "@/components/marketing/home/final-cta";
 import { CARRIERS, FORWARDING } from "@/lib/redial/carriers";
+import { AgentName, Named } from "@/components/marketing/agent-name";
 
 export const metadata = {
   title: "Works with your carrier · Redial",
@@ -18,20 +19,20 @@ export default function CompatibilityPage() {
           <p className="text-sm font-medium text-muted-foreground">Compatibility</p>
           <h1 className="mt-2 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Works with the phone and number you have.</h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            Redial answers through call forwarding, a feature every major carrier has. You dial a short code once, and calls you miss (or every call) go to DJ. Setup shows you the exact code with your Redial number filled in.
+            Redial answers through call forwarding, a feature every major carrier has. You dial a short code once, and calls you miss (or every call) go to <AgentName />. Setup shows you the exact code with your Redial number filled in.
           </p>
         </header>
 
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           {[
-            { icon: Smartphone, title: "Forward the calls you miss", desc: "Your phone rings first. Calls you don't answer, decline or can't get go to DJ." },
-            { icon: PhoneIncoming, title: "Forward every call", desc: "Your phone stays quiet. DJ answers everything and puts the right calls through." },
-            { icon: Building2, title: "Get a Redial number", desc: "A separate number to share. No forwarding needed: calls to it always reach DJ." },
+            { icon: Smartphone, title: "Forward the calls you miss", desc: "Your phone rings first. Calls you don't answer, decline or can't get go to {agent}." },
+            { icon: PhoneIncoming, title: "Forward every call", desc: "Your phone stays quiet. {agent} answers everything and puts the right calls through." },
+            { icon: Building2, title: "Get a Redial number", desc: "A separate number to share. No forwarding needed: calls to it always reach {agent}." },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="rounded-2xl border p-6">
               <Icon className="size-5" />
               <h2 className="mt-4 font-semibold">{title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+              <p className="mt-1 text-sm text-muted-foreground"><Named text={desc} /></p>
             </div>
           ))}
         </div>
@@ -86,7 +87,7 @@ export default function CompatibilityPage() {
           <div className="rounded-2xl border p-6">
             <h2 className="text-lg font-semibold">Landlines and business phone services</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Office lines and services like RingCentral, Google Voice, Zoom Phone and Dialpad can forward calls too, usually from their admin portal or settings. Choose who should reach DJ (unanswered calls, after hours, or everything) and forward to your Redial number.
+              Office lines and services like RingCentral, Google Voice, Zoom Phone and Dialpad can forward calls too, usually from their admin portal or settings. Choose who should reach <AgentName /> (unanswered calls, after hours, or everything) and forward to your Redial number.
             </p>
           </div>
           <div className="rounded-2xl border p-6">
@@ -97,7 +98,7 @@ export default function CompatibilityPage() {
           </div>
         </section>
       </div>
-      <FinalCta title="Keep your number. Let DJ answer." />
+      <FinalCta title="Keep your number. Let {agent} answer." />
     </>
   );
 }

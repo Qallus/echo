@@ -80,7 +80,7 @@ export function ReviewStep({ setup, ready, line }: { setup: Setup; ready: Item[]
         <p className="flex items-start gap-2 pt-1 text-sm">
           <PhoneCall className="mt-0.5 size-4 shrink-0" />
           {line
-            ? <span>Try it: call <span className="font-medium">{formatPhone(line.number)}</span> from another phone and meet {a.assistant?.name ?? "DJ"}.</span>
+            ? <span>Try it: call <span className="font-medium">{formatPhone(line.number)}</span> from another phone and meet {a.assistant?.name ?? "your assistant"}.</span>
             : <span className="text-muted-foreground">We&apos;ll set up your Redial number after you finish. It shows on your dashboard and in Calls, and then you can try a test call.</span>}
         </p>
       </div>

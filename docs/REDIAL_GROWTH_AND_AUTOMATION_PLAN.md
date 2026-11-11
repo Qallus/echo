@@ -32,7 +32,7 @@ Owner: Jeremy Waters (Qallus LLC). Written Nov 9, 2026. This is the working plan
 | Agent access | Hybrid: agents can do everything Jeremy can, with per-agent limits he controls in the dashboard. |
 | Order of work | All three tracks in parallel, alternating steps. |
 | Brand | The public site is **REDIAL**, using the same equalizer mark as Echo (lucide `AudioLines`). Echo stays the recording feature inside Redial. |
-| Assistant | The default assistant is named **DJ**. Users can rename theirs. |
+| Assistant | No house name (DJ retired Nov 10). Users name their assistant; suggested Ara, Rex, Eve, Leo, each matching a voice. The site rotates through them. New lines default to Ara. |
 
 ---
 

@@ -4,6 +4,7 @@ import { getBillingSettings } from "@/lib/billing/settings";
 import { ALL_FAQ } from "@/lib/faq";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { AgentName } from "@/components/marketing/agent-name";
 
 export const metadata = {
   title: "Pricing · Redial and Echo",
@@ -19,7 +20,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
       <header className="text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Let DJ take the calls. Pay for what you need.</h1>
+        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Let <AgentName /> take the calls. Pay for what you need.</h1>
         <p className="mx-auto mt-4 max-w-xl text-muted-foreground">Start free with Redial. Upgrade for more screening minutes, business features and more lines. Echo plans cover recordings and transcripts.</p>
         <p className="mt-6 text-sm text-muted-foreground">One account on the web and on your phone</p>
         <AppBadges source="pricing" className="mt-3 justify-center" />
