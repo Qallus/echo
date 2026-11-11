@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  ArrowRight, BookOpen, Building2, CalendarClock, Clock, FileText, Lock, Network, PhoneForwarded, Router, ShieldBan, UsersRound,
+  ArrowRight, AudioWaveform, BookOpen, Building2, CalendarClock, Clock, FileText, Lock, Network, PhoneForwarded, Router, ShieldBan, UsersRound,
 } from "lucide-react";
 import { FaqSection } from "@/components/marketing/faq-list";
 import { FinalCta } from "@/components/marketing/home/final-cta";
@@ -120,7 +120,7 @@ export default function BusinessPhonePage() {
           {[
             { icon: Building2, title: "Keeping your phone system?", desc: "Redial for business screens the calls your current system forwards.", href: "/redial/business" },
             { icon: CalendarClock, title: "Phone service at home too", desc: "Redial Home Phone puts the same assistant on the house phone.", href: "/home-phone" },
-            { icon: FileText, title: "Meetings, recorded", desc: "Echo turns calls and meetings into transcripts and reports.", href: "/#features" },
+            { icon: AudioWaveform, title: "Greetings and phone menus", desc: "Make them in the Recording Studio with your voice or an AI voice, plus music.", href: "/recording-studio" },
           ].map(({ icon: Icon, title, desc, href }) => (
             <Link key={title} href={href} className="rounded-2xl border p-6 transition-colors hover:bg-muted/40">
               <Icon className="size-5" />

@@ -1,5 +1,5 @@
 import {
-  AudioLines, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, ShieldCheck, Tag, Waypoints, type LucideIcon,
+  AudioLines, AudioWaveform, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, ShieldCheck, Tag, Waypoints, type LucideIcon,
 } from "lucide-react";
 
 // The public site's product navigation, shared by the desktop mega menu and
@@ -28,7 +28,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
       { href: "/business-phone", title: "Business phone", desc: "Desk phones, extensions, transfers", icon: Building2 },
       { href: "/business-phone#phones", title: "Phones that work", desc: "Grandstream, Yealink, Poly and more", icon: Headset },
       { href: "/pricing#phone-service", title: "Phone plans", desc: "Home Phone and Business Phone", icon: Tag },
-      { href: "/faq#topic-phones", title: "Phone questions", desc: "Porting, 911, outages, SIP", icon: CircleHelp },
+      { href: "/recording-studio", title: "Recording Studio", desc: "Greetings, phone menus, AI voices", icon: AudioWaveform },
     ],
   },
   {

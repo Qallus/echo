@@ -92,6 +92,18 @@ export const FAQ_TOPICS: FaqTopic[] = [
     ],
   },
   {
+    id: "studio", title: "Recording Studio", short: "Recording Studio",
+    blurb: "Record greetings, extension prompts, phone menus and hold messages with your own voice, an upload or an AI voice, and add music.",
+    items: [
+      { q: "What is the Recording Studio?", a: "A place in your dashboard to make the recordings your phone line plays: greetings, extension prompts, phone menus, hold messages and voicemail greetings. Record your own voice, upload a file, or type a script for an AI voice to read, then add background music, balance the levels and save the result to your library.", tags: "studio greeting ivr voiceover" },
+      { q: "Which AI voices can I use?", a: "Voices from OpenAI, xAI (Grok) and Google Gemini, dozens in all. Pick a voice, set the speed, type your script, and the recording is ready in a few seconds. Each one is saved to your library so you can reuse it.", tags: "tts text to speech grok gemini openai voice" },
+      { q: "Can I add music under my greeting?", a: "Yes. Upload a music file, paste a link to one, build a beat in the drum machine, or describe the beat you want and let AI Beats write it. Then set the music level, a lead-in before the voice starts, and whether the music loops." },
+      { q: "What file do I get?", a: "A WAV file saved to your library. You can play it, download it, label what it's for, mark it draft, in review, approved or live, and archive it when you don't need it." },
+      { q: "Who can hear my recordings?", a: "Only you. Recordings are stored privately in your account and play through short-lived links. Callers hear a recording only when you choose to use it on your line." },
+      { q: "Is there a limit on AI voices?", a: "You can make up to 40 AI voice clips a day, each up to 2,000 characters. Recording your own voice and uploading files have no daily limit." },
+    ],
+  },
+  {
     id: "phones", title: "Redial phone service: home and business", short: "Phone service",
     blurb: "Redial Home Phone and Business Phone give you a full phone line, with desk and cordless phones, and AI screening built in.",
     items: [
