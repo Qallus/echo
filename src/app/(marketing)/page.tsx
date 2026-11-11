@@ -9,6 +9,7 @@ import { UseCasesSection } from "@/components/marketing/home/use-cases";
 import { MobileAppSection } from "@/components/marketing/mobile-app-section";
 import { FaqSection } from "@/components/marketing/faq-list";
 import { FinalCta } from "@/components/marketing/home/final-cta";
+import { PhoneServiceSection } from "@/components/marketing/home/phone-service";
 import { KeepNumberSection } from "@/components/marketing/home/keep-number";
 import { PricingPreviewSection } from "@/components/marketing/home/pricing-preview";
 import { TrustSection } from "@/components/marketing/home/trust";
@@ -58,6 +59,7 @@ export default function LandingPage() {
       <LiveControlsSection />
       <UseCasesSection />
       <KeepNumberSection />
+      <PhoneServiceSection />
 
       <section className="border-t">
         <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">

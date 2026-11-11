@@ -6,7 +6,8 @@ import { FaqSection } from "@/components/marketing/faq-list";
 import { FinalCta } from "@/components/marketing/home/final-cta";
 import { LiveControlsSection } from "@/components/marketing/home/live-controls";
 import { CompareTable } from "@/components/marketing/phones/compare-table";
-import { DeskPhone, type ScreenFrame } from "@/components/marketing/phones/phone-art";
+import { BUSINESS_FRAMES } from "@/components/marketing/phones/frames";
+import { DeskPhone } from "@/components/marketing/phones/phone-art";
 import { PlanCompare } from "@/components/marketing/phones/plan-compare";
 import { EmergencyNotice, FaqJsonLd, FeatureGrid, SectionHead, StepsSection, SupportedPhones } from "@/components/marketing/phones/sections";
 import { Button } from "@/components/ui/button";
@@ -18,13 +19,6 @@ export const metadata = {
   description: "A business phone system on desk and Wi-Fi phones from Grandstream, Yealink and Poly that set themselves up. An AI assistant you name answers as your receptionist, transfers to the right extension, catches leads after hours and summarizes every call.",
   alternates: { canonical: "/business-phone" },
 };
-
-const FRAMES: ScreenFrame[] = [
-  { tag: "Incoming · Main line", title: "(480) 555-0187", detail: "New caller", tone: "call" },
-  { tag: "{agent} is answering", title: "Dana Ortiz · Summit Roofing", detail: "“Looking for a quote on a roof repair.”", tone: "dj" },
-  { tag: "Transfer from {agent}", title: "Dana Ortiz → Sales (101)", detail: "Wants a roof repair quote this week. Press 1 to take it.", action: "Press 1", tone: "dj" },
-  { tag: "After hours", title: "Callback booked", detail: "Dana Ortiz, 8:30 AM tomorrow. Summary sent to the team.", tone: "dj" },
-];
 
 const STEPS = [
   { title: "Choose your numbers", desc: "Bring your main business number, or pick new local numbers for each line." },
@@ -83,7 +77,7 @@ export default function BusinessPhonePage() {
           </div>
           <p className="mt-4 text-sm text-muted-foreground">Per line pricing. Unlimited US and Canada calling. No contract.</p>
         </div>
-        <DeskPhone frames={FRAMES} className="mt-16 max-w-2xl" />
+        <DeskPhone frames={BUSINESS_FRAMES} className="mt-16 max-w-2xl" />
       </section>
 
       <StepsSection id="how" eyebrow="How it works" title="A phone system without the phone closet." steps={STEPS} />

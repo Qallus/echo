@@ -166,8 +166,14 @@
   to { opacity: 1; transform: none; }
 }
 .agent-name { animation: agent-name 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+/* The status light on the drawn phones (src/components/marketing/phones). */
+@keyframes led-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px 1px #34d399; }
+  50% { opacity: 0.35; box-shadow: 0 0 1px 0 #34d399; }
+}
+.led-pulse { animation: led-pulse 1.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .hero-in, .hero-bar, .hero-dot, .hero-click, .agent-name { animation: none; }
+  .hero-in, .hero-bar, .hero-dot, .hero-click, .agent-name, .led-pulse { animation: none; }
 }
 
 /* Height of the phone bottom app bar (src/components/mobile/bottom-nav.tsx);

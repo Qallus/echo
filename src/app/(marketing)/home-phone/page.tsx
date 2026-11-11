@@ -5,7 +5,8 @@ import {
 import { FaqSection } from "@/components/marketing/faq-list";
 import { FinalCta } from "@/components/marketing/home/final-cta";
 import { CompareTable } from "@/components/marketing/phones/compare-table";
-import { CordlessPhone, type ScreenFrame } from "@/components/marketing/phones/phone-art";
+import { HOME_FRAMES } from "@/components/marketing/phones/frames";
+import { CordlessPhone } from "@/components/marketing/phones/phone-art";
 import { PlanCompare } from "@/components/marketing/phones/plan-compare";
 import { EmergencyNotice, FaqJsonLd, FeatureGrid, SectionHead, StepsSection, SupportedPhones } from "@/components/marketing/phones/sections";
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,6 @@ export const metadata = {
   description: "Replace your landline with Redial Home Phone: keep your number or get a new one, use cordless and Wi-Fi phones like the Grandstream WP826, and let your AI assistant answer spam and unknown callers. Unlimited US and Canada calling, 911 with your address.",
   alternates: { canonical: "/home-phone" },
 };
-
-const FRAMES: ScreenFrame[] = [
-  { tag: "Incoming", title: "(602) 555-0142", detail: "Unknown caller", tone: "call" },
-  { tag: "{agent} is answering", title: "Dr. Patel's office", detail: "“Calling to confirm Tuesday's appointment.”", tone: "dj" },
-  { tag: "{agent} screened it", title: "Dr. Patel's office", detail: "Appointment reminder. Press 1 to take it.", action: "Press 1", tone: "dj" },
-  { tag: "Blocked", title: "Car warranty robocall", detail: "{agent} hung up. Your phones never rang.", tone: "blocked" },
-];
 
 const STEPS = [
   { title: "Pick your number", desc: "Get a new local number in minutes, or bring the home number you've had for years." },
@@ -73,7 +67,7 @@ export default function HomePhonePage() {
           </div>
           <p className="mt-4 text-sm text-muted-foreground">Unlimited US and Canada calling. No contract. Keep your number.</p>
         </div>
-        <CordlessPhone frames={FRAMES} />
+        <CordlessPhone frames={HOME_FRAMES} />
       </section>
 
       <StepsSection id="how" eyebrow="How it works" title="From landline to Redial in an afternoon." steps={STEPS} />
