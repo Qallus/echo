@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Maya R. — Redial Assistant</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#171717}a:hover{color:#047857}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 1500px; font-family: Geist, system-ui, sans-serif; color: #0a0a0a; background: #ffffff">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 32px; border-bottom: 1px solid #e5e5e5">
+<div style="display: flex; align-items: center; gap: 10px">
+<div style="display: flex; align-items: flex-end; gap: 2px; height: 18px" aria-hidden="true">
+<span style="width: 3px; height: 8px; background: #171717; border-radius: 2px"></span>
+<span style="width: 3px; height: 16px; background: #171717; border-radius: 2px"></span>
+<span style="width: 3px; height: 11px; background: #10b981; border-radius: 2px"></span>
+<span style="width: 3px; height: 18px; background: #171717; border-radius: 2px"></span>
+<span style="width: 3px; height: 6px; background: #171717; border-radius: 2px"></span>
+</div>
+<span style="font-weight: 600; font-size: 14px; letter-spacing: 0.2em">REDIAL</span>
+<span style="font-size: 12px; color: #525252; border: 1px solid #e5e5e5; border-radius: 999px; padding: 2px 8px; margin-left: 4px">Assistants</span>
+</div>
+<a href="Main.dc.html" style="font-size: 14px; text-decoration: none; padding: 10px 12px; border-radius: 8px; border: 1px solid #e5e5e5">← Back to results</a>
+</header>
+
+<div style="max-width: 1240px; margin: 0 auto; padding: 32px; display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; box-sizing: border-box">
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 32px">
+
+<section style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center">
+<div style="width: 132px; height: 132px; border-radius: 24px; background: #d1fae5; display: grid; place-items: center; font-size: 40px; font-weight: 600; position: relative" role="img" aria-label="Profile photo placeholder for Maya R.">MR
+<span style="position: absolute; right: -4px; bottom: -4px; width: 22px; height: 22px; border-radius: 999px; background: #10b981; border: 3px solid #fff"></span>
+</div>
+<div style="flex: 1; min-width: 260px">
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<h1 style="margin: 0; font-size: 32px; font-weight: 600; letter-spacing: -0.02em">Maya R.</h1>
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #065f46; background: #ecfdf5; border-radius: 999px; padding: 4px 10px">
+<span style="width: 7px; height: 7px; border-radius: 999px; background: #10b981"></span>Available now</span>
+</div>
+<p style="margin: 6px 0 0; font-size: 16px; color: #404040">Front desk pro · 8 years in medical and dental offices</p>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 13px; color: #404040">
+<span style="display: inline-flex; align-items: center; gap: 6px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0zM12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg>Chandler, AZ · MST</span>
+<span style="display: inline-flex; align-items: center; gap: 6px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="#171717" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><strong>4.97</strong> · 61 reviews</span>
+<span style="display: inline-flex; align-items: center; gap: 6px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 6v6l4 2"></path></svg>Replies in about 20 min</span>
+<span>142 engagements</span>
+</div>
+</div>
+</section>
+
+<section style="display: flex; flex-wrap: wrap; gap: 8px" aria-label="Badges">
+<sc-for list="{{badges}}" as="b" hint-placeholder-count="5">
+<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; border: 1px solid #e5e5e5; border-radius: 10px; padding: 8px 12px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{b.d}}"></path></svg>
+{{b.label}}
+</span>
+</sc-for>
+</section>
+
+<section>
+<h2 style="margin: 0 0 4px; font-size: 18px; font-weight: 600">Voice samples</h2>
+<p style="margin: 0 0 14px; font-size: 13px; color: #525252">Short clips Maya recorded for her profile. Up to 3, 30 seconds max.</p>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{samples}}" as="v" hint-placeholder-count="3">
+<div style="{{v.rowStyle}}">
+<button type="button" onClick="{{v.play}}" aria-label="{{v.btnLabel}}" style="width: 44px; height: 44px; border-radius: 999px; border: 0; background: #171717; display: grid; place-items: center; cursor: pointer; flex: none">
+<sc-if value="{{v.playing}}" hint-placeholder-val="{{false}}">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"></path></svg>
+</sc-if>
+<sc-if value="{{v.paused}}" hint-placeholder-val="{{true}}">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true"><path d="M6 3l14 9-14 9V3z"></path></svg>
+</sc-if>
+</button>
+<div style="flex: 1; min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px">
+<strong style="font-weight: 600">{{v.title}}</strong>
+<span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #525252">{{v.len}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 3px; height: 26px; margin-top: 6px" aria-hidden="true">
+<sc-for list="{{v.bars}}" as="h" hint-placeholder-count="40">
+<span style="{{h.style}}"></span>
+</sc-for>
+</div>
+<p style="margin: 6px 0 0; font-size: 13px; color: #404040; font-style: italic">{{v.quote}}</p>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section>
+<h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">About</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.6; color: #262626; max-width: 680px">I ran the front desk for a busy pediatric dental group for six years, then a two-location dermatology practice. I keep callers calm, get the details right the first time and book into most scheduling systems. Happy to follow your script word for word or take the lead.</p>
+</section>
+
+<section>
+<h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">What Maya does</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px">
+<sc-for list="{{skills}}" as="s" hint-placeholder-count="8">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5e5e5; border-radius: 12px">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #f5f5f5; display: grid; place-items: center; flex: none">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#171717" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+</span>
+<span style="font-size: 14px">{{s.label}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px">
+<div>
+<h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">Experience</h2>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 14px">
+<li><strong style="font-weight: 600">Front desk lead</strong><br><span style="color: #525252">Pediatric dental group · 6 yrs</span></li>
+<li><strong style="font-weight: 600">Patient coordinator</strong><br><span style="color: #525252">Dermatology practice · 2 yrs</span></li>
+<li><strong style="font-weight: 600">Redial Certified</strong><br><span style="color: #525252">Passed mock-call assessment · Oct 2026</span></li>
+</ul>
+</div>
+<div>
+<h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">Languages &amp; industries</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px">
+<span style="border: 1px solid #e5e5e5; border-radius: 999px; padding: 6px 12px">English · Native</span>
+<span style="border: 1px solid #e5e5e5; border-radius: 999px; padding: 6px 12px">Spanish · Fluent</span>
+<span style="background: #f5f5f5; border-radius: 999px; padding: 6px 12px">Medical</span>
+<span style="background: #f5f5f5; border-radius: 999px; padding: 6px 12px">Dental</span>
+<span style="background: #f5f5f5; border-radius: 999px; padding: 6px 12px">Med spa</span>
+<span style="background: #f5f5f5; border-radius: 999px; padding: 6px 12px">Veterinary</span>
+</div>
+</div>
+</section>
+
+<section>
+<h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">Weekly availability <span style="font-weight: 400; font-size: 13px; color: #525252">(Arizona time)</span></h2>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; font-size: 12px; text-align: center">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="color: #525252">{{d.day}}</span>
+<span style="{{d.style}}">{{d.hours}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section>
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+<h2 style="margin: 0 0 12px; font-size: 18px; font-weight: 600">Reviews from businesses</h2>
+<span style="font-size: 13px; color: #525252">Shown after both sides review</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px">
+<sc-for list="{{reviews}}" as="r" hint-placeholder-count="2">
+<figure style="margin: 0; padding: 16px; border: 1px solid #e5e5e5; border-radius: 14px">
+<div style="display: flex; justify-content: space-between; font-size: 13px"><strong style="font-weight: 600">{{r.biz}}</strong><span style="color: #525252">{{r.when}}</span></div>
+<div style="font-size: 13px; margin: 4px 0 8px" aria-label="5 out of 5 stars">★★★★★</div>
+<blockquote style="margin: 0; font-size: 14px; line-height: 1.5; color: #262626">{{r.text}}</blockquote>
+<figcaption style="margin-top: 8px; font-size: 12px; color: #525252">{{r.type}}</figcaption>
+</figure>
+</sc-for>
+</div>
+</section>
+</main>
+
+<aside style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<div style="border: 1px solid #e5e5e5; border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 16px">
+<div role="tablist" aria-label="Engagement type" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: #f5f5f5; border-radius: 10px; padding: 4px">
+<sc-for list="{{types}}" as="t" hint-placeholder-count="3">
+<button type="button" role="tab" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+</div>
+<div>
+<div style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em">{{price.big}}<span style="font-size: 15px; font-weight: 400; color: #525252">{{price.unit}}</span></div>
+<p style="margin: 4px 0 0; font-size: 13px; color: #525252">{{price.note}}</p>
+</div>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #262626">
+<li style="display: flex; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>Your Redial AI answers first, then transfers</li>
+<li style="display: flex; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>Listen in, coach or take over any call</li>
+<li style="display: flex; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>Every call recorded and summarized by Echo</li>
+<li style="display: flex; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>Pay Redial; disputes covered for 72 hours</li>
+</ul>
+<a href="Messages.dc.html" style="display: flex; justify-content: center; align-items: center; gap: 8px; height: 48px; border-radius: 12px; background: #171717; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 500">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"></path></svg>
+Message Maya</a>
+<a href="Messages.dc.html" style="display: flex; justify-content: center; align-items: center; height: 48px; border-radius: 12px; border: 1px solid #d4d4d4; text-decoration: none; font-size: 15px; font-weight: 500">Book a 30-min paid trial · $16.50</a>
+<p style="margin: 0; display: flex; gap: 8px; font-size: 12px; color: #525252; line-height: 1.5">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 2px"><path d="M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+Phone numbers and emails stay hidden. Keep messages and payments on Redial to stay covered.</p>
+</div>
+
+<div style="border: 1px solid #e5e5e5; border-radius: 18px; overflow: hidden">
+<div style="position: relative; height: 200px; background: #f1f4f2" role="img" aria-label="Approximate service area around Chandler">
+<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0" aria-hidden="true">
+<path d="M0 40 L100 44" stroke="#ffffff" stroke-width="2" fill="none"></path>
+<path d="M40 0 L44 100" stroke="#ffffff" stroke-width="2" fill="none"></path>
+<path d="M0 78 L100 72" stroke="#ffffff" stroke-width="1.4" fill="none"></path>
+</svg>
+<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 130px; height: 130px; border-radius: 999px; background: rgba(16,185,129,0.2); border: 1px solid rgba(4,120,87,0.5)"></span>
+<span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; font-weight: 600">Chandler</span>
+</div>
+<p style="margin: 0; padding: 12px 16px; font-size: 12px; color: #525252">Approximate area only. Remote assistants can cover any US time zone.</p>
+</div>
+
+<button type="button" style="height: 44px; border: 0; background: transparent; color: #525252; font-size: 13px; text-decoration: underline; cursor: pointer">Report this profile</button>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { playing: null, type: 'demand' }; }
+  renderVals() {
+    const st = this.state;
+    const heights = [8,14,20,12,17,9,15,21,11,6,13,18,10,16,7,12,19,9,14,6,11,17,22,13,8,15,10,18,12,7,16,20,9,13,6,11,15,8,12,5];
+    const mk = (id, title, len, quote, seed) => {
+      const playing = st.playing === id;
+      return {
+        title, len, quote, playing, paused: !playing,
+        btnLabel: (playing ? 'Pause ' : 'Play ') + title,
+        play: () => this.setState({ playing: playing ? null : id }),
+        rowStyle: 'display: flex; gap: 14px; align-items: flex-start; padding: 14px; border-radius: 14px; border: 1px solid ' + (playing ? '#171717' : '#e5e5e5') + '; background: ' + (playing ? '#fafafa' : '#ffffff'),
+        bars: heights.map((h, i) => ({ style: 'width: 3px; border-radius: 2px; height: ' + heights[(i + seed) % heights.length] + 'px; background: ' + (playing && i < 16 ? '#10b981' : '#a3a3a3') }))
+      };
+    };
+    const types = [
+      ['demand', 'On-demand', { big: '$0.85', unit: ' /min', note: 'Billed per connected minute, weekly. Plus 10% service fee.' }],
+      ['shift', 'Shifts', { big: '$30', unit: ' /hr', note: 'Book set hours. Authorized at booking, charged after the shift.' }],
+      ['retainer', 'Monthly', { big: '$1,150', unit: ' /mo', note: '40 hours of coverage, then $0.85/min. Cancel any month.' }]
+    ];
+    const cur = types.find(t => t[0] === st.type);
+    const tabOn = 'height: 40px; border: 0; border-radius: 8px; background: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.08)';
+    const tabOff = 'height: 40px; border: 0; border-radius: 8px; background: transparent; color: #404040; font-size: 13px; cursor: pointer';
+    const P = {
+      phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z'
+    };
+    const on = 'padding: 10px 4px; border-radius: 8px; background: #ecfdf5; color: #065f46; font-weight: 500';
+    const offd = 'padding: 10px 4px; border-radius: 8px; background: #f5f5f5; color: #525252';
+    return {
+      badges: [
+        { label: 'ID verified', d: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1zM9 12l2 2 4-4' },
+        { label: 'Background checked', d: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
+        { label: 'Top rated', d: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
+        { label: 'Fast responder', d: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z' },
+        { label: 'Redial certified', d: 'M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z' }
+      ],
+      samples: [
+        mk('greet', 'Greeting', '0:24', '“Thanks for calling Sonoran Smiles, this is Maya. How can I help you today?”', 0),
+        mk('transfer', 'Warm transfer', '0:18', '“I have Mrs. Lopez on the line about her son’s cleaning on Thursday.”', 9),
+        mk('spanish', 'Spanish greeting', '0:21', '“Gracias por llamar, habla Maya. ¿En qué le puedo ayudar?”', 17)
+      ],
+      skills: [
+        { label: 'Live answering', d: P.phone },
+        { label: 'Warm transfers', d: 'M14 6h8M18 2l4 4-4 4' + P.phone.replace('M22', ' M22') },
+        { label: 'Appointment booking', d: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 16l2 2 4-4' },
+        { label: 'Bilingual: Spanish', d: 'M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6' },
+        { label: 'Medical office (HIPAA trained)', d: 'M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4M20 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z' },
+        { label: 'CRM entry', d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
+        { label: 'Insurance verification', d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15l2 2 4-4' },
+        { label: 'Email/SMS follow-up', d: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 7l-10 6L2 7' }
+      ],
+      days: [['Mon', '7a–3p', 1], ['Tue', '7a–3p', 1], ['Wed', '7a–3p', 1], ['Thu', '7a–3p', 1], ['Fri', '7a–1p', 1], ['Sat', 'Off', 0], ['Sun', 'Off', 0]].map(d => ({ day: d[0], hours: d[1], style: d[2] ? on : offd })),
+      reviews: [
+        { biz: 'Desert Bloom Dermatology', when: 'Oct 2026', text: 'Covered our front desk for three weeks during a staff shortage. Patients asked if she was new in the office.', type: 'Retainer · 3 weeks' },
+        { biz: 'Chandler Family Vet', when: 'Sep 2026', text: 'Picked up Saturday overflow and booked straight into our system. Spanish calls finally get answered.', type: 'Shifts · 6 Saturdays' }
+      ],
+      types: types.map(t => ({ label: t[1], style: st.type === t[0] ? tabOn : tabOff, pick: () => this.setState({ type: t[0] }) })),
+      price: cur[2]
+    };
+  }
+}
+</script>
+</body>
+</html>

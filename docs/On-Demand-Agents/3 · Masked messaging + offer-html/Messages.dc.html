@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Messages — Redial Assistants</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+a{color:#171717}a:hover{color:#047857}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="min-height: 900px; font-family: Geist, system-ui, sans-serif; color: #0a0a0a; background: #ffffff; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 32px; border-bottom: 1px solid #e5e5e5">
+<div style="display: flex; align-items: center; gap: 10px">
+<div style="display: flex; align-items: flex-end; gap: 2px; height: 18px" aria-hidden="true">
+<span style="width: 3px; height: 8px; background: #171717; border-radius: 2px"></span>
+<span style="width: 3px; height: 16px; background: #171717; border-radius: 2px"></span>
+<span style="width: 3px; height: 11px; background: #10b981; border-radius: 2px"></span>
+<span style="width: 3px; height: 18px; background: #171717; border-radius: 2px"></span>
+<span style="width: 3px; height: 6px; background: #171717; border-radius: 2px"></span>
+</div>
+<span style="font-weight: 600; font-size: 14px; letter-spacing: 0.2em">REDIAL</span>
+<span style="font-size: 12px; color: #525252; border: 1px solid #e5e5e5; border-radius: 999px; padding: 2px 8px; margin-left: 4px">Assistants</span>
+</div>
+<nav style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 14px">
+<a href="Main.dc.html" style="padding: 8px 12px; border-radius: 8px; text-decoration: none; color: #525252">Find assistants</a>
+<a href="Messages.dc.html" style="padding: 8px 12px; border-radius: 8px; background: #f5f5f5; text-decoration: none; font-weight: 500">Messages</a>
+</nav>
+<span style="width: 32px; height: 32px; border-radius: 999px; background: #171717; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600">JW</span>
+</header>
+
+<div style="flex: 1; display: flex; flex-wrap: wrap; min-height: 0">
+
+<aside style="flex: 1 1 300px; max-width: 360px; border-right: 1px solid #e5e5e5; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px" aria-label="Conversations">
+<h1 style="margin: 4px 8px 12px; font-size: 20px; font-weight: 600">Messages</h1>
+<a href="Messages.dc.html" style="display: flex; gap: 12px; padding: 12px; border-radius: 12px; background: #f5f5f5; text-decoration: none">
+<span style="width: 44px; height: 44px; border-radius: 12px; background: #d1fae5; display: grid; place-items: center; font-weight: 600; flex: none">MR</span>
+<span style="flex: 1; min-width: 0">
+<span style="display: flex; justify-content: space-between; font-size: 14px"><strong style="font-weight: 600">Maya R.</strong><span style="font-size: 12px; color: #525252">2:14 PM</span></span>
+<span style="display: block; font-size: 13px; color: #404040; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Offer sent · Retainer, 40 hrs/mo</span>
+</span>
+</a>
+<a href="Messages.dc.html" style="display: flex; gap: 12px; padding: 12px; border-radius: 12px; text-decoration: none">
+<span style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; display: grid; place-items: center; font-weight: 600; flex: none">DO</span>
+<span style="flex: 1; min-width: 0">
+<span style="display: flex; justify-content: space-between; font-size: 14px"><strong style="font-weight: 600">Daniel O.</strong><span style="font-size: 12px; color: #525252">Mon</span></span>
+<span style="display: block; font-size: 13px; color: #404040">Happy to cover the launch weekend.</span>
+</span>
+</a>
+<a href="Messages.dc.html" style="display: flex; gap: 12px; padding: 12px; border-radius: 12px; text-decoration: none">
+<span style="width: 44px; height: 44px; border-radius: 12px; background: #cffafe; display: grid; place-items: center; font-weight: 600; flex: none">EG</span>
+<span style="flex: 1; min-width: 0">
+<span style="display: flex; justify-content: space-between; font-size: 14px"><strong style="font-weight: 600">Elena G.</strong><span style="font-size: 12px; color: #525252">Nov 2</span></span>
+<span style="display: block; font-size: 13px; color: #404040">Trial completed · Leave a review</span>
+</span>
+</a>
+</aside>
+
+<main style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px; border-bottom: 1px solid #e5e5e5; flex-wrap: wrap">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 12px; background: #d1fae5; display: grid; place-items: center; font-weight: 600">MR</span>
+<div>
+<div style="font-size: 15px; font-weight: 600">Maya R.</div>
+<div style="font-size: 12px; color: #047857">● Available now · replies in ~20 min</div>
+</div>
+</div>
+<div style="display: flex; gap: 8px">
+<a href="Profile.dc.html" style="font-size: 13px; padding: 10px 12px; border: 1px solid #d4d4d4; border-radius: 8px; text-decoration: none">View profile</a>
+<button type="button" style="font-size: 13px; padding: 10px 12px; border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; cursor: pointer">Report</button>
+</div>
+</div>
+
+<div style="flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 14px; background: #fafafa">
+<p style="align-self: center; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #404040; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 999px; padding: 6px 12px">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+Contact details are hidden. Calls and payments run through Redial.</p>
+
+<div style="align-self: flex-end; max-width: 520px; background: #171717; color: #ffffff; border-radius: 16px 16px 4px 16px; padding: 12px 14px; font-size: 14px; line-height: 1.5">Hi Maya, we're a two-location dental office in Chandler. Need someone on the phones 8–12 weekdays while we hire. Spanish is a big plus.</div>
+
+<div style="align-self: flex-start; max-width: 520px; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px 16px 16px 4px; padding: 12px 14px; font-size: 14px; line-height: 1.5">That fits my schedule well. I've used Dentrix and Open Dental. Happy to do a 30-minute trial first. You can also reach me at <span style="background: #fef3c7; color: #78350f; border-radius: 4px; padding: 1px 6px; font-size: 13px">phone hidden until booked</span></div>
+
+<p style="align-self: flex-start; margin: -6px 0 0 4px; font-size: 12px; color: #92400e">Redial hid a phone number. Contact info unlocks only through Redial calling after booking.</p>
+
+<article style="align-self: flex-end; width: 100%; max-width: 420px; background: #ffffff; border: 1px solid #171717; border-radius: 16px; overflow: hidden" aria-label="Offer">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f5f5f5; font-size: 13px">
+<strong style="font-weight: 600">Offer · Monthly retainer</strong>
+<span style="font-size: 12px; color: #92400e; background: #fef3c7; border-radius: 999px; padding: 3px 8px">Waiting on Maya</span>
+</div>
+<dl style="margin: 0; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px">
+<dt style="color: #525252">Coverage</dt><dd style="margin: 0">Mon–Fri, 8:00–12:00 MST</dd>
+<dt style="color: #525252">Hours</dt><dd style="margin: 0">80 hrs/month, then $0.85/min</dd>
+<dt style="color: #525252">Line</dt><dd style="margin: 0">Main office · Redial AI answers first</dd>
+<dt style="color: #525252">Starts</dt><dd style="margin: 0">Mon, Nov 16 · after a paid trial</dd>
+<dt style="color: #525252">Maya receives</dt><dd style="margin: 0">$1,955 /mo</dd>
+<dt style="color: #525252">You pay</dt><dd style="margin: 0; font-weight: 600">$2,530 /mo <span style="font-weight: 400; color: #525252">incl. 10% fee</span></dd>
+</dl>
+<div style="display: flex; gap: 8px; padding: 0 16px 16px">
+<button type="button" style="flex: 1; height: 44px; border-radius: 10px; border: 1px solid #d4d4d4; background: #ffffff; font-size: 13px; cursor: pointer">Edit offer</button>
+<button type="button" style="flex: 1; height: 44px; border-radius: 10px; border: 1px solid #d4d4d4; background: #ffffff; font-size: 13px; cursor: pointer">Withdraw</button>
+</div>
+</article>
+</div>
+
+<form style="display: flex; gap: 10px; padding: 16px 24px; border-top: 1px solid #e5e5e5; align-items: center">
+<button type="button" aria-label="Attach a script or FAQ" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #d4d4d4; background: #fff; display: grid; place-items: center; cursor: pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+</button>
+<label style="flex: 1; display: flex">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Message Maya</span>
+<input type="text" placeholder="Write a message…" style="flex: 1; height: 44px; border: 1px solid #d4d4d4; border-radius: 10px; padding: 0 14px; font: inherit; font-size: 14px">
+</label>
+<button type="button" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #d4d4d4; background: #ffffff; font-size: 14px; cursor: pointer">Send offer</button>
+<button type="submit" aria-label="Send message" style="width: 44px; height: 44px; border-radius: 10px; border: 0; background: #171717; display: grid; place-items: center; cursor: pointer">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+</button>
+</form>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
