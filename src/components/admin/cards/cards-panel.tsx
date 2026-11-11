@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Archive, BarChart3, Check, Copy, Eye, IdCard, Mail, MousePointerClick, Nfc, Pencil, Phone, Plus, QrCode, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { useQr } from "@/components/cards/card-preview";
 import { deleteCard, deleteCardLeads, setCardStatus, setLeadStatus, setNfcStatus } from "@/lib/admin/actions/cards";
 import { cardName, cardPath, EMPTY_TOTALS, type Card, type CardLead, type CardStats, type LeadStatus } from "@/lib/cards/types";
@@ -210,9 +211,8 @@ function LeadsInbox({ leads, cards, canManage }: { leads: CardLead[]; cards: Car
                   <p className="text-xs text-muted-foreground">From {card ? cardName(card) : "a card"} · {new Date(l.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  <select aria-label="Lead status" className="h-7 rounded-md border bg-transparent px-1.5 text-xs dark:bg-input/30" value={l.status} disabled={pending} onChange={(e) => run(() => setLeadStatus([l.id], e.target.value as LeadStatus))}>
-                    {LEAD_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
+                  <Pick label="Lead status" size="sm" className="w-fit text-xs" value={l.status} disabled={pending} onChange={(v) => run(() => setLeadStatus([l.id], v as LeadStatus))}
+                    options={LEAD_STATUSES.map((s) => ({ value: s.id, label: s.label }))} />
                   {l.contact_id && <Button size="xs" variant="outline" render={<Link href={`/admin/contacts/${l.contact_id}`} />} nativeButton={false}>Open contact</Button>}
                 </div>
               </li>

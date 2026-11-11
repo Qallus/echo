@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -15,8 +16,6 @@ import { PhoneInput } from "@/components/ui/phone-input";
 
 // Shared pieces for the CRM pages.
 
-export const SELECT = "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
-export const FILTER = "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function StageDot({ stage, className }: { stage: DealStage; className?: string }) {
   return <span className={cn("inline-block size-2 shrink-0 rounded-full", stageOf(stage).dot, className)} />;
@@ -47,13 +46,13 @@ export function Field({ label, name, defaultValue, type = "text", placeholder, r
 export function SelectField({ label, name, defaultValue, options, empty, className }: {
   label: string; name: string; defaultValue?: string | null; options: { value: string; label: string }[]; empty?: string; className?: string;
 }) {
+  // Like a native select: an unknown default falls back to the first option.
+  const all = empty !== undefined ? [{ value: "", label: empty }, ...options] : options;
   return (
     <div className={cn("space-y-1.5", className)}>
       <Label htmlFor={`f-${name}`}>{label}</Label>
-      <select id={`f-${name}`} name={name} defaultValue={defaultValue ?? ""} className={SELECT}>
-        {empty !== undefined && <option value="">{empty}</option>}
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      <Pick id={`f-${name}`} name={name} label={label} options={all}
+        defaultValue={all.some((o) => o.value === (defaultValue ?? "")) ? (defaultValue ?? "") : all[0]?.value} />
     </div>
   );
 }

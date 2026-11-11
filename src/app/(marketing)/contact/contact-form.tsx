@@ -5,12 +5,12 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { submitContact } from "./actions";
 import { PhoneInput } from "@/components/ui/phone-input";
 
 const TOPICS = ["Sales", "Support", "Partnerships", "Billing", "Other"];
-const SELECT = "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 
 export function ContactForm() {
   const [sent, setSent] = useState(false);
@@ -41,7 +41,7 @@ export function ContactForm() {
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="c-topic">Topic</Label>
-        <select id="c-topic" name="topic" className={SELECT} defaultValue="Sales">{TOPICS.map((t) => <option key={t}>{t}</option>)}</select>
+        <Pick id="c-topic" name="topic" label="Topic" defaultValue="Sales" options={TOPICS.map((t) => ({ value: t, label: t }))} />
       </div>
       <div className="space-y-1.5"><Label htmlFor="c-msg">Message</Label><Textarea id="c-msg" name="message" required rows={5} maxLength={10000} /></div>
       {/* Left empty by people; bots fill it in. */}

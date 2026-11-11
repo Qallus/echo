@@ -8,13 +8,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { addActivity, deleteActivity, setActivityDone } from "@/lib/admin/actions/crm";
 import { logActivity } from "@/lib/admin/actions/crm-people";
 import { formatDay, isOverdue, ownerName, today, type Activity, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { DetailRow, EmptyState, Panel } from "./crm-kit";
-import { SELECT } from "./crm-ui";
 import { TimePicker } from "@/components/ui/time-picker";
 
 const CHANNEL: Record<string, { label: string; icon: typeof Phone; tone: string }> = {
@@ -209,9 +209,8 @@ export function LogDialog({ initial, target, onClose }: { initial: LogKind | nul
           )}
           {spec.direction && (
             <div className="space-y-1.5"><Label htmlFor="log-dir">Direction</Label>
-              <select id="log-dir" value={direction} onChange={(e) => setDirection(e.target.value)} className={SELECT}>
-                <option value="outbound">Outbound</option><option value="inbound">Inbound</option>
-              </select>
+              <Pick id="log-dir" label="Direction" value={direction} onChange={(v) => setDirection(v)}
+                options={[{ value: "outbound", label: "Outbound" }, { value: "inbound", label: "Inbound" }]} />
             </div>
           )}
           {spec.duration && (

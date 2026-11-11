@@ -5,11 +5,13 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { createPromoCode, setPromoCodeActive } from "@/lib/admin/actions/billing";
 
 export type PromoRow = { id: string; code: string; active: boolean; redeemed: number; max: number | null; summary: string };
-const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+const TYPE_OPTIONS = [{ value: "percent", label: "% off" }, { value: "amount", label: "$ off" }];
+const DURATION_OPTIONS = [{ value: "once", label: "First payment" }, { value: "repeating", label: "For some months" }, { value: "forever", label: "Forever" }];
 
 // Stripe promotion codes customers enter at checkout.
 export function PromoCodes({ codes, readOnly }: { codes: PromoRow[]; readOnly: boolean }) {
@@ -51,15 +53,11 @@ export function PromoCodes({ codes, readOnly }: { codes: PromoRow[]; readOnly: b
         }}>
           <Input required placeholder="Code, e.g. LAUNCH20" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} aria-label="Code" />
           <div className="flex gap-2">
-            <select className={SELECT} value={f.type} onChange={(e) => setF({ ...f, type: e.target.value as "percent" | "amount" })} aria-label="Discount type">
-              <option value="percent">% off</option><option value="amount">$ off</option>
-            </select>
+            <Pick label="Discount type" className="w-fit shrink-0" value={f.type} onChange={(v) => setF({ ...f, type: v as "percent" | "amount" })} options={TYPE_OPTIONS} />
             <Input required type="number" min={0} step="any" placeholder={f.type === "percent" ? "20" : "10.00"} value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} aria-label="Amount" />
           </div>
           <div className="flex gap-2">
-            <select className={SELECT} value={f.duration} onChange={(e) => setF({ ...f, duration: e.target.value as typeof f.duration })} aria-label="Duration">
-              <option value="once">First payment</option><option value="repeating">For some months</option><option value="forever">Forever</option>
-            </select>
+            <Pick label="Duration" className="w-fit shrink-0" value={f.duration} onChange={(v) => setF({ ...f, duration: v as typeof f.duration })} options={DURATION_OPTIONS} />
             {f.duration === "repeating" && <Input type="number" min={1} placeholder="Months" value={f.months} onChange={(e) => setF({ ...f, months: e.target.value })} aria-label="Months" />}
           </div>
           <Input type="number" min={1} placeholder="Max uses (optional)" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} aria-label="Max uses" />

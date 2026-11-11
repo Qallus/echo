@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -72,10 +73,8 @@ export function EventDialog({ draft, workspaces, onClose, onSaved }: { draft: Ev
           {workspaces.length > 1 && (
             <div className="space-y-1.5">
               <Label htmlFor="ev-ws">Calendar</Label>
-              <select id="ev-ws" value={d.workspaceId} onChange={(e) => set("workspaceId", e.target.value)} disabled={Boolean(d.recordingId)}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30">
-                {workspaces.map((w) => <option key={w.id} value={w.id}>{w.isPersonal ? "Personal (only you)" : `${spaceLabel(w)} (team)`}</option>)}
-              </select>
+              <Pick id="ev-ws" label="Calendar" value={d.workspaceId} onChange={(v) => set("workspaceId", v)} disabled={Boolean(d.recordingId)}
+                options={workspaces.map((w) => ({ value: w.id, label: w.isPersonal ? "Personal (only you)" : `${spaceLabel(w)} (team)` }))} />
             </div>
           )}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">

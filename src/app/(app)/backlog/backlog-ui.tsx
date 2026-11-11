@@ -6,6 +6,7 @@ import { Bot, Loader2, Plus, Trash2, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { LocalDate } from "@/components/local-date";
@@ -18,11 +19,12 @@ import {
   addComment, createRequest, deleteRequest, getRequestDetail, updateRequest, type BacklogState, type RequestDetail,
 } from "./actions";
 
-const select = "h-8 rounded-md border bg-background px-2 text-sm";
+const pick = "w-auto";
 
 export function NewItemForm({ workspaces }: { workspaces: Workspace[] }) {
   const [open, setOpen] = useState(false);
   const form = useRef<HTMLFormElement>(null);
+  const [round, setRound] = useState(0); // remounts the dropdowns on reset so they return to their defaults
   const [state, action, pending] = useActionState<BacklogState, FormData>(async (prev, data) => {
     const res = await createRequest(prev, data);
     if (res.ok) form.current?.reset(); // ready for the next item
@@ -31,16 +33,15 @@ export function NewItemForm({ workspaces }: { workspaces: Workspace[] }) {
 
   if (!open) return <Button onClick={() => setOpen(true)}><Plus /> New item</Button>;
   return (
-    <form ref={form} action={action} className="w-full space-y-2 rounded-lg border p-3">
+    <form ref={form} action={action} onReset={() => setRound((n) => n + 1)} className="w-full space-y-2 rounded-lg border p-3">
       <Input name="title" placeholder="What needs doing?" maxLength={200} required autoFocus />
       <Textarea name="details" placeholder="Details (optional)" rows={3} maxLength={20000} />
-      <div className="flex flex-wrap items-center gap-2">
-        <select name="kind" defaultValue="feature" className={select} aria-label="Kind">{KINDS.map((k) => <option key={k} value={k}>{label(k)}</option>)}</select>
-        <select name="area" defaultValue="dashboard" className={select} aria-label="Area">{AREAS.map((a) => <option key={a} value={a}>{AREA_LABEL[a]}</option>)}</select>
-        <select name="priority" defaultValue="normal" className={select} aria-label="Priority">{PRIORITIES.map((p) => <option key={p} value={p}>{label(p)}</option>)}</select>
-        <select name="workspace_id" defaultValue={workspaces.find((w) => w.isPersonal)?.id} className={select} aria-label="Workspace">
-          {workspaces.map((w) => <option key={w.id} value={w.id}>{w.isPersonal ? "Personal" : w.name}</option>)}
-        </select>
+      <div key={round} className="flex flex-wrap items-center gap-2">
+        <Pick name="kind" defaultValue="feature" className={pick} label="Kind" options={KINDS.map((k) => ({ value: k, label: label(k) }))} />
+        <Pick name="area" defaultValue="dashboard" className={pick} label="Area" options={AREAS.map((a) => ({ value: a, label: AREA_LABEL[a] }))} />
+        <Pick name="priority" defaultValue="normal" className={pick} label="Priority" options={PRIORITIES.map((p) => ({ value: p, label: label(p) }))} />
+        <Pick name="workspace_id" defaultValue={workspaces.find((w) => w.isPersonal)?.id} className={pick} label="Workspace"
+          options={workspaces.map((w) => ({ value: w.id, label: w.isPersonal ? "Personal" : w.name }))} />
         <span className="flex-1" />
         <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Close</Button>
         <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add item"}</Button>
@@ -63,24 +64,15 @@ export function Filters({ workspaces }: { workspaces: Workspace[] }) {
   };
   return (
     <div className="flex flex-wrap gap-2">
-      <select className={select} aria-label="Status" value={params.get("status") ?? ""} onChange={(e) => set("status", e.target.value)}>
-        <option value="">Open items</option>
-        <option value="all">All statuses</option>
-        {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-      </select>
-      <select className={select} aria-label="Area" value={params.get("area") ?? ""} onChange={(e) => set("area", e.target.value)}>
-        <option value="">All areas</option>
-        {AREAS.map((a) => <option key={a} value={a}>{AREA_LABEL[a]}</option>)}
-      </select>
-      <select className={select} aria-label="Priority" value={params.get("priority") ?? ""} onChange={(e) => set("priority", e.target.value)}>
-        <option value="">Any priority</option>
-        {PRIORITIES.map((p) => <option key={p} value={p}>{label(p)}</option>)}
-      </select>
+      <Pick className={pick} label="Status" value={params.get("status") ?? ""} onChange={(v) => set("status", v)}
+        options={[{ value: "", label: "Open items" }, { value: "all", label: "All statuses" }, ...STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))]} />
+      <Pick className={pick} label="Area" value={params.get("area") ?? ""} onChange={(v) => set("area", v)}
+        options={[{ value: "", label: "All areas" }, ...AREAS.map((a) => ({ value: a, label: AREA_LABEL[a] }))]} />
+      <Pick className={pick} label="Priority" value={params.get("priority") ?? ""} onChange={(v) => set("priority", v)}
+        options={[{ value: "", label: "Any priority" }, ...PRIORITIES.map((p) => ({ value: p, label: label(p) }))]} />
       {workspaces.length > 1 && (
-        <select className={select} aria-label="Workspace" value={params.get("workspace") ?? ""} onChange={(e) => set("workspace", e.target.value)}>
-          <option value="">All workspaces</option>
-          {workspaces.map((w) => <option key={w.id} value={w.id}>{w.isPersonal ? "Personal" : w.name}</option>)}
-        </select>
+        <Pick className={pick} label="Workspace" value={params.get("workspace") ?? ""} onChange={(v) => set("workspace", v)}
+          options={[{ value: "", label: "All workspaces" }, ...workspaces.map((w) => ({ value: w.id, label: w.isPersonal ? "Personal" : w.name }))]} />
       )}
     </div>
   );
@@ -90,15 +82,15 @@ export function StatusSelect({ id, status }: { id: string; status: Status }) {
   const [value, setValue] = useState(status);
   const [pending, start] = useTransition();
   return (
-    <select className={cn(select, "h-7 text-xs", pending && "opacity-60")} aria-label="Status" value={value} disabled={pending}
-      onClick={(e) => e.stopPropagation()}
-      onChange={(e) => {
-        const next = e.target.value as Status;
-        setValue(next);
-        start(async () => { const res = await updateRequest(id, { status: next }); if (res.error) setValue(status); });
-      }}>
-      {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-    </select>
+    <span onClick={(e) => e.stopPropagation()}>
+      <Pick size="sm" className={cn(pick, "text-xs", pending && "opacity-60")} label="Status" value={value} disabled={pending}
+        onChange={(v) => {
+          const next = v as Status;
+          setValue(next);
+          start(async () => { const res = await updateRequest(id, { status: next }); if (res.error) setValue(status); });
+        }}
+        options={STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))} />
+    </span>
   );
 }
 

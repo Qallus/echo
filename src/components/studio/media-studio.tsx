@@ -6,6 +6,7 @@ import { AudioPlayer } from "@/components/studio/audio-player";
 import { BackgroundMusic } from "@/components/studio/background-music";
 import { CoverThumb } from "@/components/studio/cover-thumb";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,7 +29,6 @@ type VoiceMode = "record" | "upload" | "ai";
 const SEGMENT = "flex gap-1 rounded-md border bg-muted/40 p-1";
 const segBtn = (on: boolean, extra?: string) => cn("flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors", on ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground", extra);
 const FILE_INPUT = "block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:text-secondary-foreground";
-const SELECT = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 export function MediaStudio({ library, onSaved }: { library: StudioAudio[]; onSaved: (a: StudioAudio) => void }) {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -36,6 +36,7 @@ export function MediaStudio({ library, onSaved }: { library: StudioAudio[]; onSa
   const playable = library.filter((a) => a.url && !a.archived_at);
 
   const [voiceMode, setVoiceMode] = useState<VoiceMode>("record");
+  const [libraryPick, setLibraryPick] = useState("");
   const [voiceBuffer, setVoiceBuffer] = useState<AudioBuffer | null>(null);
   const [voiceName, setVoiceName] = useState("");
   const [musicBuffer, setMusicBuffer] = useState<AudioBuffer | null>(null);
@@ -330,10 +331,7 @@ export function MediaStudio({ library, onSaved }: { library: StudioAudio[]; onSa
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs text-muted-foreground">…or pick from your library</span>
-                  <select defaultValue="" onChange={(e) => pickVoiceFromLibrary(e.target.value)} className={SELECT}>
-                    <option value="">Select…</option>
-                    {playable.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
+                  <Pick label="Library recording" value={libraryPick} onChange={(v) => { setLibraryPick(v); void pickVoiceFromLibrary(v); }} options={[{ value: "", label: "Select…" }, ...playable.map((a) => ({ value: a.id, label: a.name }))]} />
                 </label>
               </div>
             )}
@@ -446,9 +444,7 @@ export function MediaStudio({ library, onSaved }: { library: StudioAudio[]; onSa
               </label>
               <label className="block space-y-1.5">
                 <span className="text-xs text-muted-foreground">What it&apos;s for</span>
-                <select value={detailKind} onChange={(e) => setDetailKind(e.target.value as StudioKind)} className={SELECT}>
-                  {STUDIO_KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
-                </select>
+                <Pick label="What it's for" value={detailKind} onChange={(v) => setDetailKind(v as StudioKind)} options={STUDIO_KINDS.map((k) => ({ value: k.id, label: k.label }))} />
               </label>
             </div>
             <label className="block space-y-1.5">

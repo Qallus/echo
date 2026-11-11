@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, GalleryHorizontal, Image as 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useQr } from "@/components/cards/card-preview";
@@ -15,7 +16,6 @@ import {
 import type { StaffOption } from "@/lib/crm/types";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 import type { Draft, SetDraft } from "./card-builder";
 import { NfcWriter } from "./nfc";
 
@@ -208,15 +208,13 @@ export function PanelBody(props: P & { panel: PanelKey; staff: StaffOption[]; ca
           <div className="flex items-center gap-1 text-sm"><span className="text-muted-foreground">/card/</span><Input value={draft.slug} onChange={(e) => set("slug", slugify(e.target.value))} placeholder="auto" /></div>
         </F>
         <F label="Status">
-          <select className={SELECT} value={draft.status} onChange={(e) => set("status", e.target.value as Draft["status"])}>
-            <option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option><option value="archived">Archived</option>
-          </select>
+          <Pick label="Status" value={draft.status} onChange={(v) => set("status", v as Draft["status"])}
+            options={[{ value: "draft", label: "Draft" }, { value: "published", label: "Published" }, { value: "unpublished", label: "Unpublished" }, { value: "archived", label: "Archived" }]} />
         </F>
         {props.canAssign && (
           <F label="Belongs to" hint="New leads from this card are assigned to this person.">
-            <select className={SELECT} value={draft.owner_id ?? ""} onChange={(e) => set("owner_id", e.target.value || null)}>
-              <option value="">No one</option>{props.staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name} ({s.email})</option>)}
-            </select>
+            <Pick label="Belongs to" value={draft.owner_id ?? ""} onChange={(v) => set("owner_id", v || null)}
+              options={[{ value: "", label: "No one" }, ...props.staff.map((s) => ({ value: s.user_id, label: `${s.name} (${s.email})` }))]} />
           </F>
         )}
       </Section>
@@ -291,9 +289,8 @@ function LinksPanel({ draft, setDraft }: P) {
           </div>
           <Input value={l.url} onChange={(e) => update(l.id, { url: e.target.value })} placeholder="https://…" aria-label="Link address" />
           <div className="flex items-center gap-2">
-            <select className={SELECT} value={l.link_type} onChange={(e) => update(l.id, { link_type: e.target.value as LinkType })} aria-label="Link type">
-              {LINK_TYPES.map((t) => <option key={t} value={t}>{t[0].toUpperCase() + t.slice(1)}</option>)}
-            </select>
+            <Pick label="Link type" value={l.link_type} onChange={(v) => update(l.id, { link_type: v as LinkType })}
+              options={LINK_TYPES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))} />
             <label className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"><input type="checkbox" checked={l.open_in_new_tab} onChange={(e) => update(l.id, { open_in_new_tab: e.target.checked })} /> New tab</label>
           </div>
         </div>
@@ -371,9 +368,8 @@ function NfcPanel(p: P & { publicUrl: string }) {
   return (
     <Section title="NFC tap to share" intro="Program an NFC tag or card to open this link. Taps are counted as NFC visits.">
       <F label="Status">
-        <select className={SELECT} value={draft.nfc_status} onChange={(e) => setDraft((d) => ({ ...d, nfc_status: e.target.value as Draft["nfc_status"] }))}>
-          <option value="not_ordered">Not ordered</option><option value="ordered">Ordered</option><option value="assigned">Linked to a tag</option><option value="active">Active</option>
-        </select>
+        <Pick label="Status" value={draft.nfc_status} onChange={(v) => setDraft((d) => ({ ...d, nfc_status: v as Draft["nfc_status"] }))}
+          options={[{ value: "not_ordered", label: "Not ordered" }, { value: "ordered", label: "Ordered" }, { value: "assigned", label: "Linked to a tag" }, { value: "active", label: "Active" }]} />
       </F>
       <F label="Tag link">
         <div className="flex items-center gap-2"><Input readOnly value={nfcUrl} className="font-mono text-xs" /><Button size="icon-sm" variant="outline" aria-label="Copy tag link" onClick={() => void navigator.clipboard.writeText(nfcUrl)}><Copy /></Button></div>
@@ -477,9 +473,8 @@ function SplashPanel(p: P) {
       <div className="grid grid-cols-2 gap-2">
         <F label="Close after (seconds)" hint="0 = wait for a tap."><Input type="number" min={0} value={Number(c.duration_seconds ?? 0)} onChange={(e) => setContent({ duration_seconds: Number(e.target.value) })} /></F>
         <F label="Transition">
-          <select className={SELECT} value={str("transition") || "fade"} onChange={(e) => setContent({ transition: e.target.value })}>
-            <option value="none">None</option><option value="fade">Fade</option><option value="slide-up">Slide up</option><option value="slide-down">Slide down</option><option value="zoom">Zoom</option>
-          </select>
+          <Pick label="Transition" value={str("transition") || "fade"} onChange={(v) => setContent({ transition: v })}
+            options={[{ value: "none", label: "None" }, { value: "fade", label: "Fade" }, { value: "slide-up", label: "Slide up" }, { value: "slide-down", label: "Slide down" }, { value: "zoom", label: "Zoom" }]} />
         </F>
       </div>
       <div className="mb-3 flex gap-1 rounded-lg border bg-muted/40 p-1">

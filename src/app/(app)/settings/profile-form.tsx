@@ -5,6 +5,7 @@ import { LocateFixed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { Profile } from "@/lib/types";
@@ -22,8 +23,6 @@ function Field({ id, label, hint, children }: { id: string; label: string; hint?
     </div>
   );
 }
-
-const SELECT = "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function ProfileForm({ profile, timeZones }: { profile: Profile; timeZones: string[] }) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(updateProfile, {});
@@ -75,10 +74,8 @@ export function ProfileForm({ profile, timeZones }: { profile: Profile; timeZone
       <section className="grid gap-4 sm:grid-cols-2">
         <Field id="timezone" label="Time zone" hint="Teammates see your local time.">
           <div className="flex gap-2">
-            <select id="timezone" name="timezone" value={tz} onChange={(e) => setTz(e.target.value)} className={SELECT}>
-              <option value="">Not set</option>
-              {zones.map((z) => <option key={z} value={z}>{z.replaceAll("_", " ")}</option>)}
-            </select>
+            <Pick id="timezone" name="timezone" label="Time zone" value={tz} onChange={setTz}
+              options={[{ value: "", label: "Not set" }, ...zones.map((z) => ({ value: z, label: z.replaceAll("_", " ") }))]} />
             <Button type="button" variant="outline" size="icon" aria-label="Use my time zone" title="Use my time zone"
               onClick={() => setTz(Intl.DateTimeFormat().resolvedOptions().timeZone)}><LocateFixed /></Button>
           </div>

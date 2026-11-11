@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { CalendarDays, Download, Flag, UserRound, ChevronLeft, ChevronRight, ExternalLink, Eye, GitBranchPlus, LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { deleteDeal, moveDeal } from "@/lib/admin/actions/crm";
 import { bulkDelete, bulkUpdate } from "@/lib/admin/actions/crm-bulk";
@@ -13,7 +14,6 @@ import { OPEN_STAGES, STAGES, STAGE_ORDER, weighted, type DealStage } from "@/li
 import { closedRecently, contactName, formatDay, ownerName, type Contact, type Deal, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { DetailRow, EmptyState, RecordCalendar, RowActions, SearchBox, StageBadge, StatRow, StatTile, ViewSwitcher, type RowAction } from "./crm-kit";
-import { FILTER } from "./crm-ui";
 import { BulkBar, type BulkAction } from "./bulk-bar";
 import { DataTable, plain, type Column } from "./data-table";
 import { DealDialog } from "./record-dialogs";
@@ -130,10 +130,8 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SearchBox value={search} onChange={setSearch} placeholder="Search deals…" />
-          <select value={owner} onChange={(e) => setOwner(e.target.value)} className={FILTER} aria-label="Owner">
-            <option value="">All owners</option>
-            {staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}
-          </select>
+          <Pick label="Owner" className="w-fit" value={owner} onChange={(v) => setOwner(v)}
+            options={[{ value: "", label: "All owners" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
           <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <input type="checkbox" checked={allClosed} onChange={(e) => setAllClosed(e.target.checked)} /> Older closed deals
           </label>

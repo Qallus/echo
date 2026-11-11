@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -83,17 +84,13 @@ export function AboutStep({ ctx }: { ctx: SetupContext }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="su-team">Team size</Label>
-            <select id="su-team" value={teamSize} onChange={(e) => setTeamSize(e.target.value)} className="h-9 w-full rounded-lg border bg-background px-2.5 text-sm">
-              <option value="">Choose…</option>
-              {TEAM_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Pick id="su-team" label="Team size" value={teamSize} onChange={setTeamSize}
+              options={[{ value: "", label: "Choose…" }, ...TEAM_SIZES.map((s) => ({ value: s, label: s }))]} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="su-industry">Industry</Label>
-            <select id="su-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="h-9 w-full rounded-lg border bg-background px-2.5 text-sm">
-              <option value="">Choose…</option>
-              {INDUSTRIES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Pick id="su-industry" label="Industry" value={industry} onChange={setIndustry}
+              options={[{ value: "", label: "Choose…" }, ...INDUSTRIES.map((s) => ({ value: s, label: s }))]} />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="su-web">Website <span className="font-normal text-muted-foreground">(optional)</span></Label>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Hash, Pencil, Trash2 } from "lucide-react";
 import { useBuilder } from "@/components/flows/builder-context";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { deleteExtension, saveExtension, type ExtensionInput } from "@/lib/flows/actions";
@@ -13,8 +14,6 @@ import type { BuilderExtension } from "@/lib/flows/data";
 
 // Extensions on a line (101 → Sales): what Connect blocks ring and what
 // callers can dial from a menu. Needs manage_flows on the line.
-
-const SELECT = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 export function ExtensionsSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { lines, extensions, directory, recordings } = useBuilder();
@@ -57,9 +56,7 @@ export function ExtensionsSheet({ open, onOpenChange }: { open: boolean; onOpenC
           <div className="space-y-5 px-4 pb-6">
             {manageable.length > 1 && (
               <label className="block space-y-1.5"><span className="text-sm font-medium">Line</span>
-                <select className={SELECT} value={lineId} onChange={(e) => { setLineId(e.target.value); setForm({ ...blank(), lineId: e.target.value }); }}>
-                  {manageable.map((l) => <option key={l.id} value={l.id}>{l.label} · {l.number}</option>)}
-                </select>
+                <Pick label="Line" value={lineId} onChange={(v) => { setLineId(v); setForm({ ...blank(), lineId: v }); }} options={manageable.map((l) => ({ value: l.id, label: `${l.label} · ${l.number}` }))} />
               </label>
             )}
 
@@ -88,22 +85,14 @@ export function ExtensionsSheet({ open, onOpenChange }: { open: boolean; onOpenC
                 <Input maxLength={80} placeholder="Sales" aria-label="Name" value={form.name} onChange={(e) => set({ name: e.target.value })} />
               </div>
               <label className="block space-y-1.5"><span className="text-sm font-medium">Rings</span>
-                <select className={SELECT} value={form.directoryId ?? ""} onChange={(e) => set({ directoryId: e.target.value || null })}>
-                  <option value="">A phone number</option>
-                  {lineDir.map((d) => <option key={d.id} value={d.id}>{d.label} (Directory)</option>)}
-                </select>
+                <Pick label="Rings" value={form.directoryId ?? ""} onChange={(v) => set({ directoryId: v || null })} options={[{ value: "", label: "A phone number" }, ...lineDir.map((d) => ({ value: d.id, label: `${d.label} (Directory)` }))]} />
               </label>
               {!form.directoryId && <Input inputMode="tel" placeholder="(480) 555-0142" aria-label="Number to ring" value={form.number} onChange={(e) => set({ number: e.target.value })} />}
               <label className="block space-y-1.5"><span className="text-sm font-medium">Ring for</span>
-                <select className={SELECT} value={form.ringSeconds} onChange={(e) => set({ ringSeconds: Number(e.target.value) })}>
-                  {[10, 15, 20, 25, 30, 45, 60].map((s) => <option key={s} value={s}>{s} seconds</option>)}
-                </select>
+                <Pick label="Ring for" value={String(form.ringSeconds)} onChange={(v) => set({ ringSeconds: Number(v) })} options={[10, 15, 20, 25, 30, 45, 60].map((s) => ({ value: String(s), label: `${s} seconds` }))} />
               </label>
               <label className="block space-y-1.5"><span className="text-sm font-medium">Voicemail greeting</span>
-                <select className={SELECT} value={form.voicemailAudioId ?? ""} onChange={(e) => set({ voicemailAudioId: e.target.value || null })}>
-                  <option value="">The standard greeting</option>
-                  {recordings.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
+                <Pick label="Voicemail greeting" value={form.voicemailAudioId ?? ""} onChange={(v) => set({ voicemailAudioId: v || null })} options={[{ value: "", label: "The standard greeting" }, ...recordings.map((r) => ({ value: r.id, label: r.name }))]} />
               </label>
               {msg && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.text}</p>}
               <div className="flex gap-2">

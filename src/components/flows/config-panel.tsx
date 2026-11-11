@@ -6,6 +6,7 @@ import { BlockIcon } from "@/components/flows/block-icon";
 import { FORMS } from "@/components/flows/block-forms";
 import { outLabel } from "@/components/flows/flow-node";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DESCRIPTIONS } from "@/lib/flows/blocks";
@@ -16,7 +17,6 @@ import { cn } from "@/lib/utils";
 // goes; with nothing selected, the flow's own settings. The main blocks have
 // forms (block-forms.tsx); the rest are edited as JSON.
 
-const SELECT = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 export function ConfigPanel({ flow, selected, issues, onChange, onSelect }: {
   flow: Flow; selected: FlowNode | null; issues: Issue[];
@@ -65,18 +65,12 @@ function FlowSettings({ flow, issues, onChange, onSelect }: { flow: Flow; issues
         <Input value={flow.settings.timezone} maxLength={60} onChange={(e) => set({ timezone: e.target.value })} placeholder="America/Phoenix" />
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-medium">Record calls</span>
-        <select className={SELECT} value={flow.settings.recording} onChange={(e) => set({ recording: e.target.value as Flow["settings"]["recording"] })}>
-          <option value="off">Off</option>
-          <option value="after_connect">After the caller is connected to someone</option>
-          <option value="all">The whole call</option>
-        </select>
+        <Pick label="Record calls" value={flow.settings.recording} onChange={(v) => set({ recording: v as Flow["settings"]["recording"] })}
+          options={[{ value: "off", label: "Off" }, { value: "after_connect", label: "After the caller is connected to someone" }, { value: "all", label: "The whole call" }]} />
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-medium">When an output isn&apos;t connected</span>
-        <select className={SELECT} value={flow.settings.onUnconnected} onChange={(e) => set({ onUnconnected: e.target.value as Flow["settings"]["onUnconnected"] })}>
-          <option value="ai_or_voicemail">Your AI assistant answers (voicemail if out of minutes)</option>
-          <option value="voicemail">Voicemail</option>
-          <option value="goodbye">Say goodbye and hang up</option>
-        </select>
+        <Pick label="When an output isn't connected" value={flow.settings.onUnconnected} onChange={(v) => set({ onUnconnected: v as Flow["settings"]["onUnconnected"] })}
+          options={[{ value: "ai_or_voicemail", label: "Your AI assistant answers (voicemail if out of minutes)" }, { value: "voicemail", label: "Voicemail" }, { value: "goodbye", label: "Say goodbye and hang up" }]} />
       </label>
       <div className="space-y-2">
         <p className="text-sm font-medium">Checks</p>
@@ -138,17 +132,14 @@ function BlockSettings({ flow, node, issues, onChange, onSelect }: {
         <div className="space-y-2">
           <p className="text-sm font-medium">Where each output goes</p>
           {outputsOf(node).map((out) => (
-            <label key={out} className="grid grid-cols-[7rem_1fr] items-center gap-2 text-sm">
+            <div key={out} className="grid grid-cols-[7rem_1fr] items-center gap-2 text-sm">
               <span className="truncate text-muted-foreground" title={outLabel(node, out)}>{outLabel(node, out)}</span>
-              <select className={SELECT} value={node.next[out] ?? ""} onChange={(e) => update((n) => {
+              <Pick label={`Where "${outLabel(node, out)}" goes`} value={node.next[out] ?? ""} onChange={(v) => update((n) => {
                 const next = { ...n.next };
-                if (e.target.value) next[out] = e.target.value; else delete next[out];
+                if (v) next[out] = v; else delete next[out];
                 return { ...n, next };
-              })}>
-                <option value="">Not connected</option>
-                {others.map((o) => <option key={o.id} value={o.id}>{o.label || BLOCKS[o.type].label}</option>)}
-              </select>
-            </label>
+              })} options={[{ value: "", label: "Not connected" }, ...others.map((o) => ({ value: o.id, label: o.label || BLOCKS[o.type].label }))]} />
+            </div>
           ))}
         </div>
       )}

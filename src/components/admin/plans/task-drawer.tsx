@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteTasks, updateTask, type TaskPatch } from "@/lib/admin/actions/plans";
@@ -13,7 +14,6 @@ import type { StaffOption } from "@/lib/crm/types";
 import { newId } from "@/lib/crm/deals";
 import { PRIORITIES, TASK_STATUSES, type PlanGroup, type PlanTask } from "@/lib/plans/types";
 import { cn } from "@/lib/utils";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 
 // One task in full: everything saves as you change it (text fields on blur).
 export function TaskDrawer({ task, groups, staff, readOnly, onClose }: { task: PlanTask; groups: PlanGroup[]; staff: StaffOption[]; readOnly: boolean; onClose: () => void }) {
@@ -43,16 +43,16 @@ export function TaskDrawer({ task, groups, staff, readOnly, onClose }: { task: P
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label htmlFor="tk-status">Status</Label>
-              <select id="tk-status" className={SELECT} value={task.status} disabled={readOnly} onChange={(e) => save({ status: e.target.value as PlanTask["status"] })}>{TASK_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select>
+              <Pick id="tk-status" label="Status" value={task.status} disabled={readOnly} onChange={(v) => save({ status: v as PlanTask["status"] })} options={TASK_STATUSES.map((s) => ({ value: s.id, label: s.label }))} />
             </div>
             <div className="space-y-1.5"><Label htmlFor="tk-pri">Priority</Label>
-              <select id="tk-pri" className={SELECT} value={task.priority} disabled={readOnly} onChange={(e) => save({ priority: e.target.value as PlanTask["priority"] })}>{PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>
+              <Pick id="tk-pri" label="Priority" value={task.priority} disabled={readOnly} onChange={(v) => save({ priority: v as PlanTask["priority"] })} options={PRIORITIES.map((p) => ({ value: p.id, label: p.label }))} />
             </div>
             <div className="space-y-1.5"><Label htmlFor="tk-who">Assignee</Label>
-              <select id="tk-who" className={SELECT} value={task.assignee_id ?? ""} disabled={readOnly} onChange={(e) => save({ assignee_id: e.target.value || null })}><option value="">Unassigned</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}</select>
+              <Pick id="tk-who" label="Assignee" value={task.assignee_id ?? ""} disabled={readOnly} onChange={(v) => save({ assignee_id: v || null })} options={[{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
             </div>
             <div className="space-y-1.5"><Label htmlFor="tk-group">Column</Label>
-              <select id="tk-group" className={SELECT} value={task.group_id ?? ""} disabled={readOnly} onChange={(e) => save({ group_id: e.target.value || null })}><option value="">None</option>{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
+              <Pick id="tk-group" label="Column" value={task.group_id ?? ""} disabled={readOnly} onChange={(v) => save({ group_id: v || null })} options={[{ value: "", label: "None" }, ...groups.map((g) => ({ value: g.id, label: g.name }))]} />
             </div>
             <div className="space-y-1.5"><Label>Start</Label><DatePicker value={task.start_date ?? ""} onChange={(v) => save({ start_date: v || null })} /></div>
             <div className="space-y-1.5"><Label>Due</Label><DatePicker value={task.due_date ?? ""} onChange={(v) => save({ due_date: v || null })} /></div>

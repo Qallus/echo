@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Info, PhoneForwarded } from "lucide-react";
 import { carrier, forwardingCode } from "@/lib/redial/carriers";
 import { ROUTES, type RouteAnswers } from "@/lib/redial/setup";
@@ -26,7 +27,12 @@ export function RouteStep({ initial, carrierId, lineType, redialNumber }: { init
       </div>
 
       <div className="rounded-xl border bg-muted/30 p-4 text-sm">
-        {method === "new_number" ? (
+        {method === "port" ? (
+          <div className="space-y-1">
+            <p className="flex gap-2"><PhoneForwarded className="mt-0.5 size-4 shrink-0" />Have your current bill handy: the transfer needs the account number, the service address and (for mobile numbers) a transfer PIN from your carrier.</p>
+            <p className="pl-6 text-muted-foreground">Fill in the transfer form any time: <Link href="/calls/port" className="underline">Bring your number</Link>. Keep your old service until the transfer date.</p>
+          </div>
+        ) : method === "new_number" ? (
           <p className="flex gap-2"><PhoneForwarded className="mt-0.5 size-4 shrink-0" />We&apos;ll set up a Redial number for you. Share it, put it on your website, or use it for one part of your life.</p>
         ) : code ? (
           <div className="space-y-2">

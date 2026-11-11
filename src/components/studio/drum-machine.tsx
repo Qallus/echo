@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eraser, Play, Sparkles, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import {
   DRUMS,
   MELODIC,
@@ -217,11 +218,7 @@ export function DrumMachine({
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           Loop length
-          <select value={bars} onChange={(e) => setBars(Number(e.target.value))} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
-            <option value={1}>1 bar</option>
-            <option value={2}>2 bars</option>
-            <option value={4}>4 bars</option>
-          </select>
+          <Pick label="Loop length" size="sm" className="w-28" value={String(bars)} onChange={(v) => setBars(Number(v))} options={[{ value: "1", label: "1 bar" }, { value: "2", label: "2 bars" }, { value: "4", label: "4 bars" }]} />
         </label>
         <Button onClick={useAsMusic} disabled={rendering}>
           <Sparkles className="h-4 w-4" /> {rendering ? "Rendering…" : "Use as background music"}

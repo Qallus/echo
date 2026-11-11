@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { CopyButton } from "@/components/copy-button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,16 +29,14 @@ export function CopyLink({ link }: { link: string }) {
 
 export function InviteForm({ workspaceId }: { workspaceId: string }) {
   const [state, action, pending] = useActionState<InviteResult, FormData>(inviteMember, {});
+  const [round, setRound] = useState(0); // remounts the role dropdown when React resets the form
   return (
     <div className="space-y-3">
-      <form action={action} className="flex flex-wrap gap-2">
+      <form action={action} onReset={() => setRound((n) => n + 1)} className="flex flex-wrap gap-2">
         <input type="hidden" name="workspace_id" value={workspaceId} />
         <Input name="email" type="email" placeholder="teammate@company.com" required className="min-w-56 flex-1" />
-        <select name="role" defaultValue="member" aria-label="Role"
-          className="h-9 rounded-md border bg-background px-2 text-sm">
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
-        </select>
+        <Pick key={round} name="role" defaultValue="member" label="Role" className="w-auto"
+          options={[{ value: "member", label: "Member" }, { value: "admin", label: "Admin" }]} />
         <Button type="submit" disabled={pending}>{pending ? "Inviting…" : "Invite"}</Button>
       </form>
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { deleteAutomation, saveAutomation, setAutomationEnabled } from "@/lib/admin/actions/comms";
 import type { Automation, Template } from "@/lib/comms/data";
@@ -17,7 +18,6 @@ const TRIGGERS: { id: string; label: string }[] = [
   { id: "stage_changed", label: "A deal moves to a stage" }, { id: "closed_won", label: "A deal is won" }, { id: "closed_lost", label: "A deal is lost" },
   { id: "next_step_overdue", label: "A deal's next step is overdue" }, { id: "deal_stalled", label: "A deal goes quiet" },
 ];
-const SELECT = "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30";
 const delayText = (m: number) => (!m ? "right away" : m % 1440 === 0 ? `after ${m / 1440} day${m === 1440 ? "" : "s"}` : m % 60 === 0 ? `after ${m / 60} hour${m === 60 ? "" : "s"}` : `after ${m} min`);
 
 export function describe(a: Automation, templates: Template[]) {
@@ -82,13 +82,12 @@ function AutomationDialog({ automation, templates, onClose }: { automation?: Aut
         <div className="space-y-3">
           <div className="space-y-1.5"><Label htmlFor="au-name">Name</Label><Input id="au-name" value={form.name} onChange={(e) => set({ name: e.target.value })} placeholder="Proposal follow-up" /></div>
           <div className="space-y-1.5"><Label htmlFor="au-trigger">When</Label>
-            <select id="au-trigger" value={form.trigger} onChange={(e) => set({ trigger: e.target.value })} className={SELECT}>{TRIGGERS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
+            <Pick id="au-trigger" label="When" className="h-9" value={form.trigger} onChange={(v) => set({ trigger: v })} options={TRIGGERS.map((t) => ({ value: t.id, label: t.label }))} />
           </div>
           {form.trigger === "stage_changed" && (
             <div className="space-y-1.5"><Label htmlFor="au-stage">Stage</Label>
-              <select id="au-stage" value={form.stage ?? ""} onChange={(e) => set({ stage: e.target.value })} className={SELECT}>
-                <option value="">Any stage</option>{STAGE_ORDER.map((s) => <option key={s} value={s}>{STAGES[s].label}</option>)}
-              </select>
+              <Pick id="au-stage" label="Stage" className="h-9" value={form.stage ?? ""} onChange={(v) => set({ stage: v })}
+                options={[{ value: "", label: "Any stage" }, ...STAGE_ORDER.map((s) => ({ value: s, label: STAGES[s].label }))]} />
             </div>
           )}
           {form.trigger === "deal_stalled" && (
@@ -96,20 +95,18 @@ function AutomationDialog({ automation, templates, onClose }: { automation?: Aut
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label htmlFor="au-tpl">Send template</Label>
-              <select id="au-tpl" value={form.template_id} onChange={(e) => set({ template_id: e.target.value })} className={SELECT}>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+              <Pick id="au-tpl" label="Send template" className="h-9" value={form.template_id} onChange={(v) => set({ template_id: v })} options={templates.map((t) => ({ value: t.id, label: t.name }))} />
             </div>
             <div className="space-y-1.5"><Label htmlFor="au-to">To</Label>
-              <select id="au-to" value={form.recipient} onChange={(e) => set({ recipient: e.target.value as "contact" | "owner" })} className={SELECT}>
-                <option value="contact">The contact</option><option value="owner">The deal owner (internal reminder)</option>
-              </select>
+              <Pick id="au-to" label="To" className="h-9" value={form.recipient} onChange={(v) => set({ recipient: v as "contact" | "owner" })}
+                options={[{ value: "contact", label: "The contact" }, { value: "owner", label: "The deal owner (internal reminder)" }]} />
             </div>
           </div>
           <div className="space-y-1.5"><Label htmlFor="au-delay">Wait</Label>
             <div className="flex gap-2">
               <Input id="au-delay" type="number" min={0} value={form.delay / unit} onChange={(e) => set({ delay: Math.round(Number(e.target.value) * unit) })} className="w-28" />
-              <select value={unit} onChange={(e) => { const u = Number(e.target.value); set({ delay: Math.round((form.delay / unit) * u) }); setUnit(u); }} className={SELECT} aria-label="Unit">
-                <option value={1}>minutes</option><option value={60}>hours</option><option value={1440}>days</option>
-              </select>
+              <Pick label="Unit" className="h-9" value={String(unit)} onChange={(v) => { const u = Number(v); set({ delay: Math.round((form.delay / unit) * u) }); setUnit(u); }}
+                options={[{ value: "1", label: "minutes" }, { value: "60", label: "hours" }, { value: "1440", label: "days" }]} />
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm"><Switch checked={form.enabled} onCheckedChange={(v) => set({ enabled: v })} /> On</label>

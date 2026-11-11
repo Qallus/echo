@@ -5,6 +5,7 @@ import { ChevronDown, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { addProduct, savePrice, saveProduct, syncCatalogToStripe } from "@/lib/admin/actions/billing";
@@ -12,7 +13,7 @@ import { KIND_LABEL, LINE_NAME, lineOf, money, per, type Interval, type Kind, ty
 import { cn } from "@/lib/utils";
 
 type Msg = { ok?: string; error?: string };
-const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+const INTERVAL_OPTIONS = [{ value: "month", label: "Monthly" }, { value: "year", label: "Annual" }, { value: "once", label: "One-time" }];
 const toCents = (dollars: string) => Math.round(Number(dollars) * 100);
 const toDollars = (cents?: number) => (cents == null ? "" : (cents / 100).toString());
 
@@ -194,14 +195,10 @@ function AddProduct({ onDone }: { onDone: (m: Msg) => void }) {
       start(async () => onDone(await addProduct({ id: f.id, kind: f.kind, name: f.name, tagline: f.tagline, priceKey: f.priceKey || `${f.id}_${f.interval === "once" ? "once" : f.interval === "month" ? "monthly" : "annual"}`, interval: f.interval === "once" ? null : f.interval, unitAmount: toCents(f.amount) })));
     }}>
       <Input required placeholder="ID, e.g. bolt_call_line" value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} aria-label="Product ID" />
-      <select className={SELECT} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Kind })} aria-label="Kind">
-        {(Object.keys(KIND_LABEL) as Kind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
-      </select>
+      <Pick label="Kind" value={f.kind} onChange={(v) => setF({ ...f, kind: v as Kind })} options={(Object.keys(KIND_LABEL) as Kind[]).map((k) => ({ value: k, label: KIND_LABEL[k] }))} />
       <Input required placeholder="Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} aria-label="Name" />
       <Input placeholder="Tagline" value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} aria-label="Tagline" />
-      <select className={SELECT} value={f.interval} onChange={(e) => setF({ ...f, interval: e.target.value as Interval | "once" })} aria-label="Billing">
-        <option value="month">Monthly</option><option value="year">Annual</option><option value="once">One-time</option>
-      </select>
+      <Pick label="Billing" value={f.interval} onChange={(v) => setF({ ...f, interval: v as Interval | "once" })} options={INTERVAL_OPTIONS} />
       <Input required type="number" step="0.01" min={0} placeholder="Price in $" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} aria-label="Price" />
       <Input placeholder="Price key (optional)" value={f.priceKey} onChange={(e) => setF({ ...f, priceKey: e.target.value })} aria-label="Price key" />
       <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add product"}</Button>

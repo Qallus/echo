@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Circle, PhoneCall } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { formatPhone } from "@/components/ui/phone-input";
@@ -92,9 +93,8 @@ export function ReviewStep({ setup, ready, line }: { setup: Setup; ready: Item[]
         </label>
         <div className="space-y-1.5">
           <Label htmlFor="su-updates">Text me Redial news and tips</Label>
-          <select id="su-updates" value={updates} onChange={(e) => setUpdates(e.target.value)} className="h-9 w-full max-w-sm rounded-lg border bg-background px-2.5 text-sm">
-            {UPDATES.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
-          </select>
+          <Pick id="su-updates" label="Text me Redial news and tips" value={updates} onChange={setUpdates} className="max-w-sm"
+            options={UPDATES.map((u) => ({ value: u.id, label: u.label }))} />
           {updates !== "none" && <p className="text-xs text-muted-foreground">{CONSENT.sms.replace("Echo apps", "Redial")}</p>}
         </div>
       </div>

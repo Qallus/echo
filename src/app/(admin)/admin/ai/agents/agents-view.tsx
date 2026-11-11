@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { createAgent, decideApproval, pauseAllAgents, removeAgent, rotateAgentKey, setAgentActive, updateAgent, type AgentSettings } from "@/lib/admin/actions/agents";
@@ -134,7 +135,7 @@ function AgentForm({ initial, myPermissions, onSave, pending }: { initial?: Agen
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor={`an-${initial?.id ?? "new"}`}>Name</Label><Input id={`an-${initial?.id ?? "new"}`} maxLength={80} required placeholder="e.g. Paperclip sales agent" value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Runs on</Label>
-          <select value={harnessId} onChange={(e) => setHarness(e.target.value)} className="h-9 w-full rounded-lg border bg-background px-2.5 text-sm">{HARNESSES.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select>
+          <Pick label="Runs on" value={harnessId} onChange={setHarness} options={HARNESSES.map((h) => ({ value: h.id, label: h.label }))} className="h-9" />
         </div>
       </div>
 

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Archive, ArchiveRestore, Ban, CalendarClock, Mail, MailOpen, Phone, PhoneForwarded, Play, Star, UserCheck, Voicemail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LocalDate } from "@/components/local-date";
 import { addListEntry, updateCall, voicemailUrl } from "@/lib/redial/actions";
@@ -19,7 +20,6 @@ import { MirrorSettingsPanel } from "./mirror-settings";
 import type { MirrorSettings } from "@/lib/redial/mirror";
 import { AssistantSettings, RulesSettings, useLineForm } from "./line-settings";
 
-const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30";
 export const prettyNumber = (n: string | null) => (n ? n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "No caller ID");
 const who = (c: Call) => c.caller_name || c.caller_id_name || prettyNumber(c.from_number);
 const unread = (c: Call) => !c.read_at && !c.archived_at && ["message", "completed", "missed", "connected"].includes(c.status);
@@ -170,9 +170,8 @@ function CallDetail({ call: c, line, entries, manage }: { call: Call; line: Line
 
       <footer className="flex flex-wrap items-center gap-2 border-t pt-4">
         <label className="sr-only" htmlFor="call-cat">Label</label>
-        <select id="call-cat" className={SELECT} value={c.category ?? "unknown"} disabled={pending} onChange={(e) => act(() => updateCall(c.id, { category: e.target.value as Category }))}>
-          {(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => <option key={k} value={k}>{CATEGORY_LABEL[k]}</option>)}
-        </select>
+        <Pick id="call-cat" label="Label" className="w-auto" value={c.category ?? "unknown"} disabled={pending} onChange={(v) => act(() => updateCall(c.id, { category: v as Category }))}
+          options={(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => ({ value: k, label: CATEGORY_LABEL[k] }))} />
         {manage && c.from_number && listed?.kind !== "vip" && <Button size="sm" variant="ghost" disabled={pending} onClick={() => act(() => addListEntry(line.id, c.from_number!, "vip", who(c)))}><Star /> VIP</Button>}
         {manage && c.from_number && !listed && <Button size="sm" variant="ghost" disabled={pending} onClick={() => act(() => addListEntry(line.id, c.from_number!, "allow", who(c)))}><UserCheck /> Allow</Button>}
         {manage && c.from_number && listed?.kind !== "block" && (

@@ -5,8 +5,8 @@ import { CircleCheck, CircleSlash, CircleX, Clock, Pencil, Play, Plus, Trash2, W
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { LocalDate } from "@/components/local-date";
 import { deleteRule, runRuleOn, setRuleEnabled } from "@/lib/admin/actions/automation";
@@ -121,10 +121,8 @@ export function RulesPanel({ rules, runs, templates, people, records, readOnly }
               <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); act(async () => { const res = await runRuleOn(testing.id, target); if (res.ok) setTesting(null); return res; }); }}>
                 <div className="space-y-1.5">
                   <Label htmlFor="rule-target">{({ deal: "Deal", contact: "Contact", booking: "Booking", message: "Message" } as const)[subjectOf(testing.trigger)]}</Label>
-                  <select id="rule-target" className={SELECT} value={target} required onChange={(e) => setTarget(e.target.value)}>
-                    <option value="">Choose…</option>
-                    {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
+                  <Pick id="rule-target" label={({ deal: "Deal", contact: "Contact", booking: "Booking", message: "Message" } as const)[subjectOf(testing.trigger)]} value={target} required onChange={setTarget}
+                    options={[{ value: "", label: "Choose…" }, ...options.map((o) => ({ value: o.id, label: o.label }))]} />
                   {!options.length && <p className="text-xs text-muted-foreground">There are no records of this kind yet.</p>}
                 </div>
                 <p className="text-xs text-muted-foreground">This really carries out the actions: emails and texts are sent.</p>

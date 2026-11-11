@@ -9,6 +9,7 @@ import { AudioPlayer } from "@/components/studio/audio-player";
 import { CoverThumb } from "@/components/studio/cover-thumb";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -304,8 +305,6 @@ function CalendarView({ items, onPick }: { items: StudioAudio[]; onPick: (a: Stu
   );
 }
 
-const SELECT = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
-
 // Edit a recording's name, purpose, status, description and cover.
 function EditSheet({ item, onClose, onSaved }: { item: StudioAudio | null; onClose: () => void; onSaved: () => void }) {
   return (
@@ -343,10 +342,10 @@ function EditForm({ item, onSaved }: { item: StudioAudio; onSaved: () => void })
         <label className="block space-y-1.5"><span className="text-sm font-medium">Name</span><Input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} /></label>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1.5"><span className="text-sm font-medium">What it&apos;s for</span>
-            <select value={kind} onChange={(e) => setKind(e.target.value as StudioKind)} className={SELECT}>{STUDIO_KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</select>
+            <Pick label="What it's for" value={kind} onChange={(v) => setKind(v as StudioKind)} options={STUDIO_KINDS.map((k) => ({ value: k.id, label: k.label }))} />
           </label>
           <label className="block space-y-1.5"><span className="text-sm font-medium">Status</span>
-            <select value={status} onChange={(e) => setStatus(e.target.value as StudioStatus)} className={SELECT}>{STUDIO_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}</select>
+            <Pick label="Status" value={status} onChange={(v) => setStatus(v as StudioStatus)} options={STUDIO_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }))} />
           </label>
         </div>
         <label className="block space-y-1.5"><span className="text-sm font-medium">Description</span><Textarea rows={4} maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} /></label>

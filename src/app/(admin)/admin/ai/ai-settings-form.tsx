@@ -4,12 +4,12 @@ import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { saveAiSettings } from "@/lib/admin/actions/ai";
 import { MODELS, type ModelId } from "@/lib/ai/models";
 import type { AiSettings } from "@/lib/ai/settings";
 
-const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 const label = (id: ModelId) => MODELS.find((m) => m.id === id)?.label ?? id;
 
 // Which providers customers can use with Echo's keys, the default chat model,
@@ -50,9 +50,8 @@ export function AiSettingsForm({ initial, configured, defaults, readOnly }: {
       <fieldset disabled={readOnly} className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <legend className="font-medium">Default for Ask Echo</legend>
-          <select className={SELECT} value={s.defaultChat} onChange={(e) => setS((x) => ({ ...x, defaultChat: e.target.value as ModelId }))}>
-            {MODELS.filter((m) => s.enabled.includes(m.id)).map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-          </select>
+          <Pick label="Default for Ask Echo" className="w-fit" disabled={readOnly} value={s.defaultChat} onChange={(v) => setS((x) => ({ ...x, defaultChat: v as ModelId }))}
+            options={MODELS.filter((m) => s.enabled.includes(m.id)).map((m) => ({ value: m.id, label: m.label }))} />
         </div>
         <div className="space-y-2">
           <p className="font-medium">Summary order</p>
@@ -68,10 +67,8 @@ export function AiSettingsForm({ initial, configured, defaults, readOnly }: {
             ))}
           </ol>
           {MODELS.some((m) => !s.summaryOrder.includes(m.id)) && (
-            <select className={SELECT} value="" onChange={(e) => e.target.value && setS((x) => ({ ...x, summaryOrder: [...x.summaryOrder, e.target.value as ModelId] }))}>
-              <option value="">Add to the order…</option>
-              {MODELS.filter((m) => !s.summaryOrder.includes(m.id)).map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </select>
+            <Pick label="Add to the order" className="w-fit" disabled={readOnly} value="" onChange={(v) => v && setS((x) => ({ ...x, summaryOrder: [...x.summaryOrder, v as ModelId] }))}
+              options={[{ value: "", label: "Add to the order…" }, ...MODELS.filter((m) => !s.summaryOrder.includes(m.id)).map((m) => ({ value: m.id, label: m.label }))]} />
           )}
         </div>
       </fieldset>

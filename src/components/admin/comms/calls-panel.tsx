@@ -6,6 +6,7 @@ import { Delete, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Voicema
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { recordingLink, updateCall } from "@/lib/admin/actions/comms-phone";
 import type { PhoneCall } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
@@ -85,11 +86,10 @@ export function CallsPanel({ calls, people, ready, number, readOnly }: {
                   {expanded && (
                     <div className="mt-3 space-y-3 border-t pt-3 text-sm">
                       {person ? <Link href={`/admin/contacts/${person.id}`} className="text-primary hover:underline">Open {person.name}</Link> : !readOnly && (
-                        <label className="flex flex-wrap items-center gap-2 text-sm">Link to contact
-                          <select className="h-8 rounded-lg border bg-transparent px-2 text-sm" defaultValue="" onChange={(e) => e.target.value && start(async () => setMsg(await updateCall(c.id, { contactId: e.target.value })))}>
-                            <option value="">Choose…</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                          </select>
-                        </label>
+                        <div className="flex flex-wrap items-center gap-2 text-sm">Link to contact
+                          <Pick label="Link to contact" className="w-fit" defaultValue="" onChange={(v) => v && start(async () => setMsg(await updateCall(c.id, { contactId: v })))}
+                            options={[{ value: "", label: "Choose…" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
+                        </div>
                       )}
                       {c.transcript_status === "pending" && <p className="text-muted-foreground">Transcribing…</p>}
                       {c.transcript && <p className="max-h-72 overflow-y-auto rounded-lg border p-3 whitespace-pre-wrap">{c.transcript}</p>}

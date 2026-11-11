@@ -5,6 +5,7 @@ import { ExternalLink, Plus, X } from "lucide-react";
 import { useBuilder } from "@/components/flows/builder-context";
 import { AudioPlayer } from "@/components/studio/audio-player";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +20,6 @@ type Config = Record<string, unknown>;
 type FormProps = { config: Config; onChange: (c: Config) => void };
 type Prompt = { audioId?: string; text?: string };
 
-const SELECT = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "*", "#"];
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -66,10 +66,8 @@ export function PromptField({ label, value, onChange, optional }: { label: strin
             <Textarea rows={3} maxLength={1000} value={value?.text ?? ""} onChange={(e) => onChange({ text: e.target.value })} placeholder="Thanks for calling. For sales, press 1." />
           ) : recordings.length ? (
             <>
-              <select className={SELECT} value={value?.audioId ?? ""} onChange={(e) => onChange({ audioId: e.target.value })}>
-                {!clip && <option value="">Choose a recording</option>}
-                {sorted.map((r) => <option key={r.id} value={r.id}>{r.name} · {kindLabel(r.kind)}</option>)}
-              </select>
+              <Pick label="Recording" value={value?.audioId ?? ""} onChange={(v) => onChange({ audioId: v })}
+                options={[...(!clip ? [{ value: "", label: "Choose a recording" }] : []), ...sorted.map((r) => ({ value: r.id, label: `${r.name} · ${kindLabel(r.kind)}` }))]} />
               {clip?.url && <AudioPlayer src={clip.url} downloadName={clip.name} compact />}
             </>
           ) : (
@@ -89,9 +87,8 @@ function SayForm({ config, onChange }: FormProps) {
     <div className="space-y-4">
       <PromptField label="What callers hear" value={config.prompt as Prompt} onChange={(p) => onChange({ ...config, prompt: p })} />
       <Field label="Play it">
-        <select className={SELECT} value={String(config.loop ?? 1)} onChange={(e) => onChange({ ...config, loop: Number(e.target.value) })}>
-          {[1, 2, 3].map((n) => <option key={n} value={n}>{n === 1 ? "Once" : `${n} times`}</option>)}
-        </select>
+        <Pick label="Play it" value={String(config.loop ?? 1)} onChange={(v) => onChange({ ...config, loop: Number(v) })}
+          options={[1, 2, 3].map((n) => ({ value: String(n), label: n === 1 ? "Once" : `${n} times` }))} />
       </Field>
     </div>
   );
@@ -117,10 +114,8 @@ function GatherForm({ config, onChange }: FormProps) {
           {options.map((o, i) => (
             <div key={o.out} className="flex items-start gap-2">
               {input.includes("dtmf") && (
-                <select aria-label="Key" className={cn(SELECT, "w-16 shrink-0")} value={o.key ?? ""} onChange={(e) => setOptions(options.map((x, k) => (k === i ? { ...x, key: e.target.value || undefined } : x)))}>
-                  <option value="">–</option>
-                  {KEYS.map((k) => <option key={k} value={k} disabled={k !== o.key && options.some((x) => x.key === k)}>{k}</option>)}
-                </select>
+                <Pick label="Key" className="w-16 shrink-0" value={o.key ?? ""} onChange={(v) => setOptions(options.map((x, k) => (k === i ? { ...x, key: v || undefined } : x)))}
+                  options={[{ value: "", label: "–" }, ...KEYS.map((k) => ({ value: k, label: k, disabled: k !== o.key && options.some((x) => x.key === k) }))]} />
               )}
               {speech && (
                 <Input aria-label="Spoken words" placeholder="sales, buy" value={(o.speech ?? []).join(", ")}
@@ -134,9 +129,8 @@ function GatherForm({ config, onChange }: FormProps) {
         </div>
       </Field>
       <Field label="Wait for an answer">
-        <select className={SELECT} value={String(config.timeout ?? 5)} onChange={(e) => onChange({ ...config, timeout: Number(e.target.value) })}>
-          {[3, 5, 8, 10, 15].map((s) => <option key={s} value={s}>{s} seconds</option>)}
-        </select>
+        <Pick label="Wait for an answer" value={String(config.timeout ?? 5)} onChange={(v) => onChange({ ...config, timeout: Number(v) })}
+          options={[3, 5, 8, 10, 15].map((s) => ({ value: String(s), label: `${s} seconds` }))} />
       </Field>
       <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
         <span><span className="block text-sm font-medium">Dial an extension at any time</span><span className="block text-xs text-muted-foreground">Callers can type an extension (like 101) instead of choosing an option.</span></span>
@@ -164,9 +158,7 @@ function SplitForm({ config, onChange }: FormProps) {
           <div className="flex items-center justify-between"><span className="text-xs font-medium text-muted-foreground">Rule {i + 1}</span>
             <Button variant="ghost" size="icon-sm" aria-label="Remove rule" disabled={rules.length === 1} onClick={() => set(rules.filter((_, k) => k !== i))}><X /></Button></div>
           <Input list="flow-variables" aria-label="Value to check" value={r.variable} onChange={(e) => set(rules.map((x, k) => (k === i ? { ...x, variable: e.target.value } : x)))} />
-          <select className={SELECT} aria-label="Comparison" value={r.op} onChange={(e) => set(rules.map((x, k) => (k === i ? { ...x, op: e.target.value } : x)))}>
-            {OPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
+          <Pick label="Comparison" value={r.op} onChange={(v) => set(rules.map((x, k) => (k === i ? { ...x, op: v } : x)))} options={OPS.map(([v, l]) => ({ value: v, label: l }))} />
           {r.op !== "empty" && <Input aria-label="Compare with" value={r.value} onChange={(e) => set(rules.map((x, k) => (k === i ? { ...x, value: e.target.value } : x)))} placeholder={r.op === "matches" ? "^\\+1480" : "+14805550142"} />}
         </div>
       ))}
@@ -190,10 +182,8 @@ function HoursForm({ config, onChange }: FormProps) {
   return (
     <div className="space-y-4">
       <Field label="Time zone">
-        <select className={SELECT} value={tz} onChange={(e) => onChange({ ...config, tz: e.target.value })}>
-          {!ZONES.includes(tz) && <option value={tz}>{tz}</option>}
-          {ZONES.map((z) => <option key={z} value={z}>{z.replace(/_/g, " ")}</option>)}
-        </select>
+        <Pick label="Time zone" value={tz} onChange={(v) => onChange({ ...config, tz: v })}
+          options={[...(!ZONES.includes(tz) ? [{ value: tz, label: tz }] : []), ...ZONES.map((z) => ({ value: z, label: z.replace(/_/g, " ") }))]} />
       </Field>
       <Field label="Open hours">
         <div className="space-y-1.5">
@@ -253,15 +243,13 @@ function ConnectForm({ config, onChange }: FormProps) {
               </div>
               {kind(t) === "extension" ? (
                 extensions.length ? (
-                  <select className={SELECT} value={t.extensionId} onChange={(e) => set(targets.map((x, j) => (j === i ? { extensionId: e.target.value } : x)))}>
-                    {extensions.map((x) => <option key={x.id} value={x.id}>{x.ext} · {x.name}{lineLabel(x.lineId)}</option>)}
-                  </select>
+                  <Pick label="Extension" value={t.extensionId ?? ""} onChange={(v) => set(targets.map((x, j) => (j === i ? { extensionId: v } : x)))}
+                    options={extensions.map((x) => ({ value: x.id, label: `${x.ext} · ${x.name}${lineLabel(x.lineId)}` }))} />
                 ) : <p className="text-xs text-muted-foreground">No extensions yet. Add them with the Extensions button at the top.</p>
               ) : kind(t) === "directory" ? (
                 directory.length ? (
-                  <select className={SELECT} value={t.directoryId} onChange={(e) => set(targets.map((x, j) => (j === i ? { directoryId: e.target.value } : x)))}>
-                    {directory.map((d) => <option key={d.id} value={d.id}>{d.label}{lineLabel(d.lineId)}</option>)}
-                  </select>
+                  <Pick label="Directory contact" value={t.directoryId ?? ""} onChange={(v) => set(targets.map((x, j) => (j === i ? { directoryId: v } : x)))}
+                    options={directory.map((d) => ({ value: d.id, label: `${d.label}${lineLabel(d.lineId)}` }))} />
                 ) : <p className="text-xs text-muted-foreground">No Directory contacts yet. Add them in Calls → Directory.</p>
               ) : (
                 <Input inputMode="tel" placeholder="+14805550142" value={t.number ?? ""} onChange={(e) => set(targets.map((x, j) => (j === i ? { number: e.target.value.replace(/[^\d+]/g, "") } : x)))} aria-label="Number to ring" />
@@ -277,9 +265,8 @@ function ConnectForm({ config, onChange }: FormProps) {
         </Field>
       )}
       <Field label="Ring for">
-        <select className={SELECT} value={String(config.ringSeconds ?? 20)} onChange={(e) => onChange({ ...config, ringSeconds: Number(e.target.value) })}>
-          {[10, 15, 20, 25, 30, 45, 60].map((s) => <option key={s} value={s}>{s} seconds</option>)}
-        </select>
+        <Pick label="Ring for" value={String(config.ringSeconds ?? 20)} onChange={(v) => onChange({ ...config, ringSeconds: Number(v) })}
+          options={[10, 15, 20, 25, 30, 45, 60].map((s) => ({ value: String(s), label: `${s} seconds` }))} />
       </Field>
       <Field label="Whisper" hint="Said privately to the person who answers, before the caller is connected.">
         <Input maxLength={300} value={String(config.whisper ?? "")} placeholder="Call from the main menu, Sales." onChange={(e) => onChange({ ...config, whisper: e.target.value || undefined })} />
@@ -293,9 +280,8 @@ function VoicemailForm({ config, onChange }: FormProps) {
     <div className="space-y-4">
       <PromptField label="Greeting" optional value={config.prompt as Prompt | undefined} onChange={(p) => onChange({ ...config, prompt: p })} />
       <Field label="Longest message">
-        <select className={SELECT} value={String(config.maxSeconds ?? 120)} onChange={(e) => onChange({ ...config, maxSeconds: num(e.target.value, 10, 300, 120) })}>
-          {[30, 60, 120, 180, 300].map((s) => <option key={s} value={s}>{s < 60 ? `${s} seconds` : `${s / 60} ${s === 60 ? "minute" : "minutes"}`}</option>)}
-        </select>
+        <Pick label="Longest message" value={String(config.maxSeconds ?? 120)} onChange={(v) => onChange({ ...config, maxSeconds: num(v, 10, 300, 120) })}
+          options={[30, 60, 120, 180, 300].map((s) => ({ value: String(s), label: s < 60 ? `${s} seconds` : `${s / 60} ${s === 60 ? "minute" : "minutes"}` }))} />
       </Field>
       <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
         <span><span className="block text-sm font-medium">Transcribe with Echo</span><span className="block text-xs text-muted-foreground">Read the message instead of listening.</span></span>

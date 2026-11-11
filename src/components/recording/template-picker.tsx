@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Loader2, Search, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { generateRecordingSummary } from "@/lib/actions";
@@ -12,7 +13,6 @@ import { FILTERS, filterTemplates, TemplateCard } from "@/components/templates/t
 import { TEMPLATES } from "@/lib/templates";
 
 const LANGUAGES = ["English", "Spanish", "French", "German", "Portuguese", "Italian", "Dutch", "Japanese", "Korean", "Chinese (Simplified)", "Hindi", "Arabic"];
-const SELECT = "h-9 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type ModelStatus = { id: string; label: string; available: boolean };
 
@@ -67,17 +67,13 @@ export function TemplatePicker({ recordingId, open, onOpenChange, current }: { r
         </div>
 
         <footer className="flex flex-wrap items-center gap-2 border-t p-4">
-          <label className="flex items-center gap-1.5 text-sm">
-            <Sparkles className="size-4 text-muted-foreground" />
-            <span className="sr-only">AI model</span>
-            <select value={model} onChange={(e) => setModel(e.target.value)} className={SELECT} aria-label="AI model">
-              <option value="auto">Auto</option>
-              {models.filter((m) => m.available).map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </select>
-          </label>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)} className={SELECT} aria-label="Language">
-            {LANGUAGES.map((l) => <option key={l}>{l}</option>)}
-          </select>
+          <div className="flex items-center gap-1.5 text-sm">
+            <Sparkles className="size-4 text-muted-foreground" aria-hidden />
+            <Pick label="AI model" value={model} onChange={setModel} className="w-auto"
+              options={[{ value: "auto", label: "Auto" }, ...models.filter((m) => m.available).map((m) => ({ value: m.id, label: m.label }))]} />
+          </div>
+          <Pick label="Language" value={language} onChange={setLanguage} className="w-auto"
+            options={LANGUAGES.map((l) => ({ value: l, label: l }))} />
           <div className="ml-auto flex items-center gap-3">
             {pending && <span className="text-sm text-muted-foreground">Writing your summary… up to a minute</span>}
             <Button onClick={generate} disabled={pending}>{pending ? <Loader2 className="animate-spin" /> : <Wand2 />} Generate now</Button>

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Ban, Star, Trash2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -12,7 +13,6 @@ import { defaultGreeting } from "@/lib/redial/assistant";
 import { MODES, VOICES, decide, normalizeNumber as toE164, type Line, type ListEntry, type ListKind } from "@/lib/redial/types";
 import { cn } from "@/lib/utils";
 
-const SELECT = "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30";
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 const KIND = { allow: { label: "Allow", icon: UserCheck }, vip: { label: "VIP", icon: Star }, block: { label: "Block", icon: Ban } } as const;
 
@@ -101,9 +101,8 @@ function Lists({ line, entries }: { line: Line; entries: ListEntry[] }) {
         <div className="space-y-1"><Label htmlFor="rd-num" className="text-xs">Number</Label><Input id="rd-num" type="tel" className="h-9 w-40" value={number} onChange={(e) => setNumber(e.target.value)} required /></div>
         <div className="space-y-1"><Label htmlFor="rd-lbl" className="text-xs">Name (optional)</Label><Input id="rd-lbl" className="h-9 w-40" value={label} onChange={(e) => setLabel(e.target.value)} /></div>
         <div className="space-y-1"><Label htmlFor="rd-kind" className="text-xs">List</Label>
-          <select id="rd-kind" className={`${SELECT} w-28`} value={kind} onChange={(e) => setKind(e.target.value as ListKind)}>
-            <option value="allow">Allow</option><option value="vip">VIP</option><option value="block">Block</option>
-          </select>
+          <Pick id="rd-kind" label="List" className="w-28" value={kind} onChange={(v) => setKind(v as ListKind)}
+            options={[{ value: "allow", label: "Allow" }, { value: "vip", label: "VIP" }, { value: "block", label: "Block" }]} />
         </div>
         <Button type="submit" disabled={pending}>Add</Button>
       </form>
@@ -160,9 +159,8 @@ export function AssistantSettings({ line, form, ownerFirst }: { line: Line; form
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor="rd-name">Assistant&apos;s name</Label><Input id="rd-name" maxLength={40} value={s.assistant_name} onChange={(e) => set({ assistant_name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="rd-voice">Voice</Label>
-          <select id="rd-voice" className={SELECT} value={s.voice} onChange={(e) => set({ voice: e.target.value })}>
-            {VOICES.map((v) => <option key={v.id} value={v.id}>{v.label} · {v.detail}</option>)}
-          </select>
+          <Pick id="rd-voice" label="Voice" value={s.voice} onChange={(v) => set({ voice: v })}
+            options={VOICES.map((v) => ({ value: v.id, label: `${v.label} · ${v.detail}` }))} />
         </div>
       </div>
       <div className="space-y-1.5">
@@ -178,9 +176,8 @@ export function AssistantSettings({ line, form, ownerFirst }: { line: Line; form
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="rd-max">Longest screening call</Label>
-        <select id="rd-max" className={`${SELECT} max-w-xs`} value={s.max_seconds} onChange={(e) => set({ max_seconds: Number(e.target.value) })}>
-          {[60, 90, 120, 180, 240, 300].map((n) => <option key={n} value={n}>{n < 120 ? `${n} seconds` : `${n / 60} minutes`}</option>)}
-        </select>
+        <Pick id="rd-max" label="Longest screening call" className="max-w-xs" value={String(s.max_seconds)} onChange={(v) => set({ max_seconds: Number(v) })}
+          options={[60, 90, 120, 180, 240, 300].map((n) => ({ value: String(n), label: n < 120 ? `${n} seconds` : `${n / 60} minutes` }))} />
       </div>
       <SaveBar form={form} />
     </div>

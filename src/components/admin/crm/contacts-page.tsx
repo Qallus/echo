@@ -7,6 +7,7 @@ import { Archive, Download, ExternalLink, Magnet, Tag, Tags as TagsIcon, UserCog
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { addToPipeline } from "@/lib/admin/actions/crm-pipeline";
 import { bulkUpdate, type BulkChange } from "@/lib/admin/actions/crm-bulk";
@@ -15,7 +16,6 @@ import { contactsToCsv, downloadCsv } from "@/lib/crm/csv";
 import { CONTACT_ROLES, CONTACT_STATUSES, LEAD_STATUSES, contactName, ownerName, type Contact, type ContactRole, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { DetailRow, EmptyState, RowActions, SearchBox, StatRow, StatTile, ViewSwitcher, type RowAction } from "./crm-kit";
-import { FILTER } from "./crm-ui";
 import { BulkBar, emailEveryone, type BulkAction } from "./bulk-bar";
 import { DataTable, plain, type Column } from "./data-table";
 import { ComposeDialog, type Person } from "@/components/admin/comms/compose-dialog";
@@ -132,20 +132,16 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SearchBox value={search} onChange={setSearch} placeholder="Search contacts…" />
-          <select value={role} onChange={(e) => setRole(e.target.value)} className={FILTER} aria-label="Role">
-            <option value="">All roles</option>{CONTACT_ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-          </select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={FILTER} aria-label="Status">
-            <option value="">Any status</option>{CONTACT_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
+          <Pick label="Role" className="w-fit" value={role} onChange={(v) => setRole(v)}
+            options={[{ value: "", label: "All roles" }, ...CONTACT_ROLES.map((r) => ({ value: r.id, label: r.label }))]} />
+          <Pick label="Status" className="w-fit" value={status} onChange={(v) => setStatus(v)}
+            options={[{ value: "", label: "Any status" }, ...CONTACT_STATUSES.map((s) => ({ value: s.id, label: s.label }))]} />
           {tags.length > 0 && (
-            <select value={tag} onChange={(e) => setTag(e.target.value)} className={FILTER} aria-label="Tag">
-              <option value="">All tags</option>{tags.map((t) => <option key={t}>{t}</option>)}
-            </select>
+            <Pick label="Tag" className="w-fit" value={tag} onChange={(v) => setTag(v)}
+              options={[{ value: "", label: "All tags" }, ...tags.map((t) => ({ value: t, label: t }))]} />
           )}
-          <select value={owner} onChange={(e) => setOwner(e.target.value)} className={FILTER} aria-label="Owner">
-            <option value="">All owners</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}
-          </select>
+          <Pick label="Owner" className="w-fit" value={owner} onChange={(v) => setOwner(v)}
+            options={[{ value: "", label: "All owners" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ViewSwitcher views={VIEWS} value={view} onChange={setView} />

@@ -6,6 +6,7 @@ import { Link2, Sparkles } from "lucide-react";
 import { AudioPlayer } from "@/components/studio/audio-player";
 import { DrumMachine } from "@/components/studio/drum-machine";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { defaultPattern, type Pattern } from "@/lib/studio/drum-engine";
@@ -25,6 +26,7 @@ export function BackgroundMusic({
   const getCtx = () => (ctxRef.current ??= new AudioContext({ sampleRate: 44100 }));
 
   const [tab, setTab] = useState<Tab>("upload");
+  const [libPick, setLibPick] = useState("");
   const [pattern, setPattern] = useState<Pattern>(() => defaultPattern(16));
   const [musicSrc, setMusicSrc] = useState<string | null>(null);
 
@@ -121,10 +123,7 @@ export function BackgroundMusic({
           </div>
           <label className="block">
             <span className="mb-1 block text-xs text-muted-foreground">…or pick from library</span>
-            <select onChange={(e) => pickLibrary(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-              <option value="">Select…</option>
-              {library.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+            <Pick label="Library track" value={libPick} onChange={(v) => { setLibPick(v); void pickLibrary(v); }} options={[{ value: "", label: "Select…" }, ...library.map((a) => ({ value: a.id, label: a.name }))]} />
           </label>
           {musicSrc && <AudioPlayer src={musicSrc} downloadName="background-music" />}
         </div>

@@ -9,6 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteBookings, saveBooking, setBookingStatus } from "@/lib/admin/actions/bookings";
 import { BOOKING_STATUSES, formatWhen, type Booking, type BookingStatus, type BookingType } from "@/lib/bookings/types";
@@ -16,7 +17,6 @@ import { ownerName, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { BulkBar, type BulkAction } from "@/components/admin/crm/bulk-bar";
 import { EmptyState, RecordCalendar, SearchBox, StatRow, StatTile, ViewSwitcher } from "@/components/admin/crm/crm-kit";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 import { DataTable, plain, type Column } from "@/components/admin/crm/data-table";
 import { TimePicker } from "@/components/ui/time-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -146,24 +146,20 @@ function BookingDialog({ booking, types, staff, people, timezone, readOnly, onCl
       <DialogContent title={booking ? booking.title : "New booking"} className="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="bk-contact">Contact</Label>
-            <select id="bk-contact" className={SELECT} value={f.contact_id} disabled={readOnly} onChange={(e) => {
-              const p = people.find((x) => x.id === e.target.value);
-              set({ contact_id: e.target.value, ...(p ? { name: p.name, email: p.email ?? f.email, phone: p.phone ?? f.phone } : {}) });
-            }}>
-              <option value="">Not in the CRM / type below</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <Pick id="bk-contact" label="Contact" value={f.contact_id} disabled={readOnly} onChange={(v) => {
+              const p = people.find((x) => x.id === v);
+              set({ contact_id: v, ...(p ? { name: p.name, email: p.email ?? f.email, phone: p.phone ?? f.phone } : {}) });
+            }} options={[{ value: "", label: "Not in the CRM / type below" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
           </div>
           <div className="space-y-1.5"><Label htmlFor="bk-name">Name</Label><Input id="bk-name" value={f.name} disabled={readOnly} onChange={(e) => set({ name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="bk-email">Email</Label><Input id="bk-email" type="email" value={f.email} disabled={readOnly} onChange={(e) => set({ email: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="bk-type">Type</Label>
-            <select id="bk-type" className={SELECT} value={f.type_id} disabled={readOnly} onChange={(e) => { const t = types.find((x) => x.id === e.target.value); set({ type_id: e.target.value, minutes: t?.minutes ?? f.minutes }); }}>
-              <option value="">Other meeting</option>{types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <Pick id="bk-type" label="Type" value={f.type_id} disabled={readOnly} onChange={(v) => { const t = types.find((x) => x.id === v); set({ type_id: v, minutes: t?.minutes ?? f.minutes }); }}
+              options={[{ value: "", label: "Other meeting" }, ...types.map((t) => ({ value: t.id, label: t.name }))]} />
           </div>
           <div className="space-y-1.5"><Label htmlFor="bk-status">Status</Label>
-            <select id="bk-status" className={SELECT} value={f.status} disabled={readOnly} onChange={(e) => set({ status: e.target.value as BookingStatus })}>
-              {BOOKING_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
+            <Pick id="bk-status" label="Status" value={f.status} disabled={readOnly} onChange={(v) => set({ status: v as BookingStatus })}
+              options={BOOKING_STATUSES.map((s) => ({ value: s.id, label: s.label }))} />
           </div>
           <div className="space-y-1.5"><Label>Date</Label><DatePicker value={f.date} onChange={(v) => set({ date: v })} /></div>
           <div className="grid grid-cols-2 gap-2">
@@ -172,9 +168,8 @@ function BookingDialog({ booking, types, staff, people, timezone, readOnly, onCl
           </div>
           <div className="space-y-1.5"><Label htmlFor="bk-phone">Phone</Label><PhoneInput id="bk-phone" value={f.phone} disabled={readOnly} onChange={(v) => set({ phone: v })} /></div>
           <div className="space-y-1.5"><Label htmlFor="bk-host">Host</Label>
-            <select id="bk-host" className={SELECT} value={f.host_id} disabled={readOnly} onChange={(e) => set({ host_id: e.target.value })}>
-              <option value="">Anyone</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}
-            </select>
+            <Pick id="bk-host" label="Host" value={f.host_id} disabled={readOnly} onChange={(v) => set({ host_id: v })}
+              options={[{ value: "", label: "Anyone" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
           </div>
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="bk-loc">Location or link</Label><Input id="bk-loc" value={f.location} disabled={readOnly} onChange={(e) => set({ location: e.target.value })} placeholder="Zoom link, address, or phone" /></div>
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="bk-notes">Notes</Label><Textarea id="bk-notes" rows={3} value={f.notes} disabled={readOnly} onChange={(e) => set({ notes: e.target.value })} /></div>

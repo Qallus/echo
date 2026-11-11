@@ -42,6 +42,7 @@ export const ROUTES = [
   { id: "missed", label: "Keep my number, forward the calls I miss", detail: "Your phone rings first. Calls you don't answer, decline or can't get go to your assistant.", tag: "Most popular" },
   { id: "all", label: "Keep my number, send every call to your assistant", detail: "Your phone stays quiet. Your assistant answers everything and puts the right calls through." },
   { id: "new_number", label: "Give me a new Redial number", detail: "A separate number to share. Calls to it always reach your assistant first." },
+  { id: "port", label: "Move my number to Redial", detail: "Redial becomes your phone service: your number rings the app, desk phones and your mobile. The move takes 1 to 2 weeks; a Redial number works in the meantime." },
 ] as const;
 
 export const SCREEN_MODES = [

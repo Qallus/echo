@@ -9,13 +9,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { createPlan } from "@/lib/admin/actions/plans";
 import { formatDay, ownerName, type StaffOption } from "@/lib/crm/types";
 import { PLAN_TEMPLATES } from "@/lib/plans/templates";
 import { PLAN_COLORS, colorDot, type PlanSummary } from "@/lib/plans/types";
 import { cn } from "@/lib/utils";
 import { EmptyState, SearchBox, StatRow, StatTile } from "@/components/admin/crm/crm-kit";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 
 // Every plan with its progress. New plans start from a template.
 export function PlansIndex({ plans, companies, staff, readOnly }: { plans: PlanSummary[]; companies: { id: string; name: string }[]; staff: StaffOption[]; readOnly: boolean }) {
@@ -91,10 +91,10 @@ function NewPlanDialog({ companies, staff, onClose }: { companies: { id: string;
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="pl-name">Plan name</Label><Input id="pl-name" autoFocus value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={`${tpl.name}: Acme`} /></div>
           <div className="space-y-1.5"><Label htmlFor="pl-client">Client</Label>
-            <select id="pl-client" className={SELECT} value={f.company_id} onChange={(e) => setF({ ...f, company_id: e.target.value })}><option value="">None</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+            <Pick id="pl-client" label="Client" value={f.company_id} onChange={(v) => setF({ ...f, company_id: v })} options={[{ value: "", label: "None" }, ...companies.map((c) => ({ value: c.id, label: c.name }))]} />
           </div>
           <div className="space-y-1.5"><Label htmlFor="pl-owner">Owner (tasks start assigned to them)</Label>
-            <select id="pl-owner" className={SELECT} value={f.owner_id} onChange={(e) => setF({ ...f, owner_id: e.target.value })}><option value="">Unassigned</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}</select>
+            <Pick id="pl-owner" label="Owner" value={f.owner_id} onChange={(v) => setF({ ...f, owner_id: v })} options={[{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
           </div>
           <div className="space-y-1.5"><Label>Starts</Label><DatePicker value={f.start_date} onChange={(v) => setF({ ...f, start_date: v })} placeholder="Today" /></div>
           <div className="space-y-1.5"><Label>Color</Label>

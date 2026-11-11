@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SELECT } from "@/components/admin/crm/crm-ui";
+import { Pick } from "@/components/ui/pick";
 import { saveOrganization } from "@/lib/admin/actions/settings";
 import type { Organization } from "@/lib/settings/organization";
 
@@ -37,9 +37,7 @@ export function OrganizationForm({ initial, readOnly }: { initial: Organization;
         {field("website", "Website", "{{org_website}}")}
         <div className="space-y-1.5">
           <Label htmlFor="org-timezone">Time zone</Label>
-          <select id="org-timezone" className={SELECT} value={o.timezone} disabled={readOnly} onChange={(e) => set({ timezone: e.target.value })}>
-            {zones.map((z) => <option key={z} value={z}>{z.replace(/_/g, " ")}</option>)}
-          </select>
+          <Pick id="org-timezone" label="Time zone" value={o.timezone} disabled={readOnly} onChange={(v) => set({ timezone: v })} options={zones.map((z) => ({ value: z, label: z.replace(/_/g, " ") }))} />
           <p className="text-xs text-muted-foreground">What &ldquo;today&rdquo; means on the dashboard, analytics and reports.</p>
         </div>
       </div>

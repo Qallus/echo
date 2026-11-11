@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 import { saveRule, type RuleInput } from "@/lib/admin/actions/automation";
 import {
   ACTIONS, FIELDS, MERGE_HINT, OPS, RULE_TRIGGERS, blankAction, needsValue, opsFor, subjectOf, validateRule,
@@ -60,36 +60,29 @@ export function RuleBuilder({ rule, templates, people, onClose }: { rule: Rule |
 
           <fieldset className="space-y-3">
             <legend className="mb-2 text-sm font-semibold">When</legend>
-            <select aria-label="Trigger" className={SELECT} value={r.trigger} onChange={(e) => {
-              const trigger = e.target.value as RuleTrigger;
+            <Pick label="Trigger" value={r.trigger} options={RULE_TRIGGERS.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => {
+              const trigger = v as RuleTrigger;
               const keep = FIELDS[subjectOf(trigger)].map((f) => f.key);
               set({ trigger, conditions: r.conditions.filter((c) => keep.includes(c.field)) });
-            }}>
-              {RULE_TRIGGERS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-            </select>
+            }} />
             {r.trigger === "stage_changed" && (
-              <select aria-label="Stage" className={SELECT} value={r.stage ?? ""} onChange={(e) => set({ stage: e.target.value || null })}>
-                <option value="">Any stage</option>
-                {STAGE_ORDER.map((s) => <option key={s} value={s}>{STAGES[s].label}</option>)}
-              </select>
+              <Pick label="Stage" value={r.stage ?? ""} onChange={(v) => set({ stage: v || null })}
+                options={[{ value: "", label: "Any stage" }, ...STAGE_ORDER.map((s) => ({ value: s, label: STAGES[s].label }))]} />
             )}
             {r.trigger === "deal_stalled" && (
               <label className="flex items-center gap-2 text-sm">No activity for
                 <Input type="number" min={1} max={365} className="w-20" value={r.stalled_days} onChange={(e) => set({ stalled_days: Number(e.target.value) })} /> days
               </label>
             )}
-            <select aria-label="Delay" className={SELECT} value={r.delay_minutes} onChange={(e) => set({ delay_minutes: Number(e.target.value) })}>
-              {delays.map((d) => <option key={d.v} value={d.v}>{d.l}</option>)}
-            </select>
+            <Pick label="Delay" value={String(r.delay_minutes)} onChange={(v) => set({ delay_minutes: Number(v) })} options={delays.map((d) => ({ value: String(d.v), label: d.l }))} />
           </fieldset>
 
           <fieldset className="space-y-3">
             <legend className="mb-2 flex w-full items-center gap-2 text-sm font-semibold">
               Only if
               {r.conditions.length > 1 && (
-                <select aria-label="Match" className={`${SELECT} w-auto font-normal`} value={r.match} onChange={(e) => set({ match: e.target.value as "all" | "any" })}>
-                  <option value="all">all of these match</option><option value="any">any of these match</option>
-                </select>
+                <Pick label="Match" className="w-auto font-normal" value={r.match} onChange={(v) => set({ match: v as "all" | "any" })}
+                  options={[{ value: "all", label: "all of these match" }, { value: "any", label: "any of these match" }]} />
               )}
             </legend>
             {r.conditions.length === 0 && <p className="text-sm text-muted-foreground">Every time. Add a condition to narrow it down.</p>}
@@ -98,21 +91,16 @@ export function RuleBuilder({ rule, templates, people, onClose }: { rule: Rule |
               const ops = opsFor(f.kind);
               return (
                 <div key={i} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1.2fr_1fr_1.2fr_auto]">
-                  <select aria-label="Field" className={SELECT} value={c.field} onChange={(e) => {
-                    const nf = fields.find((x) => x.key === e.target.value)!;
+                  <Pick label="Field" value={c.field} options={fields.map((x) => ({ value: x.key, label: x.label }))} onChange={(v) => {
+                    const nf = fields.find((x) => x.key === v)!;
                     setCond(i, { field: nf.key, op: opsFor(nf.kind).includes(c.op) ? c.op : opsFor(nf.kind)[0], value: "" });
-                  }}>
-                    {fields.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
-                  </select>
-                  <select aria-label="Comparison" className={`${SELECT} max-sm:order-3`} value={c.op} onChange={(e) => setCond(i, { op: e.target.value as Condition["op"] })}>
-                    {ops.map((o) => <option key={o} value={o}>{OPS.find((x) => x.id === o)!.label}</option>)}
-                  </select>
+                  }} />
+                  <Pick label="Comparison" className="max-sm:order-3" value={c.op} onChange={(v) => setCond(i, { op: v as Condition["op"] })}
+                    options={ops.map((o) => ({ value: o, label: OPS.find((x) => x.id === o)!.label }))} />
                   {needsValue(c.op) ? (
                     f.kind === "stage" || f.kind === "choice" ? (
-                      <select aria-label="Value" className={`${SELECT} max-sm:order-4`} value={c.value} onChange={(e) => setCond(i, { value: e.target.value })}>
-                        <option value="">Choose…</option>
-                        {(f.kind === "stage" ? STAGE_ORDER.map((s) => ({ v: s, l: STAGES[s].label })) : f.choices!.map((v) => ({ v, l: v.replace(/_/g, " ") }))).map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-                      </select>
+                      <Pick label="Value" className="max-sm:order-4" value={c.value} onChange={(v) => setCond(i, { value: v })}
+                        options={[{ value: "", label: "Choose…" }, ...(f.kind === "stage" ? STAGE_ORDER.map((s) => ({ value: s as string, label: STAGES[s].label })) : f.choices!.map((v) => ({ value: v, label: v.replace(/_/g, " ") })))]} />
                     ) : (
                       <Input aria-label="Value" className="h-8 max-sm:order-4" type={f.kind === "number" ? "number" : "text"} value={c.value} onChange={(e) => setCond(i, { value: e.target.value })} />
                     )
@@ -132,9 +120,7 @@ export function RuleBuilder({ rule, templates, people, onClose }: { rule: Rule |
               <div key={i} className="space-y-3 rounded-lg border p-3">
                 <div className="flex items-center gap-2">
                   <span className="grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[11px] font-medium">{i + 1}</span>
-                  <select aria-label="Action" className={SELECT} value={a.type} onChange={(e) => setAct(i, blankAction(e.target.value as ActionType))}>
-                    {ACTIONS.map((x) => <option key={x.type} value={x.type}>{x.label}</option>)}
-                  </select>
+                  <Pick label="Action" value={a.type} onChange={(v) => setAct(i, blankAction(v as ActionType))} options={ACTIONS.map((x) => ({ value: x.type, label: x.label }))} />
                   <Button type="button" variant="ghost" size="icon-sm" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp /></Button>
                   <Button type="button" variant="ghost" size="icon-sm" aria-label="Move down" disabled={i === r.actions.length - 1} onClick={() => move(i, 1)}><ArrowDown /></Button>
                   <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove action" disabled={r.actions.length === 1} onClick={() => set({ actions: r.actions.filter((_, j) => j !== i) })}><X /></Button>
@@ -164,13 +150,10 @@ function ActionFields({ action: a, onChange, templates, people }: { action: Rule
     case "send_email":
       return (
         <div className="grid gap-2 sm:grid-cols-2">
-          <select aria-label="Template" className={SELECT} value={a.templateId} onChange={(e) => onChange({ ...a, templateId: e.target.value })}>
-            <option value="">Choose a template…</option>
-            {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <select aria-label="Send to" className={SELECT} value={a.to} onChange={(e) => onChange({ ...a, to: e.target.value as typeof a.to })}>
-            <option value="contact">The contact / guest / sender</option><option value="owner">The owner</option><option value="custom">An email address…</option>
-          </select>
+          <Pick label="Template" value={a.templateId} onChange={(v) => onChange({ ...a, templateId: v })}
+            options={[{ value: "", label: "Choose a template…" }, ...templates.map((t) => ({ value: t.id, label: t.name }))]} />
+          <Pick label="Send to" value={a.to} onChange={(v) => onChange({ ...a, to: v as typeof a.to })}
+            options={[{ value: "contact", label: "The contact / guest / sender" }, { value: "owner", label: "The owner" }, { value: "custom", label: "An email address…" }]} />
           {a.to === "custom" && <Input aria-label="Email address" type="email" className="h-8 sm:col-span-2" placeholder="team@example.com" value={a.email ?? ""} onChange={(e) => onChange({ ...a, email: e.target.value })} />}
           {!templates.length && <p className="text-xs text-muted-foreground sm:col-span-2">Create a template in Communications → Email first.</p>}
         </div>
@@ -178,9 +161,8 @@ function ActionFields({ action: a, onChange, templates, people }: { action: Rule
     case "send_sms":
       return (
         <div className="space-y-2">
-          <select aria-label="Send to" className={SELECT} value={a.to} onChange={(e) => onChange({ ...a, to: e.target.value as typeof a.to })}>
-            <option value="contact">The contact / guest / sender</option><option value="custom">A phone number…</option>
-          </select>
+          <Pick label="Send to" value={a.to} onChange={(v) => onChange({ ...a, to: v as typeof a.to })}
+            options={[{ value: "contact", label: "The contact / guest / sender" }, { value: "custom", label: "A phone number…" }]} />
           {a.to === "custom" && <Input aria-label="Phone number" type="tel" className="h-8" placeholder="(480) 555-0142" value={a.phone ?? ""} onChange={(e) => onChange({ ...a, phone: e.target.value })} />}
           <Textarea aria-label="Message" rows={3} maxLength={1000} value={a.body} onChange={(e) => onChange({ ...a, body: e.target.value })} />
           <p className="text-xs text-muted-foreground">Merge fields: {MERGE_HINT}</p>
@@ -195,18 +177,14 @@ function ActionFields({ action: a, onChange, templates, people }: { action: Rule
       );
     case "assign_owner":
       return (
-        <select aria-label="Owner" className={SELECT} value={a.userId} onChange={(e) => onChange({ ...a, userId: e.target.value })}>
-          <option value="">Choose a team member…</option>
-          {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
+        <Pick label="Owner" value={a.userId} onChange={(v) => onChange({ ...a, userId: v })}
+          options={[{ value: "", label: "Choose a team member…" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
       );
     case "notify_staff":
       return (
         <div className="grid gap-2 sm:grid-cols-2">
-          <select aria-label="Who" className={SELECT} value={a.userId} onChange={(e) => onChange({ ...a, userId: e.target.value })}>
-            <option value="owner">The owner</option>
-            {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          <Pick label="Who" value={a.userId} onChange={(v) => onChange({ ...a, userId: v })}
+            options={[{ value: "owner", label: "The owner" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
           <Input aria-label="Notification title" className="h-8" placeholder="New lead: {{full_name}}" value={a.title} maxLength={200} onChange={(e) => onChange({ ...a, title: e.target.value })} />
         </div>
       );

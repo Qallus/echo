@@ -7,6 +7,7 @@ import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ImageUp, Link2, Loader2, Save, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -240,10 +241,8 @@ export function DesignBuilder({ id, initialName, initial, userId, workspaces, in
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="d-ws">Who can use it</Label>
-          <select id="d-ws" value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="h-9 w-full rounded-lg border bg-transparent px-2.5 text-sm">
-            <option value="">Only me</option>
-            {workspaces.filter((w) => !w.isPersonal).map((w) => <option key={w.id} value={w.id}>Everyone in {w.name}</option>)}
-          </select>
+          <Pick id="d-ws" label="Who can use it" value={workspaceId} onChange={setWorkspaceId}
+            options={[{ value: "", label: "Only me" }, ...workspaces.filter((w) => !w.isPersonal).map((w) => ({ value: w.id, label: `Everyone in ${w.name}` }))]} />
         </div>
         <label className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
           Use as my default design

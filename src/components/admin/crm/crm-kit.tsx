@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { STAGES, type DealStage } from "@/lib/crm/deals";
 import { cn } from "@/lib/utils";
-import { SELECT } from "./crm-ui";
 
 // The Channel-Cast CRM kit (components/crm/crm-ui.tsx), on Echo's Base UI
 // components: stat tiles, view switcher, search, row menu, detail rows,
@@ -109,15 +109,25 @@ export function Editable({ value, onSave, type = "text", options, placeholder = 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const ref = useRef<HTMLInputElement>(null);
+  const pickRef = useRef<HTMLDivElement>(null);
   const current = value == null ? "" : String(value);
-  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+  useEffect(() => {
+    if (!editing) return;
+    ref.current?.focus();
+    pickRef.current?.querySelector<HTMLElement>("[data-slot=select-trigger]")?.focus();
+  }, [editing]);
   const commit = (next: string) => { setEditing(false); if (next !== current) onSave(next); };
 
   if (editing && type === "select") {
     return (
-      <select autoFocus value={draft} onChange={(e) => commit(e.target.value)} onBlur={() => setEditing(false)} className={cn(SELECT, "h-7")}>
-        {(options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      // Leaving the picker (not into its own list) or Escape discards.
+      <div ref={pickRef} onKeyDown={(e) => { if (e.key === "Escape") setEditing(false); }}
+        onBlur={(e) => {
+          const to = e.relatedTarget as Element | null;
+          if (!to || (!e.currentTarget.contains(to) && !to.closest("[data-slot=select-content]"))) setEditing(false);
+        }}>
+        <Pick label="Edit value" size="sm" value={draft} onChange={commit} options={options ?? []} />
+      </div>
     );
   }
   if (editing && type === "date") {

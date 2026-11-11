@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CircleCheck, GitMerge, PhoneCall, PhoneOutgoing, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -16,7 +17,6 @@ import { cn } from "@/lib/utils";
 export type LinePhone = { number: string; status: "pending" | "verified" | "failed"; validation_code: string | null; workspace_id: string | null; ask_workspace: boolean; announce: boolean; verified_at: string | null };
 export type LineCall = { id: string; kind: "outbound" | "merge"; to_number: string | null; status: string; error: string | null; recording_id: string | null; duration_seconds: number | null; created_at: string };
 
-const SELECT = "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30";
 const pretty = (n: string | null) => (n ? n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "");
 const STATUS: Record<string, string> = {
   queued: "Starting", ringing_you: "Ringing you", connecting: "Connecting", in_progress: "Recording", completed: "Done",
@@ -96,10 +96,8 @@ function CallPanel({ line, phone, workspaces }: { line: string; phone: LinePhone
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await placeLineCall(to, ws || null); setMsg(r); if (r.ok) { setTo(""); router.refresh(); } }); }}>
           <div className="space-y-1"><Label htmlFor="ph-to">Number to call</Label><Input id="ph-to" type="tel" placeholder="(602) 555-0199" value={to} onChange={(e) => setTo(e.target.value)} required /></div>
           <div className="space-y-1"><Label htmlFor="ph-ws">Save to</Label>
-            <select id="ph-ws" className={SELECT} value={ws} onChange={(e) => setWs(e.target.value)}>
-              <option value="">{phone.ask_workspace ? "Ask me on the call" : "My default workspace"}</option>
-              {workspaces.map((w) => <option key={w.id} value={w.id}>{w.isPersonal ? "Personal" : w.name}</option>)}
-            </select>
+            <Pick id="ph-ws" label="Save to" value={ws} onChange={setWs}
+              options={[{ value: "", label: phone.ask_workspace ? "Ask me on the call" : "My default workspace" }, ...workspaces.map((w) => ({ value: w.id, label: w.isPersonal ? "Personal" : w.name }))]} />
           </div>
           <Button type="submit" disabled={pending}><PhoneCall /> {pending ? "Ringing you…" : "Call"}</Button>
         </form>
@@ -132,10 +130,8 @@ function Prefs({ phone, workspaces }: { phone: LinePhone; workspaces: Workspace[
       </div>
       <div className="space-y-3 rounded-xl border p-4">
         <div className="space-y-1 sm:max-w-xs"><Label htmlFor="ph-def">Save recordings to</Label>
-          <select id="ph-def" className={SELECT} value={p.workspaceId} onChange={(e) => setP({ ...p, workspaceId: e.target.value })}>
-            <option value="">Personal</option>
-            {workspaces.filter((w) => !w.isPersonal).map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+          <Pick id="ph-def" label="Save recordings to" value={p.workspaceId} onChange={(v) => setP({ ...p, workspaceId: v })}
+            options={[{ value: "", label: "Personal" }, ...workspaces.filter((w) => !w.isPersonal).map((w) => ({ value: w.id, label: w.name }))]} />
         </div>
         <Toggle label="Ask on outbound calls" detail="Press 1 for Personal or 2 for Business when Echo rings you. Only you hear it." checked={p.askWorkspace} onChange={(askWorkspace) => setP({ ...p, askWorkspace })} />
         <Toggle label="Play a recording notice" detail="Both sides hear “This call is being recorded.” Off by default; you're responsible for telling people where the law requires it." checked={p.announce} onChange={(announce) => setP({ ...p, announce })} />

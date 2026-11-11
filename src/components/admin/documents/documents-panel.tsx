@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -19,7 +20,6 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { BulkBar, type BulkAction } from "@/components/admin/crm/bulk-bar";
 import { SearchBox, ViewSwitcher } from "@/components/admin/crm/crm-kit";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 
 const MAX = 50 * 1024 * 1024;
 const size = (b: number) => (b < 1024 ? `${b} B` : b < 1048576 ? `${Math.round(b / 1024)} KB` : `${(b / 1048576).toFixed(1)} MB`);
@@ -195,10 +195,10 @@ function DocSheet({ doc, folders, companies, readOnly, onClose }: { doc: Doc; fo
           <div className="space-y-1.5"><Label htmlFor="dc-name">Name</Label><Input id="dc-name" value={name} disabled={readOnly} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name !== doc.name && save({ name })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label htmlFor="dc-folder">Folder</Label>
-              <select id="dc-folder" className={SELECT} value={doc.folder_id ?? ""} disabled={readOnly} onChange={(e) => save({ folder_id: e.target.value || null })}><option value="">All files</option>{folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>
+              <Pick id="dc-folder" label="Folder" value={doc.folder_id ?? ""} disabled={readOnly} onChange={(v) => save({ folder_id: v || null })} options={[{ value: "", label: "All files" }, ...folders.map((f) => ({ value: f.id, label: f.name }))]} />
             </div>
             <div className="space-y-1.5"><Label htmlFor="dc-client">Client</Label>
-              <select id="dc-client" className={SELECT} value={doc.company_id ?? ""} disabled={readOnly} onChange={(e) => save({ company_id: e.target.value || null })}><option value="">None</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+              <Pick id="dc-client" label="Client" value={doc.company_id ?? ""} disabled={readOnly} onChange={(v) => save({ company_id: v || null })} options={[{ value: "", label: "None" }, ...companies.map((c) => ({ value: c.id, label: c.name }))]} />
             </div>
           </div>
           <div className="space-y-1.5"><Label htmlFor="dc-tags">Tags</Label><Input id="dc-tags" value={tags} disabled={readOnly} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ tags })} placeholder="Comma separated" /></div>

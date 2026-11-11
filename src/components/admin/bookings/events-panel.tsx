@@ -8,6 +8,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -22,7 +23,6 @@ import { ownerName, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { ComposeDialog } from "@/components/admin/comms/compose-dialog";
 import { EmptyState, RecordCalendar, ViewSwitcher } from "@/components/admin/crm/crm-kit";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 
 const VIEWS = [{ id: "list" as const, label: "List", icon: List }, { id: "calendar" as const, label: "Calendar", icon: CalendarDays }];
 
@@ -118,17 +118,17 @@ function EventDialog({ event, staff, timezone, onClose }: { event?: EventRow; st
             <div className="space-y-1.5"><Label>End time</Label><TimePicker value={f.end_time} step={15} onChange={(v) => set({ end_time: v })} /></div>
           </>}
           <div className="space-y-1.5"><Label htmlFor="ev-loc">Where</Label>
-            <select id="ev-loc" className={SELECT} value={f.location_kind} onChange={(x) => set({ location_kind: x.target.value as EventRow["location_kind"] })}>{EVENT_LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}</select>
+            <Pick id="ev-loc" label="Where" value={f.location_kind} onChange={(v) => set({ location_kind: v as EventRow["location_kind"] })} options={EVENT_LOCATIONS.map((l) => ({ value: l.id, label: l.label }))} />
           </div>
           <div className="space-y-1.5"><Label htmlFor="ev-cap">Capacity (blank = unlimited)</Label><Input id="ev-cap" type="number" min={1} value={f.capacity} onChange={(x) => set({ capacity: x.target.value })} /></div>
           {f.location_kind !== "online" && <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ev-addr">Address or venue</Label><Input id="ev-addr" value={f.location} onChange={(x) => set({ location: x.target.value })} /></div>}
           {f.location_kind !== "in_person" && <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ev-url">Online link (sent to registrants, not shown publicly)</Label><Input id="ev-url" value={f.online_url} onChange={(x) => set({ online_url: x.target.value })} placeholder="https://" /></div>}
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ev-desc">Description</Label><Textarea id="ev-desc" rows={5} value={f.description} onChange={(x) => set({ description: x.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ev-host">Host</Label>
-            <select id="ev-host" className={SELECT} value={f.host_id} onChange={(x) => set({ host_id: x.target.value })}><option value="">Anyone</option>{staff.map((p) => <option key={p.user_id} value={p.user_id}>{p.name}</option>)}</select>
+            <Pick id="ev-host" label="Host" value={f.host_id} onChange={(v) => set({ host_id: v })} options={[{ value: "", label: "Anyone" }, ...staff.map((p) => ({ value: p.user_id, label: p.name }))]} />
           </div>
           <div className="space-y-1.5"><Label htmlFor="ev-status">Status</Label>
-            <select id="ev-status" className={SELECT} value={f.status} onChange={(x) => set({ status: x.target.value as EventRow["status"] })}>{EVENT_STATUSES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}</select>
+            <Pick id="ev-status" label="Status" value={f.status} onChange={(v) => set({ status: v as EventRow["status"] })} options={EVENT_STATUSES.map((st) => ({ value: st.id, label: st.label }))} />
           </div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2"><Switch checked={f.registration_open} onCheckedChange={(v) => set({ registration_open: v })} /> Registration open</label>
         </div>

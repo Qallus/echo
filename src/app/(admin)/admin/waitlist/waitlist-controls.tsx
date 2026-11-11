@@ -3,24 +3,22 @@
 import { useState, useTransition } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { setWaitlistStatus } from "@/lib/admin/actions/waitlist";
 import type { Entry } from "./page";
 
 const STATUSES = ["waiting", "notified", "invited", "joined", "unsubscribed"];
+const STATUS_OPTIONS = STATUSES.map((s) => ({ value: s, label: s[0].toUpperCase() + s.slice(1) }));
 
 export function StatusSelect({ id, status }: { id: string; status: string }) {
   const [value, setValue] = useState(status);
   const [pending, start] = useTransition();
   return (
-    <select aria-label="Status" value={value} disabled={pending}
-      className="h-7 rounded-md border border-input bg-transparent px-1.5 text-xs capitalize outline-none focus-visible:border-ring dark:bg-input/30"
-      onChange={(e) => {
-        const next = e.target.value;
+    <Pick label="Status" size="sm" className="w-fit text-xs" value={value} disabled={pending} options={STATUS_OPTIONS}
+      onChange={(next) => {
         setValue(next);
         start(async () => { const r = await setWaitlistStatus(id, next); if (r.error) { setValue(status); alert(r.error); } });
-      }}>
-      {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-    </select>
+      }} />
   );
 }
 

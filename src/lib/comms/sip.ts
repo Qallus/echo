@@ -29,13 +29,13 @@ export async function ensureSipDomain(current: SipConfig, accountSid: string): P
   if (!domainSid) {
     const name = `redial-${accountSid.slice(-8).toLowerCase()}.sip.twilio.com`;
     const r = await twilioRequest("/SIP/Domains.json", {
-      DomainName: name, FriendlyName: "Redial desk phones", VoiceUrl: voiceUrl, VoiceMethod: "POST", SipRegistration: "true",
+      DomainName: name, FriendlyName: "Redial desk phones", VoiceUrl: voiceUrl, VoiceMethod: "POST", SipRegistration: "true", EmergencyCallingEnabled: "true",
     });
     if (!r.ok) return { error: `Couldn't create the SIP domain: ${err(r)}` };
     domainSid = String(r.data.sid);
     domain = String(r.data.domain_name);
   } else {
-    const r = await twilioRequest(`/SIP/Domains/${domainSid}.json`, { VoiceUrl: voiceUrl, VoiceMethod: "POST", SipRegistration: "true" });
+    const r = await twilioRequest(`/SIP/Domains/${domainSid}.json`, { VoiceUrl: voiceUrl, VoiceMethod: "POST", SipRegistration: "true", EmergencyCallingEnabled: "true" });
     if (!r.ok) return { error: `Couldn't update the SIP domain: ${err(r)}` };
     domain = String(r.data.domain_name);
   }

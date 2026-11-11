@@ -8,13 +8,13 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteBookingType, saveAvailability, saveBookingType } from "@/lib/admin/actions/bookings";
 import { LOCATIONS, WEEKDAYS, slugify, type Availability, type BookingType } from "@/lib/bookings/types";
 import { ownerName, type StaffOption } from "@/lib/crm/types";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
-import { SELECT } from "@/components/admin/crm/crm-ui";
 import { TimePicker } from "@/components/ui/time-picker";
 
 const ZONES = ["America/Phoenix", "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "America/Anchorage", "Pacific/Honolulu", "UTC"];
@@ -73,11 +73,11 @@ function TypeDialog({ type, staff, onClose }: { type?: BookingType; staff: Staff
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ty-desc">Description</Label><Textarea id="ty-desc" rows={2} value={f.description} onChange={(e) => set({ description: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ty-min">Length (minutes)</Label><Input id="ty-min" type="number" min={5} value={f.minutes} onChange={(e) => set({ minutes: Number(e.target.value) })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ty-loc">Where</Label>
-            <select id="ty-loc" className={SELECT} value={f.location} onChange={(e) => set({ location: e.target.value as BookingType["location"] })}>{LOCATIONS.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}</select>
+            <Pick id="ty-loc" label="Where" value={f.location} onChange={(v) => set({ location: v as BookingType["location"] })} options={LOCATIONS.map((l) => ({ value: l.id, label: l.label }))} />
           </div>
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ty-det">Meeting link, address or number (shown in reminders)</Label><Input id="ty-det" value={f.location_detail} onChange={(e) => set({ location_detail: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ty-host">Host</Label>
-            <select id="ty-host" className={SELECT} value={f.host_id} onChange={(e) => set({ host_id: e.target.value })}><option value="">Anyone</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}</select>
+            <Pick id="ty-host" label="Host" value={f.host_id} onChange={(v) => set({ host_id: v })} options={[{ value: "", label: "Anyone" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
           </div>
           <div className="space-y-1.5"><Label htmlFor="ty-buf">Gap between bookings (min)</Label><Input id="ty-buf" type="number" min={0} value={f.buffer_minutes} onChange={(e) => set({ buffer_minutes: Number(e.target.value) })} /></div>
           <div className="space-y-1.5"><Label htmlFor="ty-notice">Minimum notice (hours)</Label><Input id="ty-notice" type="number" min={0} value={f.min_notice_hours} onChange={(e) => set({ min_notice_hours: Number(e.target.value) })} /></div>
@@ -108,7 +108,7 @@ export function AvailabilityPanel({ initial, readOnly }: { initial: Availability
   return (
     <div className="max-w-2xl space-y-5">
       <div className="space-y-1.5"><Label htmlFor="av-tz">Time zone</Label>
-        <select id="av-tz" className={SELECT} value={a.timezone} disabled={readOnly} onChange={(e) => setA({ ...a, timezone: e.target.value })}>{ZONES.map((z) => <option key={z} value={z}>{z.replace("_", " ")}</option>)}</select>
+        <Pick id="av-tz" label="Time zone" value={a.timezone} disabled={readOnly} onChange={(v) => setA({ ...a, timezone: v })} options={ZONES.map((z) => ({ value: z, label: z.replace("_", " ") }))} />
       </div>
       <div className="divide-y rounded-xl border bg-card">
         {WEEKDAYS.map(([d, label]) => {

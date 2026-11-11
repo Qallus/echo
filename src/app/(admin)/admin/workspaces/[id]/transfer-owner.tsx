@@ -2,9 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { transferWorkspace } from "@/lib/admin/actions/users";
-
-const SELECT = "h-8 min-w-0 flex-1 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 // Makes another member the owner; current owners become admins.
 export function TransferOwner({ workspaceId, members }: { workspaceId: string; members: { user_id: string; label: string }[] }) {
@@ -19,9 +18,7 @@ export function TransferOwner({ workspaceId, members }: { workspaceId: string; m
       if (confirm(`Make ${name} the owner? Current owners become admins.`)) start(async () => setMsg(await transferWorkspace(workspaceId, to)));
     }}>
       <div className="flex gap-2">
-        <select value={to} onChange={(e) => setTo(e.target.value)} className={SELECT} aria-label="New owner">
-          {members.map((m) => <option key={m.user_id} value={m.user_id}>{m.label}</option>)}
-        </select>
+        <Pick label="New owner" className="flex-1" value={to} onChange={setTo} options={members.map((m) => ({ value: m.user_id, label: m.label }))} />
         <Button type="submit" size="sm" disabled={pending}>Transfer</Button>
       </div>
       {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}

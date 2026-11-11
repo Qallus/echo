@@ -5,11 +5,10 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { DETAIL_ICONS } from "@/components/profile/detail-icons";
 import { DETAIL_KINDS, MAX_DETAILS, MAX_VALUE, PREFIXES, type DetailKind, type ProfileDetail } from "@/lib/profile-details";
-
-const SELECT = "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 // "Additional information": rows the user adds from a menu. Sent with the
 // profile form as JSON in a hidden "details" input.
@@ -41,9 +40,8 @@ export function DetailsEditor({ initial }: { initial: ProfileDetail[] }) {
             )}
             <div className="min-w-0 flex-1 basis-40">
               {d.kind === "prefix" ? (
-                <select aria-label="Prefix" value={d.value} onChange={(e) => update(i, { value: e.target.value })} className={SELECT}>
-                  {PREFIXES.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                <Pick label="Prefix" value={d.value} onChange={(v) => update(i, { value: v })}
+                  options={PREFIXES.map((p) => ({ value: p, label: p }))} />
               ) : (
                 <Input aria-label={d.label || k.label} value={d.value} placeholder={k.placeholder} maxLength={MAX_VALUE[d.kind] ?? 120}
                   type={d.kind === "birthday" ? "date" : d.kind === "email" ? "email" : d.kind === "phone" ? "tel" : "text"}

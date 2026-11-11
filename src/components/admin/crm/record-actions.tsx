@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { deleteCompany, deleteContact, deleteDeal, moveDeal } from "@/lib/admin/actions/crm";
 import { DEAL_STAGES, contactName, type Company, type Contact, type Deal, type DealStage, type StaffOption } from "@/lib/crm/types";
-import { SELECT } from "./crm-ui";
 import { CompanyDialog, ContactDialog, DealDialog } from "./record-dialogs";
 
 type Ref = { id: string; name: string };
@@ -96,13 +96,11 @@ export function StageSelect({ id, stage, readOnly }: { id: string; stage: DealSt
   const [value, setValue] = useState(stage);
   const [pending, start] = useTransition();
   return (
-    <select value={value} disabled={readOnly || pending} aria-label="Stage" className={`${SELECT} w-auto`}
-      onChange={(e) => {
-        const next = e.target.value as DealStage;
+    <Pick value={value} disabled={readOnly || pending} label="Stage" className="w-auto" options={DEAL_STAGES.map((s) => ({ value: s.id, label: s.label }))}
+      onChange={(v) => {
+        const next = v as DealStage;
         setValue(next);
         start(async () => { const res = await moveDeal(id, next); if (res.error) { setValue(stage); alert(res.error); } });
-      }}>
-      {DEAL_STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-    </select>
+      }} />
   );
 }

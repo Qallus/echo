@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { Check, Copy, KeyRound, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { E911Card, type E911Row } from "@/components/redial/e911-card";
 import { addDevice, removeDevice, resetDevice, setDeviceRing, type DeviceLogin } from "@/lib/redial/device-actions";
 import { PHONE_MODELS, VENDORS, type PhoneVendor } from "@/lib/redial/phone-models";
 
@@ -16,7 +18,6 @@ import { PHONE_MODELS, VENDORS, type PhoneVendor } from "@/lib/redial/phone-mode
 export type DeviceRow = { id: string; line_id: string; label: string; model: string; vendor: PhoneVendor; mac: string | null; sip_username: string; ring: boolean; last_provisioned_at: string | null; created_at: string };
 type LineRow = { id: string; label: string; number: string };
 
-const SELECT = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 const macText = (m: string | null) => (m ? m.toUpperCase().match(/.{2}/g)!.join(":") : "");
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -51,7 +52,7 @@ function SetupSteps({ vendor, login }: { vendor: PhoneVendor; login: DeviceLogin
   return <p className="text-sm">Open the phone&apos;s settings, go to <span className="font-medium">{VENDORS[vendor].setup}</span>, and enter the address below ({vendor === "yealink" ? "with https://" : path}). Then restart the phone.</p>;
 }
 
-export function PhonesView({ lines, devices, ready, domain }: { lines: LineRow[]; devices: DeviceRow[]; ready: boolean; domain: string | null }) {
+export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: { lines: LineRow[]; devices: DeviceRow[]; e911: E911Row[]; ownerName: string; ready: boolean; domain: string | null }) {
   const [lineId, setLineId] = useState(lines[0].id);
   const [modelId, setModelId] = useState("gs_wp826");
   const [label, setLabel] = useState("");
@@ -79,6 +80,7 @@ export function PhonesView({ lines, devices, ready, domain }: { lines: LineRow[]
         return (
           <section key={l.id} className="space-y-2">
             <h2 className="text-sm font-semibold">{l.label} · {pretty(l.number)}</h2>
+            <E911Card lineId={l.id} row={e911.find((x) => x.line_id === l.id) ?? null} defaultName={ownerName} />
             <ul className="divide-y rounded-xl border bg-card">
               {mine.length === 0 && <li className="p-4 text-sm text-muted-foreground">No phones on this line yet.</li>}
               {mine.map((d) => {
@@ -105,16 +107,12 @@ export function PhonesView({ lines, devices, ready, domain }: { lines: LineRow[]
         <p className="flex items-center gap-2 font-semibold"><Plus className="size-4" /> Add a phone</p>
         {lines.length > 1 && (
           <label className="block space-y-1.5"><span className="text-sm font-medium">Line</span>
-            <select className={SELECT} value={lineId} onChange={(e) => setLineId(e.target.value)}>{lines.map((l) => <option key={l.id} value={l.id}>{l.label} · {pretty(l.number)}</option>)}</select>
+            <Pick label="Line" value={lineId} onChange={setLineId} options={lines.map((l) => ({ value: l.id, label: `${l.label} · ${pretty(l.number)}` }))} />
           </label>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1.5"><span className="text-sm font-medium">Model</span>
-            <select className={SELECT} value={modelId} onChange={(e) => setModelId(e.target.value)}>
-              {(Object.keys(VENDORS) as PhoneVendor[]).map((v) => (
-                <optgroup key={v} label={VENDORS[v].label}>{PHONE_MODELS.filter((m) => m.vendor === v).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</optgroup>
-              ))}
-            </select>
+            <Pick label="Model" value={modelId} onChange={setModelId} options={PHONE_MODELS.map((m) => ({ value: m.id, label: m.name, group: VENDORS[m.vendor].label }))} />
           </label>
           <label className="block space-y-1.5"><span className="text-sm font-medium">Name</span>
             <Input maxLength={60} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Kitchen, Front desk" />

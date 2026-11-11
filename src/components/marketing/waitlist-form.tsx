@@ -7,12 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { joinWaitlist } from "@/lib/waitlist";
 import { CONSENT, PLATFORMS, PRODUCTS, SMS_FREQUENCIES, TEAM_SIZES, UPDATE_TOPICS, USE_CASES, type Platform } from "@/lib/waitlist-options";
 import { cn } from "@/lib/utils";
 
-const SELECT = "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 const toggle = (list: string[], id: string, on: boolean) => (on ? [...new Set([...list, id])] : list.filter((x) => x !== id));
 
 // "Get notified" for the mobile apps: who they are, which app and products,
@@ -90,17 +90,15 @@ export function WaitlistForm({ platform, source, onBack }: { platform: Platform;
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="w-company" label="Company"><Input id="w-company" name="company" autoComplete="organization" maxLength={200} /></Field>
           <Field id="w-team" label="Team size">
-            <select id="w-team" name="team_size" className={SELECT} defaultValue="">
-              <option value="" disabled>Choose</option>{TEAM_SIZES.map((s) => <option key={s} value={s}>{s === "1" ? "Just me" : `${s} people`}</option>)}
-            </select>
+            <Pick id="w-team" name="team_size" label="Team size" defaultValue=""
+              options={[{ value: "", label: "Choose", disabled: true }, ...TEAM_SIZES.map((s) => ({ value: s, label: s === "1" ? "Just me" : `${s} people` }))]} />
           </Field>
         </div>
       )}
 
       <Field id="w-use" label="Main use">
-        <select id="w-use" name="use_case" className={SELECT} defaultValue="">
-          <option value="">Choose (optional)</option>{USE_CASES.map((u) => <option key={u}>{u}</option>)}
-        </select>
+        <Pick id="w-use" name="use_case" label="Main use" defaultValue=""
+          options={[{ value: "", label: "Choose (optional)" }, ...USE_CASES.map((u) => ({ value: u, label: u }))]} />
       </Field>
       <Field id="w-details" label="Tell us how you'd use it (optional)"><Textarea id="w-details" name="details" rows={2} maxLength={2000} /></Field>
       <Field id="w-questions" label="Questions or comments (optional)"><Textarea id="w-questions" name="questions" rows={2} maxLength={4000} /></Field>
@@ -120,9 +118,8 @@ export function WaitlistForm({ platform, source, onBack }: { platform: Platform;
         {sms && (
           <div className="space-y-1 pl-6">
             <label htmlFor="w-freq" className="text-foreground">How often may we text?</label>
-            <select id="w-freq" className={SELECT} value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-              {SMS_FREQUENCIES.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </select>
+            <Pick id="w-freq" label="How often may we text?" value={frequency} onChange={setFrequency}
+              options={SMS_FREQUENCIES.map((o) => ({ value: o.id, label: o.label }))} />
           </div>
         )}
         <label className="flex items-start gap-2"><Checkbox className="mt-0.5" checked={call} onCheckedChange={(v) => setCall(Boolean(v))} /><span>{CONSENT.call}</span></label>

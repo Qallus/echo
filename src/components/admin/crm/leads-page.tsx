@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Ban, CalendarDays, Download, Mail, Tag, UserRound, ExternalLink, GitBranchPlus, Kanban, LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pick } from "@/components/ui/pick";
 import { addToPipeline } from "@/lib/admin/actions/crm-pipeline";
 import { bulkDelete, bulkUpdate, type BulkChange } from "@/lib/admin/actions/crm-bulk";
 import { deleteContacts, setLeadStatus } from "@/lib/admin/actions/crm-people";
@@ -12,7 +13,6 @@ import { contactsToCsv, downloadCsv } from "@/lib/crm/csv";
 import { LEAD_STATUSES, contactName, ownerName, type Contact, type LeadStatus, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { EmptyState, RecordCalendar, RowActions, SearchBox, StatRow, StatTile, ViewSwitcher, type RowAction } from "./crm-kit";
-import { FILTER } from "./crm-ui";
 import { BulkBar, emailEveryone, type BulkAction } from "./bulk-bar";
 import { DataTable, plain, type Column } from "./data-table";
 import { ComposeDialog, type Person } from "@/components/admin/comms/compose-dialog";
@@ -125,9 +125,8 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SearchBox value={search} onChange={setSearch} placeholder="Search leads…" />
-          <select value={owner} onChange={(e) => setOwner(e.target.value)} className={FILTER} aria-label="Owner">
-            <option value="">All owners</option>{staff.map((s) => <option key={s.user_id} value={s.user_id}>{s.name}</option>)}
-          </select>
+          <Pick label="Owner" className="w-fit" value={owner} onChange={(v) => setOwner(v)}
+            options={[{ value: "", label: "All owners" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
           <label className="flex items-center gap-1.5 text-sm text-muted-foreground"><input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} /> In pipeline & disqualified</label>
         </div>
         <div className="flex flex-wrap items-center gap-2">

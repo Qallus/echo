@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
 import { requireStaff } from "@/lib/admin/guard";
-import { encryptKey } from "@/lib/ai/keys";
+import { decryptKey, encryptKey } from "@/lib/ai/keys";
 import { ensureSipDomain, sipConfig } from "@/lib/comms/sip";
 import { toE164 } from "@/lib/notify/senders";
 import { invalidateSecrets, secret } from "@/lib/secrets";
@@ -77,4 +77,34 @@ export async function setUpSipDomain(): Promise<Result> {
   await adminAudit(supabase, "redial.sip.setup", { type: "integration", id: "twilio" }, { domain: r.config.domain });
   revalidatePath("/admin/redial");
   return { ok: `Desk phones are set up on ${r.config.domain}.` };
+}
+
+// ---------------------------------------------------------------------------
+// Number ports: staff move a request along (the member and the CRM see it),
+// and can reveal the carrier account number and PIN to submit the port
+// (each reveal is audited in the database).
+// ---------------------------------------------------------------------------
+export type PortStatus = "submitted" | "in_review" | "needs_info" | "with_carrier" | "scheduled" | "completed" | "rejected";
+
+export async function setPortStatus(id: string, status: PortStatus, focDate: string, note: string): Promise<Result> {
+  await requireStaff("users.manage");
+  if (focDate && !/^\d{4}-\d{2}-\d{2}$/.test(focDate)) return { error: "Use a full date for the transfer date." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_redial_port_status", { p_id: id, p_status: status, p_foc: focDate || null, p_note: note });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/redial");
+  return { ok: "Port request updated." };
+}
+
+export async function revealPortDetails(id: string): Promise<Result & { accountNumber?: string; pin?: string | null }> {
+  await requireStaff("users.manage");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_redial_port_secrets", { p_id: id });
+  const row = (data as { account_number_enc: string; pin_enc: string | null }[] | null)?.[0];
+  if (error || !row) return { error: error?.message ?? "Request not found." };
+  try {
+    return { ok: "Shown once; this was logged.", accountNumber: decryptKey(row.account_number_enc), pin: row.pin_enc ? decryptKey(row.pin_enc) : null };
+  } catch {
+    return { error: "Couldn't decrypt the details (the app key changed?)." };
+  }
 }

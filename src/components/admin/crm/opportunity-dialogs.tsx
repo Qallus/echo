@@ -7,12 +7,12 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { moveDeal } from "@/lib/admin/actions/crm";
 import { updateDeal } from "@/lib/admin/actions/crm-pipeline";
 import { LOST_REASONS, NEXT_STEP_TYPES, newId, type CustomField, type CustomFieldType } from "@/lib/crm/deals";
 import type { Deal } from "@/lib/crm/types";
-import { SELECT } from "./crm-ui";
 
 type Close = () => void;
 
@@ -56,9 +56,7 @@ export function CloseDialog({ deal, outcome, onClose }: { deal: Deal; outcome: "
       <DialogContent title={outcome === "won" ? "Mark Closed Won" : "Mark Closed Lost"}>
         {outcome === "lost" && (
           <div className="space-y-1.5"><Label htmlFor="lost-reason">Lost reason</Label>
-            <select id="lost-reason" value={reason} onChange={(e) => setReason(e.target.value)} className={SELECT}>
-              {LOST_REASONS.map((r) => <option key={r}>{r}</option>)}
-            </select>
+            <Pick id="lost-reason" label="Lost reason" value={reason} onChange={(v) => setReason(v)} options={LOST_REASONS.map((r) => ({ value: r, label: r }))} />
           </div>
         )}
         <div className="space-y-1.5"><Label htmlFor="close-notes">{outcome === "won" ? "Won summary" : "Notes"}</Label>
@@ -94,14 +92,11 @@ export function NextStepDialog({ deal, onClose }: { deal: Deal; onClose: Close }
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5"><Label>Due</Label><DatePicker value={due} onChange={setDue} /></div>
           <div className="space-y-1.5"><Label htmlFor="ns-type">Type</Label>
-            <select id="ns-type" value={type} onChange={(e) => setType(e.target.value)} className={SELECT}>
-              {NEXT_STEP_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
-            </select>
+            <Pick id="ns-type" label="Type" value={type} onChange={(v) => setType(v)} options={NEXT_STEP_TYPES.map((t) => ({ value: t.key, label: t.label }))} />
           </div>
           <div className="space-y-1.5"><Label htmlFor="ns-pri">Priority</Label>
-            <select id="ns-pri" value={priority} onChange={(e) => setPriority(e.target.value)} className={SELECT}>
-              <option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option>
-            </select>
+            <Pick id="ns-pri" label="Priority" value={priority} onChange={(v) => setPriority(v)}
+              options={[{ value: "low", label: "Low" }, { value: "normal", label: "Normal" }, { value: "high", label: "High" }]} />
           </div>
         </div>
         <p className="text-xs text-muted-foreground">An open opportunity with no future next step is flagged in its header.</p>
@@ -131,9 +126,8 @@ export function AddFieldDialog({ deal, onClose }: { deal: Deal; onClose: Close }
         <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
           <div className="space-y-1.5"><Label htmlFor="fld-label">Label</Label><Input id="fld-label" autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="PO number" /></div>
           <div className="space-y-1.5"><Label htmlFor="fld-type">Type</Label>
-            <select id="fld-type" value={type} onChange={(e) => setType(e.target.value as CustomFieldType)} className={SELECT}>
-              <option value="text">Text</option><option value="number">Number</option><option value="date">Date</option>
-            </select>
+            <Pick id="fld-type" label="Type" value={type} onChange={(v) => setType(v as CustomFieldType)}
+              options={[{ value: "text", label: "Text" }, { value: "number", label: "Number" }, { value: "date", label: "Date" }]} />
           </div>
         </div>
         {taken && <p className="text-sm text-destructive">There&apos;s already a field with that name.</p>}

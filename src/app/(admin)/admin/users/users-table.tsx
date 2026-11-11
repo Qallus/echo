@@ -8,6 +8,7 @@ import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { inviteUser } from "@/lib/admin/actions/users";
 import { roleLabel, type StaffRole } from "@/lib/admin/permissions";
@@ -22,7 +23,6 @@ export type UserRow = {
 const TYPE_LABEL = { personal: "Personal", business: "Business", team: "Team" };
 const FILTERS = ["All", "Personal", "Business", "Team", "Staff", "Paying", "Suspended", "Unconfirmed", "Inactive 30d"] as const;
 type Filter = (typeof FILTERS)[number];
-const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function matches(u: UserRow, f: Filter) {
   switch (f) {
@@ -70,9 +70,7 @@ export function UsersTable({ users, canInvite }: { users: UserRow[]; canInvite: 
           <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or email" className="pl-8" aria-label="Search users" />
         </div>
-        <select value={filter} onChange={(e) => setFilter(e.target.value as Filter)} className={SELECT} aria-label="Filter">
-          {FILTERS.map((f) => <option key={f}>{f}</option>)}
-        </select>
+        <Pick label="Filter" className="w-fit" value={filter} onChange={(v) => setFilter(v as Filter)} options={FILTERS.map((f) => ({ value: f, label: f }))} />
         <div className="flex rounded-lg border p-0.5">
           <Button variant={view === "table" ? "secondary" : "ghost"} size="icon-sm" aria-label="Table view" onClick={() => setView("table")}><Rows3 /></Button>
           <Button variant={view === "cards" ? "secondary" : "ghost"} size="icon-sm" aria-label="Card view" onClick={() => setView("cards")}><LayoutGrid /></Button>

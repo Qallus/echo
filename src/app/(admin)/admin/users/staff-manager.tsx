@@ -5,12 +5,13 @@ import { ShieldAlert, ShieldCheck, UserMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { STAFF_ROLES, roleLabel, type StaffRole } from "@/lib/admin/permissions";
 import { setStaffRole } from "./actions";
 
 export type StaffMember = { user_id: string; email: string; full_name: string | null; role: StaffRole; mfa_enrolled: boolean };
 
-const SELECT = "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+const ROLE_OPTIONS = STAFF_ROLES.map((r) => ({ value: r.role, label: r.label }));
 
 // Owners add people (who already have an Echo account) as staff, change their
 // role, or remove them. Each change is written to the admin audit log.
@@ -34,12 +35,10 @@ export function StaffManager({ staff, meId }: { staff: StaffMember[]; meId: stri
           <span className="text-sm font-medium">Email of an Echo account</span>
           <Input type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} placeholder="name@company.com" required />
         </label>
-        <label className="space-y-1.5">
+        <div className="space-y-1.5">
           <span className="block text-sm font-medium">Role</span>
-          <select value={role} onChange={(ev) => setRole(ev.target.value as StaffRole)} className={SELECT}>
-            {STAFF_ROLES.map((r) => <option key={r.role} value={r.role}>{r.label}</option>)}
-          </select>
-        </label>
+          <Pick label="Role" className="w-fit" value={role} onChange={(v) => setRole(v as StaffRole)} options={ROLE_OPTIONS} />
+        </div>
         <Button type="submit" disabled={pending}>Add or update</Button>
         <p className="w-full text-xs text-muted-foreground">{STAFF_ROLES.find((r) => r.role === role)?.detail} Staff must turn on two-step sign-in before they can use the admin area.</p>
       </form>
@@ -60,9 +59,7 @@ export function StaffManager({ staff, meId }: { staff: StaffMember[]; meId: stri
               <Badge>{roleLabel(s.role)} (you)</Badge>
             ) : (
               <>
-                <select aria-label={`Role for ${s.email}`} value={s.role} disabled={pending} onChange={(ev) => run(s.email, ev.target.value as StaffRole)} className={SELECT}>
-                  {STAFF_ROLES.map((r) => <option key={r.role} value={r.role}>{r.label}</option>)}
-                </select>
+                <Pick label={`Role for ${s.email}`} className="w-fit" value={s.role} disabled={pending} onChange={(v) => run(s.email, v as StaffRole)} options={ROLE_OPTIONS} />
                 <Button variant="ghost" size="icon-sm" aria-label={`Remove ${s.email}`} disabled={pending} onClick={() => run(s.email, null)}><UserMinus /></Button>
               </>
             )}

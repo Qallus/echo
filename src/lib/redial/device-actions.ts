@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { encryptKey } from "@/lib/ai/keys";
+import { e911OnNumber } from "@/lib/comms/e911";
 import { createSipCredential, deleteSipCredential, newSipLogin, sipConfig, sipReady, updateSipPassword } from "@/lib/comms/sip";
 import { requireUser } from "@/lib/data";
 import { siteUrl } from "@/lib/notify/senders";
@@ -33,8 +34,11 @@ export async function addDevice(input: { lineId: string; modelId: string; label:
   if (!sipReady(sip)) return { error: "Desk phones aren't switched on for Redial yet. Ask Redial support to finish setting them up." };
 
   const supabase = await createClient();
-  const { data: line } = await supabase.from("redial_lines").select("id").eq("id", input.lineId).maybeSingle();
+  const { data: line } = await supabase.from("redial_lines").select("id, number").eq("id", input.lineId).maybeSingle();
   if (!line) return { error: "Line not found." };
+  // 911 first: phones call out from this number, so Twilio must have its address.
+  const e911 = await e911OnNumber(line.number);
+  if (e911.status === "none" || e911.status === "failed") return { error: "Add this line's 911 address first (above), so emergency calls from the phone are sent with your location." };
   const { username, password } = newSipLogin();
   const cred = await createSipCredential(sip.listSid!, username, password);
   if (!cred.sid) return { error: `Couldn't create the phone's login: ${cred.error}` };
