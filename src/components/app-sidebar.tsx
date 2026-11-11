@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  AudioLines, Briefcase, CalendarDays, PhoneIncoming, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
+  AudioLines, AudioWaveform, Briefcase, CalendarDays, PhoneIncoming, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Home, Inbox,
   LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, UserRound, Users, Video,
 } from "lucide-react";
 import {
@@ -193,6 +193,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
             {callsUnread !== null
               ? <NavItem href="/calls" label="Calls" icon={PhoneIncoming} n={callsUnread || undefined} />
               : <NavItem href="/setup" label="Set up Redial" icon={PhoneIncoming} />}
+            <NavItem href="/studio" label="Studio" icon={AudioWaveform} />
           </SidebarMenu>
         </SidebarGroup>
         {workspaces.map((ws) => {
