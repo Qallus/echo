@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { createFlow, deleteFlow } from "@/lib/flows/actions";
 import type { FlowSummary } from "@/lib/flows/data";
 
-// The flow list: create a flow, open one in Call Tree, or delete one you own.
+// The call tree list: create one (blank or the sample), open it, or delete one you own.
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
@@ -20,14 +20,15 @@ export function FlowList({ flows }: { flows: FlowSummary[] }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
+  const [from, setFrom] = useState<"blank" | "sample">("sample");
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<FlowSummary | null>(null);
   const [pending, start] = useTransition();
 
   function create() {
     start(async () => {
-      const r = await createFlow(name);
-      if (r.error || !r.id) { setError(r.error ?? "Couldn't create the flow."); return; }
+      const r = await createFlow(name, from);
+      if (r.error || !r.id) { setError(r.error ?? "Couldn't create the call tree."); return; }
       router.push(`/call-tree/${r.id}`);
     });
   }
@@ -35,15 +36,15 @@ export function FlowList({ flows }: { flows: FlowSummary[] }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => { setName(""); setError(null); setCreating(true); }}><Plus /> New flow</Button>
+        <Button onClick={() => { setName(""); setError(null); setCreating(true); }}><Plus /> New call tree</Button>
       </div>
 
       {flows.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-10 text-center">
           <Workflow className="mx-auto size-8 text-muted-foreground" />
-          <p className="mt-3 font-medium">No call flows yet.</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">A flow decides what happens when someone calls: a greeting, a phone menu, business hours, extensions, your AI assistant and voicemail.</p>
-          <Button className="mt-4" onClick={() => setCreating(true)}><Plus /> Create your first flow</Button>
+          <p className="mt-3 font-medium">No call trees yet.</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">A call tree decides what happens when someone calls: a greeting, a phone menu, business hours, extensions, your AI assistant and voicemail.</p>
+          <Button className="mt-4" onClick={() => setCreating(true)}><Plus /> Create your first call tree</Button>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -78,9 +79,21 @@ export function FlowList({ flows }: { flows: FlowSummary[] }) {
 
       <Dialog open={creating} onOpenChange={setCreating}>
         {creating && (
-          <DialogContent title="New call flow" description="Name it after the line or what it's for, like Main business line or After hours.">
+          <DialogContent title="New call tree" description="Name it after the line or what it's for, like Main business line or After hours.">
             <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); create(); }}>
-              <Input autoFocus value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Main business line" aria-label="Flow name" />
+              <Input autoFocus value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Main business line" aria-label="Call tree name" />
+              <div className="grid gap-2" role="radiogroup" aria-label="Start from">
+                {([
+                  ["sample", "Sample business line", "Business hours, a greeting, a menu for sales, support and the operator, your AI assistant and voicemail."],
+                  ["blank", "Blank", "A greeting and goodbye to build on."],
+                ] as const).map(([v, title, desc]) => (
+                  <button key={v} type="button" role="radio" aria-checked={from === v} onClick={() => setFrom(v)}
+                    className={`rounded-lg border p-3 text-left transition-colors ${from === v ? "border-foreground bg-muted/50" : "hover:bg-muted/40"}`}>
+                    <span className="block text-sm font-medium">{title}</span>
+                    <span className="block text-xs text-muted-foreground">{desc}</span>
+                  </button>
+                ))}
+              </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setCreating(false)}>Cancel</Button>
@@ -93,7 +106,7 @@ export function FlowList({ flows }: { flows: FlowSummary[] }) {
 
       <Dialog open={Boolean(removing)} onOpenChange={(o) => { if (!o) setRemoving(null); }}>
         {removing && (
-          <DialogContent title={`Delete "${removing.name}"?`} description="The flow, its versions and its call history are removed for good. Lines it ran on go back to how they answered before.">
+          <DialogContent title={`Delete "${removing.name}"?`} description="The call tree, its versions and its call history are removed for good. Lines it ran on go back to how they answered before.">
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setRemoving(null)}>Cancel</Button>
               <Button variant="destructive" disabled={pending} onClick={() => start(async () => {

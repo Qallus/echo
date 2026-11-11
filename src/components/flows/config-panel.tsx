@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { BlockIcon } from "@/components/flows/block-icon";
+import { FORMS } from "@/components/flows/block-forms";
 import { outLabel } from "@/components/flows/flow-node";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +13,8 @@ import { BLOCKS, outputsOf, type Flow, type FlowNode, type Issue } from "@/lib/f
 import { cn } from "@/lib/utils";
 
 // The right panel: the selected block's label, settings and where each output
-// goes; with nothing selected, the flow's own settings. Block settings are
-// edited as JSON for now (forms per block come in Call Tree step 4).
+// goes; with nothing selected, the flow's own settings. The main blocks have
+// forms (block-forms.tsx); the rest are edited as JSON.
 
 const SELECT = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
@@ -56,7 +57,7 @@ function FlowSettings({ flow, issues, onChange, onSelect }: { flow: Flow; issues
   const set = (patch: Partial<Flow["settings"]>) => onChange((f) => ({ ...f, settings: { ...f.settings, ...patch } }));
   return (
     <div className="space-y-5 p-4">
-      <Heading title="Flow settings" sub="Select a block on the canvas to change it." />
+      <Heading title="Call tree settings" sub="Select a block on the canvas to change it." />
       <label className="block space-y-1.5"><span className="text-sm font-medium">Name</span>
         <Input value={flow.name} maxLength={80} onChange={(e) => onChange((f) => ({ ...f, name: e.target.value }))} />
       </label>
@@ -94,11 +95,18 @@ function BlockSettings({ flow, node, issues, onChange, onSelect }: {
   const isStart = node.id === flow.start;
   const others = flow.nodes.filter((n) => n.id !== node.id && n.id !== flow.start);
 
+  // New settings; connections from outputs the block no longer has are dropped.
+  const setConfig = (config: Record<string, unknown>) => update((n) => {
+    const outs = outputsOf({ ...n, config });
+    return { ...n, config, next: Object.fromEntries(Object.entries(n.next).filter(([out]) => outs.includes(out))) };
+  });
+  const Form = FORMS[node.type];
+
   function applyJson() {
     try {
       const value = JSON.parse(json) as unknown;
       if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Settings must be a JSON object.");
-      update((n) => ({ ...n, config: value as Record<string, unknown> }));
+      setConfig(value as Record<string, unknown>);
       setJsonError(null);
     } catch (e) {
       setJsonError((e as Error).message);
@@ -115,7 +123,9 @@ function BlockSettings({ flow, node, issues, onChange, onSelect }: {
         <Input value={node.label} maxLength={80} onChange={(e) => update((n) => ({ ...n, label: e.target.value }))} />
       </label>
 
-      {!isStart && (
+      {!isStart && Form && <Form config={node.config} onChange={setConfig} />}
+
+      {!isStart && !Form && (
         <div className="space-y-1.5">
           <span className="text-sm font-medium">Settings</span>
           <Textarea rows={10} spellCheck={false} value={json} onChange={(e) => setJson(e.target.value)} className="font-mono text-xs" aria-label="Block settings (JSON)" />

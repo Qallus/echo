@@ -117,3 +117,11 @@ test("junk input is rejected without throwing", () => {
   assert.equal(validateFlow({ nope: true }).flow, null);
   assert.equal(validateFlow(null).flow, null);
 });
+
+test("the sample call tree is valid apart from choosing who Sales and Support ring", async () => {
+  const { sampleFlow, starterFlow } = await import("./blocks.ts");
+  const errs = validateFlow(sampleFlow("Summit Roofing")).issues.filter((i) => i.level === "error");
+  assert.deepEqual(errs.map((e) => e.node).sort(), ["sales", "support"]);
+  assert.ok(errs.every((e) => /Choose who to ring/.test(e.message)));
+  assert.deepEqual(validateFlow(starterFlow("Test")).issues, []);
+});

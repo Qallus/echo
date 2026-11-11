@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ReactFlowProvider } from "@xyflow/react";
-import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Upload, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Hash, Upload, Workflow } from "lucide-react";
 import { BlockLibrary } from "@/components/flows/block-library";
+import { BuilderProvider } from "@/components/flows/builder-context";
+import { ExtensionsSheet } from "@/components/flows/extensions-sheet";
 import { ConfigPanel } from "@/components/flows/config-panel";
 import { FlowCanvas } from "@/components/flows/flow-canvas";
 import { Button } from "@/components/ui/button";
@@ -13,7 +15,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Textarea } from "@/components/ui/textarea";
 import { saveFlowDraft } from "@/lib/flows/actions";
 import { newNode, starterFlow } from "@/lib/flows/blocks";
-import type { FlowDraft } from "@/lib/flows/data";
+import type { BuilderContext, FlowDraft } from "@/lib/flows/data";
 import { BLOCKS, flowSchema, validateFlow, type BlockType, type Flow } from "@/lib/flows/schema";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +34,7 @@ function readDraft(d: FlowDraft): Flow {
   return parsed.success ? parsed.data : starterFlow(d.name);
 }
 
-export function FlowStudio({ initial }: { initial: FlowDraft }) {
+export function FlowStudio({ initial, context }: { initial: FlowDraft; context: BuilderContext }) {
   const [flow, setFlow] = useState<Flow>(() => readDraft(initial));
   const [selected, setSelected] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export function FlowStudio({ initial }: { initial: FlowDraft }) {
   const [savedAt, setSavedAt] = useState(() => new Date(initial.updatedAt));
   const [restore, setRestore] = useState<Flow | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [extOpen, setExtOpen] = useState(false);
   const rev = useRef(initial.rev);
   const latest = useRef(flow);
   // Saves run one at a time, so each uses the revision the last one returned.
@@ -118,7 +121,7 @@ export function FlowStudio({ initial }: { initial: FlowDraft }) {
     if (!file) return;
     try {
       const parsed = flowSchema.safeParse(JSON.parse(await file.text()));
-      if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "That file isn't a Redial flow.");
+      if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "That file isn't a Redial call tree.");
       change(() => parsed.data);
       setSelected(null);
       setNotice(`Imported "${parsed.data.name}". Your previous version is replaced; export first if you want to keep it.`);
@@ -129,15 +132,16 @@ export function FlowStudio({ initial }: { initial: FlowDraft }) {
   }
 
   const status = save === "saving" ? "Saving…" : save === "dirty" ? "Unsaved changes" : save === "error" ? "Couldn't save. Retrying…"
-    : save === "conflict" ? "Someone else changed this flow" : `Saved · ${savedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+    : save === "conflict" ? "Someone else changed this call tree" : `Saved · ${savedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
   return (
+    <BuilderProvider value={context}>
     <div className="flex h-dvh flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5">
-        <Button variant="ghost" size="icon-sm" nativeButton={false} render={<Link href="/call-tree" aria-label="All flows" />}><ArrowLeft /></Button>
+        <Button variant="ghost" size="icon-sm" nativeButton={false} render={<Link href="/call-tree" aria-label="All call trees" />}><ArrowLeft /></Button>
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">Calls / Call Tree{initial.publishedVersion ? ` · Published v${initial.publishedVersion}` : " · Draft"}</p>
-          <p className="truncate font-semibold">{flow.name || "Untitled flow"}</p>
+          <p className="truncate font-semibold">{flow.name || "Untitled call tree"}</p>
         </div>
         <span className={cn("rounded-full border px-2.5 py-1 text-xs", save === "error" || save === "conflict" ? "border-destructive/40 text-destructive" : "text-muted-foreground")} aria-live="polite">{status}</span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -158,6 +162,7 @@ export function FlowStudio({ initial }: { initial: FlowDraft }) {
               ) : <p className="text-sm text-muted-foreground">No problems found.</p>}
             </PopoverContent>
           </Popover>
+          <Button variant="outline" size="sm" onClick={() => setExtOpen(true)}><Hash /> Extensions</Button>
           <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={(e) => void importJson(e.target.files?.[0] ?? null)} />
           <Button variant="outline" size="sm" onClick={() => importRef.current?.click()}><Upload /> Import JSON</Button>
           <Button variant="outline" size="sm" onClick={exportJson}><Download /> Export JSON</Button>
@@ -167,7 +172,7 @@ export function FlowStudio({ initial }: { initial: FlowDraft }) {
       {(restore || notice || save === "conflict") && (
         <div className="flex flex-wrap items-center gap-3 border-b bg-muted/50 px-4 py-2 text-sm">
           {save === "conflict" ? (
-            <><span>Someone else saved this flow while you were editing. Reload to see their version; your changes stay in this browser until you do.</span>
+            <><span>Someone else saved this call tree while you were editing. Reload to see their version; your changes stay in this browser until you do.</span>
               <Button size="sm" variant="outline" onClick={() => window.location.reload()}>Reload</Button></>
           ) : restore ? (
             <><span>You have unsaved changes from an earlier visit.</span>
@@ -206,7 +211,9 @@ export function FlowStudio({ initial }: { initial: FlowDraft }) {
           <ConfigPanel flow={flow} selected={selectedNode} issues={issues} onChange={change} onSelect={setSelected} />
         </ResizablePanel>
       </ResizablePanelGroup>
+      <ExtensionsSheet open={extOpen} onOpenChange={setExtOpen} />
     </div>
+    </BuilderProvider>
   );
 }
 

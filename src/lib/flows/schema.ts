@@ -54,7 +54,7 @@ export const BLOCKS = {
   hours: {
     label: "Business hours", icon: "clock", caller: false, outs: ["open", "closed", "holiday"],
     config: z.object({
-      tz: text(60).min(1),
+      tz: text(60).min(1, "Choose a time zone."),
       week: z.partialRecord(z.enum(DAYS), z.tuple([time, time])),
       holidays: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(60).default([]),
     }),
@@ -62,7 +62,7 @@ export const BLOCKS = {
   connect: {
     label: "Connect to extension", icon: "phone-forwarded", caller: true, outs: ["connected", "noAnswer", "busy", "failed"],
     config: z.object({
-      targets: z.array(target).min(1).max(10),
+      targets: z.array(target).min(1, "Choose who to ring.").max(10),
       mode: z.enum(["one", "all", "order"]).default("one"),
       ringSeconds: z.number().int().min(5).max(60).default(20),
       whisper: text(300).optional(),
@@ -87,7 +87,7 @@ export const BLOCKS = {
     config: z.object({ prompt: prompt.optional(), maxSeconds: z.number().int().min(10).max(300).default(120), transcribe: z.boolean().default(true) }),
   },
   callback: { label: "Callback request", icon: "phone-outgoing", caller: true, outs: ["saved"], config: z.object({ prompt: prompt.optional() }) },
-  flow: { label: "Run another flow", icon: "git-branch", caller: false, outs: [], config: z.object({ flowId: uuid }) },
+  flow: { label: "Go to another call tree", icon: "git-branch", caller: false, outs: [], config: z.object({ flowId: z.string().uuid("Choose the call tree to continue in.") }) },
   hangup: { label: "Hang up", icon: "phone-off", caller: true, outs: [], config: z.object({ prompt: prompt.optional() }) },
   set: {
     label: "Set variables", icon: "variable", caller: false, outs: ["next"],
@@ -151,6 +151,10 @@ export function outputsOf(n: FlowNode): string[] {
 
 export type Issue = { level: "error" | "warning"; node?: string; message: string };
 
+// Outputs that are fine to leave unconnected: a menu repeats or uses the
+// call tree's fallback, and a connected or hung-up call simply ends.
+const OPTIONAL_OUTS = new Set(["noMatch", "noInput", "connected", "hungUp"]);
+
 // Checks a flow. Errors block publishing; warnings don't.
 export function validateFlow(input: unknown): { flow: Flow | null; issues: Issue[] } {
   const parsed = flowSchema.safeParse(input);
@@ -166,9 +170,9 @@ export function validateFlow(input: unknown): { flow: Flow | null; issues: Issue
   }
 
   const start = byId.get(flow.start);
-  if (!start) issues.push({ level: "error", message: "The flow has no starting block." });
-  else if (start.type !== "trigger.call") issues.push({ level: "error", node: start.id, message: "The flow must start with an Incoming call block." });
-  if (flow.nodes.filter((n) => n.type === "trigger.call").length > 1) issues.push({ level: "error", message: "A flow can have only one Incoming call block." });
+  if (!start) issues.push({ level: "error", message: "The call tree has no starting block." });
+  else if (start.type !== "trigger.call") issues.push({ level: "error", node: start.id, message: "The call tree must start with an Incoming call block." });
+  if (flow.nodes.filter((n) => n.type === "trigger.call").length > 1) issues.push({ level: "error", message: "A call tree can have only one Incoming call block." });
 
   for (const n of flow.nodes) {
     const cfg = BLOCKS[n.type].config.safeParse(n.config);
@@ -188,7 +192,7 @@ export function validateFlow(input: unknown): { flow: Flow | null; issues: Issue
       else if (to === flow.start) issues.push({ level: "error", node: n.id, message: `${n.label || BLOCKS[n.type].label}: can't go back to Incoming call.` });
     }
     for (const out of outs) {
-      if (!n.next[out] && out !== "noMatch" && out !== "noInput") issues.push({ level: "warning", node: n.id, message: `${n.label || BLOCKS[n.type].label}: "${out}" isn't connected.` });
+      if (!n.next[out] && !OPTIONAL_OUTS.has(out)) issues.push({ level: "warning", node: n.id, message: `${n.label || BLOCKS[n.type].label}: "${out}" isn't connected.` });
     }
   }
 

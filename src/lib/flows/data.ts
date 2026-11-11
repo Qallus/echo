@@ -1,4 +1,7 @@
 import "server-only";
+import { myLines } from "@/lib/redial/data";
+import { allows } from "@/lib/redial/types";
+import { myStudioAudio } from "@/lib/studio/data";
 import { createClient } from "@/lib/supabase/server";
 
 // Call Tree reads, as the signed-in person. RLS: flows they own, or flows on
@@ -36,5 +39,42 @@ export async function flowForEditing(id: string): Promise<FlowDraft | null> {
   return {
     id: f.id, name: f.name, description: f.description, draft: f.draft, rev: f.draft_rev, updatedAt: f.draft_updated_at,
     publishedVersion: (f.published as unknown as { version: number } | null)?.version ?? null,
+  };
+}
+
+// What the block forms can pick from: Recording Studio clips, the lines the
+// person can build on, their Directory contacts and extensions, and other
+// flows (for "Run another flow").
+export type BuilderLine = { id: string; label: string; number: string; canManage: boolean };
+export type BuilderExtension = {
+  id: string; lineId: string; ext: string; name: string; directoryId: string | null; number: string | null;
+  ringSeconds: number; voicemailAudioId: string | null;
+};
+export type BuilderContext = {
+  recordings: { id: string; name: string; kind: string; url: string | null; duration: number | null }[];
+  lines: BuilderLine[];
+  directory: { id: string; lineId: string; label: string; number: string }[];
+  extensions: BuilderExtension[];
+  flows: { id: string; name: string }[];
+};
+
+export async function builderContext(flowId: string): Promise<BuilderContext> {
+  const supabase = await createClient();
+  const [audio, lines, flows] = await Promise.all([myStudioAudio(), myLines(), supabase.from("call_flows").select("id, name").neq("id", flowId).order("name")]);
+  const lineIds = lines.map((l) => l.id);
+  const [{ data: dir }, { data: ext }] = lineIds.length
+    ? await Promise.all([
+      supabase.from("redial_directory").select("id, line_id, label, number").in("line_id", lineIds).order("sort").order("label"),
+      supabase.from("redial_extensions").select("id, line_id, ext, name, directory_id, number, ring_seconds, voicemail_audio_id").in("line_id", lineIds).order("ext"),
+    ])
+    : [{ data: [] }, { data: [] }];
+  return {
+    recordings: audio.filter((a) => !a.archived_at).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url, duration: a.duration_seconds })),
+    lines: lines.map((l) => ({ id: l.id, label: l.label, number: l.number, canManage: allows(l.access, "manage_flows") })),
+    directory: (dir ?? []).map((d) => ({ id: d.id, lineId: d.line_id, label: d.label, number: d.number })),
+    extensions: (ext ?? []).map((e) => ({
+      id: e.id, lineId: e.line_id, ext: e.ext, name: e.name, directoryId: e.directory_id, number: e.number, ringSeconds: e.ring_seconds, voicemailAudioId: e.voicemail_audio_id,
+    })),
+    flows: (flows.data ?? []).map((f) => ({ id: f.id, name: f.name })),
   };
 }

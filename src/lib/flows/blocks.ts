@@ -1,4 +1,4 @@
-import { BLOCKS, FLOW_SCHEMA, type BlockType, type Flow, type FlowNode } from "./schema";
+import { BLOCKS, FLOW_SCHEMA, type BlockType, type Flow, type FlowNode } from "./schema.ts";
 
 // The Call Tree block library: how blocks are grouped and described, the
 // settings a new block starts with, and the starter flow for a new flow.
@@ -20,7 +20,7 @@ export const DESCRIPTIONS: Record<BlockType, string> = {
   queue: "Hold with music",
   voicemail: "Take a message",
   callback: "Save a callback request",
-  flow: "Continue in another flow",
+  flow: "Continue in another call tree",
   hangup: "End the call",
   set: "Save values for later",
   http: "Call an outside service",
@@ -73,6 +73,39 @@ export function starterFlow(name: string): Flow {
       { id: "incoming", type: "trigger.call", label: "Incoming call", pos: [0, 0], config: {}, next: { next: "greeting" } },
       { id: "greeting", type: "say", label: "Greeting", pos: [0, 180], config: { prompt: { text: `Thanks for calling ${name}.` }, loop: 1 }, next: { next: "goodbye" } },
       { id: "goodbye", type: "hangup", label: "Goodbye", pos: [0, 360], config: {}, next: {} },
+    ],
+  };
+}
+
+// A worked example: business hours, a greeting and a phone menu (sales,
+// support, operator, or dial an extension), with the AI assistant and
+// voicemail behind it. Sales and Support still need someone to ring.
+export function sampleFlow(name: string): Flow {
+  const prompt = (text: string) => ({ text });
+  return {
+    schema: FLOW_SCHEMA,
+    name,
+    settings: { timezone: "America/Phoenix", recording: "off", onUnconnected: "ai_or_voicemail" },
+    start: "incoming",
+    nodes: [
+      { id: "incoming", type: "trigger.call", label: "Incoming call", pos: [400, 0], config: {}, next: { next: "hours" } },
+      { id: "hours", type: "hours", label: "Business hours", pos: [400, 170], config: DEFAULT_CONFIG.hours, next: { open: "greeting", closed: "after_hours", holiday: "after_hours" } },
+      { id: "greeting", type: "say", label: "Greeting", pos: [160, 360], config: { prompt: prompt(`Thanks for calling ${name}.`), loop: 1 }, next: { next: "menu" } },
+      {
+        id: "menu", type: "gather", label: "Main menu", pos: [160, 540],
+        config: {
+          prompt: prompt("For sales, press 1. For support, press 2. To reach the operator, press 0. If you know your party's extension, dial it at any time."),
+          input: ["dtmf", "speech"], timeout: 5, extensions: true,
+          options: [{ out: "sales", key: "1", speech: ["sales"] }, { out: "support", key: "2", speech: ["support", "help"] }, { out: "operator", key: "0", speech: ["operator"] }],
+        },
+        next: { sales: "sales", support: "support", operator: "assistant", noInput: "assistant", noMatch: "menu" },
+      },
+      { id: "sales", type: "connect", label: "Sales", pos: [-160, 760], config: { targets: [], mode: "one", ringSeconds: 20, record: false }, next: { noAnswer: "voicemail", busy: "voicemail", failed: "voicemail" } },
+      { id: "support", type: "connect", label: "Support", pos: [160, 760], config: { targets: [], mode: "all", ringSeconds: 25, record: false }, next: { noAnswer: "voicemail", busy: "voicemail", failed: "voicemail" } },
+      { id: "assistant", type: "ai", label: "AI assistant", pos: [480, 760], config: { instructions: "Answer questions about the business, take a message, and offer a callback.", intents: [], maxMinutes: 5 }, next: { handoff: "voicemail", hungUp: "goodbye", error: "voicemail" } },
+      { id: "after_hours", type: "say", label: "After hours", pos: [700, 360], config: { prompt: prompt("We're closed right now. Our hours are 8 to 5, Monday through Friday."), loop: 1 }, next: { next: "voicemail" } },
+      { id: "voicemail", type: "voicemail", label: "Voicemail", pos: [160, 980], config: { prompt: prompt("Please leave your name, number and a short message after the tone."), maxSeconds: 120, transcribe: true }, next: { recorded: "goodbye", none: "goodbye" } },
+      { id: "goodbye", type: "hangup", label: "Goodbye", pos: [160, 1180], config: { prompt: prompt("Thanks for calling. Goodbye.") }, next: {} },
     ],
   };
 }

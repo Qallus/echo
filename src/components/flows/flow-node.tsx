@@ -36,7 +36,7 @@ function summary(n: FlowBlock): string {
   if (c.prompt?.audioId) return "Plays a Studio recording";
   if (c.prompt?.text) return `“${c.prompt.text}”`;
   switch (n.type) {
-    case "trigger.call": return "Calls to the lines this flow runs on";
+    case "trigger.call": return "Calls to the lines this call tree runs on";
     case "connect": return c.targets?.length ? `Rings ${c.targets.length} ${c.targets.length === 1 ? "destination" : "destinations"}` : "Choose who to ring";
     case "hours": return c.tz ? `Hours in ${c.tz}` : "Set the hours";
     case "http": return c.url ?? "";
