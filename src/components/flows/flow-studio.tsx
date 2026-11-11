@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ReactFlowProvider } from "@xyflow/react";
-import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Hash, History, MoreHorizontal, PhoneIncoming, Rocket, Upload, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Hash, History, MoreHorizontal, PhoneIncoming, Rocket, Sparkles, Upload, Workflow } from "lucide-react";
+import { AiBuilder } from "@/components/flows/ai-builder";
 import { BlockLibrary } from "@/components/flows/block-library";
 import { BuilderProvider } from "@/components/flows/builder-context";
 import { ExtensionsSheet } from "@/components/flows/extensions-sheet";
@@ -18,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Textarea } from "@/components/ui/textarea";
 import { saveFlowDraft } from "@/lib/flows/actions";
-import { newNode, starterFlow } from "@/lib/flows/blocks";
+import { layoutFlow, newNode, starterFlow } from "@/lib/flows/blocks";
 import type { BuilderContext, FlowDraft, FlowRun } from "@/lib/flows/data";
 import { BLOCKS, flowSchema, validateFlow, type BlockType, type Flow } from "@/lib/flows/schema";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,7 @@ import { cn } from "@/lib/utils";
 // until the save goes through, so a lost connection doesn't lose work.
 
 type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
-type Tab = "visual" | "json";
+type Tab = "visual" | "ai" | "json";
 const backupKey = (id: string) => `flow-draft:${id}`;
 // Drag to resize the library and settings columns (same look as the email editor).
 const HANDLE = "w-1.5 bg-border transition-colors hover:bg-foreground/20 data-[separator=active]:bg-foreground/30";
@@ -189,6 +190,7 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="outline" size="icon-sm" aria-label="More" />}><MoreHorizontal /></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => change((f) => layoutFlow(f))}><Workflow /> Tidy up layout</DropdownMenuItem>
               <DropdownMenuItem onClick={() => importRef.current?.click()}><Upload /> Import JSON</DropdownMenuItem>
               <DropdownMenuItem onClick={exportJson}><Download /> Export JSON</DropdownMenuItem>
             </DropdownMenuContent>
@@ -219,7 +221,7 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
         <ResizableHandle withHandle className={HANDLE} />
         <ResizablePanel minSize={360} className="relative min-h-0">
           <div className="absolute top-3 left-3 z-10 flex gap-1 rounded-lg border bg-background p-1 shadow-sm" role="tablist" aria-label="Editor">
-            {([["visual", "Visual builder", Workflow], ["json", "JSON", Braces]] as const).map(([id, label, Icon]) => (
+            {([["visual", "Visual builder", Workflow], ["ai", "Build with AI", Sparkles], ["json", "JSON", Braces]] as const).map(([id, label, Icon]) => (
               <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
                 className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium", tab === id ? "bg-muted" : "text-muted-foreground hover:text-foreground")}>
                 <Icon className="size-3.5" /> {label}
@@ -230,6 +232,8 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
             <ReactFlowProvider>
               <FlowCanvas flow={flow} issues={issues} selected={selected} focus={focus} path={path} onSelect={setSelected} onChange={change} onDropBlock={(t, p) => addBlock(t, p)} />
             </ReactFlowProvider>
+          ) : tab === "ai" ? (
+            <AiBuilder flow={flow} onApply={(f) => { change(() => f); setSelected(null); setTab("visual"); }} />
           ) : (
             <JsonEditor key={JSON.stringify(flow).length} flow={flow} onApply={(f) => { change(() => f); setTab("visual"); }} />
           )}

@@ -109,3 +109,36 @@ export function sampleFlow(name: string): Flow {
     ],
   };
 }
+
+// Blocks are laid out in rows by depth from Incoming call (used by Build with
+// AI and the Tidy up button). When most of the
+// tree is new, everything is laid out fresh; otherwise existing blocks stay
+// where they are and new ones go below them.
+export function layoutFlow(next: Flow, current: Flow | null = null): Flow {
+  const old = new Map((current?.nodes ?? []).map((n) => [n.id, n.pos]));
+  const kept = next.nodes.filter((n) => old.has(n.id)).length;
+  const fresh = kept * 2 < next.nodes.length;
+  const depth = new Map<string, number>([[next.start, 0]]);
+  const queue = [next.start];
+  while (queue.length) {
+    const id = queue.shift()!;
+    const n = next.nodes.find((x) => x.id === id);
+    for (const to of Object.values(n?.next ?? {})) if (!depth.has(to)) { depth.set(to, depth.get(id)! + 1); queue.push(to); }
+  }
+  const top = fresh ? 0 : Math.max(0, ...next.nodes.filter((n) => old.has(n.id)).map((n) => old.get(n.id)![1])) + 220;
+  const perRow = new Map<number, number>();
+  const rowSize = new Map<number, number>();
+  for (const n of next.nodes) if (fresh || !old.has(n.id)) { const d = depth.get(n.id) ?? 99; rowSize.set(d, (rowSize.get(d) ?? 0) + 1); }
+  const rows = [...rowSize.keys()].sort((x, y) => x - y);
+  return {
+    ...next,
+    nodes: next.nodes.map((n) => {
+      if (!fresh && old.has(n.id)) return { ...n, pos: old.get(n.id)! };
+      const d = depth.get(n.id) ?? 99;
+      const i = perRow.get(d) ?? 0;
+      perRow.set(d, i + 1);
+      const width = rowSize.get(d) ?? 1;
+      return { ...n, pos: [Math.round((i - (width - 1) / 2) * 320), top + rows.indexOf(d) * 200] as [number, number] };
+    }),
+  };
+}

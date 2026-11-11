@@ -125,3 +125,11 @@ test("the sample call tree is valid apart from choosing who Sales and Support ri
   assert.ok(errs.every((e) => /Choose who to ring/.test(e.message)));
   assert.deepEqual(validateFlow(starterFlow("Test")).issues, []);
 });
+
+test("tidy up lays blocks out without overlaps", async () => {
+  const { layoutFlow, sampleFlow } = await import("./blocks.ts");
+  const f = layoutFlow(sampleFlow("Test"));
+  const seen = new Set(f.nodes.map((n) => n.pos.join(",")));
+  assert.equal(seen.size, f.nodes.length);
+  assert.deepEqual(f.nodes.find((n) => n.id === "incoming")!.pos, [0, 0]);
+});
