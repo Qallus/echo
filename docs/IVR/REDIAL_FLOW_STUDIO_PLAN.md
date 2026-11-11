@@ -1,7 +1,8 @@
 # Redial Call Tree: Visual IVR / Call-Flow Builder
 
 > Status: **Approved v1.1** (2026-11-11). Approval-gated: build one step, show it, stop.
-> Steps 1 and 2 are built: `supabase/migrations/20261111120000_call_flows.sql` and `src/lib/flows/schema.ts` (14 tests, `npm test`).
+> Built: steps 1-7 (2026-11-11). Tables, flow format and checks (`src/lib/flows/schema.ts`), builder at `/call-tree` with block forms and extensions, the call runner (`src/lib/flows/runner.ts`, step webhook `/api/webhooks/twilio/flow/step`), publish, versions and rollback, and the Calls panel with path highlighting. Tests: `npm test`.
+> On calls today: Say, Gather (keys, speech, dial an extension), Split, Business hours, Connect (one, all, in order, whisper), Voicemail, Callback, Set variables, HTTP, Go to another call tree, AI receptionist (hands the call to the existing AI screening), Hang up. Not yet on calls: Human assistant (needs the marketplace), Queue, CRM blocks, SMS / email, per-call recording on Connect, AI intents.
 
 ## 0. Decisions (2026-11-11)
 

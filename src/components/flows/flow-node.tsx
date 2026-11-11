@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 // One block on the Call Tree canvas: an input handle on top, a short
 // summary, and an output chip (with its own handle) for each transition.
 
-export type BlockNodeData = { node: FlowBlock; issue?: "error" | "warning"; start: boolean };
+export type BlockNodeData = { node: FlowBlock; issue?: "error" | "warning"; start: boolean; visited?: boolean };
 export type BlockNode = Node<BlockNodeData, "block">;
 
 const OUT_LABEL: Record<string, string> = {
@@ -48,10 +48,10 @@ function summary(n: FlowBlock): string {
 }
 
 function BlockNodeView({ data, selected }: NodeProps<BlockNode>) {
-  const { node, issue, start } = data;
+  const { node, issue, start, visited } = data;
   const outs = outputsOf(node);
   return (
-    <div className={cn("w-64 rounded-xl border bg-card text-card-foreground shadow-sm transition-shadow", selected ? "border-foreground ring-2 ring-foreground/15" : "hover:shadow-md", issue === "error" && !selected && "border-destructive/60")}>
+    <div className={cn("w-64 rounded-xl border bg-card text-card-foreground shadow-sm transition-shadow", selected ? "border-foreground ring-2 ring-foreground/15" : "hover:shadow-md", issue === "error" && !selected && "border-destructive/60", visited === true && "ring-2 ring-foreground/60", visited === false && "opacity-40")}>
       {!start && <Handle type="target" position={Position.Top} className="!size-2.5 !border-2 !border-background !bg-muted-foreground" />}
       <div className="flex items-center gap-2.5 border-b px-3 py-2.5">
         <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", start ? "bg-foreground text-background" : "bg-muted")}><BlockIcon type={node.type} className="size-3.5" /></span>

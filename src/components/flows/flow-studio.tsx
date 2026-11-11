@@ -3,19 +3,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ReactFlowProvider } from "@xyflow/react";
-import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Hash, Upload, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Braces, CheckCircle2, Download, Hash, History, MoreHorizontal, PhoneIncoming, Rocket, Upload, Workflow } from "lucide-react";
 import { BlockLibrary } from "@/components/flows/block-library";
 import { BuilderProvider } from "@/components/flows/builder-context";
 import { ExtensionsSheet } from "@/components/flows/extensions-sheet";
+import { PublishDialog } from "@/components/flows/publish-dialog";
+import { VersionsSheet } from "@/components/flows/versions-sheet";
+import { CallsSheet } from "@/components/flows/calls-sheet";
 import { ConfigPanel } from "@/components/flows/config-panel";
 import { FlowCanvas } from "@/components/flows/flow-canvas";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Textarea } from "@/components/ui/textarea";
 import { saveFlowDraft } from "@/lib/flows/actions";
 import { newNode, starterFlow } from "@/lib/flows/blocks";
-import type { BuilderContext, FlowDraft } from "@/lib/flows/data";
+import type { BuilderContext, FlowDraft, FlowRun } from "@/lib/flows/data";
 import { BLOCKS, flowSchema, validateFlow, type BlockType, type Flow } from "@/lib/flows/schema";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +48,20 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
   const [restore, setRestore] = useState<Flow | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [extOpen, setExtOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [callsOpen, setCallsOpen] = useState(false);
+  const [run, setRun] = useState<FlowRun | null>(null);
+  // The path a picked call took: the blocks it visited and the links between them.
+  const path = useMemo(() => {
+    if (!run) return null;
+    const nodes = new Set(run.steps.map((s) => s.node));
+    const edges = new Set(run.steps.flatMap((s, i) => {
+      const next = run.steps[i + 1];
+      return s.transition && next ? [`${s.node}:${s.transition}`] : [];
+    }));
+    return { nodes, edges };
+  }, [run]);
   const rev = useRef(initial.rev);
   const latest = useRef(flow);
   // Saves run one at a time, so each uses the revision the last one returned.
@@ -53,6 +71,8 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
   const { issues } = useMemo(() => validateFlow(flow), [flow]);
   const errors = issues.filter((i) => i.level === "error").length;
   const selectedNode = flow.nodes.find((n) => n.id === selected) ?? null;
+  const published = useMemo(() => { const p = flowSchema.safeParse(initial.published); return p.success ? JSON.stringify(p.data) : null; }, [initial.published]);
+  const changed = published !== null && published !== JSON.stringify(flow);
 
   // Unsaved work from an earlier visit, made on this same revision.
   useEffect(() => {
@@ -140,7 +160,7 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
       <header className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5">
         <Button variant="ghost" size="icon-sm" nativeButton={false} render={<Link href="/call-tree" aria-label="All call trees" />}><ArrowLeft /></Button>
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Calls / Call Tree{initial.publishedVersion ? ` · Published v${initial.publishedVersion}` : " · Draft"}</p>
+          <p className="text-xs text-muted-foreground">Calls / Call Tree · {initial.publishedVersion ? `Live: version ${initial.publishedVersion}${changed ? " · draft has unpublished changes" : ""}` : "Not published yet"}</p>
           <p className="truncate font-semibold">{flow.name || "Untitled call tree"}</p>
         </div>
         <span className={cn("rounded-full border px-2.5 py-1 text-xs", save === "error" || save === "conflict" ? "border-destructive/40 text-destructive" : "text-muted-foreground")} aria-live="polite">{status}</span>
@@ -163,9 +183,17 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
             </PopoverContent>
           </Popover>
           <Button variant="outline" size="sm" onClick={() => setExtOpen(true)}><Hash /> Extensions</Button>
+          <Button variant="outline" size="sm" onClick={() => setCallsOpen(true)}><PhoneIncoming /> Calls</Button>
+          <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}><History /> Versions</Button>
           <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={(e) => void importJson(e.target.files?.[0] ?? null)} />
-          <Button variant="outline" size="sm" onClick={() => importRef.current?.click()}><Upload /> Import JSON</Button>
-          <Button variant="outline" size="sm" onClick={exportJson}><Download /> Export JSON</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" size="icon-sm" aria-label="More" />}><MoreHorizontal /></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => importRef.current?.click()}><Upload /> Import JSON</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportJson}><Download /> Export JSON</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="sm" onClick={() => setPublishOpen(true)}><Rocket /> Publish</Button>
         </div>
       </header>
 
@@ -200,7 +228,7 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
           </div>
           {tab === "visual" ? (
             <ReactFlowProvider>
-              <FlowCanvas flow={flow} issues={issues} selected={selected} focus={focus} onSelect={setSelected} onChange={change} onDropBlock={(t, p) => addBlock(t, p)} />
+              <FlowCanvas flow={flow} issues={issues} selected={selected} focus={focus} path={path} onSelect={setSelected} onChange={change} onDropBlock={(t, p) => addBlock(t, p)} />
             </ReactFlowProvider>
           ) : (
             <JsonEditor key={JSON.stringify(flow).length} flow={flow} onApply={(f) => { change(() => f); setTab("visual"); }} />
@@ -212,6 +240,18 @@ export function FlowStudio({ initial, context }: { initial: FlowDraft; context: 
         </ResizablePanel>
       </ResizablePanelGroup>
       <ExtensionsSheet open={extOpen} onOpenChange={setExtOpen} />
+      <CallsSheet open={callsOpen} onOpenChange={setCallsOpen} flowId={initial.id} flow={flow} picked={run?.id ?? null} onPick={(r) => { setRun(r); if (r) setCallsOpen(false); }} />
+      {run && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-20 -translate-x-1/2">
+          <div className="pointer-events-auto flex items-center gap-3 rounded-full border bg-background px-4 py-2 text-sm shadow-lg">
+            Showing the path of a call from {run.from ?? "an unknown caller"}
+            <Button size="sm" variant="ghost" onClick={() => setRun(null)}>Clear</Button>
+          </div>
+        </div>
+      )}
+      <VersionsSheet open={versionsOpen} onOpenChange={setVersionsOpen} flowId={initial.id} versions={initial.versions} />
+      <PublishDialog open={publishOpen} onOpenChange={setPublishOpen} flowId={initial.id} issues={issues} saved={save === "saved"}
+        lineIds={initial.lineIds} nextVersion={(initial.versions[0]?.version ?? 0) + 1} />
     </div>
     </BuilderProvider>
   );

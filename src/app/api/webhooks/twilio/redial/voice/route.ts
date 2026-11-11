@@ -1,6 +1,7 @@
 import { e164, twiml, verifyTwilio } from "@/lib/comms/twilio";
 import { callToken, gatewayConfig } from "@/lib/redial/gateway";
 import { conference, conferenceName, ringOwner, stream, voicemail } from "@/lib/redial/twiml";
+import { lineFlow, startFlowRun } from "@/lib/flows/runner";
 import { decide, type Line } from "@/lib/redial/types";
 import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -24,6 +25,23 @@ export async function POST(req: Request) {
   const from = e164(p.From);
   const { data: entries } = from ? await db.from("redial_list_entries").select("number, kind").eq("line_id", line.id) : { data: [] };
   const decision = decide(line, from, entries ?? []);
+
+  // A published call tree answers everyone except blocked callers and VIPs.
+  const vip = Boolean(from && (entries ?? []).some((e) => e.number === from && e.kind === "vip"));
+  const tree = decision.action !== "block" && !vip ? await lineFlow(db, line.id) : null;
+  if (tree) {
+    const { data: call, error: e } = await db.from("redial_calls").upsert({
+      line_id: line.id, owner_id: line.owner_id, twilio_sid: p.CallSid, from_number: from ?? p.From ?? null,
+      caller_id_name: p.CallerName || null, reason: `Call tree: ${tree.name}`, status: "ringing",
+    }, { onConflict: "twilio_sid" }).select("id").single();
+    if (!e && call) {
+      try {
+        return twiml(await startFlowRun(db, tree, line, { id: call.id, sid: p.CallSid, from, callerName: p.CallerName || null, to: line.number }));
+      } catch (err) {
+        console.error("[redial voice] call tree", err instanceof Error ? err.message : err);
+      }
+    } else console.error("[redial voice] call tree call row", e?.message);
+  }
   const gw = await gatewayConfig();
   const usage = decision.action === "screen" && gw.ready ? await redialUsage(db, line.owner_id) : null;
   const outOfMinutes = Boolean(usage && usage.remaining_seconds < MIN_SECONDS_TO_SCREEN);

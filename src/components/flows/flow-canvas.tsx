@@ -16,8 +16,9 @@ import type { Issue, BlockType, Flow, FlowNode } from "@/lib/flows/schema";
 
 const NODE_TYPES = { block: FlowBlockNode };
 
-export function FlowCanvas({ flow, issues, selected, focus, onSelect, onChange, onDropBlock }: {
+export function FlowCanvas({ flow, issues, selected, focus, path, onSelect, onChange, onDropBlock }: {
   flow: Flow; issues: Issue[]; selected: string | null; focus: string | null;
+  path: { nodes: Set<string>; edges: Set<string> } | null;
   onSelect: (id: string | null) => void;
   onChange: (update: (f: Flow) => Flow) => void;
   onDropBlock: (type: BlockType, pos: [number, number]) => void;
@@ -44,14 +45,15 @@ export function FlowCanvas({ flow, issues, selected, focus, onSelect, onChange, 
     const mine = issues.filter((i) => i.node === n.id);
     return {
       id: n.id, type: "block", position: { x: n.pos[0], y: n.pos[1] }, selected: n.id === selected, deletable: n.id !== flow.start, measured: sizes[n.id],
-      data: { node: n, start: n.id === flow.start, issue: mine.some((i) => i.level === "error") ? "error" : mine.length ? "warning" : undefined },
+      data: { node: n, start: n.id === flow.start, visited: path ? path.nodes.has(n.id) : undefined, issue: mine.some((i) => i.level === "error") ? "error" : mine.length ? "warning" : undefined },
     };
-  }), [flow, issues, selected, sizes]);
+  }), [flow, issues, selected, sizes, path]);
 
   const edges = useMemo<Edge[]>(() => flow.nodes.flatMap((n) => Object.entries(n.next).map(([out, to]) => ({
     id: `${n.id}:${out}`, source: n.id, sourceHandle: out, target: to, type: "smoothstep",
-    style: { strokeWidth: 1.5 }, selected: `${n.id}:${out}` === edgeSel,
-  }))), [flow, edgeSel]);
+    selected: `${n.id}:${out}` === edgeSel, animated: Boolean(path?.edges.has(`${n.id}:${out}`)),
+    style: path ? { strokeWidth: path.edges.has(`${n.id}:${out}`) ? 2.5 : 1, opacity: path.edges.has(`${n.id}:${out}`) ? 1 : 0.25 } : { strokeWidth: 1.5 },
+  }))), [flow, edgeSel, path]);
 
   const onNodesChange = useCallback((changes: NodeChange<BlockNode>[]) => {
     const measured = changes.flatMap((c) => (c.type === "dimensions" && c.dimensions ? [[c.id, c.dimensions] as const] : []));

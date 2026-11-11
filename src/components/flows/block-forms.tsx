@@ -284,10 +284,6 @@ function ConnectForm({ config, onChange }: FormProps) {
       <Field label="Whisper" hint="Said privately to the person who answers, before the caller is connected.">
         <Input maxLength={300} value={String(config.whisper ?? "")} placeholder="Call from the main menu, Sales." onChange={(e) => onChange({ ...config, whisper: e.target.value || undefined })} />
       </Field>
-      <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
-        <span><span className="block text-sm font-medium">Record this call</span><span className="block text-xs text-muted-foreground">Saved to Echo with a transcript and summary.</span></span>
-        <Switch checked={Boolean(config.record)} onCheckedChange={(v) => onChange({ ...config, record: v })} />
-      </label>
     </div>
   );
 }

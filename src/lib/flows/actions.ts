@@ -5,7 +5,8 @@ import { requireUser } from "@/lib/data";
 import { toE164 } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { sampleFlow, starterFlow } from "./blocks";
-import { flowSchema } from "./schema";
+import { flowRuns } from "./data";
+import { canPublish, flowSchema, validateFlow } from "./schema";
 
 // Call Tree edits, as the signed-in person (RLS decides who can edit).
 
@@ -82,4 +83,62 @@ export async function deleteExtension(id: string): Promise<{ ok?: string; error?
   const supabase = await createClient();
   const { data, error } = await supabase.from("redial_extensions").delete().eq("id", id).select("id");
   return error || !data?.length ? { error: "Couldn't delete that extension." } : { ok: "Extension deleted." };
+}
+
+// Publish the saved draft as the next version, and set which lines answer
+// with it. A line runs one call tree, so choosing a line here takes it from
+// any other tree.
+export async function publishFlow(id: string, note: string, lineIds: string[]): Promise<{ version?: number; error?: string }> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data: f } = await supabase.from("call_flows").select("draft").eq("id", id).maybeSingle();
+  if (!f) return { error: "This call tree was deleted, or you no longer have access." };
+  const { issues } = validateFlow(f.draft);
+  if (!canPublish(issues)) return { error: "Fix the problems marked in red first." };
+  const { data: version, error } = await supabase.rpc("call_flow_publish", { p_flow: id, p_note: note.trim().slice(0, 300) || null });
+  if (error) return { error: "Couldn't publish the call tree." };
+  const lines = await setFlowLines(supabase, id, lineIds);
+  revalidatePath(`/call-tree/${id}`);
+  revalidatePath("/call-tree");
+  return lines.error ? { version: version as number, error: lines.error } : { version: version as number };
+}
+
+async function setFlowLines(supabase: Awaited<ReturnType<typeof createClient>>, id: string, lineIds: string[]): Promise<{ error?: string }> {
+  const wanted = [...new Set(lineIds.filter((l) => /^[0-9a-f-]{36}$/i.test(l)))].slice(0, 50);
+  const { data: current } = await supabase.from("call_flow_lines").select("line_id").eq("flow_id", id);
+  const drop = (current ?? []).map((r) => r.line_id).filter((l) => !wanted.includes(l));
+  if (drop.length) await supabase.from("call_flow_lines").delete().eq("flow_id", id).in("line_id", drop);
+  for (const lineId of wanted) {
+    if ((current ?? []).some((r) => r.line_id === lineId)) continue;
+    await supabase.from("call_flow_lines").delete().eq("line_id", lineId);
+    const { error } = await supabase.from("call_flow_lines").insert({ line_id: lineId, flow_id: id });
+    if (error) return { error: "Published, but some lines couldn't be switched to this call tree." };
+  }
+  return {};
+}
+
+export async function rollbackFlow(id: string, version: number): Promise<{ ok?: string; error?: string }> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("call_flow_rollback", { p_flow: id, p_version: version });
+  if (error) return { error: "Couldn't roll back." };
+  revalidatePath(`/call-tree/${id}`);
+  return { ok: `Version ${version} is live again, and the draft matches it.` };
+}
+
+// Stop answering a line with this call tree (the line goes back to its usual screening).
+export async function detachFlowLine(id: string, lineId: string): Promise<{ ok?: string; error?: string }> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("call_flow_lines").delete().eq("flow_id", id).eq("line_id", lineId);
+  if (error) return { error: "Couldn't change that line." };
+  revalidatePath(`/call-tree/${id}`);
+  return { ok: "That line answers with its usual screening again." };
+}
+
+// For the Calls panel in the builder (RLS: people who can edit the call tree
+// or read the line's calls).
+export async function loadFlowRuns(id: string) {
+  await requireUser();
+  return flowRuns(id);
 }
