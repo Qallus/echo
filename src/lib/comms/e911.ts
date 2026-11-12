@@ -48,6 +48,14 @@ export async function registerE911(number: string, a: E911Address): Promise<E911
     const code = Number(ad.data.code ?? 0);
     return { addressSid: null, status: "failed", error: code === 21615 || code === 21628 ? "That address couldn't be found. Check the street, city and ZIP code." : `Couldn't save the address: ${msg(ad)}` };
   }
+  // Twilio won't swap one emergency address for another: take the old one
+  // off the number first (911 keeps working from the mobile meanwhile).
+  const cur = await twilioRequest(`/IncomingPhoneNumbers/${pn.sid}.json`, {}, "GET");
+  if (cur.ok && cur.data.emergency_address_sid && cur.data.emergency_address_sid !== ad.data.sid) {
+    if (cur.data.emergency_status === "Active") await twilioRequest(`/IncomingPhoneNumbers/${pn.sid}.json`, { EmergencyStatus: "Inactive" });
+    const off = await twilioRequest(`/IncomingPhoneNumbers/${pn.sid}.json`, { EmergencyAddressSid: "" });
+    if (!off.ok) return { addressSid: String(ad.data.sid), status: "failed", error: `The address was saved but the old one couldn't be taken off the number: ${msg(off)}` };
+  }
   const r = await twilioRequest(`/IncomingPhoneNumbers/${pn.sid}.json`, { EmergencyAddressSid: String(ad.data.sid), EmergencyStatus: "Active" });
   if (!r.ok) return { addressSid: String(ad.data.sid), status: "failed", error: `The address was saved but couldn't be put on the number: ${msg(r)}` };
   return stateOf(r.data);
