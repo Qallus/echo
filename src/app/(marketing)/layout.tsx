@@ -63,6 +63,8 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <Link href="/home-phone" className="block text-muted-foreground hover:text-foreground">Home phone</Link>
               <Link href="/business-phone" className="block text-muted-foreground hover:text-foreground">Business phone</Link>
               <Link href="/recording-studio" className="block text-muted-foreground hover:text-foreground">Recording Studio</Link>
+              <Link href="/live-agents" className="block text-muted-foreground hover:text-foreground">Live Agents</Link>
+              <Link href="/become-a-live-agent" className="block text-muted-foreground hover:text-foreground">Become a Live Agent</Link>
               <Link href="/compatibility" className="block text-muted-foreground hover:text-foreground">Compatibility</Link>
               <Link href="/pricing" className="block text-muted-foreground hover:text-foreground">Pricing</Link>
               <Link href="/faq" className="block text-muted-foreground hover:text-foreground">FAQ</Link>

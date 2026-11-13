@@ -44,6 +44,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
 ];
 
 export const NAV_MORE = [
+  { href: "/live-agents", label: "Live Agents" },
   { href: "/pricing", label: "Pricing" },
   { href: "/developers", label: "Developers" },
   { href: "/contact", label: "Contact" },
