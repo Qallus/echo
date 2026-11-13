@@ -48,7 +48,15 @@ export function AgentsMap({ agents, active, onHover, className }: {
         store.set(a.id, { marker, circle });
         return circle;
       });
-      if (layers.length) m.fitBounds(L.featureGroup(layers).getBounds().pad(0.15), { maxZoom: 11 });
+      // Open on where most agents are (within ~250 km of the median spot) so
+      // a few far-away agents don't zoom the map out to the whole country.
+      if (layers.length) {
+        const mid = (xs: number[]) => xs.sort((x, y) => x - y)[Math.floor(xs.length / 2)];
+        const cLat = mid(agents.map((a) => a.lat)), cLng = mid(agents.map((a) => a.lng));
+        const near = layers.filter((_, i) => m.distance([agents[i].lat, agents[i].lng], [cLat, cLng]) < 250_000);
+        const focus = near.length * 2 >= layers.length ? near : layers;
+        m.fitBounds(L.featureGroup(focus).getBounds().pad(0.15), { maxZoom: 11 });
+      }
       map.current = m;
     })();
     return () => { cancelled = true; map.current?.remove(); map.current = null; store.clear(); };
