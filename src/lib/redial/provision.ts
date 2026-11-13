@@ -23,6 +23,8 @@ function grandstream(a: ProvisionAccount): string {
     P31: "1", // SIP registration
     P81: "1", // unregister on reboot
     P32: "60", // registration expiration (minutes)
+    P194: "1", // check the config server on a schedule...
+    P193: "60", // ...every 60 minutes (the phone's check-in, shown as Online)
   };
   const lines = Object.entries(p).map(([k, v]) => `    <${k}>${xmlEsc(v)}</${k}>`).join("\n");
   return `<?xml version="1.0" encoding="UTF-8" ?>\n<gs_provision version="1">\n  <mac>${a.mac}</mac>\n  <config version="1">\n${lines}\n  </config>\n</gs_provision>\n`;
@@ -56,6 +58,15 @@ function polyConfig(a: ProvisionAccount): string {
     "reg.1.server.1.address": a.domain, "reg.1.server.1.port": "5060", "reg.1.displayName": a.label, "reg.1.label": "Redial",
   };
   return `<?xml version="1.0" standalone="yes"?>\n<PHONE_CONFIG>\n  <ALL ${Object.entries(attrs).map(([k, v]) => `${k}="${xmlEsc(v)}"`).join(" ")} />\n</PHONE_CONFIG>\n`;
+}
+
+// The firmware version from the phone's User-Agent, e.g. Grandstream's
+// "Grandstream Model HW WP826 SW 1.0.3.29 DevId ec74d7ba5834" or Yealink's
+// "Yealink SIP-T54W 96.86.0.100 …".
+export function firmwareFrom(userAgent: string | null): string | null {
+  if (!userAgent) return null;
+  const v = userAgent.match(/\bSW\s+(\d+(?:\.\d+){1,4})/i) ?? userAgent.match(/\b(\d+\.\d+\.\d+(?:\.\d+)?)\b/);
+  return v ? v[1].slice(0, 60) : null;
 }
 
 // The file a phone asked for, or null when it isn't this phone's file.

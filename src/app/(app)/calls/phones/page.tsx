@@ -13,17 +13,17 @@ export const metadata = { title: "Phones · Echo" };
 
 type Db = Awaited<ReturnType<typeof createClient>>;
 
-// The phones, with their settings-page link when that column exists (it
-// arrives in a later database update; until then the page works without it).
+// The phones, with the newer columns (settings-page link, check-ins) when
+// the database has them; older databases fall back step by step.
 async function loadDevices(db: Db, ids: string[], cols: string): Promise<DeviceRow[]> {
   if (!ids.length) return [];
-  const withUrl = await db.from("redial_devices").select(`${cols}, web_url`).in("line_id", ids).order("created_at");
-  if (!withUrl.error) return (withUrl.data ?? []) as unknown as DeviceRow[];
-  const { data } = await db.from("redial_devices").select(cols).in("line_id", ids).order("created_at");
-  return ((data ?? []) as unknown as DeviceRow[]).map((d) => ({ ...d, web_url: null }));
+  for (const extra of [", web_url, last_seen_at, firmware", ", web_url", ""]) {
+    const { data, error } = await db.from("redial_devices").select(`${cols}${extra}`).in("line_id", ids).order("created_at");
+    if (!error) return ((data ?? []) as unknown as DeviceRow[]).map((d) => ({ ...d, web_url: d.web_url ?? null, last_seen_at: d.last_seen_at ?? null, firmware: d.firmware ?? null }));
+  }
+  return [];
 }
 
-// Desk, cordless and Wi-Fi phones on the member's lines (owners only).
 export default async function PhonesPage() {
   await requireUser();
   const lines = (await myLines()).filter((l) => l.access.owner);

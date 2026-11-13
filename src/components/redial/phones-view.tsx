@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Check, Copy, ExternalLink, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { PHONE_MODELS, VENDORS, type PhoneVendor } from "@/lib/redial/phone-mode
 // The Phones page: add a phone by model and MAC address, see the setup
 // address and login (shown once), and choose which phones ring.
 
-export type DeviceRow = { id: string; line_id: string; label: string; model: string; vendor: PhoneVendor; mac: string | null; sip_username: string; ring: boolean; last_provisioned_at: string | null; created_at: string; web_url: string | null };
+export type DeviceRow = { id: string; line_id: string; label: string; model: string; vendor: PhoneVendor; mac: string | null; sip_username: string; ring: boolean; last_provisioned_at: string | null; created_at: string; web_url: string | null; last_seen_at: string | null; firmware: string | null };
 type LineRow = { id: string; label: string; number: string };
 
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
@@ -50,6 +50,39 @@ function SetupSteps({ vendor, login }: { vendor: PhoneVendor; login: DeviceLogin
   }
   if (vendor === "other") return <p className="text-sm">Enter the SIP server, username and password below in your phone&apos;s SIP account settings.</p>;
   return <p className="text-sm">Open the phone&apos;s settings, go to <span className="font-medium">{VENDORS[vendor].setup}</span>, and enter the address below ({vendor === "yealink" ? "with https://" : path}). Then restart the phone.</p>;
+}
+
+// Phones check in every 60 minutes; after 2 missed check-ins they're offline.
+const OFFLINE_AFTER = 150 * 60_000;
+
+// The current time, after the page has loaded (so server and browser agree),
+// updated each minute.
+function useNow() {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const first = setTimeout(() => setNow(Date.now()), 0);
+    const every = setInterval(() => setNow(Date.now()), 60_000);
+    return () => { clearTimeout(first); clearInterval(every); };
+  }, []);
+  return now;
+}
+
+const ago = (iso: string, now: number) => {
+  const min = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));
+  return min < 1 ? "just now" : min < 60 ? `${min} min ago` : when(iso);
+};
+
+// Online / Offline from the phone's check-ins; phones set up before
+// check-ins existed show Connected until they restart once.
+function DeviceStatus({ d, now }: { d: DeviceRow; now: number | null }) {
+  if (!d.last_provisioned_at) return { badge: <Badge variant="outline">Not set up yet</Badge>, line: "Waiting for the phone to download its settings" };
+  const dot = <span className="size-1.5 rounded-full bg-current" aria-hidden />;
+  const fw = d.firmware ? ` · Firmware ${d.firmware}` : "";
+  if (!d.last_seen_at) return { badge: <Badge variant="success" className="gap-1.5">{dot} Connected</Badge>, line: `Connected ${when(d.last_provisioned_at)} · Restart the phone once to see Online status` };
+  const online = now === null || now - new Date(d.last_seen_at).getTime() < OFFLINE_AFTER;
+  return online
+    ? { badge: <Badge variant="success" className="gap-1.5">{dot} Online</Badge>, line: `Checked in ${now === null ? when(d.last_seen_at) : ago(d.last_seen_at, now)}${fw}` }
+    : { badge: <Badge variant="destructive" className="gap-1.5">{dot} Offline</Badge>, line: `Last checked in ${when(d.last_seen_at)}${fw} · Check its power and Wi-Fi` };
 }
 
 // The phone's own settings page (on the member's network), saved per phone.
@@ -87,6 +120,7 @@ export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: {
   const [removing, setRemoving] = useState<DeviceRow | null>(null);
   const [pending, start] = useTransition();
   const [adding, setAdding] = useState(devices.length === 0);
+  const now = useNow();
   const model = PHONE_MODELS.find((m) => m.id === modelId)!;
 
   function run(act: () => Promise<{ ok?: string; error?: string; login?: DeviceLogin }>, vendor?: PhoneVendor) {
@@ -111,17 +145,16 @@ export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: {
               {mine.length === 0 && <li className="p-4 text-sm text-muted-foreground">No phones on this line yet.</li>}
               {mine.map((d) => {
                 const m = PHONE_MODELS.find((x) => x.id === d.model);
+                const status = DeviceStatus({ d, now });
                 return (
                   <li key={d.id} className="space-y-2 p-4">
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                       <div className="min-w-0 flex-1 space-y-1">
                         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
                           {d.label} <span className="font-normal text-muted-foreground">· {VENDORS[d.vendor].label} {m?.name ?? ""}</span>
-                          {d.last_provisioned_at
-                            ? <Badge variant="success" className="gap-1.5"><span className="size-1.5 rounded-full bg-current" aria-hidden /> Connected</Badge>
-                            : <Badge variant="outline">Not set up yet</Badge>}
+                          {status.badge}
                         </p>
-                        <p className="text-xs text-muted-foreground">{d.mac ? `MAC ${macText(d.mac)} · ` : ""}{d.last_provisioned_at ? `Connected ${when(d.last_provisioned_at)}` : "Waiting for the phone to download its settings"}</p>
+                        <p className="text-xs text-muted-foreground">{d.mac ? `MAC ${macText(d.mac)} · ` : ""}{status.line}</p>
                       </div>
                       <div className="flex items-center gap-4">
                         <label className="flex items-center gap-2 text-sm"><Switch checked={d.ring} onCheckedChange={(v) => run(() => setDeviceRing(d.id, v))} aria-label={`Ring ${d.label} for calls`} /> Rings</label>
