@@ -10,6 +10,8 @@ export const NOTIFICATION_TYPES = [
   { type: "redial_call", label: "Screened call", desc: "Your Redial assistant answered a call on your line." },
   { type: "agent_approval", label: "Agent approval requests", desc: "An AI agent you made is waiting for you to approve an action." },
   { type: "live_agent_review", label: "Live Agent profile review", desc: "The Redial team approved your Live Agent profile or asked for changes." },
+  { type: "live_agent_message", label: "Live Agent messages", desc: "A business or Live Agent sent you a message." },
+  { type: "live_agent_offer", label: "Live Agent offers", desc: "An offer or counter-offer for Live Agent work." },
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]["type"] | "test";

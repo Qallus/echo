@@ -5,7 +5,7 @@ import { ArrowUpRight, MapPin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AgentAvatar } from "@/components/live-agents/agent-avatar";
 import { AgentBadges, SkillChip } from "@/components/live-agents/icons";
-import { InterestButton } from "@/components/live-agents/interest-dialog";
+import { MessageButton, type Hiring } from "@/components/live-agents/message-button";
 import { VoiceSamplePlayer } from "@/components/live-agents/voice-sample";
 import { ATTRIBUTES, firstName, money, type LiveAgent, type Skill } from "@/lib/live-agents/types";
 
@@ -14,8 +14,8 @@ const KEY_SETUP = ["door-closes", "usb-headset", "noise-cancelling", "wired-inte
 import { cn } from "@/lib/utils";
 
 // One Live Agent in the browse results (grid card or list row).
-export function AgentCard({ agent: a, skills, layout = "grid", active, onHover }: {
-  agent: LiveAgent; skills: Map<string, Skill>; layout?: "grid" | "list"; active?: boolean; onHover?: (id: string | null) => void;
+export function AgentCard({ agent: a, skills, hiring, layout = "grid", active, onHover }: {
+  agent: LiveAgent; skills: Map<string, Skill>; hiring: Hiring; layout?: "grid" | "list"; active?: boolean; onHover?: (id: string | null) => void;
 }) {
   const sample = a.samples[0];
   const setup = KEY_SETUP.filter((s) => a.workspace.includes(s) || a.equipment.includes(s)).slice(0, 3).map((s) => ATTRIBUTES.find((x) => x.slug === s)!.label);
@@ -63,7 +63,7 @@ export function AgentCard({ agent: a, skills, layout = "grid", active, onHover }
           {a.industries.length > 0 && <p className="text-xs text-muted-foreground">{a.industries.slice(0, 2).join(" · ")}</p>}
         </div>
         <div className="relative z-10 flex gap-2">
-          <InterestButton kind="business" size="sm" variant="outline" agentName={firstName(a.displayName)} source={`/live-agents#${a.handle}`}>Message</InterestButton>
+          <MessageButton size="sm" variant="outline" hiring={hiring} agent={{ id: a.id, name: firstName(a.displayName), handle: a.handle }}>Message</MessageButton>
           <Button size="sm" variant="secondary" nativeButton={false} render={<Link href={`/live-agents/${a.handle}`} />}>View profile <ArrowUpRight /></Button>
         </div>
       </div>

@@ -5,12 +5,13 @@ import { AvailabilityGrid } from "@/components/live-agents/availability-grid";
 import { AreaMap, BookingCard } from "@/components/live-agents/booking-card";
 import { AgentBadges, IconByName } from "@/components/live-agents/icons";
 import { VoiceSamplePlayer } from "@/components/live-agents/voice-sample";
+import type { Hiring } from "@/components/live-agents/message-button";
 import { EQUIPMENT, firstName, replyLabel, tzLabel, WORKSPACE, type Fees, type LiveAgent, type Skill } from "@/lib/live-agents/types";
 
 // A Live Agent's profile: the public page, and the agent's own preview
 // (preview: no booking, a note on clips still waiting for review).
-export function ProfileView({ agent: a, skills, fees, preview = false, pendingClips = [] }: {
-  agent: LiveAgent; skills: Skill[]; fees: Fees; preview?: boolean; pendingClips?: string[];
+export function ProfileView({ agent: a, skills, fees, preview = false, pendingClips = [], hiring }: {
+  agent: LiveAgent; skills: Skill[]; fees: Fees; preview?: boolean; pendingClips?: string[]; hiring?: Hiring;
 }) {
   const name = firstName(a.displayName);
   const mine = a.skills.map((s) => skills.find((k) => k.slug === s)).filter((s) => s != null);
@@ -154,7 +155,7 @@ export function ProfileView({ agent: a, skills, fees, preview = false, pendingCl
         </div>
 
         <aside className="lg:sticky lg:top-20">
-          <BookingCard agent={a} fees={fees} name={name} preview={preview} />
+          <BookingCard agent={a} fees={fees} name={name} preview={preview} hiring={hiring} />
         </aside>
       </div>
     </div>

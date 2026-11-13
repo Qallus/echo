@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { BrowseFilters, ViewToggle } from "@/components/live-agents/filters";
 import { BrowseResults } from "@/components/live-agents/browse-results";
 import { InterestButton } from "@/components/live-agents/interest-dialog";
+import { getUser } from "@/lib/data";
 import { getFees, listLiveAgents, listSkills, liveAgentStats } from "@/lib/live-agents/data";
+import { hiringWorkspaces } from "@/lib/live-agents/messages";
 import { parseFilters } from "@/lib/live-agents/types";
 
 export const metadata = {
@@ -18,7 +20,8 @@ export const metadata = {
 // grid with a map, a list, or a full map.
 export default async function LiveAgentsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const filters = parseFilters(await searchParams);
-  const [skills, stats, fees] = await Promise.all([listSkills(), liveAgentStats(), getFees()]);
+  const [skills, stats, fees, user, workspaces] = await Promise.all([listSkills(), liveAgentStats(), getFees(), getUser(), hiringWorkspaces()]);
+  const hiring = { signedIn: Boolean(user), workspaces };
   const { ready, agents, total } = await listLiveAgents(filters, skills);
 
   const tiles = [
@@ -83,7 +86,7 @@ export default async function LiveAgentsPage({ searchParams }: { searchParams: P
               <Suspense><ViewToggle view={filters.view} /></Suspense>
             </div>
             {agents.length ? (
-              <BrowseResults agents={agents} skills={skills} view={filters.view} />
+              <BrowseResults agents={agents} skills={skills} view={filters.view} hiring={hiring} />
             ) : (
               <div className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
                 No Live Agents match those filters{total ? "" : " yet"}. Try fewer filters, or <InterestButton kind="business" variant="ghost" size="sm" source="/live-agents">tell us what you need</InterestButton>.

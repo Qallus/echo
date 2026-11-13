@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { InterestButton } from "@/components/live-agents/interest-dialog";
+import { MessageButton, type Hiring } from "@/components/live-agents/message-button";
 import { feeSplit, money, type Fees, type LiveAgent } from "@/lib/live-agents/types";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 type Plan = "ondemand" | "shifts" | "monthly";
 
-export function BookingCard({ agent: a, fees, name, preview = false }: { agent: LiveAgent; fees: Fees; name: string; preview?: boolean }) {
+export function BookingCard({ agent: a, fees, name, preview = false, hiring = { signedIn: false, workspaces: [] } }: { agent: LiveAgent; fees: Fees; name: string; preview?: boolean; hiring?: Hiring }) {
   const plans = [
     a.perMinuteCents != null && { id: "ondemand" as Plan, tab: "On-demand", price: `${money(a.perMinuteCents, { exact: true })}/min`, note: `Billed per connected minute, weekly. Plus ${fees.businessFeePercent}% service fee.` },
     a.hourlyCents != null && { id: "shifts" as Plan, tab: "Shifts", price: `${money(a.hourlyCents)}/hr`, note: "Authorized when you book, charged after the shift." },
@@ -50,9 +50,9 @@ export function BookingCard({ agent: a, fees, name, preview = false }: { agent: 
       <div className="space-y-2">
         {preview
           ? <Button className="w-full" disabled>Message {name}</Button>
-          : <InterestButton kind="business" className="w-full" agentName={name} source={`/live-agents/${a.handle}`}>Message {name}</InterestButton>}
+          : <MessageButton className="w-full" hiring={hiring} agent={{ id: a.id, name, handle: a.handle }}>Message {name}</MessageButton>}
         {trial != null && (
-          <Button variant="outline" className="w-full" disabled>Book a 30-min paid trial · {money(trial, { exact: true })} <span className="text-xs text-muted-foreground">(soon)</span></Button>
+          <p className="text-center text-xs text-muted-foreground">Message {name} to send an offer or book a 30-minute paid trial ({money(trial, { exact: true })}).</p>
         )}
       </div>
       {preview && <p className="rounded-lg bg-muted p-2 text-xs text-muted-foreground">Preview: this is how businesses see your booking card. Prices include Redial&apos;s {fees.businessFeePercent}% service fee; you receive your rate minus {fees.agentFeePercent}%.</p>}

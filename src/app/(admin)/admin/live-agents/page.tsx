@@ -9,7 +9,8 @@ import { listSkills, mediaUrl } from "@/lib/live-agents/data";
 import { AGENT_STATUS } from "@/lib/live-agents/setup";
 import { ATTRIBUTES, money, WEEKDAYS, type Weekday } from "@/lib/live-agents/types";
 import { createClient } from "@/lib/supabase/server";
-import { ClipReview, ProfileDecision, type AdminClip } from "./review-card";
+import { adminAudit } from "@/lib/admin/audit";
+import { ClipReview, ProfileDecision, ResolveReport, type AdminClip } from "./review-card";
 
 export const metadata = { title: "Live Agents · Admin · Echo" };
 
@@ -37,6 +38,12 @@ export default async function LiveAgentsAdminPage() {
     );
   }
   const rows = (data ?? []) as Row[];
+  type Report = { id: string; thread_id: string | null; agent_name: string | null; business_name: string | null; reporter_side: string; reason: string; details: string | null; status: string; created_at: string; messages: { side: string; body: string; at: string }[] };
+  const { data: rep } = await supabase.rpc("admin_live_agent_reports");
+  const reports = ((rep ?? []) as Report[]);
+  const openReports = reports.filter((r) => r.status === "open");
+  // Staff read reported conversations only; each view is logged.
+  if (openReports.length) await adminAudit(supabase, "live_agents.reports_viewed", undefined, { reports: openReports.map((r) => r.id) });
   const label = (s: string) => skills.find((k) => k.slug === s)?.label ?? s;
   const queue = rows.filter((r) => r.status === "pending" || (r.status === "live" && r.samples.some((s) => s.status === "pending")));
   const count = (s: string) => rows.filter((r) => r.status === s && !r.is_demo).length;
@@ -95,6 +102,27 @@ export default async function LiveAgentsAdminPage() {
           </div>
         )}
       </Section>
+
+      {reports.length > 0 && (
+        <Section title="Reported conversations" description="Only reported conversations are visible to staff, and every view is logged.">
+          <div className="space-y-3">
+            {reports.slice(0, 20).map((r) => (
+              <details key={r.id} className="rounded-2xl border bg-card p-4" open={r.status === "open"}>
+                <summary className="flex cursor-pointer flex-wrap items-center gap-2 text-sm">
+                  <Badge variant={r.status === "open" ? "destructive" : "outline"}>{r.status === "open" ? "Open" : "Resolved"}</Badge>
+                  <span className="font-medium">{r.reason.replace(/_/g, " ")}</span>
+                  <span className="text-muted-foreground">· {r.business_name ?? "Business"} and {r.agent_name ?? "Live Agent"} · reported by the {r.reporter_side} · <LocalDate iso={r.created_at} /></span>
+                </summary>
+                {r.details && <p className="mt-3 text-sm">{r.details}</p>}
+                <div className="mt-3 max-h-72 space-y-1.5 overflow-y-auto rounded-xl bg-muted/40 p-3 text-sm">
+                  {r.messages.map((m, i) => <p key={i}><span className="font-medium capitalize">{m.side}:</span> {m.body}</p>)}
+                </div>
+                {r.status === "open" && manage && <div className="mt-3"><ResolveReport id={r.id} /></div>}
+              </details>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="All profiles">
         <div className="overflow-x-auto rounded-xl border">

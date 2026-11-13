@@ -139,3 +139,28 @@ export function replyLabel(minutes: number | null) {
 
 export const tzLabel = (tz: string) =>
   ({ "America/Phoenix": "Arizona time", "America/Los_Angeles": "Pacific time", "America/Denver": "Mountain time", "America/Chicago": "Central time", "America/New_York": "Eastern time" })[tz] ?? tz;
+
+// Engagements: the four ways to book a Live Agent, and what each side sees.
+export const ENGAGEMENT_TYPES = [
+  { id: "on_demand", label: "On-demand", unit: "/min", detail: "Billed per connected minute, weekly." },
+  { id: "shift", label: "Shift", unit: "/hr", detail: "A booked block of time." },
+  { id: "retainer", label: "Monthly plan", unit: "/mo", detail: "A block of hours each month." },
+  { id: "trial", label: "30-minute paid trial", unit: "/hr", detail: "Try them out before booking more." },
+] as const;
+export const engagementLabel = (type: string) => ENGAGEMENT_TYPES.find((t) => t.id === type)?.label ?? type;
+
+// Rate is the agent's rate (per minute, per hour or per month). Total is
+// for the whole booking where it's known (a shift, a trial, a month).
+export function offerPrice(e: { type: string; rateCents: number; hours: number | null; businessFeePct: number; agentFeePct: number }) {
+  const unit = ENGAGEMENT_TYPES.find((t) => t.id === e.type)?.unit ?? "";
+  const base = e.type === "shift" ? e.rateCents * (e.hours ?? 0) : e.type === "trial" ? e.rateCents * 0.5 : e.type === "retainer" ? e.rateCents : null;
+  const pay = (c: number) => Math.round(c * (1 + e.businessFeePct / 100));
+  const get = (c: number) => Math.round(c * (1 - e.agentFeePct / 100));
+  return {
+    rate: `${money(e.rateCents, { exact: e.type === "on_demand" })}${unit}`,
+    businessRate: `${money(pay(e.rateCents), { exact: true })}${unit}`,
+    agentRate: `${money(get(e.rateCents), { exact: true })}${unit}`,
+    businessTotal: base == null ? null : money(pay(base), { exact: true }),
+    agentTotal: base == null ? null : money(get(base), { exact: true }),
+  };
+}

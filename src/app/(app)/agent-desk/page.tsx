@@ -9,6 +9,8 @@ import { AvailableNowSwitch, ListingActions } from "@/components/live-agents/des
 import { myLiveAgent, profileGaps, profileStrength } from "@/lib/live-agents/agent-data";
 import { AGENT_STATUS } from "@/lib/live-agents/setup";
 import { requireUser } from "@/lib/data";
+import { listThreads, myEngagements } from "@/lib/live-agents/messages";
+import { engagementLabel, offerPrice } from "@/lib/live-agents/types";
 
 export const metadata = { title: "Agent Desk · Redial Live Agents" };
 
@@ -46,6 +48,15 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
   const gaps = profileGaps(agent);
   const strength = profileStrength(agent);
   const pendingClips = Object.values(agent.clipStatus).filter((s) => s === "pending").length;
+  const [engagements, threads] = await Promise.all([myEngagements(), listThreads()]);
+  const work = engagements.filter((e) => e.side === "agent");
+  const offers = work.filter((e) => e.status === "offered" && e.offeredBy === "business");
+  const booked = work.filter((e) => e.status === "accepted" || e.status === "active");
+  const unread = (threads ?? []).filter((t) => t.side === "agent" && t.unread).length;
+  const line = (e: (typeof work)[number]) => {
+    const p = offerPrice(e);
+    return [e.startsOn && new Date(`${e.startsOn}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }), e.schedule, `you receive ${p.agentTotal ?? p.agentRate}${e.type === "retainer" ? "/mo" : ""}`].filter(Boolean).join(" · ");
+  };
   const first = agent.displayName.split(" ")[0];
 
   return (
@@ -87,11 +98,34 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
             <div className="mt-4 border-t pt-4"><ListingActions status={agent.status} /></div>
           </section>
 
+          <section className="space-y-3 rounded-2xl border p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-semibold">Offers and bookings</h2>
+              <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/messages" />}><Inbox /> Messages{unread ? ` (${unread} new)` : ""}</Button>
+            </div>
+            {offers.length === 0 && booked.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{agent.status === "live" ? "No offers yet. Businesses that message you and send offers show up here." : "Once your profile is live, offers from businesses show up here."}</p>
+            ) : (
+              <ul className="divide-y rounded-xl border">
+                {[...offers, ...booked].map((e) => (
+                  <li key={e.id}>
+                    <Link href={`/messages/${e.threadId}`} className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-muted/40">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{e.counterpart} · {engagementLabel(e.type)}</p>
+                        <p className="text-sm text-muted-foreground">{line(e)}</p>
+                      </div>
+                      <Badge variant={e.status === "offered" ? "secondary" : "success"}>{e.status === "offered" ? "Offer for you" : "Booked"}</Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className="space-y-3">
             <h2 className="font-semibold">Coming to your Agent Desk</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { icon: Inbox, t: "Messages and offers", d: "Businesses message you, send offers and book trials. Accept, counter or decline here." },
                 { icon: PhoneIncoming, t: "Incoming transfers", d: "Answer calls in your browser, with the caller's details, the business's script and live AI suggestions." },
                 { icon: CalendarRange, t: "Shifts calendar", d: "Your booked shifts and monthly clients in one place." },
                 { icon: Banknote, t: "Earnings and payouts", d: "Weekly payouts by direct deposit through Stripe, and your tax documents." },

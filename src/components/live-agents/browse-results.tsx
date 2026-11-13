@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { AgentCard } from "@/components/live-agents/agent-card";
+import type { Hiring } from "@/components/live-agents/message-button";
 import type { MapAgent } from "@/components/live-agents/agents-map";
 import { money, type Filters, type LiveAgent, type Skill } from "@/lib/live-agents/types";
 import { cn } from "@/lib/utils";
@@ -12,7 +13,7 @@ const AgentsMap = dynamic(() => import("@/components/live-agents/agents-map").th
 });
 
 // Results in the chosen view. Cards and map pins share the hovered agent.
-export function BrowseResults({ agents, skills, view }: { agents: LiveAgent[]; skills: Skill[]; view: Filters["view"] }) {
+export function BrowseResults({ agents, skills, view, hiring }: { agents: LiveAgent[]; skills: Skill[]; view: Filters["view"]; hiring: Hiring }) {
   const [active, setActive] = useState<string | null>(null);
   const bySlug = useMemo(() => new Map(skills.map((s) => [s.slug, s])), [skills]);
   const points = useMemo<MapAgent[]>(() => agents.filter((a) => a.lat != null && a.lng != null).map((a) => ({
@@ -34,7 +35,7 @@ export function BrowseResults({ agents, skills, view }: { agents: LiveAgent[]; s
   return (
     <div className={cn("grid grid-cols-1 gap-6", view === "grid" && "lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start xl:grid-cols-[minmax(0,1fr)_28rem]")}>
       <div className={cn("grid grid-cols-1 gap-4", view === "grid" && "md:grid-cols-2")}>
-        {agents.map((a) => <AgentCard key={a.id} agent={a} skills={bySlug} layout={view === "list" ? "list" : "grid"} active={active === a.id} onHover={setActive} />)}
+        {agents.map((a) => <AgentCard key={a.id} agent={a} skills={bySlug} hiring={hiring} layout={view === "list" ? "list" : "grid"} active={active === a.id} onHover={setActive} />)}
       </div>
       {view === "grid" && (
         <aside className="hidden lg:sticky lg:top-20 lg:block">

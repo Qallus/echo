@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { VoiceSamplePlayer } from "@/components/live-agents/voice-sample";
-import { reviewLiveAgent } from "@/lib/admin/actions/live-agents";
+import { resolveLiveAgentReport, reviewLiveAgent } from "@/lib/admin/actions/live-agents";
 
 export type AdminClip = { id: string; title: string; transcript: string | null; url: string; duration_s: number | null; status: string; ai_voice: boolean };
 
@@ -64,4 +64,10 @@ export function ClipReview({ clip, canManage }: { clip: AdminClip; canManage: bo
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
+}
+
+export function ResolveReport({ id }: { id: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return <Button size="sm" variant="outline" disabled={pending} onClick={() => start(async () => { await resolveLiveAgentReport(id); router.refresh(); })}><Check /> Mark resolved</Button>;
 }

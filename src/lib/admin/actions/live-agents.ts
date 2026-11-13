@@ -27,3 +27,14 @@ export async function reviewLiveAgent(target: string, decision: Decision, note?:
   revalidatePath("/live-agents", "layout");
   return { ok: DONE[decision] };
 }
+
+export async function resolveLiveAgentReport(id: string): Promise<Result> {
+  await requireStaff("marketplace.manage");
+  if (!isUuid(id)) return { error: "Report not found." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_resolve_live_agent_report", { report: id });
+  if (error) return { error: "Couldn't save that. Try again." };
+  await adminAudit(supabase, "live_agents.report_resolved", { type: "live_agent_report", id });
+  revalidatePath("/admin/live-agents");
+  return { ok: "Marked resolved." };
+}
