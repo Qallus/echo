@@ -144,6 +144,18 @@ export const FAQ_TOPICS: FaqTopic[] = [
     ],
   },
   {
+    id: "live-agents", title: "Redial Live Agents", short: "Live Agents",
+    blurb: "Real people who answer your business calls, with your Redial AI assistant answering first.",
+    items: [
+      { q: "What is a Live Agent?", a: "A Live Agent is a real person who answers calls for your business through Redial. Your AI assistant still answers first; when a caller needs a person, or nobody on your team picks up, the call rings your booked Live Agent along with what the caller already told the AI.", tags: "human receptionist answering service" },
+      { q: "How do I choose a Live Agent?", a: "Browse Live Agents by skill, language, rate, equipment and workspace, listen to their voice samples, read reviews, then message them. Contact details stay hidden until you book, and everything happens inside Redial.", tags: "find hire search browse" },
+      { q: "How are Live Agents paid for?", a: "Each Live Agent sets their own rate: per minute on demand, per shift, or monthly. You see the rate plus Redial's service fee before you pay. On-demand minutes are billed weekly to your saved card; shifts and monthly bookings are paid when you book.", tags: "price cost fee billing rates" },
+      { q: "What if something goes wrong with a booking?", a: "Report a problem from the booking within 3 days of the work finishing and Redial holds the Live Agent's payout while we look into it. Paid bookings can be refunded when the work wasn't done.", tags: "dispute refund problem" },
+      { q: "How do I become a Live Agent?", a: "Create a free account, build your profile (experience, skills, voice samples, equipment, rates and hours) and send it for review. Once approved you're listed, businesses can message and book you, and you take calls in the Agent Desk in your browser.", tags: "apply job work from home earn" },
+      { q: "How do Live Agents get paid?", a: "Through a Stripe payout account you set up from Earnings. Payment for completed work is sent after a short hold, straight to your bank or debit card.", tags: "payout earnings bank stripe" },
+    ],
+  },
+  {
     id: "support", title: "Account and support", short: "Support",
     items: [
       { q: "How do I contact you?", a: `Use the contact form, email ${COMPANY.email} or call ${COMPANY.phone}. We reply within one business day.`, tags: "support help email phone" },

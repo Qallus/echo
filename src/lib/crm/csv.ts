@@ -27,7 +27,7 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-const FIELDS: Record<keyof Omit<ImportRow, "details">, RegExp> = {
+const FIELDS: Record<keyof Omit<ImportRow, "details" | "phones" | "emails" | "addresses" | "photo">, RegExp> = {
   first_name: /^(first ?name|first|given ?name)$/,
   last_name: /^(last ?name|last|surname|family ?name)$/,
   email: /^(e-?mail|email ?address|work ?email)$/,
@@ -42,6 +42,7 @@ const FIELDS: Record<keyof Omit<ImportRow, "details">, RegExp> = {
   website: /^(website|url|web ?site|company ?website)$/,
   notes: /^(notes?|description|comments?)$/,
   tags: /^(tags?|labels?)$/,
+  birthday: /^(birthday|birth ?date|date of birth|dob)$/,
 };
 
 // Header row -> field per column ("name" splits into first and last).

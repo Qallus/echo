@@ -165,7 +165,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
             <div key={c.id} className="flex items-center gap-3 rounded-xl border bg-card p-3 hover:border-primary/40">
               <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${contactName(c)}`} />
               <button type="button" onClick={() => setDrawer(c.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                <UserAvatar name={contactName(c)} email={c.email ?? ""} src={null} size="md" />
+                <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="md" />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2"><span className="truncate text-sm font-medium">{contactName(c)}</span><RoleBadge role={c.role} /></span>
                   <span className="block truncate text-xs text-muted-foreground">{[c.title, c.company?.name, [c.city, c.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ") || c.email || "—"}</span>
@@ -186,7 +186,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
               <div className="flex items-start gap-3">
                 <input type="checkbox" className="mt-1" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${contactName(c)}`} />
                 <button type="button" onClick={() => setDrawer(c.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                  <UserAvatar name={contactName(c)} email={c.email ?? ""} src={null} size="md" />
+                  <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="md" />
                   <span className="min-w-0"><span className="block truncate font-medium">{contactName(c)}</span><span className="block truncate text-xs text-muted-foreground">{[c.title, c.company?.name].filter(Boolean).join(" · ") || "—"}</span></span>
                 </button>
                 <RowActions actions={actions(c)} />
@@ -223,7 +223,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
             <div className="space-y-5">
               <SheetHeader className="p-0">
                 <div className="flex items-center gap-3">
-                  <UserAvatar name={contactName(d)} email={d.email ?? ""} src={null} size="lg" />
+                  <UserAvatar name={contactName(d)} email={d.email ?? ""} src={d.photo ?? null} size="lg" />
                   <div className="min-w-0"><SheetTitle className="truncate">{contactName(d)}</SheetTitle><p className="truncate text-sm text-muted-foreground">{[d.title, d.company?.name].filter(Boolean).join(" · ")}</p></div>
                 </div>
               </SheetHeader>

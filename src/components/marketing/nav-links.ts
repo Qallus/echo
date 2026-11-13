@@ -1,9 +1,9 @@
 import {
-  AudioLines, AudioWaveform, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, ShieldCheck, Tag, Waypoints, type LucideIcon,
+  AudioLines, AudioWaveform, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, Search, ShieldCheck, Tag, UserRoundPlus, Users, Waypoints, type LucideIcon,
 } from "lucide-react";
 
 // The public site's product navigation, shared by the desktop mega menu and
-// the phone menu: Redial, phone service and Echo, each with its own column,
+// the phone menu: Redial, phone service, Live Agents and Echo, each with its own column,
 // worded so the columns don't read as duplicates. Five links each with a
 // one-line description, so the columns line up.
 
@@ -29,6 +29,16 @@ export const NAV_PRODUCTS: NavProduct[] = [
       { href: "/business-phone#phones", title: "Phones that work", desc: "Grandstream, Yealink, Poly and more", icon: Headset },
       { href: "/pricing#phone-service", title: "Phone plans", desc: "Home Phone and Business Phone", icon: Tag },
       { href: "/recording-studio", title: "Recording Studio", desc: "Greetings, phone menus, AI voices", icon: AudioWaveform },
+    ],
+  },
+  {
+    name: "Live Agents", tagline: "Real people on your phones", icon: Users,
+    links: [
+      { href: "/live-agents", title: "Search Live Agents", desc: "By skill, language and availability", icon: Search },
+      { href: "/live-agents/how-it-works", title: "How it works", desc: "AI answers first, then a person", icon: Waypoints },
+      { href: "/live-agents/how-it-works#pricing", title: "Live Agent rates", desc: "Per minute, per shift or monthly", icon: Tag },
+      { href: "/become-a-live-agent", title: "Become an agent", desc: "Answer calls from home, your hours", icon: UserRoundPlus },
+      { href: "/faq#topic-live-agents", title: "Questions & answers", desc: "Booking, payment, getting listed", icon: CircleHelp },
     ],
   },
   {

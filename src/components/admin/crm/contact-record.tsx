@@ -51,7 +51,7 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
       </Link>
 
       <div className="flex flex-wrap items-start gap-4 rounded-xl border bg-card p-4">
-        <UserAvatar name={contactName(contact)} email={contact.email ?? ""} src={null} size="lg" />
+        <UserAvatar name={contactName(contact)} email={contact.email ?? ""} src={contact.photo ?? null} size="lg" />
         <div className="min-w-0 flex-1 space-y-1">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{contactName(contact)}</h1>
           <p className="text-sm text-muted-foreground">
@@ -97,6 +97,7 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
             {field("Source", "source")}{field("Interest", "interest")}{field("Website", "website")}{field("City", "city")}{field("State", "state")}
             <DetailRow label="Tags">{readOnly ? contact.tags.join(", ") : <Editable value={contact.tags.join(", ")} placeholder="Add tags" onSave={(v) => save({ tags: v })} />}</DetailRow>
           </Panel>
+          <ReachPanel contact={contact} />
           {contact.notes && <Panel title="Notes"><p className="text-sm whitespace-pre-wrap">{contact.notes}</p></Panel>}
           {details.length > 0 && (
             <Panel title="Imported details">
@@ -116,5 +117,30 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
         </div>
       </div>
     </div>
+  );
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Every number, email and address from the phone, with its label, plus birthday.
+function ReachPanel({ contact: c }: { contact: Contact }) {
+  const phones = c.phones ?? [], emails = c.emails ?? [], addresses = c.addresses ?? [];
+  const extra = phones.length > 1 || emails.length > 1 || addresses.length > 0 || c.birthday;
+  if (!extra) return null;
+  return (
+    <Panel title="Phones, emails & addresses">
+      {phones.map((p, i) => (
+        <DetailRow key={`p${i}`} label={`${cap(p.label)} phone`}>
+          <button type="button" className="hover:underline" onClick={() => startCall({ number: p.value, name: contactName(c), contactId: c.id })}>{p.value}</button>
+        </DetailRow>
+      ))}
+      {emails.map((e, i) => <DetailRow key={`e${i}`} label={`${cap(e.label)} email`}><span className="break-all">{e.value}</span></DetailRow>)}
+      {addresses.map((a, i) => (
+        <DetailRow key={`a${i}`} label={`${cap(a.label)} address`}>
+          <span className="whitespace-pre-line">{[a.street, [a.city, [a.state, a.zip].filter(Boolean).join(" ")].filter(Boolean).join(", "), a.country].filter(Boolean).join("\n")}</span>
+        </DetailRow>
+      ))}
+      {c.birthday && <DetailRow label="Birthday">{new Date(`${c.birthday}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</DetailRow>}
+    </Panel>
   );
 }

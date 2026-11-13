@@ -72,11 +72,11 @@ export async function deleteContacts(ids: string[]): Promise<Result> {
 export type { ImportRow } from "@/lib/crm/ops";
 
 // CSV and phone import (see importContactRows).
-export async function importContacts(rows: ImportRow[], role: "contact" | "lead" = "contact"): Promise<Result> {
+export async function importContacts(rows: ImportRow[], role: "contact" | "lead" = "contact", onDuplicate: "skip" | "fill" = "skip") {
   await requireStaff("crm.manage");
-  const { ok, error } = await importContactRows(await createClient(), rows, role);
+  const res = await importContactRows(await createClient(), rows, role, onDuplicate === "fill" ? "fill" : "skip");
   refresh();
-  return error ? { error } : { ok };
+  return res;
 }
 
 // A call, email, text, meeting or note that happened outside Echo.

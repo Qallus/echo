@@ -10,8 +10,8 @@ import { NAV_MORE, NAV_PRODUCTS } from "./nav-links";
 import { Named } from "@/components/marketing/agent-name";
 
 // Desktop header navigation (lg up): a Features mega menu with a column each
-// for Redial, phone service and Echo plus a get-the-app card, then the other
-// pages.
+// for Redial, phone service, Live Agents and Echo plus a get-the-app card
+// (wide screens), then the other pages.
 export function SiteNav() {
   const plain = cn(navigationMenuTriggerStyle(), "bg-transparent font-normal text-muted-foreground hover:text-foreground");
   return (
@@ -20,9 +20,9 @@ export function SiteNav() {
         <NavigationMenuItem>
           <NavigationMenuTrigger className="bg-transparent font-normal text-muted-foreground hover:text-foreground data-popup-open:text-foreground">Features</NavigationMenuTrigger>
           <NavigationMenuContent>
-            <div className="grid w-[min(1060px,calc(100vw-2rem))] grid-cols-[1fr_1fr_1fr_14rem] gap-2 p-2">
+            <div className="grid w-[min(1280px,calc(100vw-2rem))] grid-cols-4 gap-2 p-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_13rem]">
               {NAV_PRODUCTS.map(({ name, tagline, icon: Icon, links }) => (
-                <div key={name} className="p-1">
+                <div key={name} className="min-w-0 p-1">
                   <div className="flex items-center gap-2.5 px-2 pt-1 pb-3">
                     <span className="flex size-8 items-center justify-center rounded-lg bg-foreground text-background"><Icon className="size-4" /></span>
                     <div className="leading-tight">
@@ -45,7 +45,7 @@ export function SiteNav() {
                   </ul>
                 </div>
               ))}
-              <AppCard />
+              <AppCard className="hidden xl:flex" />
             </div>
           </NavigationMenuContent>
         </NavigationMenuItem>

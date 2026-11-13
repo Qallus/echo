@@ -74,7 +74,12 @@ export type Contact = {
   address: string | null; city: string | null; state: string | null; zip: string | null; details: Record<string, string>;
   created_at: string; updated_at: string;
   company?: { id: string; name: string } | null;
+  // From phone imports (optional until the 20261114090000 update has run).
+  photo?: string | null; phones?: Labeled[]; emails?: Labeled[]; addresses?: ContactAddress[]; birthday?: string | null;
 };
+
+export type Labeled = { label: string; value: string };
+export type ContactAddress = { label: string; street: string; city: string; state: string; zip: string; country: string };
 
 export type Deal = {
   id: string; title: string; stage: DealStage; value_cents: number; currency: string; company_id: string | null; contact_id: string | null;

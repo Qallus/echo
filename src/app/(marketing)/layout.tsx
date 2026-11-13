@@ -4,12 +4,21 @@ import { Button } from "@/components/ui/button";
 import { AppBadges } from "@/components/marketing/app-badges";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
 import { SiteNav } from "@/components/marketing/site-nav";
+import { SiteSearch } from "@/components/marketing/site-search";
 import { CartButton } from "@/components/store/store";
 import { CatalogSync } from "@/components/store/catalog-sync";
 import { loadCatalog } from "@/lib/billing/catalog-server";
 import { ThemeToggle } from "@/components/theme";
 import { getUser } from "@/lib/data";
 import { COMPANY } from "@/lib/company";
+
+// Footer columns: four of five links each, so the rows line up.
+const FOOTER: { title: string; links: [string, string][] }[] = [
+  { title: "Redial", links: [["Features", "/#redial"], ["For business", "/redial/business"], ["Live call controls", "/#controls"], ["Pricing", "/pricing"], ["FAQ", "/faq"]] },
+  { title: "Phone service", links: [["Home phone", "/home-phone"], ["Business phone", "/business-phone"], ["Phones that work", "/compatibility"], ["Phone plans", "/pricing#phone-service"], ["Recording Studio", "/recording-studio"]] },
+  { title: "Live Agents", links: [["Search Live Agents", "/live-agents"], ["How it works", "/live-agents/how-it-works"], ["Live Agent rates", "/live-agents/how-it-works#pricing"], ["Become an agent", "/become-a-live-agent"], ["Questions & answers", "/faq#topic-live-agents"]] },
+  { title: "Company", links: [["Contact", "/contact"], ["Book a demo", "/book"], ["Developers", "/developers"], ["Sign in", "/login"], ["Create account", "/signup"]] },
+];
 
 // Public site: header and footer around the landing and pricing pages.
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -18,16 +27,17 @@ export default async function MarketingLayout({ children }: { children: React.Re
     <div className="flex min-h-svh flex-col bg-background">
       <CatalogSync products={catalog} />
       <header className="sticky top-0 z-30 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
             <AudioLines className="size-5" />
             <span className="text-lg font-semibold tracking-[0.2em]">REDIAL</span>
           </Link>
-          {/* Right side, left to right: navigation, cart, Sign in, Get started, theme
+          {/* Right side, left to right: navigation, search, cart, Sign in, Get started, theme
               (the phone menu replaces the navigation below lg). */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-0.5 sm:gap-2">
             <SiteNav />
             <span className="mx-1 hidden h-5 w-px bg-border lg:block" />
+            <SiteSearch />
             <CartButton />
             {user ? (
               <Button nativeButton={false} render={<Link href="/" />}>Open Echo</Button>
@@ -46,50 +56,40 @@ export default async function MarketingLayout({ children }: { children: React.Re
       <main className="flex-1">{children}</main>
 
       <footer className="border-t">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 text-sm sm:flex-row sm:items-start sm:px-6">
-          <div className="space-y-2">
+        <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 text-sm sm:px-6 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16">
+          <div className="space-y-4">
             <div className="flex items-center gap-2">
               <AudioLines className="size-4" />
               <span className="font-semibold tracking-[0.2em]">REDIAL</span>
             </div>
-            <p className="max-w-xs text-muted-foreground">Your AI assistant answers. You take the calls that matter. With Echo recordings and transcripts built in.</p>
-            <AppBadges source="footer" signedIn={!!user} className="pt-2" />
+            <p className="text-muted-foreground">Your AI assistant answers. You take the calls that matter. With Echo recordings and transcripts built in.</p>
+            <div className="space-y-1.5 text-muted-foreground">
+              <a href={`mailto:${COMPANY.email}`} className="block hover:text-foreground">{COMPANY.email}</a>
+              <a href={COMPANY.phoneHref} className="block hover:text-foreground">{COMPANY.phone}</a>
+              <p>{COMPANY.address}</p>
+            </div>
           </div>
-          <nav className="grid grid-cols-2 gap-x-10 gap-y-6 sm:ml-auto sm:flex">
-            <div className="space-y-2">
-              <p className="font-medium">Product</p>
-              <Link href="/#redial" className="block text-muted-foreground hover:text-foreground">Features</Link>
-              <Link href="/redial/business" className="block text-muted-foreground hover:text-foreground">For business</Link>
-              <Link href="/home-phone" className="block text-muted-foreground hover:text-foreground">Home phone</Link>
-              <Link href="/business-phone" className="block text-muted-foreground hover:text-foreground">Business phone</Link>
-              <Link href="/recording-studio" className="block text-muted-foreground hover:text-foreground">Recording Studio</Link>
-              <Link href="/live-agents" className="block text-muted-foreground hover:text-foreground">Live Agents</Link>
-              <Link href="/become-a-live-agent" className="block text-muted-foreground hover:text-foreground">Become a Live Agent</Link>
-              <Link href="/compatibility" className="block text-muted-foreground hover:text-foreground">Compatibility</Link>
-              <Link href="/pricing" className="block text-muted-foreground hover:text-foreground">Pricing</Link>
-              <Link href="/faq" className="block text-muted-foreground hover:text-foreground">FAQ</Link>
-              <Link href="/developers" className="block text-muted-foreground hover:text-foreground">Developers</Link>
-              <Link href="/contact" className="block text-muted-foreground hover:text-foreground">Contact</Link>
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium">Legal</p>
-              <Link href="/terms" className="block text-muted-foreground hover:text-foreground">Terms of Service</Link>
-              <Link href="/privacy" className="block text-muted-foreground hover:text-foreground">Privacy Policy</Link>
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium">Account</p>
-              <Link href="/login" className="block text-muted-foreground hover:text-foreground">Sign in</Link>
-              <Link href="/signup" className="block text-muted-foreground hover:text-foreground">Create account</Link>
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium">Contact</p>
-              <a href={`mailto:${COMPANY.email}`} className="block text-muted-foreground hover:text-foreground">{COMPANY.email}</a>
-              <a href={COMPANY.phoneHref} className="block text-muted-foreground hover:text-foreground">{COMPANY.phone}</a>
-              <p className="max-w-[12rem] text-muted-foreground">{COMPANY.address}</p>
-            </div>
+          <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
+            {FOOTER.map((col) => (
+              <div key={col.title} className="space-y-2.5">
+                <p className="font-medium">{col.title}</p>
+                {col.links.map(([label, href]) => (
+                  <Link key={href} href={href} className="block text-muted-foreground hover:text-foreground">{label}</Link>
+                ))}
+              </div>
+            ))}
           </nav>
         </div>
-        <div className="mx-auto w-full max-w-6xl px-4 pb-8 text-xs text-muted-foreground sm:px-6">© {new Date().getFullYear()} Qallus LLC. Redial is a product of Qallus LLC.</div>
+        <div className="border-t">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 text-xs text-muted-foreground sm:px-6 md:flex-row md:items-center">
+            <p>© {new Date().getFullYear()} Qallus LLC. Redial is a product of Qallus LLC.</p>
+            <div className="flex gap-4">
+              <Link href="/terms" className="hover:text-foreground">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link>
+            </div>
+            <AppBadges source="footer" signedIn={!!user} className="md:ml-auto" />
+          </div>
+        </div>
       </footer>
     </div>
   );
