@@ -19,14 +19,15 @@ export function AgentCard({ agent: a, skills, layout = "grid", active, onHover }
   return (
     <article
       onMouseEnter={() => onHover?.(a.id)} onMouseLeave={() => onHover?.(null)}
-      className={cn("flex flex-col gap-4 rounded-2xl border bg-card p-5 transition", active ? "border-foreground/40 shadow-md" : "hover:border-foreground/25",
+      className={cn("relative flex cursor-pointer flex-col gap-4 rounded-2xl border bg-card p-5 transition", active ? "border-foreground/40 shadow-md" : "hover:border-foreground/25",
         layout === "list" && "md:flex-row md:items-center")}
     >
       <div className={cn("flex min-w-0 gap-4", layout === "list" && "md:w-[22rem] md:shrink-0")}>
         <AgentAvatar name={a.displayName} url={a.avatarUrl} online={a.availableNow} />
         <div className="min-w-0 space-y-1">
           <h3 className="font-semibold leading-tight">
-            <Link href={`/live-agents/${a.handle}`} className="hover:underline">{a.displayName}</Link>
+            {/* The name's link covers the whole card; the player and buttons sit above it. */}
+            <Link href={`/live-agents/${a.handle}`} className="after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring">{a.displayName}</Link>
           </h3>
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1"><MapPin className="size-3" /> {a.city}, {a.region}</span>
@@ -47,7 +48,7 @@ export function AgentCard({ agent: a, skills, layout = "grid", active, onHover }
           <p className="text-xs text-muted-foreground">{a.yearsExperience} years experience · {a.languages.join(" / ")}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">{chips.map((s) => <SkillChip key={s.slug} skill={s} />)}</div>
-        {sample ? <VoiceSamplePlayer sample={sample} compact /> : <p className="rounded-xl border border-dashed p-3 text-xs text-muted-foreground">Voice sample coming soon</p>}
+        {sample ? <VoiceSamplePlayer sample={sample} compact className="relative z-10" /> : <p className="rounded-xl border border-dashed p-3 text-xs text-muted-foreground">Voice sample coming soon</p>}
       </div>
 
       <div className={cn("flex flex-wrap items-end justify-between gap-3 border-t pt-4", layout === "list" && "md:w-48 md:shrink-0 md:flex-col md:items-stretch md:border-t-0 md:border-l md:pt-0 md:pl-5")}>
@@ -56,7 +57,7 @@ export function AgentCard({ agent: a, skills, layout = "grid", active, onHover }
           {a.perMinuteCents != null && <p className="text-xs text-muted-foreground">{money(a.perMinuteCents, { exact: true })}/min on demand</p>}
           {a.industries.length > 0 && <p className="text-xs text-muted-foreground">{a.industries.slice(0, 2).join(" · ")}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="relative z-10 flex gap-2">
           <InterestButton kind="business" size="sm" variant="outline" agentName={firstName(a.displayName)} source={`/live-agents#${a.handle}`}>Message</InterestButton>
           <Button size="sm" variant="secondary" nativeButton={false} render={<Link href={`/live-agents/${a.handle}`} />}>View profile <ArrowUpRight /></Button>
         </div>
