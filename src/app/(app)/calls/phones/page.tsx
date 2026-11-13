@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRightLeft, Phone } from "lucide-react";
+import { ArrowLeft, Phone } from "lucide-react";
 import type { E911Row } from "@/components/redial/e911-card";
 import { PhonesView, type DeviceRow } from "@/components/redial/phones-view";
 import { Button } from "@/components/ui/button";
@@ -59,12 +59,11 @@ export default async function PhonesPage() {
     return live;
   }))).filter((x): x is E911Row => Boolean(x));
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-1">
         <Button variant="ghost" size="sm" className="-ml-2" nativeButton={false} render={<Link href="/calls" />}><ArrowLeft /> Calls</Button>
         <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><Phone className="size-7" /> Phones</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">Desk, cordless and Wi-Fi phones that ring with your mobile and call out from your Redial number. Register the line&apos;s 911 address, add a phone, then type its setup address into the phone once.</p>
-        <Button variant="outline" size="sm" className="mt-2" nativeButton={false} render={<Link href="/calls/port" />}><ArrowRightLeft /> Bring a number you already have</Button>
+        <p className="max-w-2xl text-sm text-muted-foreground">Desk, cordless and Wi-Fi phones that ring with your mobile and call out from your Redial number.</p>
       </div>
       {lines.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-8 text-center">
