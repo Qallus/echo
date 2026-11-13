@@ -34,6 +34,8 @@ export async function saveE911(lineId: string, form: E911Form): Promise<Result> 
   if (!line || line.owner_id !== user?.id) return { error: "Only the line's owner can set its 911 address." };
 
   const r = await registerE911(line.number, a);
+  // The number kept its current address: leave Redial's copy showing that.
+  if (r.error && r.status !== "failed") { revalidatePath("/calls/phones"); return { error: r.error }; }
   const row = {
     customer_name: a.customerName, street: a.street, street2: a.street2 ?? null, city: a.city, region: a.region, postal_code: a.postalCode,
     address_sid: r.addressSid, status: r.status === "none" ? "failed" : r.status, message: r.error ?? r.message ?? null,

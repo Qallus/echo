@@ -84,6 +84,26 @@ export async function setDeviceRing(id: string, ring: boolean): Promise<Result> 
   return error ? { error: "Couldn't change that phone." } : done({ ok: ring ? "This phone rings for calls." : "This phone won't ring for calls." });
 }
 
+// The phone's own settings page on the member's network ("192.168.4.119" or
+// a full address). Empty clears it.
+export async function setDeviceWebUrl(id: string, raw: string): Promise<Result> {
+  await requireUser();
+  const text = raw.trim();
+  let url: string | null = null;
+  if (text) {
+    try {
+      const u = new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`);
+      if (!["http:", "https:"].includes(u.protocol) || !u.hostname || u.username || u.password) throw new Error();
+      url = u.toString().replace(/\/$/, "");
+    } catch { return { error: "Enter the phone's address, like 192.168.4.119." }; }
+    if (url.length > 200) return { error: "That address is too long." };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("redial_devices").update({ web_url: url }).eq("id", id).select("id");
+  if (error || !data?.length) return { error: "Couldn't save that. If this keeps happening, the latest database update may not be applied yet." };
+  return done({ ok: url ? "Saved. The link opens the phone's settings on the same network as the phone." : "Link removed." });
+}
+
 export async function removeDevice(id: string): Promise<Result> {
   await requireUser();
   const supabase = await createClient();

@@ -11,29 +11,53 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Phones · Echo" };
 
+type Db = Awaited<ReturnType<typeof createClient>>;
+
+// The phones, with their settings-page link when that column exists (it
+// arrives in a later database update; until then the page works without it).
+async function loadDevices(db: Db, ids: string[], cols: string): Promise<DeviceRow[]> {
+  if (!ids.length) return [];
+  const withUrl = await db.from("redial_devices").select(`${cols}, web_url`).in("line_id", ids).order("created_at");
+  if (!withUrl.error) return (withUrl.data ?? []) as unknown as DeviceRow[];
+  const { data } = await db.from("redial_devices").select(cols).in("line_id", ids).order("created_at");
+  return ((data ?? []) as unknown as DeviceRow[]).map((d) => ({ ...d, web_url: null }));
+}
+
 // Desk, cordless and Wi-Fi phones on the member's lines (owners only).
 export default async function PhonesPage() {
   await requireUser();
   const lines = (await myLines()).filter((l) => l.access.owner);
   const supabase = await createClient();
-  const [{ data }, sip, { data: e911 }, profile] = await Promise.all([
-    lines.length
-      ? supabase.from("redial_devices").select("id, line_id, label, model, vendor, mac, sip_username, ring, last_provisioned_at, created_at").in("line_id", lines.map((l) => l.id)).order("created_at")
-      : Promise.resolve({ data: [] }),
+  const ids = lines.map((l) => l.id);
+  const cols = "id, line_id, label, model, vendor, mac, sip_username, ring, last_provisioned_at, created_at";
+  const [devices, sip, { data: e911 }, profile] = await Promise.all([
+    loadDevices(supabase, ids, cols),
     sipConfig(),
-    lines.length ? supabase.from("redial_e911").select("line_id, customer_name, street, street2, city, region, postal_code, status, message, updated_at").in("line_id", lines.map((l) => l.id)) : Promise.resolve({ data: [] }),
+    ids.length ? supabase.from("redial_e911").select("line_id, customer_name, street, street2, city, region, postal_code, status, message, updated_at").in("line_id", ids) : Promise.resolve({ data: [] }),
     getMyProfile(),
   ]);
-  // Twilio finishes some 911 registrations a few minutes later: check again.
-  const addresses = await Promise.all(((e911 ?? []) as E911Row[]).map(async (row) => {
-    if (row.status !== "pending") return row;
-    const line = lines.find((l) => l.id === row.line_id);
-    const now = line ? await e911OnNumber(line.number) : null;
-    if (!now || now.error || now.status === "pending" || now.status === "none") return row;
-    const status = now.status;
-    await supabase.from("redial_e911").update({ status, message: now.message ?? null }).eq("line_id", row.line_id);
-    return { ...row, status, message: now.message ?? null };
-  }));
+  // Twilio is the record: show the address that's really on each number
+  // (even one set outside Redial), and keep Redial's copy in step.
+  const saved = (e911 ?? []) as E911Row[];
+  const addresses = (await Promise.all(lines.map(async (l): Promise<E911Row | null> => {
+    const row = saved.find((x) => x.line_id === l.id) ?? null;
+    const now = await e911OnNumber(l.number);
+    if (now.error) return row;
+    if (!now.address) {
+      if (row?.status !== "registered") return row;
+      return { ...row, status: "failed", message: "This address isn't on your number anymore. Register it again." };
+    }
+    const a = now.address;
+    const status = now.status === "none" ? "failed" : now.status;
+    const live: E911Row = {
+      line_id: l.id, customer_name: a.customerName, street: a.street, street2: a.street2 ?? null, city: a.city, region: a.region,
+      postal_code: a.postalCode, status, message: now.message ?? null, updated_at: row?.updated_at ?? new Date().toISOString(),
+    };
+    if (!row || row.status !== status || row.street !== live.street || row.postal_code !== live.postal_code) {
+      await supabase.from("redial_e911").upsert({ ...live, updated_at: undefined, address_sid: now.addressSid }, { onConflict: "line_id" });
+    }
+    return live;
+  }))).filter((x): x is E911Row => Boolean(x));
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 sm:px-6">
       <div className="space-y-1">
@@ -49,7 +73,7 @@ export default async function PhonesPage() {
           <Button className="mt-4" nativeButton={false} render={<Link href="/setup" />}>Set up Redial</Button>
         </div>
       ) : (
-        <PhonesView lines={lines.map((l) => ({ id: l.id, label: l.label, number: l.number }))} devices={(data ?? []) as DeviceRow[]} e911={addresses} ownerName={profile.fullName ?? ""} ready={sipReady(sip)} domain={sip.domain} />
+        <PhonesView lines={lines.map((l) => ({ id: l.id, label: l.label, number: l.number }))} devices={devices} e911={addresses} ownerName={profile.fullName ?? ""} ready={sipReady(sip)} domain={sip.domain} />
       )}
     </div>
   );

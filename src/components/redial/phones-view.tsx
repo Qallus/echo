@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Copy, KeyRound, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, ExternalLink, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pick } from "@/components/ui/pick";
@@ -9,13 +9,13 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { E911Card, type E911Row } from "@/components/redial/e911-card";
-import { addDevice, removeDevice, resetDevice, setDeviceRing, type DeviceLogin } from "@/lib/redial/device-actions";
+import { addDevice, removeDevice, resetDevice, setDeviceRing, setDeviceWebUrl, type DeviceLogin } from "@/lib/redial/device-actions";
 import { PHONE_MODELS, VENDORS, type PhoneVendor } from "@/lib/redial/phone-models";
 
 // The Phones page: add a phone by model and MAC address, see the setup
 // address and login (shown once), and choose which phones ring.
 
-export type DeviceRow = { id: string; line_id: string; label: string; model: string; vendor: PhoneVendor; mac: string | null; sip_username: string; ring: boolean; last_provisioned_at: string | null; created_at: string };
+export type DeviceRow = { id: string; line_id: string; label: string; model: string; vendor: PhoneVendor; mac: string | null; sip_username: string; ring: boolean; last_provisioned_at: string | null; created_at: string; web_url: string | null };
 type LineRow = { id: string; label: string; number: string };
 
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
@@ -52,6 +52,31 @@ function SetupSteps({ vendor, login }: { vendor: PhoneVendor; login: DeviceLogin
   return <p className="text-sm">Open the phone&apos;s settings, go to <span className="font-medium">{VENDORS[vendor].setup}</span>, and enter the address below ({vendor === "yealink" ? "with https://" : path}). Then restart the phone.</p>;
 }
 
+// The phone's own settings page (on the member's network), saved per phone.
+function WebLink({ device, busy, onSave }: { device: DeviceRow; busy: boolean; onSave: (url: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(device.web_url ?? "");
+  if (editing) {
+    return (
+      <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); onSave(value); setEditing(false); }}>
+        <Input autoFocus value={value} onChange={(e) => setValue(e.target.value)} placeholder="192.168.4.119" aria-label={`${device.label} settings page address`} className="h-8 max-w-60 font-mono text-xs" />
+        <Button size="sm" type="submit" disabled={busy}>Save</Button>
+        <Button size="sm" type="button" variant="ghost" onClick={() => { setValue(device.web_url ?? ""); setEditing(false); }}>Cancel</Button>
+        <span className="w-full text-xs text-muted-foreground">On the handset: Menu → Status shows its IP address. The link only opens on the same Wi-Fi as the phone.</span>
+      </form>
+    );
+  }
+  return device.web_url ? (
+    <span className="flex flex-wrap items-center gap-1 text-xs">
+      <a href={device.web_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium underline underline-offset-4"><ExternalLink className="size-3.5" /> Phone settings</a>
+      <span className="text-muted-foreground">({device.web_url.replace(/^https?:\/\//, "")}, same Wi-Fi only)</span>
+      <Button size="icon-xs" variant="ghost" aria-label={`Change ${device.label} settings page address`} onClick={() => setEditing(true)}><Pencil /></Button>
+    </span>
+  ) : (
+    <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"><ExternalLink className="size-3.5" /> Add a link to the phone&apos;s settings page</button>
+  );
+}
+
 export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: { lines: LineRow[]; devices: DeviceRow[]; e911: E911Row[]; ownerName: string; ready: boolean; domain: string | null }) {
   const [lineId, setLineId] = useState(lines[0].id);
   const [modelId, setModelId] = useState("gs_wp826");
@@ -61,6 +86,7 @@ export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: {
   const [shown, setShown] = useState<{ login: DeviceLogin; vendor: PhoneVendor } | null>(null);
   const [removing, setRemoving] = useState<DeviceRow | null>(null);
   const [pending, start] = useTransition();
+  const [adding, setAdding] = useState(devices.length === 0);
   const model = PHONE_MODELS.find((m) => m.id === modelId)!;
 
   function run(act: () => Promise<{ ok?: string; error?: string; login?: DeviceLogin }>, vendor?: PhoneVendor) {
@@ -86,15 +112,20 @@ export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: {
               {mine.map((d) => {
                 const m = PHONE_MODELS.find((x) => x.id === d.model);
                 return (
-                  <li key={d.id} className="flex flex-wrap items-center gap-3 p-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{d.label} <span className="font-normal text-muted-foreground">· {VENDORS[d.vendor].label} {m?.name ?? ""}</span></p>
-                      <p className="text-xs text-muted-foreground">{d.mac ? `MAC ${macText(d.mac)} · ` : ""}{d.last_provisioned_at ? `Set itself up ${when(d.last_provisioned_at)}` : "Waiting for the phone to download its settings"}</p>
+                  <li key={d.id} className="space-y-2 p-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{d.label} <span className="font-normal text-muted-foreground">· {VENDORS[d.vendor].label} {m?.name ?? ""}</span></p>
+                        <p className="text-xs text-muted-foreground">{d.mac ? `MAC ${macText(d.mac)} · ` : ""}{d.last_provisioned_at ? `Connected ${when(d.last_provisioned_at)}` : "Waiting for the phone to download its settings"}</p>
+                      </div>
+                      {d.last_provisioned_at
+                        ? <Badge variant="secondary" className="gap-1.5"><span className="size-2 rounded-full bg-primary" aria-hidden /> Connected</Badge>
+                        : <Badge variant="outline">Not set up yet</Badge>}
+                      <label className="flex items-center gap-2 text-sm"><Switch checked={d.ring} onCheckedChange={(v) => run(() => setDeviceRing(d.id, v))} aria-label={`Ring ${d.label} for calls`} /> Rings</label>
+                      <Button size="sm" variant="outline" disabled={pending || !ready} onClick={() => run(() => resetDevice(d.id), d.vendor)}><KeyRound /> New setup address</Button>
+                      <Button size="icon-sm" variant="ghost" aria-label={`Remove ${d.label}`} onClick={() => setRemoving(d)}><Trash2 /></Button>
                     </div>
-                    {d.last_provisioned_at ? <Badge variant="secondary">Set up</Badge> : <Badge variant="outline">Not set up yet</Badge>}
-                    <label className="flex items-center gap-2 text-sm"><Switch checked={d.ring} onCheckedChange={(v) => run(() => setDeviceRing(d.id, v))} aria-label={`Ring ${d.label} for calls`} /> Rings</label>
-                    <Button size="sm" variant="outline" disabled={pending || !ready} onClick={() => run(() => resetDevice(d.id), d.vendor)}><KeyRound /> New setup address</Button>
-                    <Button size="icon-sm" variant="ghost" aria-label={`Remove ${d.label}`} onClick={() => setRemoving(d)}><Trash2 /></Button>
+                    <WebLink key={d.web_url ?? ""} device={d} busy={pending} onSave={(url) => run(() => setDeviceWebUrl(d.id, url))} />
                   </li>
                 );
               })}
@@ -103,8 +134,16 @@ export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: {
         );
       })}
 
+      {!adding && msg && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.text}</p>}
+      {!adding ? (
+        <Button variant="outline" onClick={() => { setMsg(null); setAdding(true); }}><Plus /> Add another phone</Button>
+      ) : (
       <form className="space-y-3 rounded-2xl border p-4" onSubmit={(e) => { e.preventDefault(); run(() => addDevice({ lineId, modelId, label, mac }), model.vendor); }}>
-        <p className="flex items-center gap-2 font-semibold"><Plus className="size-4" /> Add a phone</p>
+        <div className="flex items-center gap-2">
+          <p className="flex flex-1 items-center gap-2 font-semibold"><Plus className="size-4" /> {devices.length ? "Add another phone" : "Add your phone"}</p>
+          {devices.length > 0 && <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>}
+        </div>
+        {devices.length > 0 && <p className="text-sm text-muted-foreground">Your phones above are connected. Add a phone here only if you have another one, like a second handset or a desk phone.</p>}
         {lines.length > 1 && (
           <label className="block space-y-1.5"><span className="text-sm font-medium">Line</span>
             <Pick label="Line" value={lineId} onChange={setLineId} options={lines.map((l) => ({ value: l.id, label: `${l.label} · ${pretty(l.number)}` }))} />
@@ -127,6 +166,7 @@ export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: {
         {msg && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.text}</p>}
         <Button type="submit" disabled={pending || !ready}>{pending ? "Adding…" : "Add phone"}</Button>
       </form>
+      )}
 
       <Dialog open={Boolean(shown)} onOpenChange={(o) => { if (!o) setShown(null); }}>
         {shown && (
