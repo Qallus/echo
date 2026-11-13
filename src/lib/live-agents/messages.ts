@@ -22,7 +22,8 @@ export type ThreadSummary = {
   id: string; side: Side; title: string; subtitle: string; avatarUrl: string | null; handle: string | null; lastMessageAt: string;
   preview: string; unread: boolean; openOffers: number; booked: number; blocked: boolean;
 };
-export type Thread = ThreadSummary & { workspaceId: string; agentId: string; agentUserId: string | null; messages: Message[]; engagements: Engagement[] };
+export type Review = { engagementId: string; side: Side; rating: number; body: string | null; revealed: boolean; mine: boolean };
+export type Thread = ThreadSummary & { workspaceId: string; agentId: string; agentUserId: string | null; messages: Message[]; engagements: Engagement[]; reviews: Review[] };
 
 type ThreadRow = {
   id: string; workspace_id: string; agent_id: string; business_name: string; last_message_at: string; business_read_at: string; agent_read_at: string | null; blocked_by: string | null;
@@ -90,15 +91,17 @@ export async function getThread(id: string): Promise<Thread | null> {
   const { data } = await supabase.from("live_agent_threads").select(THREAD_COLS).eq("id", id).maybeSingle();
   if (!data) return null;
   const t = data as unknown as ThreadRow;
-  const [{ data: msgs }, { data: engs }] = await Promise.all([
+  const [{ data: msgs }, { data: engs }, { data: revs }] = await Promise.all([
     supabase.from("live_agent_messages").select("id, sender_side, sender_id, kind, body, masked, engagement_id, created_at").eq("thread_id", id).order("created_at").limit(500),
     supabase.from("live_agent_engagements").select(ENG_COLS).eq("thread_id", id).order("created_at"),
+    supabase.from("live_agent_reviews").select("engagement_id, author_side, author_id, rating, body, revealed_at").eq("thread_id", id),
   ]);
   const engagements = ((engs ?? []) as EngagementRow[]).map(toEngagement);
   const last = msgs?.at(-1);
   const summary = summarize(t, user.id, last ? { body: last.body, side: last.sender_side } : undefined, engagements);
   return {
     ...summary, workspaceId: t.workspace_id, agentId: t.agent_id, agentUserId: t.live_agents?.user_id ?? null, engagements,
+    reviews: (revs ?? []).map((r) => ({ engagementId: r.engagement_id, side: r.author_side, rating: r.rating, body: r.body, revealed: Boolean(r.revealed_at), mine: r.author_id === user.id })),
     messages: (msgs ?? []).map((m) => ({
       id: m.id, side: m.sender_side, kind: m.kind, body: m.body, masked: m.masked, engagementId: m.engagement_id, createdAt: m.created_at,
       mine: m.sender_id === user.id,

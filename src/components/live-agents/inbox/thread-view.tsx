@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Ban, CreditCard, EllipsisVertical, ExternalLink, Flag, Lock, Paperclip, Send, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Ban, CreditCard, EllipsisVertical, ExternalLink, Flag, Lock, Paperclip, Send, Star, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -13,9 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { AgentAvatar } from "@/components/live-agents/agent-avatar";
 import { OfferDialog, type AgentRates } from "@/components/live-agents/inbox/offer-form";
 import {
-  blockLiveAgentThread, markLiveAgentThreadRead, reportLiveAgentThread, respondToLiveAgentOffer, routeLiveAgentCalls, sendLiveAgentMessage,
+  blockLiveAgentThread, markLiveAgentThreadRead, reportLiveAgentThread, respondToLiveAgentOffer, reviewLiveAgentWork, routeLiveAgentCalls, sendLiveAgentMessage,
 } from "@/lib/live-agents/message-actions";
-import type { Engagement, Thread } from "@/lib/live-agents/messages";
+import type { Engagement, Review, Thread } from "@/lib/live-agents/messages";
 import { disputeEngagement, payForEngagement } from "@/lib/live-agents/payments";
 import { engagementLabel, offerPrice, type Fees } from "@/lib/live-agents/types";
 import { createClient } from "@/lib/supabase/client";
@@ -104,7 +104,7 @@ export function ThreadView({ thread: t, rates, fees, lines = [] }: { thread: Thr
           if (m.kind === "system") return <p key={m.id} className="text-center text-xs text-muted-foreground">{m.body} · {time(m.createdAt)}</p>;
           const e = m.engagementId ? engagements.get(m.engagementId) : undefined;
           if (m.kind === "offer" && e) {
-            return <OfferCard key={m.id} e={e} side={t.side} mine={m.side === t.side} note={m.body} thread={t.id} blocked={t.blocked} lines={lines}
+            return <OfferCard key={m.id} e={e} side={t.side} mine={m.side === t.side} note={m.body} thread={t.id} blocked={t.blocked} lines={lines} reviews={t.reviews.filter((r) => r.engagementId === e.id)}
               onCounter={() => setOffer({ open: true, counter: e })} />;
           }
           return (
@@ -146,7 +146,7 @@ export function ThreadView({ thread: t, rates, fees, lines = [] }: { thread: Thr
   );
 }
 
-function OfferCard({ e, side, mine, note, thread, blocked, lines, onCounter }: { e: Engagement; side: "business" | "agent"; mine: boolean; note: string; thread: string; blocked: boolean; lines: LineOption[]; onCounter: () => void }) {
+function OfferCard({ e, side, mine, note, thread, blocked, lines, reviews, onCounter }: { e: Engagement; side: "business" | "agent"; mine: boolean; note: string; thread: string; blocked: boolean; lines: LineOption[]; reviews: Review[]; onCounter: () => void }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [dispute, setDispute] = useState(false);
@@ -233,6 +233,7 @@ function OfferCard({ e, side, mine, note, thread, blocked, lines, onCounter }: {
         {e.status === "completed" && side === "business" && !e.disputedAt && (
           <Button size="sm" variant="ghost" disabled={pending} onClick={() => setDispute(true)}><TriangleAlert /> Report a problem (within 72 hours)</Button>
         )}
+        {e.status === "completed" && <Reviews e={e} side={side} reviews={reviews} thread={thread} />}
         {e.disputedAt && <p className="text-xs text-muted-foreground">A problem was reported. The Redial team is reviewing it and the payout is on hold.</p>}
         {dispute && (
           <div className="space-y-2 rounded-lg border p-3">
@@ -283,5 +284,47 @@ function ReportDialog({ open, onOpenChange, thread }: { open: boolean; onOpenCha
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Two-way reviews on completed work: hidden until both sides review (or 14 days).
+function Reviews({ e, side, reviews, thread }: { e: Engagement; side: "business" | "agent"; reviews: Review[]; thread: string }) {
+  const router = useRouter();
+  const [stars, setStars] = useState(0);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string>();
+  const [pending, start] = useTransition();
+  const mine = reviews.find((r) => r.mine);
+  const theirs = reviews.find((r) => !r.mine && r.revealed);
+  const show = (r: Review, who: string) => (
+    <div className="rounded-lg bg-muted/50 p-2.5 text-sm">
+      <p className="flex items-center gap-1 text-xs text-muted-foreground">{who} · {Array.from({ length: 5 }, (_, i) => <Star key={i} className={cn("size-3", i < r.rating ? "fill-current text-amber-500" : "")} />)}</p>
+      {r.body && <p className="mt-1">{r.body}</p>}
+    </div>
+  );
+  return (
+    <div className="space-y-2 border-t pt-3">
+      {mine ? show(mine, "Your review") : (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{side === "business" ? "How did they do?" : "How was working with this business?"}</p>
+          <div className="flex gap-1" role="radiogroup" aria-label="Rating">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button" role="radio" aria-checked={stars === n} aria-label={`${n} star${n === 1 ? "" : "s"}`} onClick={() => setStars(n)}>
+                <Star className={cn("size-6", n <= stars ? "fill-amber-500 text-amber-500" : "text-muted-foreground")} />
+              </button>
+            ))}
+          </div>
+          <Textarea rows={2} maxLength={1000} value={body} onChange={(ev) => setBody(ev.target.value)} placeholder={side === "business" ? "What went well? Anything they could improve?" : "Clear instructions? Easy to work with?"} />
+          <Button size="sm" disabled={pending || !stars} onClick={() => start(async () => {
+            setError(undefined);
+            const r = await reviewLiveAgentWork(e.id, stars, body, thread);
+            if (r.error) setError(r.error); else router.refresh();
+          })}>Send review</Button>
+          <p className="text-xs text-muted-foreground">Reviews stay hidden until you&apos;ve both reviewed, or 14 days pass.</p>
+        </div>
+      )}
+      {theirs ? show(theirs, side === "business" ? "Their review of you" : "The business's review") : mine && <p className="text-xs text-muted-foreground">Their review shows here once they&apos;ve left one.</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
   );
 }

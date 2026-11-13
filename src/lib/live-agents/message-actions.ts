@@ -91,6 +91,15 @@ export async function routeLiveAgentCalls(engagement: string, line: string | nul
   return { ok: true };
 }
 
+export async function reviewLiveAgentWork(engagement: string, stars: number, body: string, thread?: string): Promise<Result> {
+  if (!isUuid(engagement)) return { error: "Booking not found." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("live_agent_review", { engagement, stars: Math.round(stars), body: body.slice(0, 1000) });
+  if (error) return { error: friendly(error) };
+  refresh(thread);
+  return { ok: true };
+}
+
 export async function blockLiveAgentThread(thread: string): Promise<Result> {
   if (!isUuid(thread)) return { error: "Conversation not found." };
   const supabase = await createClient();

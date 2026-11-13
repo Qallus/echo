@@ -9,7 +9,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //   1. completes booked work that has clearly ended (queues payouts, 3-day hold), and
 //   2. bills on-demand bookings weekly for answered minutes (1-minute minimum
 //      per call) on the business's saved card, and
-//   3. sends payouts that are due to each agent's Stripe Express account.
+//   3. sends payouts that are due to each agent's Stripe Express account, and
+//   4. reveals reviews after 14 days and refreshes ratings, reply times and badges.
 // A payout is only sent when the Stripe account belongs to that agent
 // (metadata.echo_user_id) and can receive transfers.
 
@@ -74,14 +75,22 @@ async function run(req: Request) {
   if (!(await authorized(req))) return Response.json({ error: "Not allowed." }, { status: 403 });
   const db = createAdminClient();
   const { data: completed } = await db.rpc("live_agent_auto_complete");
+  const { data: refreshed } = await db.rpc("live_agent_refresh_all");
 
   const s = await stripe();
-  if (!s) return Response.json({ ok: true, completed, paid: 0, note: "Stripe not set up" });
+  if (!s) return Response.json({ ok: true, completed, refreshed, paid: 0, note: "Stripe not set up" });
   const { data } = await db.from("live_agent_payouts")
     .select("id, engagement_id, amount_cents, agent_id, live_agents (user_id, live_agent_payout_accounts (stripe_account_id)), live_agent_payments (stripe_payment_intent)")
     .eq("status", "pending").lte("available_at", new Date().toISOString()).limit(50);
 
   const billed = await billOnDemand(db, s);
+
+  // "ID verified": Stripe has verified the agent's identity for payouts.
+  const { data: accounts } = await db.from("live_agent_payout_accounts").select("agent_id, stripe_account_id").limit(500);
+  for (const a of accounts ?? []) {
+    const acct = await s.accounts.retrieve(a.stripe_account_id).catch(() => null);
+    if (acct) await db.rpc("live_agent_set_verified", { agent: a.agent_id, verified: Boolean(acct.details_submitted && acct.payouts_enabled) });
+  }
 
   let paid = 0, waiting = 0;
   for (const p of (data ?? []) as unknown as Due[]) {
@@ -107,7 +116,7 @@ async function run(req: Request) {
       await db.from("live_agent_payouts").update({ status: "failed", failure: (e instanceof Error ? e.message : "Transfer failed").slice(0, 500) }).eq("id", p.id);
     }
   }
-  return Response.json({ ok: true, completed, billed, paid, waiting });
+  return Response.json({ ok: true, completed, refreshed, billed, paid, waiting });
 }
 
 export const GET = run;

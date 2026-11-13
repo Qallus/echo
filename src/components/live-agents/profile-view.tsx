@@ -6,12 +6,14 @@ import { AreaMap, BookingCard } from "@/components/live-agents/booking-card";
 import { AgentBadges, IconByName } from "@/components/live-agents/icons";
 import { VoiceSamplePlayer } from "@/components/live-agents/voice-sample";
 import type { Hiring } from "@/components/live-agents/message-button";
-import { EQUIPMENT, firstName, replyLabel, tzLabel, WORKSPACE, type Fees, type LiveAgent, type Skill } from "@/lib/live-agents/types";
+import { engagementLabel, EQUIPMENT, firstName, replyLabel, tzLabel, WORKSPACE, type Fees, type LiveAgent, type Skill } from "@/lib/live-agents/types";
 
 // A Live Agent's profile: the public page, and the agent's own preview
 // (preview: no booking, a note on clips still waiting for review).
-export function ProfileView({ agent: a, skills, fees, preview = false, pendingClips = [], hiring }: {
-  agent: LiveAgent; skills: Skill[]; fees: Fees; preview?: boolean; pendingClips?: string[]; hiring?: Hiring;
+export type PublicReview = { rating: number; body: string | null; business_name: string; type: string; revealed_at: string };
+
+export function ProfileView({ agent: a, skills, fees, preview = false, pendingClips = [], hiring, reviews = [] }: {
+  agent: LiveAgent; skills: Skill[]; fees: Fees; preview?: boolean; pendingClips?: string[]; hiring?: Hiring; reviews?: PublicReview[];
 }) {
   const name = firstName(a.displayName);
   const mine = a.skills.map((s) => skills.find((k) => k.slug === s)).filter((s) => s != null);
@@ -138,9 +140,22 @@ export function ProfileView({ agent: a, skills, fees, preview = false, pendingCl
 
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">Reviews from businesses</h2>
-            <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-              {a.reviewCount ? `${a.reviewCount} reviews` : "No reviews yet."} Reviews appear after both the business and the Live Agent have reviewed each other.
-            </p>
+            {reviews.length ? (
+              <ul className="divide-y rounded-xl border">
+                {reviews.map((r, i) => (
+                  <li key={i} className="space-y-1 p-4">
+                    <p className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="font-medium">{r.business_name}</span>
+                      <span className="flex">{Array.from({ length: 5 }, (_, n) => <Star key={n} className={n < r.rating ? "size-3.5 fill-amber-500 text-amber-500" : "size-3.5 text-muted-foreground"} />)}</span>
+                      <span className="text-xs text-muted-foreground">{engagementLabel(r.type)} · {new Date(r.revealed_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
+                    </p>
+                    {r.body && <p className="text-sm text-muted-foreground">{r.body}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No reviews yet. Reviews appear after both the business and the Live Agent have reviewed each other.</p>
+            )}
           </section>
 
           <section className="space-y-3">
