@@ -7,7 +7,10 @@ import { AgentAvatar } from "@/components/live-agents/agent-avatar";
 import { AgentBadges, SkillChip } from "@/components/live-agents/icons";
 import { InterestButton } from "@/components/live-agents/interest-dialog";
 import { VoiceSamplePlayer } from "@/components/live-agents/voice-sample";
-import { firstName, money, type LiveAgent, type Skill } from "@/lib/live-agents/types";
+import { ATTRIBUTES, firstName, money, type LiveAgent, type Skill } from "@/lib/live-agents/types";
+
+// The setup details businesses ask about most, in this order.
+const KEY_SETUP = ["door-closes", "usb-headset", "noise-cancelling", "wired-internet", "backup-internet", "backup-power", "quiet", "dedicated-desk", "webcam"];
 import { cn } from "@/lib/utils";
 
 // One Live Agent in the browse results (grid card or list row).
@@ -15,6 +18,7 @@ export function AgentCard({ agent: a, skills, layout = "grid", active, onHover }
   agent: LiveAgent; skills: Map<string, Skill>; layout?: "grid" | "list"; active?: boolean; onHover?: (id: string | null) => void;
 }) {
   const sample = a.samples[0];
+  const setup = KEY_SETUP.filter((s) => a.workspace.includes(s) || a.equipment.includes(s)).slice(0, 3).map((s) => ATTRIBUTES.find((x) => x.slug === s)!.label);
   const chips = a.skills.map((s) => skills.get(s)).filter((s): s is Skill => Boolean(s)).slice(0, layout === "list" ? 5 : 3);
   return (
     <article
@@ -48,6 +52,7 @@ export function AgentCard({ agent: a, skills, layout = "grid", active, onHover }
           <p className="text-xs text-muted-foreground">{a.yearsExperience} years experience · {a.languages.join(" / ")}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">{chips.map((s) => <SkillChip key={s.slug} skill={s} />)}</div>
+        {setup.length > 0 && <p className="text-xs text-muted-foreground">{setup.join(" · ")}</p>}
         {sample ? <VoiceSamplePlayer sample={sample} compact className="relative z-10" /> : <p className="rounded-xl border border-dashed p-3 text-xs text-muted-foreground">Voice sample coming soon</p>}
       </div>
 

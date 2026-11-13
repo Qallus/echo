@@ -9,13 +9,14 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { redirect } from "next/navigation";
 import { callsBadge } from "@/lib/redial/data";
 import { lineNumber } from "@/lib/line/server";
+import { hasLiveAgentProfile } from "@/lib/live-agents/agent-data";
 import { countUnreadNotifications, getMyProfile, isSuperAdmin, isSuspended, listFolders, listRecordings, listWorkspaces, requireUser } from "@/lib/data";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   if (await isSuspended()) redirect("/suspended");
-  const [workspaces, recordings, folders, superAdmin, profile, unread, catalog, callsUnread, line] = await Promise.all([
-    listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile(), countUnreadNotifications(), loadCatalog(), callsBadge(), lineNumber(),
+  const [workspaces, recordings, folders, superAdmin, profile, unread, catalog, callsUnread, line, liveAgent] = await Promise.all([
+    listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile(), countUnreadNotifications(), loadCatalog(), callsBadge(), lineNumber(), hasLiveAgentProfile(),
   ]);
   const me = { id: user.id, name: profile.fullName, email: user.email, avatarUrl: profile.avatarUrl, unread };
 
@@ -23,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <RecorderProvider workspaces={workspaces} userId={user.id}>
     <CatalogSync products={catalog} />
     <SidebarProvider defaultOpen={(await cookies()).get("sidebar_state")?.value !== "false"}>
-      <AppSidebar me={me} workspaces={workspaces} recordings={recordings} folders={folders} superAdmin={superAdmin} callsUnread={callsUnread} phoneLine={Boolean(line)} />
+      <AppSidebar me={me} workspaces={workspaces} recordings={recordings} folders={folders} superAdmin={superAdmin} callsUnread={callsUnread} phoneLine={Boolean(line)} liveAgent={liveAgent} />
       {/* overflow-x-clip (not hidden): trims sub-pixel overflow without breaking the sticky header. */}
       <SidebarInset className="min-w-0 overflow-x-clip">
         <MobileHeader me={me} />

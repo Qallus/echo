@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bot, BotMessageSquare, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users, Smartphone } from "lucide-react";
+import { ArrowLeft, Bot, BotMessageSquare, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, Headset, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users, Smartphone } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarTrigger, useSidebar,
@@ -40,6 +40,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { href: "/admin/documents", label: "Documents", icon: FolderOpen, permission: "crm.view" },
       { href: "/admin/automation", label: "Automation", icon: Workflow, permission: "comms.view" },
       { href: "/admin/redial", label: "Redial", icon: PhoneCall, permission: "users.view" },
+      { href: "/admin/live-agents", label: "Live Agents", icon: Headset, permission: "marketplace.view" },
       { href: "/admin/billing", label: "Billing", icon: CreditCard, permission: "billing.view" },
       { href: "/admin/ai", label: "AI", icon: Bot, permission: "ai.view", exact: true },
       { href: "/admin/ai/agents", label: "Agents", icon: BotMessageSquare, permission: "staff.manage" },

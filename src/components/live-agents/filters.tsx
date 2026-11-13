@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { IconByName } from "@/components/live-agents/icons";
-import { RATE_RANGES, SORTS, type Filters, type Skill } from "@/lib/live-agents/types";
+import { ATTRIBUTES, RATE_RANGES, SETUP_FILTERS, SORTS, type Filters, type Skill } from "@/lib/live-agents/types";
 import { cn } from "@/lib/utils";
 
 // The browse filter bar. Every choice lives in the URL (?q=&skill=&...), so
@@ -22,7 +22,7 @@ export function BrowseFilters({ filters: f, skills, languages }: { filters: Filt
   const path = usePathname();
   const params = useSearchParams();
   const [q, setQ] = useState(f.q);
-  const [more, setMore] = useState(Boolean(f.language || f.rate !== "any"));
+  const [more, setMore] = useState(Boolean(f.language || f.rate !== "any" || f.setup));
   const [pending, start] = useTransition();
 
   function set(next: Record<string, string | null>) {
@@ -32,7 +32,7 @@ export function BrowseFilters({ filters: f, skills, languages }: { filters: Filt
   }
 
   const chips = CHIPS.map((slug) => skills.find((s) => s.slug === slug)).filter((s): s is Skill => Boolean(s));
-  const active = Boolean(f.q || f.skill || f.language || f.rate !== "any" || f.now);
+  const active = Boolean(f.q || f.skill || f.language || f.rate !== "any" || f.setup || f.now);
 
   return (
     <div className={cn("space-y-3 rounded-2xl border bg-card p-3 transition-opacity sm:p-4", pending && "opacity-70")}>
@@ -65,15 +65,16 @@ export function BrowseFilters({ filters: f, skills, languages }: { filters: Filt
       </div>
 
       {more && (
-        <div className="grid gap-3 border-t pt-3 sm:grid-cols-3">
+        <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
           <Pick label="Skill" value={f.skill} onChange={(v) => set({ skill: v || null })} options={[{ value: "", label: "All skills" }, ...skills.map((s) => ({ value: s.slug, label: s.label }))]} />
           <Pick label="Language" value={f.language} onChange={(v) => set({ language: v || null })} options={[{ value: "", label: "Any language" }, ...languages.map((l) => ({ value: l, label: l }))]} />
           <Pick label="Hourly rate" value={f.rate} onChange={(v) => set({ rate: v === "any" ? null : v })} options={RATE_RANGES.map((r) => ({ value: r.id, label: r.label }))} />
+          <Pick label="Workspace and equipment" value={f.setup} onChange={(v) => set({ setup: v || null })} options={[{ value: "", label: "Any setup" }, ...SETUP_FILTERS.map((s) => ({ value: s, label: ATTRIBUTES.find((a) => a.slug === s)!.label }))]} />
         </div>
       )}
 
       {active && (
-        <button type="button" onClick={() => { setQ(""); set({ q: null, skill: null, language: null, rate: null, now: null }); }}
+        <button type="button" onClick={() => { setQ(""); set({ q: null, skill: null, language: null, rate: null, setup: null, now: null }); }}
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <X className="size-3" /> Clear filters
         </button>

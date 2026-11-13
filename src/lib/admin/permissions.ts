@@ -1,5 +1,5 @@
 // Super Admin staff roles and what each can do. Mirrors
-// private.role_permissions() (latest in supabase/migrations/20261103110000_comms_email.sql);
+// private.role_permissions() (latest in supabase/migrations/20261113120000_live_agents_onboarding.sql);
 // the database is the real check, this decides what the UI shows.
 
 export type StaffRole = "owner" | "admin" | "support" | "finance" | "marketing" | "analyst";
@@ -9,7 +9,8 @@ export type Permission =
   | "users.view" | "users.manage" | "workspaces.view" | "workspaces.manage" | "staff.manage"
   | "billing.view" | "billing.manage" | "ai.view" | "ai.manage" | "notifications.view"
   | "crm.view" | "crm.manage" | "content.manage" | "settings.manage" | "audit.view"
-  | "comms.view" | "comms.manage" | "social.manage" | "projects.manage";
+  | "comms.view" | "comms.manage" | "social.manage" | "projects.manage"
+  | "marketplace.view" | "marketplace.manage";
 
 export const STAFF_ROLES: { role: StaffRole; label: string; detail: string }[] = [
   { role: "owner", label: "Owner", detail: "Everything, including adding and removing staff." },

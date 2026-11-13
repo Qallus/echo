@@ -25,6 +25,8 @@ export type LiveAgent = {
   languages: string[];
   industries: string[];
   skills: string[];
+  equipment: string[];
+  workspace: string[];
   experience: { title: string; detail?: string }[];
   perMinuteCents: number | null;
   hourlyCents: number | null;
@@ -76,14 +78,45 @@ export const RATE_RANGES = [
 ] as const;
 export type RateRangeId = (typeof RATE_RANGES)[number]["id"];
 
-export type Filters = { q: string; skill: string; language: string; rate: RateRangeId; now: boolean; sort: SortId; view: "grid" | "list" | "map" };
+export type Filters = { q: string; skill: string; language: string; rate: RateRangeId; setup: string; now: boolean; sort: SortId; view: "grid" | "list" | "map" };
+
+// Equipment and workspace: what businesses check before trusting someone
+// with their callers. Slugs are stored on the profile; icons are lucide names.
+export type Attribute = { slug: string; label: string; icon: string; group: string };
+export const EQUIPMENT: Attribute[] = [
+  { slug: "desktop", label: "Desktop computer", icon: "pc-case", group: "Computer" },
+  { slug: "laptop", label: "Laptop", icon: "laptop", group: "Computer" },
+  { slug: "tablet", label: "Tablet", icon: "tablet", group: "Computer" },
+  { slug: "second-monitor", label: "Second monitor", icon: "monitor", group: "Computer" },
+  { slug: "usb-headset", label: "Headset with microphone", icon: "headset", group: "Audio and video" },
+  { slug: "noise-cancelling", label: "Noise-cancelling headset", icon: "headphones", group: "Audio and video" },
+  { slug: "webcam", label: "Webcam", icon: "webcam", group: "Audio and video" },
+  { slug: "smartphone", label: "Smartphone", icon: "smartphone", group: "Phones" },
+  { slug: "landline", label: "Landline or desk phone", icon: "phone", group: "Phones" },
+  { slug: "wired-internet", label: "Wired (Ethernet) internet", icon: "cable", group: "Reliability" },
+  { slug: "backup-internet", label: "Backup internet or hotspot", icon: "wifi", group: "Reliability" },
+  { slug: "backup-power", label: "Battery backup (UPS)", icon: "battery-charging", group: "Reliability" },
+];
+export const WORKSPACE: Attribute[] = [
+  { slug: "home-office", label: "Home office", icon: "house", group: "Where" },
+  { slug: "coworking", label: "Coworking or office space", icon: "building-2", group: "Where" },
+  { slug: "shared-space", label: "Shared space at home", icon: "users", group: "Where" },
+  { slug: "door-closes", label: "Enclosed room with a door", icon: "door-closed", group: "Privacy" },
+  { slug: "dedicated-desk", label: "Dedicated desk", icon: "lamp-desk", group: "Privacy" },
+  { slug: "quiet", label: "Quiet, no background noise", icon: "volume-x", group: "Privacy" },
+  { slug: "video-ready", label: "Professional video backdrop", icon: "webcam", group: "Privacy" },
+];
+export const ATTRIBUTES = [...EQUIPMENT, ...WORKSPACE];
+// The ones offered as browse filters.
+export const SETUP_FILTERS = ["usb-headset", "noise-cancelling", "door-closes", "dedicated-desk", "quiet", "webcam", "wired-internet", "backup-internet", "backup-power", "desktop", "landline"];
 
 export function parseFilters(sp: Record<string, string | string[] | undefined>): Filters {
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string).slice(0, 80) : "");
   const sort = SORTS.some((s) => s.id === one("sort")) ? (one("sort") as SortId) : "best";
   const rate = RATE_RANGES.some((r) => r.id === one("rate")) ? (one("rate") as RateRangeId) : "any";
   const view = one("view") === "list" || one("view") === "map" ? (one("view") as "list" | "map") : "grid";
-  return { q: one("q").trim(), skill: one("skill"), language: one("language"), rate, now: one("now") === "1", sort, view };
+  const setup = ATTRIBUTES.some((a) => a.slug === one("setup")) ? one("setup") : "";
+  return { q: one("q").trim(), skill: one("skill"), language: one("language"), rate, setup, now: one("now") === "1", sort, view };
 }
 
 // Badges Redial computes (never self-claimed).

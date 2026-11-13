@@ -1,7 +1,8 @@
 import { createElement } from "react";
 import {
   BadgeCheck, CalendarCheck, Contact, CreditCard, Filter, House, Languages, LifeBuoy, Mail, Moon, PhoneForwarded, PhoneIncoming, PhoneOutgoing,
-  Scale, ShieldCheck, ShoppingBag, Sparkles, Star, Stethoscope, Wrench, Zap, CircleDot, type LucideIcon,
+  Scale, ShieldCheck, ShoppingBag, Sparkles, Star, Stethoscope, Wrench, Zap, CircleDot, PcCase, Laptop, Tablet, Monitor, Headset, Headphones,
+  Webcam, Smartphone, Phone, Cable, Wifi, BatteryCharging, Building2, Users, DoorClosed, LampDesk, VolumeX, type LucideIcon,
 } from "lucide-react";
 import { BADGES, type Skill } from "@/lib/live-agents/types";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,9 @@ const ICONS: Record<string, LucideIcon> = {
   languages: Languages, "life-buoy": LifeBuoy, filter: Filter, "shopping-bag": ShoppingBag, moon: Moon, stethoscope: Stethoscope, scale: Scale,
   wrench: Wrench, house: House, home: House, "credit-card": CreditCard, contact: Contact, mail: Mail,
   "badge-check": BadgeCheck, "shield-check": ShieldCheck, zap: Zap, star: Star, sparkles: Sparkles,
+  "pc-case": PcCase, laptop: Laptop, tablet: Tablet, monitor: Monitor, headset: Headset, headphones: Headphones, webcam: Webcam,
+  smartphone: Smartphone, phone: Phone, cable: Cable, wifi: Wifi, "battery-charging": BatteryCharging, "building-2": Building2, users: Users,
+  "door-closed": DoorClosed, "lamp-desk": LampDesk, "volume-x": VolumeX,
 };
 
 // A lucide icon by its stored name (a dot when the name isn't mapped).

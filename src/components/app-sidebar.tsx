@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  AudioLines, AudioWaveform, Briefcase, CalendarDays, PhoneIncoming, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Headset, Home, Inbox,
+  AudioLines, AudioWaveform, Briefcase, CalendarDays, PhoneIncoming, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Headphones, Headset, Home, Inbox,
   LayoutTemplate, ListTodo, Lock, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, UserRound, Users, Video, Workflow,
 } from "lucide-react";
 import {
@@ -58,9 +58,9 @@ function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProp
 }
 
 export type Me = { id: string; name: string | null; email: string; avatarUrl: string | null; unread: number };
-type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null; phoneLine?: boolean };
+type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null; phoneLine?: boolean; liveAgent?: boolean };
 
-export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null, phoneLine = false }: Props) {
+export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null, phoneLine = false, liveAgent = false }: Props) {
   const { email } = me;
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
@@ -196,6 +196,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
             <NavItem href="/studio" label="Recording Studio" icon={AudioWaveform} />
             <NavItem href="/call-tree" label="Call Tree" icon={Workflow} />
             <NavItem href="/live-agents" label="Live Agents" icon={Headset} />
+            {liveAgent && <NavItem href="/agent-desk" label="Agent Desk" icon={Headphones} />}
           </SidebarMenu>
         </SidebarGroup>
         {workspaces.map((ws) => {

@@ -5,6 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FaqSection } from "@/components/marketing/faq-list";
 import { InterestButton } from "@/components/live-agents/interest-dialog";
+import { getUser } from "@/lib/data";
 import { getFees, listSkills } from "@/lib/live-agents/data";
 import { feeSplit, money } from "@/lib/live-agents/types";
 
@@ -47,8 +48,10 @@ const FAQ = [
 ];
 
 export default async function BecomeALiveAgentPage() {
-  const [skills, fees] = await Promise.all([listSkills(), getFees()]);
+  const [skills, fees, user] = await Promise.all([listSkills(), getFees(), getUser()]);
   const ex = feeSplit(3000, fees);
+  // Signed in: straight to the profile builder. Otherwise create an account first.
+  const start = user ? "/agent-desk/setup" : `/signup?next=${encodeURIComponent("/agent-desk/setup")}`;
 
   return (
     <>
@@ -59,10 +62,12 @@ export default async function BecomeALiveAgentPage() {
           Answer calls for businesses that need a real person. Redial&apos;s AI answers first and hands you the calls that matter, with the caller&apos;s details on your screen.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <InterestButton kind="agent" size="lg" skills={skills} source="/become-a-live-agent">Apply to join <ArrowRight /></InterestButton>
+          <Button size="lg" nativeButton={false} render={<Link href={start} />}>Create your profile <ArrowRight /></Button>
           <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/live-agents" />}>See Live Agent profiles</Button>
         </div>
-        <p className="mt-4 text-sm text-muted-foreground">We&apos;re inviting the first Live Agents now. Apply and we&apos;ll email you when your spot opens.</p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          About 15 minutes, free. Not ready yet? <InterestButton kind="agent" variant="ghost" size="sm" className="h-auto px-1 align-baseline underline underline-offset-2" skills={skills} source="/become-a-live-agent">Get updates instead</InterestButton>
+        </p>
       </section>
 
       <section className="border-t bg-muted/30">
@@ -120,9 +125,9 @@ export default async function BecomeALiveAgentPage() {
           <div className="rounded-3xl bg-[radial-gradient(120%_120%_at_0%_0%,#3f3f46_0%,#18181b_55%,#09090b_100%)] px-6 py-14 text-center text-white sm:px-12">
             <Headphones className="mx-auto size-8 text-white/80" />
             <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl">Your voice. Your hours. Your rates.</h2>
-            <p className="mx-auto mt-4 max-w-xl text-white/70">Apply in two minutes. We&apos;ll email you when your spot opens.</p>
+            <p className="mx-auto mt-4 max-w-xl text-white/70">Build your profile in about 15 minutes. The Redial team reviews it, then businesses can book you.</p>
             <div className="mt-8 flex justify-center">
-              <InterestButton kind="agent" size="lg" className="bg-white text-neutral-900 hover:bg-white/90" skills={skills} source="/become-a-live-agent#cta">Apply to join <ArrowRight /></InterestButton>
+              <Button size="lg" className="bg-white text-neutral-900 hover:bg-white/90" nativeButton={false} render={<Link href={start} />}>Create your profile <ArrowRight /></Button>
             </div>
           </div>
         </div>

@@ -75,7 +75,7 @@ export default async function LiveAgentsPage({ searchParams }: { searchParams: P
             </Suspense>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">{filters.q || filters.skill || filters.language || filters.now || filters.rate !== "any" ? "Matching Live Agents" : "Recommended Live Agents"} · {agents.length} {agents.length === 1 ? "match" : "matches"}</h2>
+                <h2 className="text-lg font-semibold">{filters.q || filters.skill || filters.language || filters.setup || filters.now || filters.rate !== "any" ? "Matching Live Agents" : "Recommended Live Agents"} · {agents.length} {agents.length === 1 ? "match" : "matches"}</h2>
                 <p className="text-xs text-muted-foreground">
                   Rates shown are what the agent charges; Redial adds a {fees.businessFeePercent}% service fee at booking. Locations are shown by area only.
                 </p>
