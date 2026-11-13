@@ -113,17 +113,21 @@ export function PhonesView({ lines, devices, e911, ownerName, ready, domain }: {
                 const m = PHONE_MODELS.find((x) => x.id === d.model);
                 return (
                   <li key={d.id} className="space-y-2 p-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{d.label} <span className="font-normal text-muted-foreground">· {VENDORS[d.vendor].label} {m?.name ?? ""}</span></p>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                          {d.label} <span className="font-normal text-muted-foreground">· {VENDORS[d.vendor].label} {m?.name ?? ""}</span>
+                          {d.last_provisioned_at
+                            ? <Badge variant="success" className="gap-1.5"><span className="size-1.5 rounded-full bg-current" aria-hidden /> Connected</Badge>
+                            : <Badge variant="outline">Not set up yet</Badge>}
+                        </p>
                         <p className="text-xs text-muted-foreground">{d.mac ? `MAC ${macText(d.mac)} · ` : ""}{d.last_provisioned_at ? `Connected ${when(d.last_provisioned_at)}` : "Waiting for the phone to download its settings"}</p>
                       </div>
-                      {d.last_provisioned_at
-                        ? <Badge variant="secondary" className="gap-1.5"><span className="size-2 rounded-full bg-primary" aria-hidden /> Connected</Badge>
-                        : <Badge variant="outline">Not set up yet</Badge>}
-                      <label className="flex items-center gap-2 text-sm"><Switch checked={d.ring} onCheckedChange={(v) => run(() => setDeviceRing(d.id, v))} aria-label={`Ring ${d.label} for calls`} /> Rings</label>
-                      <Button size="sm" variant="outline" disabled={pending || !ready} onClick={() => run(() => resetDevice(d.id), d.vendor)}><KeyRound /> New setup address</Button>
-                      <Button size="icon-sm" variant="ghost" aria-label={`Remove ${d.label}`} onClick={() => setRemoving(d)}><Trash2 /></Button>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 text-sm"><Switch checked={d.ring} onCheckedChange={(v) => run(() => setDeviceRing(d.id, v))} aria-label={`Ring ${d.label} for calls`} /> Rings</label>
+                        <Button size="sm" variant="outline" disabled={pending || !ready} onClick={() => run(() => resetDevice(d.id), d.vendor)}><KeyRound /> New setup address</Button>
+                        <Button size="icon-sm" variant="ghost" aria-label={`Remove ${d.label}`} onClick={() => setRemoving(d)}><Trash2 /></Button>
+                      </div>
                     </div>
                     <WebLink key={d.web_url ?? ""} device={d} busy={pending} onSave={(url) => run(() => setDeviceWebUrl(d.id, url))} />
                   </li>

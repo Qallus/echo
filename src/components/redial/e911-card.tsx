@@ -35,8 +35,8 @@ export function E911Card({ lineId, row, defaultName }: { lineId: string; row: E9
   const ok = row?.status === "registered";
   return (
     <div className="space-y-3 rounded-xl border bg-card p-4">
-      <div className="flex flex-wrap items-start gap-3">
-        {ok ? <ShieldCheck className="mt-0.5 size-5 text-primary" /> : <ShieldAlert className="mt-0.5 size-5 text-destructive" />}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {ok ? <ShieldCheck className="size-5 shrink-0 self-start text-emerald-600 dark:text-emerald-400" /> : <ShieldAlert className="size-5 shrink-0 self-start text-destructive" />}
         <div className="min-w-0 flex-1">
           <p className="font-medium">911 address</p>
           {row && !editing ? (
@@ -45,8 +45,12 @@ export function E911Card({ lineId, row, defaultName }: { lineId: string; row: E9
             <p className="text-sm text-muted-foreground">Where this line&apos;s phones are. 911 calls from your Redial number send this address to emergency services.</p>
           )}
         </div>
-        {row && <Badge variant={ok ? "secondary" : "outline"}>{ok ? "Registered" : row.status === "pending" ? "Registering" : "Not registered"}</Badge>}
-        {row && !editing && <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Change</Button>}
+        {row && (
+          <div className="flex items-center gap-3">
+            <Badge variant={ok ? "success" : "outline"}>{ok ? "Registered" : row.status === "pending" ? "Registering" : "Not registered"}</Badge>
+            {!editing && <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Change</Button>}
+          </div>
+        )}
       </div>
 
       {editing && (
