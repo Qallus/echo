@@ -98,6 +98,15 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
             <div className="mt-4 border-t pt-4"><ListingActions status={agent.status} /></div>
           </section>
 
+          <Link href="/agent-desk/earnings" className="flex items-center gap-3 rounded-2xl border p-5 transition hover:bg-muted/40">
+            <Banknote className="size-5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Earnings and payouts</p>
+              <p className="text-sm text-muted-foreground">Set up payouts with Stripe, see what&apos;s on hold and what&apos;s been paid.</p>
+            </div>
+            <ArrowRight className="size-4 text-muted-foreground" />
+          </Link>
+
           <section className="space-y-3 rounded-2xl border p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Offers and bookings</h2>
@@ -114,7 +123,7 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
                         <p className="font-medium">{e.counterpart} · {engagementLabel(e.type)}</p>
                         <p className="text-sm text-muted-foreground">{line(e)}</p>
                       </div>
-                      <Badge variant={e.status === "offered" ? "secondary" : "success"}>{e.status === "offered" ? "Offer for you" : "Booked"}</Badge>
+                      <Badge variant={e.status === "active" ? "success" : "secondary"}>{e.status === "offered" ? "Offer for you" : e.status === "accepted" ? "Awaiting payment" : "Booked and paid"}</Badge>
                     </Link>
                   </li>
                 ))}
@@ -128,7 +137,6 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
               {[
                 { icon: PhoneIncoming, t: "Incoming transfers", d: "Answer calls in your browser, with the caller's details, the business's script and live AI suggestions." },
                 { icon: CalendarRange, t: "Shifts calendar", d: "Your booked shifts and monthly clients in one place." },
-                { icon: Banknote, t: "Earnings and payouts", d: "Weekly payouts by direct deposit through Stripe, and your tax documents." },
               ].map(({ icon: Icon, t, d }) => (
                 <div key={t} className="rounded-2xl border border-dashed p-4"><Icon className="size-5 text-muted-foreground" /><p className="mt-3 font-medium">{t}</p><p className="text-sm text-muted-foreground">{d}</p></div>
               ))}

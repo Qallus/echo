@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Ban, EllipsisVertical, ExternalLink, Flag, Lock, Paperclip, Send } from "lucide-react";
+import { ArrowLeft, Ban, CreditCard, EllipsisVertical, ExternalLink, Flag, Lock, Paperclip, Send, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -16,6 +16,7 @@ import {
   blockLiveAgentThread, markLiveAgentThreadRead, reportLiveAgentThread, respondToLiveAgentOffer, sendLiveAgentMessage,
 } from "@/lib/live-agents/message-actions";
 import type { Engagement, Thread } from "@/lib/live-agents/messages";
+import { disputeEngagement, payForEngagement } from "@/lib/live-agents/payments";
 import { engagementLabel, offerPrice, type Fees } from "@/lib/live-agents/types";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ const time = (iso: string) => new Date(iso).toLocaleString([], { month: "short",
 const date = (d: string | null) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : null);
 
 const STATUS: Record<string, { label: string; tone: "outline" | "secondary" | "success" | "destructive" }> = {
-  offered: { label: "Waiting for a reply", tone: "secondary" }, accepted: { label: "Booked", tone: "success" }, active: { label: "Active", tone: "success" },
+  offered: { label: "Waiting for a reply", tone: "secondary" }, accepted: { label: "Accepted · awaiting payment", tone: "secondary" }, active: { label: "Booked and paid", tone: "success" },
   declined: { label: "Declined", tone: "outline" }, withdrawn: { label: "Withdrawn", tone: "outline" }, replaced: { label: "Countered", tone: "outline" },
   completed: { label: "Completed", tone: "outline" }, cancelled: { label: "Cancelled", tone: "destructive" },
 };
@@ -146,6 +147,8 @@ export function ThreadView({ thread: t, rates, fees }: { thread: Thread; rates: 
 function OfferCard({ e, side, mine, note, thread, blocked, onCounter }: { e: Engagement; side: "business" | "agent"; mine: boolean; note: string; thread: string; blocked: boolean; onCounter: () => void }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
+  const [dispute, setDispute] = useState(false);
+  const [problem, setProblem] = useState("");
   const [pending, start] = useTransition();
   const price = offerPrice(e);
   const act = (action: "accept" | "decline" | "withdraw" | "cancel" | "complete") => start(async () => {
@@ -187,10 +190,45 @@ function OfferCard({ e, side, mine, note, thread, blocked, onCounter }: { e: Eng
             )}
           </div>
         )}
-        {(e.status === "accepted" || e.status === "active") && (
+        {e.status === "accepted" && (
+          <div className="space-y-2">
+            {side === "business" ? (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={pending} onClick={() => start(async () => {
+                  setError(undefined);
+                  const r = await payForEngagement(e.id);
+                  if (r.url) window.location.assign(r.url); else setError(r.error);
+                })}><CreditCard /> {e.type === "on_demand" ? "Add a card to start" : `Pay ${price.businessTotal} to confirm`}</Button>
+                <Button size="sm" variant="ghost" disabled={pending} onClick={() => act("cancel")}>Cancel</Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs text-muted-foreground">Waiting for the business to pay. You&apos;ll get a message when it&apos;s confirmed.</p>
+                <Button size="sm" variant="ghost" disabled={pending} onClick={() => act("cancel")}>Cancel</Button>
+              </div>
+            )}
+          </div>
+        )}
+        {e.status === "active" && side === "business" && !e.disputedAt && (
           <div className="flex flex-wrap gap-2">
-            {side === "business" && <Button size="sm" variant="outline" disabled={pending} onClick={() => act("complete")}>Mark complete</Button>}
-            <Button size="sm" variant="ghost" disabled={pending} onClick={() => act("cancel")}>Cancel booking</Button>
+            <Button size="sm" variant="outline" disabled={pending} onClick={() => act("complete")}>Mark complete</Button>
+            <Button size="sm" variant="ghost" disabled={pending} onClick={() => setDispute(true)}><TriangleAlert /> Report a problem</Button>
+          </div>
+        )}
+        {e.status === "completed" && side === "business" && !e.disputedAt && (
+          <Button size="sm" variant="ghost" disabled={pending} onClick={() => setDispute(true)}><TriangleAlert /> Report a problem (within 72 hours)</Button>
+        )}
+        {e.disputedAt && <p className="text-xs text-muted-foreground">A problem was reported. The Redial team is reviewing it and the payout is on hold.</p>}
+        {dispute && (
+          <div className="space-y-2 rounded-lg border p-3">
+            <Textarea rows={3} maxLength={2000} value={problem} onChange={(ev) => setProblem(ev.target.value)} placeholder="What went wrong? For example: they didn't answer during the shift." />
+            <div className="flex gap-2">
+              <Button size="sm" disabled={pending || !problem.trim()} onClick={() => start(async () => {
+                const r = await disputeEngagement(e.id, problem, thread);
+                if (r.error) setError(r.error); else { setDispute(false); router.refresh(); }
+              })}>Send to the Redial team</Button>
+              <Button size="sm" variant="ghost" onClick={() => setDispute(false)}>Cancel</Button>
+            </div>
           </div>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}

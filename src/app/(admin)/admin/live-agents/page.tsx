@@ -10,7 +10,7 @@ import { AGENT_STATUS } from "@/lib/live-agents/setup";
 import { ATTRIBUTES, money, WEEKDAYS, type Weekday } from "@/lib/live-agents/types";
 import { createClient } from "@/lib/supabase/server";
 import { adminAudit } from "@/lib/admin/audit";
-import { ClipReview, ProfileDecision, ResolveReport, type AdminClip } from "./review-card";
+import { ClipReview, MoneyActions, ProfileDecision, ResolveReport, type AdminClip } from "./review-card";
 
 export const metadata = { title: "Live Agents · Admin · Echo" };
 
@@ -42,6 +42,13 @@ export default async function LiveAgentsAdminPage() {
   const { data: rep } = await supabase.rpc("admin_live_agent_reports");
   const reports = ((rep ?? []) as Report[]);
   const openReports = reports.filter((r) => r.status === "open");
+  type Money = {
+    engagement_id: string; agent_name: string; business_name: string; type: string; eng_status: string; paid_at: string; completed_at: string | null;
+    disputed_at: string | null; dispute_note: string | null; payment_intent: string | null; amount_cents: number | null; refunded_cents: number | null;
+    payment_status: string | null; payout_id: string | null; payout_cents: number | null; payout_status: string | null; payout_failure: string | null;
+  };
+  const { data: moneyData } = await supabase.rpc("admin_live_agent_money");
+  const payments = (moneyData ?? []) as Money[];
   // Staff read reported conversations only; each view is logged.
   if (openReports.length) await adminAudit(supabase, "live_agents.reports_viewed", undefined, { reports: openReports.map((r) => r.id) });
   const label = (s: string) => skills.find((k) => k.slug === s)?.label ?? s;
@@ -120,6 +127,37 @@ export default async function LiveAgentsAdminPage() {
                 {r.status === "open" && manage && <div className="mt-3"><ResolveReport id={r.id} /></div>}
               </details>
             ))}
+          </div>
+        </Section>
+      )}
+
+      {payments.length > 0 && (
+        <Section title="Payments and payouts" description="Businesses pay up front. Payouts go out 3 days after work is complete unless a problem is reported.">
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr><th className="px-3 py-2 font-medium">Booking</th><th className="px-3 py-2 font-medium">Paid</th><th className="px-3 py-2 font-medium">Payout</th><th className="px-3 py-2 font-medium">Actions</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {payments.map((m) => (
+                  <tr key={m.engagement_id} className="align-top">
+                    <td className="px-3 py-2">
+                      <p className="font-medium">{m.business_name} → {m.agent_name}</p>
+                      <p className="text-xs text-muted-foreground">{m.type.replace("_", "-")} · {m.eng_status}{m.completed_at && <> · done <LocalDate iso={m.completed_at} short /></>}</p>
+                      {m.disputed_at && <p className="mt-1 max-w-sm text-xs text-destructive">Problem reported: {m.dispute_note}</p>}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {m.amount_cents ? money(m.amount_cents, { exact: true }) : "Card saved"}{m.refunded_cents ? ` (refunded ${money(m.refunded_cents, { exact: true })})` : ""}
+                      <br /><LocalDate iso={m.paid_at} short />
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {m.payout_id ? <>{money(m.payout_cents ?? 0, { exact: true })} · {m.payout_status}{m.payout_failure && <><br /><span className="text-xs">{m.payout_failure}</span></>}</> : "Not yet"}
+                    </td>
+                    <td className="px-3 py-2">{manage && <MoneyActions paymentIntent={m.payment_intent} engagementId={m.engagement_id} payoutId={m.payout_id} payoutStatus={m.payout_status} refunded={m.payment_status === "refunded"} />}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Section>
       )}

@@ -31,7 +31,7 @@ export default async function HiringPage() {
             <p className="text-sm text-muted-foreground">{[date(e.startsOn), e.schedule, `${p.businessTotal ?? p.businessRate}${e.type === "retainer" ? "/mo" : ""} incl. fee`].filter(Boolean).join(" · ")}</p>
           </div>
           <Badge variant={e.status === "offered" ? "secondary" : e.status === "accepted" || e.status === "active" ? "success" : "outline"}>
-            {e.status === "offered" ? (e.offeredBy === "business" ? "Waiting for them" : "Counter-offer for you") : e.status === "accepted" ? "Booked" : e.status[0].toUpperCase() + e.status.slice(1)}
+            {e.status === "offered" ? (e.offeredBy === "business" ? "Waiting for them" : "Counter-offer for you") : e.status === "accepted" ? "Awaiting your payment" : e.status === "active" ? "Booked and paid" : e.status[0].toUpperCase() + e.status.slice(1)}
           </Badge>
         </Link>
       </li>

@@ -45,7 +45,33 @@ async function insertOrder(db: Db, order: Record<string, unknown>, lines: Line[]
   return data;
 }
 
+// A Live Agent booking paid, or a card saved for on-demand minutes. Recorded
+// by the database function, which also confirms the booking in the thread.
+async function onLiveAgentCheckout(db: Db, s: Stripe, session: Stripe.Checkout.Session) {
+  const userId = session.client_reference_id ?? session.metadata?.echo_user_id;
+  const customer = id(session.customer);
+  if (userId) await saveCustomer(db, s, userId, customer);
+  const kind = session.metadata?.kind === "card" ? "card" : "charge";
+  if (kind === "card") {
+    // Make the saved card the default so weekly on-demand billing can use it.
+    const si = id(session.setup_intent);
+    const intent = si ? await s.setupIntents.retrieve(si) : null;
+    const pm = id(intent?.payment_method);
+    if (customer && pm) await s.customers.update(customer, { invoice_settings: { default_payment_method: pm } }).catch(() => {});
+  } else if (session.payment_status !== "paid") {
+    return;
+  }
+  const { error } = await db.rpc("live_agent_record_payment", {
+    p: {
+      engagement_id: session.metadata?.live_agent_engagement, kind, session_id: session.id, payment_intent: id(session.payment_intent) ?? "",
+      customer: customer ?? "", payer_id: userId ?? "", amount_cents: session.amount_total ?? 0, base_cents: Number(session.metadata?.base_cents ?? 0),
+    },
+  });
+  if (error) throw new Error(error.message);
+}
+
 async function onCheckoutCompleted(db: Db, s: Stripe, session: Stripe.Checkout.Session) {
+  if (session.metadata?.live_agent_engagement) return onLiveAgentCheckout(db, s, session);
   const userId = session.client_reference_id ?? session.metadata?.echo_user_id;
   if (!userId) return;
   await saveCustomer(db, s, userId, id(session.customer));
@@ -137,6 +163,8 @@ async function onSubscription(db: Db, sub: Stripe.Subscription) {
 async function onRefund(db: Db, charge: Stripe.Charge) {
   const pi = id(charge.payment_intent);
   if (!pi) return;
+  // Live Agent payments are tracked in their own table (a no-op for store orders).
+  await db.rpc("live_agent_record_refund", { pi, refunded: charge.amount_refunded, total: charge.amount });
   await db.from("orders")
     .update({ status: charge.amount_refunded >= charge.amount ? "refunded" : "partially_refunded" })
     .eq("stripe_payment_intent_id", pi);

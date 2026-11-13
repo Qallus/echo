@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { VoiceSamplePlayer } from "@/components/live-agents/voice-sample";
-import { resolveLiveAgentReport, reviewLiveAgent } from "@/lib/admin/actions/live-agents";
+import { refundLiveAgentPayment, resolveLiveAgentReport, reviewLiveAgent, setLiveAgentPayout } from "@/lib/admin/actions/live-agents";
 
 export type AdminClip = { id: string; title: string; transcript: string | null; url: string; duration_s: number | null; status: string; ai_voice: boolean };
 
@@ -70,4 +70,28 @@ export function ResolveReport({ id }: { id: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   return <Button size="sm" variant="outline" disabled={pending} onClick={() => start(async () => { await resolveLiveAgentReport(id); router.refresh(); })}><Check /> Mark resolved</Button>;
+}
+
+// Refund a payment, or release / hold a payout.
+export function MoneyActions({ paymentIntent, engagementId, payoutId, payoutStatus, refunded }: {
+  paymentIntent: string | null; engagementId: string; payoutId: string | null; payoutStatus: string | null; refunded: boolean;
+}) {
+  const router = useRouter();
+  const [msg, setMsg] = useState<{ text: string; error?: boolean }>();
+  const [pending, start] = useTransition();
+  const run = (fn: () => Promise<{ ok?: string; error?: string }>) => start(async () => {
+    const r = await fn();
+    setMsg(r.error ? { text: r.error, error: true } : { text: r.ok ?? "Saved." });
+    if (!r.error) router.refresh();
+  });
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-1.5">
+        {payoutId && (payoutStatus === "held" || payoutStatus === "failed") && <Button size="xs" variant="outline" disabled={pending} onClick={() => run(() => setLiveAgentPayout(payoutId, "release"))}>Release payout</Button>}
+        {payoutId && payoutStatus === "pending" && <Button size="xs" variant="outline" disabled={pending} onClick={() => run(() => setLiveAgentPayout(payoutId, "hold"))}>Hold payout</Button>}
+        {paymentIntent && !refunded && payoutStatus !== "paid" && <Button size="xs" variant="ghost" className="text-destructive" disabled={pending} onClick={() => run(() => refundLiveAgentPayment(paymentIntent, engagementId))}>Refund in full</Button>}
+      </div>
+      {msg && <p className={msg.error ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>{msg.text}</p>}
+    </div>
+  );
 }
