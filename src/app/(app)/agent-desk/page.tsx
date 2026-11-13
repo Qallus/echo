@@ -5,6 +5,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AgentAvatar } from "@/components/live-agents/agent-avatar";
+import { AgentPhone } from "@/components/live-agents/agent-phone";
 import { AvailableNowSwitch, ListingActions } from "@/components/live-agents/desk-controls";
 import { myLiveAgent, profileGaps, profileStrength } from "@/lib/live-agents/agent-data";
 import { AGENT_STATUS } from "@/lib/live-agents/setup";
@@ -81,6 +82,7 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="space-y-6">
+          {agent.status === "live" && <AgentPhone scripts={Object.fromEntries(booked.map((e) => [e.id, { business: e.counterpart, script: e.script }]))} />}
           <section className="rounded-2xl border p-5">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-semibold">Your profile</h2>

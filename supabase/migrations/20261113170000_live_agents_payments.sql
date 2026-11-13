@@ -74,9 +74,9 @@ create policy "live_agent_payments_select" on public.live_agent_payments for sel
 -- 3. Payouts to agents.
 create table public.live_agent_payouts (
   id uuid primary key default gen_random_uuid(),
-  engagement_id uuid not null unique references public.live_agent_engagements on delete cascade,
+  engagement_id uuid not null references public.live_agent_engagements on delete cascade,
   agent_id uuid not null references public.live_agents on delete cascade,
-  payment_id uuid references public.live_agent_payments on delete set null,
+  payment_id uuid unique references public.live_agent_payments on delete set null, -- one payout per payment (on-demand: one per weekly bill)
   amount_cents int not null check (amount_cents >= 0),
   status text not null default 'pending' check (status in ('pending', 'held', 'paid', 'failed', 'cancelled')),
   available_at timestamptz not null,
@@ -87,7 +87,7 @@ create table public.live_agent_payouts (
 );
 create index live_agent_payouts_agent_idx on public.live_agent_payouts (agent_id, created_at desc);
 create index live_agent_payouts_due_idx on public.live_agent_payouts (status, available_at);
-create index live_agent_payouts_payment_idx on public.live_agent_payouts (payment_id);
+create index live_agent_payouts_engagement_idx on public.live_agent_payouts (engagement_id);
 revoke all on public.live_agent_payouts from anon, authenticated;
 grant select on public.live_agent_payouts to authenticated;
 alter table public.live_agent_payouts enable row level security;
@@ -109,7 +109,7 @@ begin
   values (e, eng.agent_id, pay.id,
           greatest(0, round((pay.base_cents - pay.refunded_cents * pay.base_cents::numeric / greatest(pay.amount_cents, 1)) * (1 - eng.agent_fee_pct / 100)))::int,
           now() + interval '3 days')
-  on conflict (engagement_id) do nothing;
+  on conflict (payment_id) do nothing;
 end $$;
 revoke execute on function private.live_agent_queue_payout(uuid) from public, anon, authenticated;
 
@@ -243,7 +243,7 @@ begin
     join public.live_agent_threads t on t.id = e.thread_id
     join public.live_agents a on a.id = e.agent_id
     left join lateral (select * from public.live_agent_payments x where x.engagement_id = e.id order by x.created_at desc limit 1) p on true
-    left join public.live_agent_payouts o on o.engagement_id = e.id
+    left join lateral (select * from public.live_agent_payouts y where y.engagement_id = e.id order by y.created_at desc limit 1) o on true
     where e.paid_at is not null
     order by (e.disputed_at is not null and o.status = 'held') desc, e.paid_at desc
     limit 300;

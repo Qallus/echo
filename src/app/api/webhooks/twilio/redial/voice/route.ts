@@ -3,6 +3,7 @@ import { callToken, gatewayConfig } from "@/lib/redial/gateway";
 import { conference, conferenceName, lineSipUris, ringOwner, stream, voicemail } from "@/lib/redial/twiml";
 import { lineFlow, startFlowRun } from "@/lib/flows/runner";
 import { decide, type Line } from "@/lib/redial/types";
+import { liveAgentForLine, ringLiveAgent } from "@/lib/live-agents/handoff";
 import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -74,6 +75,15 @@ export async function POST(req: Request) {
       }
       return twiml(stream(gw.url!, callToken(gw.secret!, call.id), call.id));
     }
-    default: return twiml(voicemail(call.id, `Hi, you've reached ${line.label === "My line" ? "this number" : line.label}. Please leave your name, number and a short message after the tone.`));
+    default: {
+      // Before voicemail: the booked Live Agent, when one covers this line now.
+      const handoff = await liveAgentForLine(db, line.id);
+      const ring = handoff ? await ringLiveAgent(db, handoff, { callId: call.id, lineNumber: line.number, caller: from ?? p.From ?? null, reason: null }) : null;
+      if (ring) {
+        await db.from("redial_calls").update({ status: "connecting", reason: "Sent to Live Agent" }).eq("id", call.id);
+        return twiml(ring);
+      }
+    }
+    return twiml(voicemail(call.id, `Hi, you've reached ${line.label === "My line" ? "this number" : line.label}. Please leave your name, number and a short message after the tone.`));
   }
 }

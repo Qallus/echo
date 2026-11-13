@@ -82,6 +82,15 @@ export async function respondToLiveAgentOffer(engagement: string, action: "accep
   return { ok: true };
 }
 
+export async function routeLiveAgentCalls(engagement: string, line: string | null, thread?: string): Promise<Result> {
+  if (!isUuid(engagement) || (line !== null && !isUuid(line))) return { error: "Choose a line." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("live_agent_route", { engagement, line });
+  if (error) return { error: friendly(error) };
+  refresh(thread);
+  return { ok: true };
+}
+
 export async function blockLiveAgentThread(thread: string): Promise<Result> {
   if (!isUuid(thread)) return { error: "Conversation not found." };
   const supabase = await createClient();

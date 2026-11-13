@@ -15,7 +15,7 @@ export type Engagement = {
   id: string; threadId: string; workspaceId: string; agentId: string; type: EngagementType; status: EngagementStatus; offeredBy: Side;
   rateCents: number; hours: number | null; startsOn: string | null; endsOn: string | null; schedule: string | null; script: string | null;
   businessFeePct: number; agentFeePct: number; replaces: string | null; createdAt: string; respondedAt: string | null;
-  paidAt: string | null; completedAt: string | null; disputedAt: string | null;
+  paidAt: string | null; completedAt: string | null; disputedAt: string | null; lineId: string | null;
 };
 export type Message = { id: string; side: Side | "system"; kind: "text" | "offer" | "system"; body: string; masked: boolean; engagementId: string | null; createdAt: string; mine: boolean };
 export type ThreadSummary = {
@@ -32,17 +32,17 @@ type EngagementRow = {
   id: string; thread_id: string; workspace_id: string; agent_id: string; type: EngagementType; status: EngagementStatus; offered_by: Side; rate_cents: number;
   hours: number | null; starts_on: string | null; ends_on: string | null; schedule: string | null; script: string | null; business_fee_pct: number;
   agent_fee_pct: number; replaces: string | null; created_at: string; responded_at: string | null;
-  paid_at?: string | null; completed_at?: string | null; disputed_at?: string | null;
+  paid_at?: string | null; completed_at?: string | null; disputed_at?: string | null; line_id?: string | null;
 };
 
 const THREAD_COLS = "id, workspace_id, agent_id, business_name, last_message_at, business_read_at, agent_read_at, blocked_by, live_agents (display_name, headline, handle, avatar_url, user_id)";
-const ENG_COLS = "id, thread_id, workspace_id, agent_id, type, status, offered_by, rate_cents, hours, starts_on, ends_on, schedule, script, business_fee_pct, agent_fee_pct, replaces, created_at, responded_at, paid_at, completed_at, disputed_at";
+const ENG_COLS = "id, thread_id, workspace_id, agent_id, type, status, offered_by, rate_cents, hours, starts_on, ends_on, schedule, script, business_fee_pct, agent_fee_pct, replaces, created_at, responded_at, paid_at, completed_at, disputed_at, line_id";
 
 export const toEngagement = (e: EngagementRow): Engagement => ({
   id: e.id, threadId: e.thread_id, workspaceId: e.workspace_id, agentId: e.agent_id, type: e.type, status: e.status, offeredBy: e.offered_by,
   rateCents: e.rate_cents, hours: e.hours == null ? null : Number(e.hours), startsOn: e.starts_on, endsOn: e.ends_on, schedule: e.schedule, script: e.script,
   businessFeePct: Number(e.business_fee_pct), agentFeePct: Number(e.agent_fee_pct), replaces: e.replaces, createdAt: e.created_at, respondedAt: e.responded_at,
-  paidAt: e.paid_at ?? null, completedAt: e.completed_at ?? null, disputedAt: e.disputed_at ?? null,
+  paidAt: e.paid_at ?? null, completedAt: e.completed_at ?? null, disputedAt: e.disputed_at ?? null, lineId: e.line_id ?? null,
 });
 
 function summarize(t: ThreadRow, me: string, last: { body: string; side: string } | undefined, engs: Engagement[]): ThreadSummary {

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AgentAvatar } from "@/components/live-agents/agent-avatar";
 import { OfferDialog, type AgentRates } from "@/components/live-agents/inbox/offer-form";
 import {
-  blockLiveAgentThread, markLiveAgentThreadRead, reportLiveAgentThread, respondToLiveAgentOffer, sendLiveAgentMessage,
+  blockLiveAgentThread, markLiveAgentThreadRead, reportLiveAgentThread, respondToLiveAgentOffer, routeLiveAgentCalls, sendLiveAgentMessage,
 } from "@/lib/live-agents/message-actions";
 import type { Engagement, Thread } from "@/lib/live-agents/messages";
 import { disputeEngagement, payForEngagement } from "@/lib/live-agents/payments";
@@ -30,7 +30,9 @@ const STATUS: Record<string, { label: string; tone: "outline" | "secondary" | "s
   completed: { label: "Completed", tone: "outline" }, cancelled: { label: "Cancelled", tone: "destructive" },
 };
 
-export function ThreadView({ thread: t, rates, fees }: { thread: Thread; rates: AgentRates; fees: Fees }) {
+type LineOption = { id: string; label: string; number: string };
+
+export function ThreadView({ thread: t, rates, fees, lines = [] }: { thread: Thread; rates: AgentRates; fees: Fees; lines?: LineOption[] }) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [error, setError] = useState<string>();
@@ -102,7 +104,7 @@ export function ThreadView({ thread: t, rates, fees }: { thread: Thread; rates: 
           if (m.kind === "system") return <p key={m.id} className="text-center text-xs text-muted-foreground">{m.body} · {time(m.createdAt)}</p>;
           const e = m.engagementId ? engagements.get(m.engagementId) : undefined;
           if (m.kind === "offer" && e) {
-            return <OfferCard key={m.id} e={e} side={t.side} mine={m.side === t.side} note={m.body} thread={t.id} blocked={t.blocked}
+            return <OfferCard key={m.id} e={e} side={t.side} mine={m.side === t.side} note={m.body} thread={t.id} blocked={t.blocked} lines={lines}
               onCounter={() => setOffer({ open: true, counter: e })} />;
           }
           return (
@@ -144,7 +146,7 @@ export function ThreadView({ thread: t, rates, fees }: { thread: Thread; rates: 
   );
 }
 
-function OfferCard({ e, side, mine, note, thread, blocked, onCounter }: { e: Engagement; side: "business" | "agent"; mine: boolean; note: string; thread: string; blocked: boolean; onCounter: () => void }) {
+function OfferCard({ e, side, mine, note, thread, blocked, lines, onCounter }: { e: Engagement; side: "business" | "agent"; mine: boolean; note: string; thread: string; blocked: boolean; lines: LineOption[]; onCounter: () => void }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [dispute, setDispute] = useState(false);
@@ -207,6 +209,19 @@ function OfferCard({ e, side, mine, note, thread, blocked, onCounter }: { e: Eng
                 <Button size="sm" variant="ghost" disabled={pending} onClick={() => act("cancel")}>Cancel</Button>
               </div>
             )}
+          </div>
+        )}
+        {e.status === "active" && side === "business" && (
+          <div className="space-y-1.5 rounded-lg border p-3">
+            <p className="text-xs font-medium">Send missed calls from</p>
+            {lines.length ? (
+              <Pick label="Redial line" value={e.lineId ?? ""} onChange={(v) => start(async () => {
+                setError(undefined);
+                const r = await routeLiveAgentCalls(e.id, v || null, thread);
+                if (r.error) setError(r.error); else router.refresh();
+              })} options={[{ value: "", label: "Don't send calls yet" }, ...lines.map((l) => ({ value: l.id, label: `${l.label} · ${l.number.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3")}` }))]} />
+            ) : <p className="text-xs text-muted-foreground">Set up a Redial line first, then choose it here.</p>}
+            <p className="text-xs text-muted-foreground">When nobody on your line answers, the call rings the Live Agent&apos;s Agent Desk{e.type === "shift" || e.type === "trial" ? " on the booked day" : " while they're Available now"}.</p>
           </div>
         )}
         {e.status === "active" && side === "business" && !e.disputedAt && (

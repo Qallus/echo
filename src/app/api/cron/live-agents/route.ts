@@ -7,7 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://echo.redial.si/api/cron/live-agents
 // No user session: CRON_SECRET is checked, then the service role
 //   1. completes booked work that has clearly ended (queues payouts, 3-day hold), and
-//   2. sends payouts that are due to each agent's Stripe Express account.
+//   2. bills on-demand bookings weekly for answered minutes (1-minute minimum
+//      per call) on the business's saved card, and
+//   3. sends payouts that are due to each agent's Stripe Express account.
 // A payout is only sent when the Stripe account belongs to that agent
 // (metadata.echo_user_id) and can receive transfers.
 
@@ -27,6 +29,47 @@ type Due = {
   live_agent_payments: { stripe_payment_intent: string | null } | null;
 };
 
+type Db = ReturnType<typeof createAdminClient>;
+type StripeClient = NonNullable<Awaited<ReturnType<typeof stripe>>>;
+const WEEK = 7 * 24 * 3600_000;
+
+async function billOnDemand(db: Db, s: StripeClient) {
+  const { data: engs } = await db.from("live_agent_engagements")
+    .select("id, rate_cents, business_fee_pct, paid_at, billed_through, live_agent_payments (kind, stripe_customer)")
+    .eq("type", "on_demand").eq("status", "active").limit(200);
+  type E = { id: string; rate_cents: number; business_fee_pct: number; paid_at: string | null; billed_through: string | null; live_agent_payments: { kind: string; stripe_customer: string | null }[] };
+  let n = 0;
+  for (const e of (engs ?? []) as unknown as E[]) {
+    const since = e.billed_through ?? e.paid_at;
+    if (!since || Date.now() - new Date(since).getTime() < WEEK) continue;
+    const customer = e.live_agent_payments.find((p) => p.kind === "card" && p.stripe_customer)?.stripe_customer;
+    if (!customer) continue;
+    const { data: sessions } = await db.from("live_agent_call_sessions").select("id, billable_seconds")
+      .eq("engagement_id", e.id).eq("status", "answered").is("payment_id", null).not("ended_at", "is", null);
+    if (!sessions?.length) continue;
+    const minutes = sessions.reduce((m, x) => m + Math.ceil(Math.max(60, x.billable_seconds) / 60), 0);
+    const base = minutes * e.rate_cents;
+    const amount = Math.round(base * (1 + Number(e.business_fee_pct) / 100));
+    if (amount < 50) continue;
+    try {
+      const c = await s.customers.retrieve(customer);
+      const pm = !c.deleted && c.invoice_settings?.default_payment_method;
+      if (!pm) continue;
+      const intent = await s.paymentIntents.create({
+        amount, currency: "usd", customer, payment_method: typeof pm === "string" ? pm : pm.id, off_session: true, confirm: true,
+        transfer_group: e.id, description: `Redial Live Agent: ${minutes} on-demand minutes`,
+        metadata: { live_agent_engagement: e.id, minutes: String(minutes) },
+      }, { idempotencyKey: `live-agent-bill-${e.id}-${sessions.map((x) => x.id).sort().at(-1)}` });
+      if (intent.status !== "succeeded") continue;
+      const { error } = await db.rpc("live_agent_bill_minutes", { engagement: e.id, sessions: sessions.map((x) => x.id), pi: intent.id, amount, base });
+      if (!error) n++;
+    } catch (err) {
+      console.error("[live agents] on-demand billing", e.id, err instanceof Error ? err.message : err);
+    }
+  }
+  return n;
+}
+
 async function run(req: Request) {
   if (!(await authorized(req))) return Response.json({ error: "Not allowed." }, { status: 403 });
   const db = createAdminClient();
@@ -37,6 +80,8 @@ async function run(req: Request) {
   const { data } = await db.from("live_agent_payouts")
     .select("id, engagement_id, amount_cents, agent_id, live_agents (user_id, live_agent_payout_accounts (stripe_account_id)), live_agent_payments (stripe_payment_intent)")
     .eq("status", "pending").lte("available_at", new Date().toISOString()).limit(50);
+
+  const billed = await billOnDemand(db, s);
 
   let paid = 0, waiting = 0;
   for (const p of (data ?? []) as unknown as Due[]) {
@@ -62,7 +107,7 @@ async function run(req: Request) {
       await db.from("live_agent_payouts").update({ status: "failed", failure: (e instanceof Error ? e.message : "Transfer failed").slice(0, 500) }).eq("id", p.id);
     }
   }
-  return Response.json({ ok: true, completed, paid, waiting });
+  return Response.json({ ok: true, completed, billed, paid, waiting });
 }
 
 export const GET = run;

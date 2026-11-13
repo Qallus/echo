@@ -326,3 +326,15 @@ export async function deleteAgentProfile(): Promise<Result> {
   refresh(ctx.agent.handle);
   return { ok: true };
 }
+
+// Agent Desk phone: a browser calling token so transfers ring this agent.
+// Incoming only; the identity is tied to the signed-in agent.
+export async function agentDeskToken(): Promise<{ token?: string; error?: string }> {
+  const ctx = await me();
+  if (!ctx?.agent) return { error: "Create your Live Agent profile first." };
+  if (ctx.agent.status !== "live") return { error: "Your phone turns on once your profile is live." };
+  const { voiceToken } = await import("@/lib/comms/twilio");
+  const { liveAgentIdentity } = await import("./handoff");
+  const token = await voiceToken(liveAgentIdentity(ctx.user.id), { incoming: true });
+  return token ? { token } : { error: "Calling isn't set up yet (the Twilio API key or TwiML App is missing)." };
+}
