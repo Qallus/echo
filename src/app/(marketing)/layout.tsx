@@ -10,7 +10,6 @@ import { CatalogSync } from "@/components/store/catalog-sync";
 import { loadCatalog } from "@/lib/billing/catalog-server";
 import { ThemeToggle } from "@/components/theme";
 import { getUser } from "@/lib/data";
-import { COMPANY } from "@/lib/company";
 
 // Footer columns: four of five links each, so the rows line up.
 const FOOTER: { title: string; links: [string, string][] }[] = [
@@ -63,11 +62,6 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <span className="font-semibold tracking-[0.2em]">REDIAL</span>
             </div>
             <p className="text-muted-foreground">Your AI assistant answers. You take the calls that matter. With Echo recordings and transcripts built in.</p>
-            <div className="space-y-1.5 text-muted-foreground">
-              <a href={`mailto:${COMPANY.email}`} className="block hover:text-foreground">{COMPANY.email}</a>
-              <a href={COMPANY.phoneHref} className="block hover:text-foreground">{COMPANY.phone}</a>
-              <p>{COMPANY.address}</p>
-            </div>
           </div>
           <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
             {FOOTER.map((col) => (
