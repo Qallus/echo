@@ -14,7 +14,8 @@ import { WaitlistForm } from "./waitlist-form";
 // STORE_URLS and that button links straight to the store.
 const STORE_URLS: Record<Platform, string | null> = { ios: null, android: null };
 
-export function AppBadges({ source, signedIn = false, className }: { source: string; signedIn?: boolean; className?: string }) {
+// size "sm": compact badges for tight spots like the footer.
+export function AppBadges({ source, signedIn = false, size = "default", className }: { source: string; signedIn?: boolean; size?: "default" | "sm"; className?: string }) {
   const [open, setOpen] = useState<Platform | null>(null);
   const [view, setView] = useState<"choose" | "notify">("choose");
   const show = (p: Platform) => { setView("choose"); setOpen(p); };
@@ -22,9 +23,9 @@ export function AppBadges({ source, signedIn = false, className }: { source: str
 
   return (
     <>
-      <div className={cn("flex flex-wrap items-center gap-3", className)}>
-        <Badge platform="ios" onOpen={show} />
-        <Badge platform="android" onOpen={show} />
+      <div className={cn("flex flex-wrap items-center", size === "sm" ? "gap-2" : "gap-3", className)}>
+        <Badge platform="ios" onOpen={show} small={size === "sm"} />
+        <Badge platform="android" onOpen={show} small={size === "sm"} />
       </div>
       <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
         {open && (
@@ -60,18 +61,19 @@ function Option({ href, icon, title, detail }: { href: string; icon: React.React
 }
 
 // Store-style badge: black, logo, two lines. A real link once the listing exists.
-function Badge({ platform, onOpen }: { platform: Platform; onOpen: (p: Platform) => void }) {
+function Badge({ platform, onOpen, small }: { platform: Platform; onOpen: (p: Platform) => void; small?: boolean }) {
   const ios = platform === "ios";
   const inner = (
     <>
       {ios ? <AppleLogo /> : <PlayLogo />}
       <span className="text-left leading-tight">
-        <span className="block text-[10px] font-normal opacity-80">{ios ? "Redial for iPhone" : "Redial for Android"}</span>
-        <span className="block text-base font-semibold tracking-tight">{ios ? "App Store" : "Google Play"}</span>
+        <span className={cn("block font-normal opacity-80", small ? "text-[8px]" : "text-[10px]")}>{ios ? "Redial for iPhone" : "Redial for Android"}</span>
+        <span className={cn("block font-semibold tracking-tight", small ? "text-xs" : "text-base")}>{ios ? "App Store" : "Google Play"}</span>
       </span>
     </>
   );
-  const style = "inline-flex h-12 min-w-40 items-center gap-2.5 rounded-xl border border-white/15 bg-black px-3.5 text-white shadow-sm transition hover:bg-neutral-800 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
+  const style = cn("inline-flex items-center border border-white/15 bg-black text-white shadow-sm transition hover:bg-neutral-800 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+    small ? "h-9 gap-1.5 rounded-lg px-2.5 [&_svg]:size-4" : "h-12 min-w-40 gap-2.5 rounded-xl px-3.5");
   const url = STORE_URLS[platform];
   if (url) return <a href={url} className={style} target="_blank" rel="noopener noreferrer">{inner}</a>;
   return <button type="button" className={style} onClick={() => onOpen(platform)} aria-haspopup="dialog">{inner}</button>;

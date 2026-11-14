@@ -81,7 +81,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <Link href="/terms" className="hover:text-foreground">Terms of Service</Link>
               <Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link>
             </div>
-            <AppBadges source="footer" signedIn={!!user} className="md:ml-auto" />
+            <AppBadges source="footer" signedIn={!!user} size="sm" className="md:ml-auto" />
           </div>
         </div>
       </footer>
