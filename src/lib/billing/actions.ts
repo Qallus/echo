@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { getUser, requireUser } from "@/lib/data";
 import { siteOrigin } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
-import { LINE_NAME, findPrice, lineOf, type Line } from "./catalog";
+import { LINE_NAME, amountFor, findPrice, lineOf, type Line } from "./catalog";
 import { loadCatalog } from "./catalog-server";
+import { checkPromo, type PromoCheck } from "./promo";
 import { getBillingSettings } from "./settings";
 import { stripe } from "./stripe";
 import type { CartLine } from "./cart";
@@ -41,7 +42,28 @@ async function customerId(userId: string) {
 
 // Cart -> Stripe Checkout. Anything recurring makes it a subscription
 // checkout; one-off items then go on the first invoice.
-export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> {
+// The cart's "Apply" button: checks a promo code against the cart (and the
+// signed-in customer, if any) and estimates the discount. Checkout checks again.
+export async function previewPromo(lines: CartLine[], code: string): Promise<PromoCheck> {
+  const s = await stripe();
+  if (!s) return { ok: false, error: "Promo codes aren't available yet." };
+  await loadCatalog();
+  const items = promoItems(lines);
+  if (!items.length) return { ok: false, error: "Your cart is empty." };
+  const user = await getUser();
+  try {
+    return await checkPromo(s, await createClient(), code, user ? { id: user.id, email: user.email } : null, items);
+  } catch {
+    return { ok: false, error: "Couldn't check that code. Please try again." };
+  }
+}
+
+const promoItems = (lines: CartLine[]) => lines.flatMap((l) => {
+  const hit = findPrice(l.key);
+  return hit && l.quantity > 0 ? [{ productId: hit.product.id, amount: amountFor(hit.price, l.quantity) }] : [];
+});
+
+export async function startCheckout(lines: CartLine[], promoCode?: string): Promise<CheckoutResult> {
   const user = await getUser();
   if (!user) return { needLogin: true };
   const s = await stripe();
@@ -75,9 +97,17 @@ export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> 
   const recurring = items.some((l) => l.hit!.price.interval);
   const origin = await siteOrigin();
   const customer = await customerId(user.id);
-  const meta = { echo_user_id: user.id };
-  // Stripe allows either an automatic discount or promo-code entry, not both.
-  const coupon = recurring ? await byokCoupon() : null;
+  // A promo code from the cart (checked again here) replaces the own-AI-keys
+  // discount: a checkout takes one discount. Codes are only entered in the
+  // cart, where Echo's rules apply, so Stripe's own code box stays off.
+  let promo: Extract<PromoCheck, { ok: true }> | null = null;
+  if (promoCode?.trim()) {
+    const check = await checkPromo(s, await createClient(), promoCode, { id: user.id, email: user.email }, promoItems(lines));
+    if (!check.ok) return { error: check.error };
+    promo = check;
+  }
+  const meta: Record<string, string> = { echo_user_id: user.id, ...(promo ? { promo_code_id: promo.id, promo_code: promo.code } : {}) };
+  const coupon = !promo && recurring ? await byokCoupon() : null;
 
   const session = await s.checkout.sessions.create({
     mode: recurring ? "subscription" : "payment",
@@ -88,7 +118,7 @@ export async function startCheckout(lines: CartLine[]): Promise<CheckoutResult> 
     ...(recurring
       ? { subscription_data: { metadata: meta } }
       : { invoice_creation: { enabled: true, invoice_data: { metadata: meta } }, ...(customer ? {} : { customer_creation: "always" as const }) }),
-    ...(coupon ? { discounts: [{ coupon }] } : { allow_promotion_codes: true }),
+    ...(promo ? { discounts: [{ promotion_code: promo.id }] } : coupon ? { discounts: [{ coupon }] } : {}),
     billing_address_collection: "auto",
     success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/cart`,

@@ -31,8 +31,16 @@ async function saveCustomer(db: Db, s: Stripe, userId: string, customer: string 
 type Line = { price_key: string | null; description: string; quantity: number; unit_amount: number | null; amount: number; interval: "month" | "year" | null };
 
 async function insertOrder(db: Db, order: Record<string, unknown>, lines: Line[]) {
-  const { data, error } = await db.from("orders").insert(order).select("*").single();
-  if (error) {
+  let { data, error } = await db.from("orders").insert(order).select("*").single();
+  // Promo columns not added yet (migration 20261116120000): save the order without them.
+  if (error && /promo_code/.test(error.message)) {
+    const rest = { ...order };
+    delete rest.promo_code_id;
+    delete rest.promo_code;
+    ({ data, error } = await db.from("orders").insert(rest).select("*").single());
+  }
+  if (error || !data) {
+    if (!error) throw new Error("Order not saved.");
     if (error.code === "23505") return null; // already recorded
     throw new Error(error.message);
   }
@@ -69,6 +77,10 @@ async function onLiveAgentCheckout(db: Db, s: Stripe, session: Stripe.Checkout.S
   });
   if (error) throw new Error(error.message);
 }
+
+// The promotion code on a checkout (Echo also passes it in the metadata).
+const promoOf = (session: Stripe.Checkout.Session) =>
+  (session.discounts ?? []).map((d) => id(d.promotion_code as string | { id: string } | null)).find(Boolean) ?? null;
 
 async function onCheckoutCompleted(db: Db, s: Stripe, session: Stripe.Checkout.Session) {
   if (session.metadata?.live_agent_engagement) return onLiveAgentCheckout(db, s, session);
@@ -107,6 +119,8 @@ async function onCheckoutCompleted(db: Db, s: Stripe, session: Stripe.Checkout.S
     total: session.amount_total ?? 0,
     stripe_checkout_session_id: session.id,
     stripe_invoice_id: invoiceId,
+    promo_code_id: session.metadata?.promo_code_id || promoOf(session),
+    promo_code: session.metadata?.promo_code || null,
     stripe_payment_intent_id: pi,
     receipt_url: receipt,
     invoice_pdf: invoice?.invoice_pdf ?? null,

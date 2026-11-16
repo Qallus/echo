@@ -14,23 +14,28 @@ import { createClient } from "@/lib/supabase/server";
 import { BillingSettingsForm } from "./billing-settings-form";
 import { CatalogEditor } from "./catalog-editor";
 import { OrdersTable, type OrderRow } from "./orders-table";
-import { PromoCodes, type PromoRow } from "./promo-codes";
+import { PromoCodes } from "./promo-codes";
+import { toPromoRow } from "@/lib/billing/promo";
+import type { PromoRow } from "@/lib/billing/promo-rules";
 
 export const metadata = { title: "Billing · Admin · Echo" };
 
 type SubRow = { id: string; user_id: string; user_email: string | null; status: string; items: { price_key: string; quantity: number }[]; current_period_end: string | null; cancel_at_period_end: boolean; created_at: string; updated_at: string };
 
-// Stripe promotion codes (empty until Stripe is connected).
-async function promoCodes(): Promise<PromoRow[]> {
+// Stripe promotion codes (empty until Stripe is connected), with what each
+// has given away on orders so far.
+async function promoCodes(supabase: Awaited<ReturnType<typeof createClient>>): Promise<PromoRow[]> {
   const s = await stripe();
   if (!s) return [];
   try {
-    const list = await s.promotionCodes.list({ limit: 50, expand: ["data.promotion.coupon"] });
+    const list = await s.promotionCodes.list({ limit: 100, expand: ["data.promotion.coupon"] });
+    const ids = list.data.map((p) => p.id);
+    const { data: used } = ids.length
+      ? await supabase.from("orders").select("promo_code_id, discount").in("promo_code_id", ids).in("status", ["paid", "partially_refunded"])
+      : { data: [] };
     return list.data.map((p) => {
-      const c = typeof p.promotion?.coupon === "object" ? p.promotion.coupon : null;
-      const off = c?.percent_off ? `${c.percent_off}% off` : c?.amount_off ? `${money(c.amount_off, c.currency ?? "usd")} off` : "";
-      const length = c?.duration === "forever" ? "forever" : c?.duration === "repeating" ? `for ${c.duration_in_months} months` : "first payment";
-      return { id: p.id, code: p.code, active: p.active, redeemed: p.times_redeemed, max: p.max_redemptions, summary: [off, length].filter(Boolean).join(", ") };
+      const mine = (used ?? []).filter((o) => o.promo_code_id === p.id);
+      return { ...toPromoRow(p), given: mine.reduce((n, o) => n + (o.discount ?? 0), 0), orders: mine.length };
     });
   } catch {
     return [];
@@ -49,7 +54,7 @@ export default async function AdminBillingPage() {
     supabase.rpc("admin_orders", { max_rows: 300 }),
     supabase.rpc("admin_subscriptions"),
     getBillingSettings(supabase),
-    promoCodes(),
+    promoCodes(supabase),
   ]);
   const o = (orders.data ?? []) as OrderRow[];
   const s = (subs.data ?? []) as SubRow[];
@@ -121,7 +126,7 @@ export default async function AdminBillingPage() {
         </TabsContent>
 
         <TabsContent value="codes" className="pt-6">
-          {connected ? <PromoCodes codes={codes} readOnly={!manage} /> : <p className="rounded-xl border p-4 text-sm text-muted-foreground">Promotion codes live in Stripe. Add your Stripe secret key in Settings → Integrations to create them here.</p>}
+          {connected ? <PromoCodes codes={codes} readOnly={!manage} products={catalog.map((p) => ({ id: p.id, name: p.name, kind: p.kind }))} /> : <p className="rounded-xl border p-4 text-sm text-muted-foreground">Promotion codes live in Stripe. Add your Stripe secret key in Settings → Integrations to create them here.</p>}
         </TabsContent>
 
         <TabsContent value="settings" className="pt-6">
