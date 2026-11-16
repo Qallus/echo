@@ -5,6 +5,7 @@ import { lineFlow, startFlowRun } from "@/lib/flows/runner";
 import { decide, type Line } from "@/lib/redial/types";
 import { liveAgentForLine, ringLiveAgent } from "@/lib/live-agents/handoff";
 import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
+import { checkCaller, lineProtection } from "@/lib/redial/protection";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // A call to a Redial number ("A call comes in" on that Twilio number).
@@ -14,6 +15,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // leave a voicemail instead. Lines with live routing run the screening as a
 // conference (caller and AI as separate participants); otherwise, or if that
 // can't start, the call streams to the gateway directly.
+// With fraud protection on (the default), the caller ID is checked first: a
+// VIP, allow-list or family number whose caller ID fails the carrier check
+// is screened instead of ringing straight through.
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
@@ -27,15 +31,23 @@ export async function POST(req: Request) {
   const { data: entries } = from ? await db.from("redial_list_entries").select("number, kind").eq("line_id", line.id) : { data: [] };
   // Desk phones count as somewhere to ring, like the member's own number.
   const sipUris = await lineSipUris(db, line.id);
-  const decision = decide({ ...line, forward_to: line.forward_to ?? (sipUris.length ? "sip" : null) }, from, entries ?? []);
+  let decision = decide({ ...line, forward_to: line.forward_to ?? (sipUris.length ? "sip" : null) }, from, entries ?? []);
+
+  // Fraud protection: check the caller ID before trusting a known number.
+  const protection = await lineProtection(db, line.id);
+  const check = protection.enabled && decision.action !== "block" ? await checkCaller(db, line.id, from, p.StirVerstat, entries ?? []) : null;
+  if (check?.spoofSuspect && decision.action === "forward" && /VIP|allow list/.test(decision.reason)) {
+    decision = { action: "screen", reason: "Known number, but the caller ID looks faked" };
+  }
+  const signalCols = check ? { stir_verstat: check.stir, line_type: check.lineType, risk_signals: check.signals } : {};
 
   // A published call tree answers everyone except blocked callers and VIPs.
-  const vip = Boolean(from && (entries ?? []).some((e) => e.number === from && e.kind === "vip"));
+  const vip = Boolean(from && !check?.spoofSuspect && (entries ?? []).some((e) => e.number === from && e.kind === "vip"));
   const tree = decision.action !== "block" && !vip ? await lineFlow(db, line.id) : null;
   if (tree) {
     const { data: call, error: e } = await db.from("redial_calls").upsert({
       line_id: line.id, owner_id: line.owner_id, twilio_sid: p.CallSid, from_number: from ?? p.From ?? null,
-      caller_id_name: p.CallerName || null, reason: `Call tree: ${tree.name}`, status: "ringing",
+      caller_id_name: p.CallerName || null, reason: `Call tree: ${tree.name}`, status: "ringing", ...signalCols,
     }, { onConflict: "twilio_sid" }).select("id").single();
     if (!e && call) {
       try {
@@ -55,7 +67,7 @@ export async function POST(req: Request) {
     line_id: line.id, owner_id: line.owner_id, twilio_sid: p.CallSid, from_number: from ?? p.From ?? null,
     caller_id_name: p.CallerName || null, reason: action === decision.action ? decision.reason : `${decision.reason}; ${fallback}, so voicemail`,
     status: action === "block" ? "blocked" : action === "forward" ? "forwarded" : action === "screen" ? "screening" : "ringing",
-    ...(action === "block" ? { ended_at: new Date().toISOString() } : {}),
+    ...(action === "block" ? { ended_at: new Date().toISOString() } : {}), ...signalCols,
   }, { onConflict: "twilio_sid" }).select("id").single();
   if (error || !call) {
     console.error("[redial voice]", error?.message);

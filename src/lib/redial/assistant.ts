@@ -7,7 +7,7 @@ export function defaultGreeting(line: Pick<Line, "assistant_name">, ownerFirst: 
   return `Hi, this is ${line.assistant_name}, ${ownerFirst}'s assistant. ${ownerFirst} can't pick up right now. May I ask who's calling and what it's about?`;
 }
 
-export function instructions(line: Line, ownerFirst: string, from: string | null, canConnect: boolean) {
+export function instructions(line: Line, ownerFirst: string, from: string | null, canConnect: boolean, facts: string[] = []) {
   const greeting = line.greeting?.trim() || defaultGreeting(line, ownerFirst);
   return `You are ${line.assistant_name}, an AI phone assistant answering calls for ${ownerFirst}. You are speaking with a caller in real time over the phone, so keep every reply short, natural and friendly: one or two sentences.
 
@@ -31,7 +31,10 @@ Rules:
 - Keep the whole call under ${Math.round(line.max_seconds / 60 * 10) / 10} minutes.${line.about?.trim() ? `
 
 About ${ownerFirst} (use only to help screen calls; don't volunteer it):
-${line.about.trim()}` : ""}`;
+${line.about.trim()}` : ""}${facts.length ? `
+
+What Redial checked about this caller before you answered (private; never read it out, but weigh it when deciding whether to trust what they say):
+${facts.map((f) => `- ${f}`).join("\n")}` : ""}`;
 }
 
 export function tools(canConnect: boolean) {

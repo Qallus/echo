@@ -1,5 +1,6 @@
 import { instructions, tools } from "@/lib/redial/assistant";
 import { gatewayConfig, readCallToken, verifyGateway } from "@/lib/redial/gateway";
+import { callFacts, type Signal } from "@/lib/redial/protection";
 import type { Line } from "@/lib/redial/types";
 import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   if (!id || !xaiKey) return Response.json({ error: "Not allowed." }, { status: 403 });
 
   const db = createAdminClient();
-  const { data: call } = await db.from("redial_calls").select("id, status, from_number, owner_id, line:redial_lines(*)").eq("id", id).maybeSingle();
+  const { data: call } = await db.from("redial_calls").select("id, status, from_number, owner_id, stir_verstat, line_type, risk_signals, line:redial_lines(*)").eq("id", id).maybeSingle();
   const line = call?.line as unknown as Line | null;
   if (!call || !line || call.status !== "screening") return Response.json({ error: "Call isn't screening." }, { status: 409 });
   const { data: profile } = await db.from("profiles").select("full_name").eq("id", call.owner_id).maybeSingle();
@@ -27,6 +28,6 @@ export async function POST(req: Request) {
 
   return Response.json({
     callId: call.id, xaiKey, model: "grok-voice-latest", voice: line.voice, maxSeconds,
-    instructions: instructions(line, first, call.from_number, canConnect), tools: tools(canConnect),
+    instructions: instructions(line, first, call.from_number, canConnect, callFacts(call as { risk_signals?: Signal[] | null })), tools: tools(canConnect),
   });
 }

@@ -52,6 +52,24 @@ export async function twilioRequest(path: string, params: Record<string, string>
   return { ok: res.ok, status: res.status, data };
 }
 
+// Twilio Lookup v2: is the number real, and what kind of line is it
+// (mobile, landline, fixedVoip, nonFixedVoip, tollFree...). A small per-lookup
+// charge; times out quickly so a call is never held up waiting for it.
+export async function twilioLookup(number: string, timeoutMs = 2500): Promise<{ valid: boolean; lineType: string | null; carrier: string | null } | null> {
+  const e = await env();
+  if (!e.sid || !e.token) return null;
+  try {
+    const res = await fetch(`https://lookups.twilio.com/v2/PhoneNumbers/${encodeURIComponent(number)}?Fields=line_type_intelligence`, {
+      headers: { Authorization: auth(e) }, signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { valid?: boolean; line_type_intelligence?: { type?: string | null; carrier_name?: string | null } | null };
+    return { valid: j.valid !== false, lineType: j.line_type_intelligence?.type ?? null, carrier: j.line_type_intelligence?.carrier_name ?? null };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchRecording(recordingUrl: string): Promise<Blob | null> {
   const res = await fetch(`${recordingUrl}.mp3`, { headers: { Authorization: auth(await env()) } });
   return res.ok ? res.blob() : null;
