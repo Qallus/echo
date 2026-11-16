@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { adminAudit } from "@/lib/admin/audit";
 import { requireStaff } from "@/lib/admin/guard";
-import type { Interval, Kind, Tier } from "@/lib/billing/catalog";
+import { lineOf, type Interval, type Kind, type Tier } from "@/lib/billing/catalog";
 import { invalidateCatalog, loadFullCatalog } from "@/lib/billing/catalog-server";
 import { dayEnd, dayStart, rulesFromMetadata, rulesToMetadata, type PromoDuration, type PromoRules } from "@/lib/billing/promo-rules";
 import { getBillingSettings, parseBillingSettings, type BillingSettings } from "@/lib/billing/settings";
 import { stripe } from "@/lib/billing/stripe";
 import { syncProductToStripe, type SyncResult } from "@/lib/billing/stripe-sync";
 import { isUuid } from "@/lib/data";
+import { siteOrigin } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { ok?: string; error?: string };
@@ -108,6 +109,67 @@ export async function syncCatalogToStripe(): Promise<Result> {
   }
   await adminAudit(supabase, "billing.stripe.sync", undefined, { ...result });
   return done(`Stripe is in sync: ${result.created.length} new, ${result.updated.length} changed, ${result.unchanged.length} unchanged.`);
+}
+
+// Stripe's customer portal (opened by "Manage billing"), set up in one go so
+// nobody has to find each setting in the dashboard: syncs the catalog, then
+// update cards, invoices, contact details, cancel at period end with a reason,
+// switch between the Redial plans (lines adjustable on per-line plans;
+// downgrades wait for the period end), no promo codes (those go through the
+// cart's rules), and Redial's name, terms, privacy and return link.
+export async function setUpCustomerPortal(): Promise<Result> {
+  await requireStaff("billing.manage");
+  const s = await stripe();
+  if (!s) return { error: "Stripe isn't connected." };
+  const synced = await syncCatalogToStripe();
+  if (synced.error) return synced;
+  const supabase = await createClient();
+  const origin = await siteOrigin();
+
+  try {
+    // The Redial plans customers can switch between, with every active price.
+    const plans = (await loadFullCatalog(supabase)).filter((p) => p.kind === "plan" && p.active !== false && lineOf(p) === "redial");
+    const products: { product: string; prices: string[]; adjustable_quantity: { enabled: boolean; minimum?: number; maximum?: number } }[] = [];
+    for (const p of plans) {
+      const found = (await s.products.search({ query: `metadata['echo_id']:'${p.id}'` })).data[0];
+      const keys = p.prices.filter((x) => x.active !== false && x.interval).map((x) => x.key);
+      if (!found || !keys.length) continue;
+      const prices = (await s.prices.list({ lookup_keys: keys, active: true, limit: 20 })).data.map((x) => x.id);
+      if (prices.length) products.push({ product: found.id, prices, adjustable_quantity: p.perSeat ? { enabled: true, minimum: 1, maximum: 100 } : { enabled: false } });
+    }
+
+    const features = {
+      customer_update: { enabled: true, allowed_updates: ["name", "email", "address", "phone"] as ("name" | "email" | "address" | "phone")[] },
+      invoice_history: { enabled: true },
+      payment_method_update: { enabled: true },
+      subscription_cancel: {
+        enabled: true, mode: "at_period_end" as const, proration_behavior: "none" as const,
+        cancellation_reason: { enabled: true, options: ["too_expensive", "missing_features", "switched_service", "unused", "customer_service", "too_complex", "low_quality", "other"] as ("too_expensive")[] },
+      },
+      subscription_update: products.length
+        ? {
+            enabled: true,
+            default_allowed_updates: ["price", "quantity"] as ("price" | "quantity")[], // no "promotion_code"
+            products,
+            proration_behavior: "always_invoice" as const,
+            schedule_at_period_end: { conditions: [{ type: "decreasing_item_amount" as const }, { type: "shortening_interval" as const }] },
+          }
+        : { enabled: false },
+    };
+    const config = {
+      business_profile: { headline: "Redial: manage your plan, card and invoices", privacy_policy_url: `${origin}/privacy`, terms_of_service_url: `${origin}/terms` },
+      default_return_url: `${origin}/billing`,
+      features,
+    };
+    const current = (await s.billingPortal.configurations.list({ is_default: true, limit: 1 })).data[0];
+    if (current) await s.billingPortal.configurations.update(current.id, config);
+    else await s.billingPortal.configurations.create(config);
+    await adminAudit(supabase, "billing.portal.setup", { type: "integration", id: "stripe" }, { plans: products.length });
+    revalidatePath("/admin/billing");
+    return { ok: `${synced.ok} Customer portal set up: cards, invoices, contact details, cancel at period end, ${products.length ? `switching between ${products.length} Redial plans` : "plan switching off (no Redial plans found in Stripe)"}, promo codes off.` };
+  } catch (e) {
+    return { error: `Catalog synced, but the portal didn't save: ${e instanceof Error ? e.message : e}` };
+  }
 }
 
 // Full refund of an order's payment through Stripe; the webhook then marks it refunded.

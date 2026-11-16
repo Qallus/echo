@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, RefreshCw, Settings2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { addProduct, savePrice, saveProduct, syncCatalogToStripe } from "@/lib/admin/actions/billing";
+import { addProduct, savePrice, saveProduct, syncCatalogToStripe, setUpCustomerPortal } from "@/lib/admin/actions/billing";
 import { KIND_LABEL, LINE_NAME, lineOf, money, per, type Interval, type Kind, type Price, type Product, type Tier } from "@/lib/billing/catalog";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,9 @@ export function CatalogEditor({ products, stripeReady, readOnly }: { products: P
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" disabled={pending || !stripeReady} onClick={() => start(async () => setMsg(await syncCatalogToStripe()))}>
             <RefreshCw /> Sync to Stripe
+          </Button>
+          <Button variant="outline" size="sm" disabled={pending || !stripeReady} onClick={() => start(async () => setMsg(await setUpCustomerPortal()))}>
+            <Settings2 /> Set up customer portal
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAdding((v) => !v)}><Plus /> Add product</Button>
           <span className="text-xs text-muted-foreground">{stripeReady ? "Stripe connected." : "Stripe isn't connected yet: changes save to Echo and sync once STRIPE_SECRET_KEY is set."}</span>
