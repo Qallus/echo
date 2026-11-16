@@ -94,14 +94,14 @@ export function createBlock(type: BlockType): EmailBlock {
     case "header": return { ...base, title: "", url: LOGOS[1].url, alt: LOGOS[1].alt, height: 28, backgroundColor: "#18181b", padTop: 18, padBottom: 18 };
     case "heading": return { ...base, text: "Your heading", headingLevel: "h2", fontSize: 22, textColor: "#18181b", padTop: 24 };
     case "text": return { ...base, text: "Hi {{first_name}},\n\nWrite your message here.", fontSize: 16, textColor: "#3f3f46" };
-    case "button": return { ...base, text: "Learn more", linkUrl: "https://echo.redial.si", buttonColor: "#18181b", buttonTextColor: "#ffffff" };
+    case "button": return { ...base, text: "Learn more", linkUrl: "https://redial.si", buttonColor: "#18181b", buttonTextColor: "#ffffff" };
     case "image": return { ...base, url: "", alt: "", width: 536 };
     case "divider": return { ...base, dividerColor: "#e4e4e7", padBottom: 16 };
     case "spacer": return { ...base, height: 24, padBottom: 0 };
     case "columns": return { ...base, columns: [{ blocks: [createBlock("text")] }, { blocks: [createBlock("text")] }] };
     case "footer": return { ...base, text: "{{org_name}} · {{org_address}}", fontSize: 12, textColor: "#71717a", align: "center", padTop: 8 };
-    case "buttons": return { ...base, text: "Get started", linkUrl: "https://echo.redial.si", label: "Learn more", secondaryUrl: "https://echo.redial.si", buttonColor: "#18181b", buttonTextColor: "#ffffff" };
-    case "card": return { ...base, url: "", alt: "", title: "Card title", text: "A short description of what this is about.", label: "Read more", linkUrl: "https://echo.redial.si", borderColor: "#e4e4e7", buttonColor: "#18181b", buttonTextColor: "#ffffff" };
+    case "buttons": return { ...base, text: "Get started", linkUrl: "https://redial.si", label: "Learn more", secondaryUrl: "https://redial.si", buttonColor: "#18181b", buttonTextColor: "#ffffff" };
+    case "card": return { ...base, url: "", alt: "", title: "Card title", text: "A short description of what this is about.", label: "Read more", linkUrl: "https://redial.si", borderColor: "#e4e4e7", buttonColor: "#18181b", buttonTextColor: "#ffffff" };
     case "list": return { ...base, items: [{ label: "First point" }, { label: "Second point" }, { label: "Third point" }], ordered: false, fontSize: 16, textColor: "#3f3f46" };
     case "quote": return { ...base, text: "Echo saves me an hour after every call.", title: "Customer name", label: "Role, Company", url: "", fontSize: 18, borderColor: "#18181b", textColor: "#18181b" };
     case "callout": return { ...base, title: "Heads up", text: "Something worth noticing.", fontSize: 14, ...CALLOUTS.info };
@@ -243,12 +243,12 @@ function renderBlock(b: EmailBlock, s: EmailSettings, origin: string): string {
 }
 
 // One block's table row, for the editor canvas (each block is clickable there).
-export const blockHtml = (b: EmailBlock, settings: EmailSettings, origin = "https://echo.redial.si") =>
+export const blockHtml = (b: EmailBlock, settings: EmailSettings, origin = "https://redial.si") =>
   renderBlock(b, { ...DEFAULT_SETTINGS, ...settings }, origin.replace(/\/$/, ""));
 
 export function schemaToHtml(schema: EmailSchema, opts: { preheader?: string; origin?: string } = {}): string {
   const s = { ...DEFAULT_SETTINGS, ...schema.settings };
-  const origin = (opts.origin || "https://echo.redial.si").replace(/\/$/, "");
+  const origin = (opts.origin || "https://redial.si").replace(/\/$/, "");
   const font = /^[\w\s,'-]+$/.test(s.fontFamily) ? s.fontFamily : DEFAULT_SETTINGS.fontFamily;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:0;background:${color(s.backgroundColor, DEFAULT_SETTINGS.backgroundColor)}">${
     opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(opts.preheader)}</div>` : ""}

@@ -73,7 +73,7 @@ export function registerEmailTools(server: McpServer, ctx: McpContext, permissio
         html_mode: "Or write the whole email as HTML (mode: html): tables and inline styles, 600px wide, no scripts. Include {{unsubscribe_url}} in a link, or a footer with one is added.",
         merge_fields: [...MERGE_FIELDS.map((m) => m.token), "{{unsubscribe_url}}"],
         categories: CATEGORIES, statuses: STATUSES,
-        brand: { ...org, colors: { ink: "#18181b", muted: "#71717a", page: DEFAULT_SETTINGS.backgroundColor, card: "#ffffff", line: "#e4e4e7" }, site: "https://echo.redial.si" },
+        brand: { ...org, colors: { ink: "#18181b", muted: "#71717a", page: DEFAULT_SETTINGS.backgroundColor, card: "#ffffff", line: "#e4e4e7" }, site: "https://redial.si" },
         audiences: {
           contacts: { roles: CONTACT_ROLES, statuses: CONTACT_STATUSES, leadStatuses: LEAD_STATUSES, tags: "free text, see echo_email_audience_list" },
           waitlist: { products: WAITLIST_PRODUCTS, topics: WAITLIST_TOPICS, statuses: WAITLIST_STATUSES },

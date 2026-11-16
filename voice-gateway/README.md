@@ -18,7 +18,7 @@ Echo owns everything else: the xAI key (Admin → Settings → Integrations → 
 
 1. **New Resource → Application** from this repo. **Base directory:** `voice-gateway`. **Build pack:** Dockerfile.
 2. **Environment variables:**
-   - `APP_URL`: Echo's public URL, e.g. `https://echo.redial.si`
+   - `APP_URL`: Echo's public URL, e.g. `https://redial.si`
    - `REDIAL_GATEWAY_SECRET`: a long random value, marked secret (for example from `openssl rand -hex 32`)
    - `MAX_CALLS` (optional): concurrent calls, 20 by default
 3. **Domain:** e.g. `https://voice.redial.si`, port 8080. Coolify handles TLS, so Twilio connects over `wss://`.

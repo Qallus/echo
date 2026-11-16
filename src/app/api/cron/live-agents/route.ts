@@ -4,7 +4,7 @@ import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Live Agents money job (a Coolify scheduled task, hourly):
-//   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://echo.redial.si/api/cron/live-agents
+//   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://redial.si/api/cron/live-agents
 // No user session: CRON_SECRET is checked, then the service role
 //   1. completes booked work that has clearly ended (queues payouts, 3-day hold), and
 //   2. bills on-demand bookings weekly for answered minutes (1-minute minimum

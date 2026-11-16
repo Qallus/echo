@@ -7,7 +7,7 @@ import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Scheduled job (a Coolify scheduled task every 5 minutes):
-//   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://echo.redial.si/api/cron/comms
+//   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://redial.si/api/cron/comms
 // No user session: the shared CRON_SECRET is checked, then the service role
 // sends scheduled emails and texts that are due, queues time-based
 // automations and rules, runs everything that's due, and sends booking

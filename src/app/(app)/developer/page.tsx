@@ -11,7 +11,7 @@ import { RevokeButton } from "./revoke-button";
 
 export const metadata = { title: "Developer · Echo" };
 
-const PRODUCTION_MCP = "https://echo.redial.si/api/mcp";
+const PRODUCTION_MCP = "https://redial.si/api/mcp";
 
 export default async function DeveloperPage() {
   await requireUser();
@@ -51,7 +51,7 @@ export default async function DeveloperPage() {
           </div>
           {isLocal && (
             <p className="text-xs text-muted-foreground">
-              Claude connects from the internet, so use the production address once Echo is live at echo.redial.si.
+              Claude connects from the internet, so use the production address (redial.si).
               For local testing: <code>{origin}/api/mcp</code>.
             </p>
           )}

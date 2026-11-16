@@ -13,7 +13,7 @@ The plan this is part of: `docs/REDIAL_GROWTH_AND_AUTOMATION_PLAN.md` (Track C).
 - Its **key** is `rdk_<handle>_<secret>`. The secret is that account's password. The key is shown once when it's made and never stored.
 
 **How it connects.**
-- The agent calls `https://echo.redial.si/api/mcp` with the header `Authorization: Bearer <key>`.
+- The agent calls `https://redial.si/api/mcp` with the header `Authorization: Bearer <key>`.
 - The MCP signs the agent in with its key (`src/lib/mcp/agents.ts`), so every call runs **as the agent, under RLS**. No service-role key is involved.
 - The session is reused until it's about to expire.
 
@@ -76,10 +76,10 @@ These actions wait for a person:
 
 1. Go to Admin → AI → Agents and click **New agent**. Name it, pick where it runs, and choose its permissions, areas and limits. Start narrow and widen it later.
 2. Copy the key and the example configuration. The key isn't shown again.
-3. In the harness, add an MCP server. The URL is `https://echo.redial.si/api/mcp`, and the header is `Authorization: Bearer <key>`. Most harnesses accept this JSON:
+3. In the harness, add an MCP server. The URL is `https://redial.si/api/mcp`, and the header is `Authorization: Bearer <key>`. Most harnesses accept this JSON:
 
    ```json
-   { "mcpServers": { "redial": { "type": "http", "url": "https://echo.redial.si/api/mcp", "headers": { "Authorization": "Bearer rdk_..." } } } }
+   { "mcpServers": { "redial": { "type": "http", "url": "https://redial.si/api/mcp", "headers": { "Authorization": "Bearer rdk_..." } } } }
    ```
 
 4. Tell the agent to call `agent_whoami` first.

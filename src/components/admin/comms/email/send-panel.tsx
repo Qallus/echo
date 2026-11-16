@@ -20,7 +20,7 @@ import { PeopleField, type Person } from "./people-field";
 import { Pick } from "./pick";
 import { TemplatePicker } from "./template-picker";
 
-export const SAMPLE = { first_name: "Dana", last_name: "Whitfield", full_name: "Dana Whitfield", email: "dana@example.com", company: "Oasis Resorts", title: "VP Operations", owner: "Jeremy", deal: "Oasis: Business plan", stage: "Proposal", amount: "$4,800", site_url: "https://echo.redial.si", org_name: "Echo", unsubscribe_url: "#" };
+export const SAMPLE = { first_name: "Dana", last_name: "Whitfield", full_name: "Dana Whitfield", email: "dana@example.com", company: "Oasis Resorts", title: "VP Operations", owner: "Jeremy", deal: "Oasis: Business plan", stage: "Proposal", amount: "$4,800", site_url: "https://redial.si", org_name: "Echo", unsubscribe_url: "#" };
 
 // Send an email: To (people or an audience), Subject with the Templates picker
 // beside it, then the email itself. The server checks every send (counts,

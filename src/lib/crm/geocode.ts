@@ -13,7 +13,7 @@ export async function geocode(address: string): Promise<{ lat: number; lng: numb
   last = Date.now();
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`, {
-      headers: { "User-Agent": "Echo admin (https://echo.redial.si; hello@redial.si)", "Accept-Language": "en" },
+      headers: { "User-Agent": "Echo admin (https://redial.si; hello@redial.si)", "Accept-Language": "en" },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;

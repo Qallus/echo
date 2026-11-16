@@ -11,7 +11,7 @@ begin
   ok := public.email_track_event('svix_2', 're_test_1', 'opened', now(), null);
   ok := public.email_track_event('svix_3', 're_test_1', 'opened', now(), null);
   ok := public.email_track_event('svix_3', 're_test_1', 'opened', now(), null); r := r || format(E'1 duplicate delivery returns %s [false]\n', ok);
-  ok := public.email_track_event('svix_4', 're_test_1', 'clicked', now(), null, 'https://echo.redial.si');
+  ok := public.email_track_event('svix_4', 're_test_1', 'clicked', now(), null, 'https://redial.si');
   select open_count, click_count, delivered_at is not null d, last_event into v from public.email_sends where id = s;
   r := r || format(E'2 opens=%s [2] clicks=%s [1] delivered=%s [t] last=%s [clicked]\n', v.open_count, v.click_count, v.d, v.last_event);
   ok := public.email_track_event('svix_5', 're_test_1', 'bounced', now(), null, null, 'Mailbox does not exist', false);

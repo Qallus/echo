@@ -167,7 +167,7 @@ export function PhoneImportDialog({ existing, onClose }: { existing: Contact[]; 
                 <div className="space-y-2 text-sm">
                   <p className="font-medium">Continue on your phone</p>
                   <p className="text-muted-foreground">Scan with your phone&apos;s camera to open this there (sign in if asked). Bring over all your contacts or pick specific people; they show up here when you import.</p>
-                  {url.includes("localhost") && <p className="text-xs text-amber-700 dark:text-amber-300">This is a local address your phone can&apos;t reach. Use echo.redial.si to scan.</p>}
+                  {url.includes("localhost") && <p className="text-xs text-amber-700 dark:text-amber-300">This is a local address your phone can&apos;t reach. Use redial.si to scan.</p>}
                 </div>
               </div>
             )}

@@ -11,7 +11,7 @@ export const metadata = {
   alternates: { canonical: "/developers" },
 };
 
-const SITE = "https://echo.redial.si";
+const SITE = "https://redial.si";
 const MCP_URL = `${SITE}/api/mcp`;
 const API_BASE = `${SITE}/api/v1`;
 

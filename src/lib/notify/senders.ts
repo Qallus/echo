@@ -114,7 +114,7 @@ export async function sendPush(subscription: webpush.PushSubscription, payload: 
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return { ok: false, error: "Push isn't configured (VAPID keys)." };
   try {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? "mailto:support@echo.redial.si", pub, priv);
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? "mailto:support@redial.si", pub, priv);
     await webpush.sendNotification(subscription, JSON.stringify(payload), { TTL: 60 * 60 * 24 });
     return { ok: true };
   } catch (e) {

@@ -81,18 +81,25 @@ export async function deleteRecording(recordingSid: string) {
 }
 
 // X-Twilio-Signature: base64 HMAC-SHA1 (auth token) of the full public URL
-// followed by each POST param name+value, sorted by name.
+// followed by each POST param name+value, sorted by name. Twilio signs the
+// URL it called, so besides the site URL we also accept the host the request
+// actually came in on (a number still pointed at an older domain keeps working).
 export async function verifyTwilio(req: Request): Promise<Record<string, string> | null> {
   const token = (await env()).token;
   const sig = req.headers.get("x-twilio-signature");
   if (!token || !sig) return null;
   const params = Object.fromEntries(new URLSearchParams(await req.text()));
   const u = new URL(req.url);
-  const url = siteUrl(`${u.pathname}${u.search}`);
-  const data = url + Object.keys(params).sort().map((k) => k + params[k]).join("");
-  const expected = Buffer.from(createHmac("sha1", token).update(data).digest("base64"));
+  const path = `${u.pathname}${u.search}`;
+  const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "").split(",")[0].trim();
+  const urls = new Set([siteUrl(path), ...(host ? [`https://${host}${path}`] : [])]);
+  const body = Object.keys(params).sort().map((k) => k + params[k]).join("");
   const given = Buffer.from(sig);
-  return expected.length === given.length && timingSafeEqual(expected, given) ? params : null;
+  for (const url of urls) {
+    const expected = Buffer.from(createHmac("sha1", token).update(url + body).digest("base64"));
+    if (expected.length === given.length && timingSafeEqual(expected, given)) return params;
+  }
+  return null;
 }
 
 const b64url = (v: string | Buffer) => Buffer.from(v).toString("base64url");

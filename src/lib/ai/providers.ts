@@ -47,7 +47,7 @@ const PROVIDERS: Record<ModelId, { keyEnv: string; modelEnv: string; defaultMode
     keyEnv: "OPENROUTER_API_KEY", modelEnv: "OPENROUTER_MODEL", defaultModel: "openrouter/auto",
     build: (apiKey, model) => createOpenAI({
       apiKey, baseURL: "https://openrouter.ai/api/v1",
-      headers: { "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "https://echo.redial.si", "X-Title": "Echo" },
+      headers: { "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "https://redial.si", "X-Title": "Echo" },
     }).chat(model),
   },
 };

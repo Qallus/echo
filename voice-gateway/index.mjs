@@ -18,7 +18,7 @@
 // OpenAI's realtime transcription and every line goes to
 // /api/webhooks/redial/mirror; the gateway never sends audio back.
 //
-// Env: APP_URL (https://echo.redial.si), REDIAL_GATEWAY_SECRET (same value as
+// Env: APP_URL (https://redial.si), REDIAL_GATEWAY_SECRET (same value as
 // Admin -> Settings -> Integrations -> Redial), PORT (8080), MAX_CALLS (20).
 
 import http from "node:http";

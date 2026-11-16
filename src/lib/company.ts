@@ -7,5 +7,5 @@ export const COMPANY = {
   phone: "(480) 999-9906",
   phoneHref: "tel:+14809999906",
   address: "19033 S Arizona Ave #1, Chandler, AZ 85286",
-  site: "https://echo.redial.si",
+  site: "https://redial.si",
 };
