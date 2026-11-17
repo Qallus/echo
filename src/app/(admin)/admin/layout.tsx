@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ShieldOff } from "lucide-react";
 import { AdminMobileHeader } from "@/components/admin/admin-mobile-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AdminBottomNav } from "@/components/admin/admin-bottom-nav";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Softphone } from "@/components/admin/comms/softphone";
 import { TopBar } from "@/components/shell/shell";
@@ -38,7 +39,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/settings" className="font-medium underline underline-offset-2">Turn it back on before launch</Link>
           </p>
         )}
-        <main className="flex-1">{children}</main>
+        {/* Phones: leave room for the fixed bottom bar. */}
+        <main className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
+        <AdminBottomNav permissions={staff.permissions} />
         {can(staff, "comms.manage") && <Softphone />}
       </SidebarInset>
     </SidebarProvider>

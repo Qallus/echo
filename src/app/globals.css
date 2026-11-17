@@ -231,3 +231,8 @@
 @media print {
   [data-slot="sidebar"], [data-slot="sidebar-gap"], header.sticky, nav[aria-label="App"] { display: none !important; }
 }
+
+/* Stat cards switched off with the "Hide stats" switch (components/shell/stats-toggle.tsx).
+   A row that holds only stat cards collapses too. */
+html[data-stats="hidden"] .stat-card { display: none !important; }
+html[data-stats="hidden"] .stat-row:not(:has(> :not(.stat-card):not(:has(> .stat-card)))) { display: none !important; }

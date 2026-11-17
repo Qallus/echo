@@ -26,7 +26,7 @@ export default async function AgentsPage() {
 
   return (
     <AdminPage title="Agents" description="AI agents that work through the Redial MCP with their own key and limits. Everything they do is logged.">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Agents" value={rows.length} />
         <StatCard label="Active" value={rows.filter((a) => a.active).length} />
         <StatCard label="Waiting for you" value={pending.length} />

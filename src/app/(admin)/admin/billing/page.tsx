@@ -78,7 +78,7 @@ export default async function AdminBillingPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-8 pt-6">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard label="MRR" value={money(monthly)} hint={`ARR ${money(monthly * 12)}`} />
             <StatCard label="Active subscriptions" value={live.length} hint={pastDue.length ? `${pastDue.length} past due` : "None past due"} />
             <StatCard label="Revenue this month" value={money(revenueMonth)} hint={`${money(revenue30)} in the last 30 days`} />

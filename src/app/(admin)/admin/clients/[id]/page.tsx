@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { CompanyLogo } from "@/components/admin/crm/company-logo";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Mail, Phone } from "lucide-react";
 import { Section } from "@/components/admin/admin-ui";
 import { TimelinePanel } from "@/components/admin/crm/timeline";
 import { DealRows, Detail } from "@/components/admin/crm/crm-ui";
@@ -35,7 +36,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/admin/clients" />}><ArrowLeft /> Clients</Button>
 
       <div className="flex flex-wrap items-start gap-4">
-        <span className="flex size-12 items-center justify-center rounded-xl border bg-muted"><Building2 className="size-6 text-muted-foreground" /></span>
+        <CompanyLogo src={company.logo} size="lg" />
         <div className="min-w-0 flex-1 space-y-1">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{company.name}</h1>
           {company.industry && <p className="text-sm text-muted-foreground">{company.industry}</p>}
@@ -66,7 +67,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                 {contacts.map((c) => (
                   <li key={c.id}>
                     <Link href={`/admin/contacts/${c.id}`} className="flex items-center gap-2.5 p-3 hover:bg-muted/40">
-                      <UserAvatar name={contactName(c)} email={c.email ?? ""} src={null} size="sm" />
+                      <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="sm" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium">{contactName(c)}</span>
                         <span className="block truncate text-xs text-muted-foreground">{c.title ?? c.email ?? ""}</span>

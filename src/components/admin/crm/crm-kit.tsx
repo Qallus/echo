@@ -16,12 +16,12 @@ import { cn } from "@/lib/utils";
 // panels, click-to-edit fields and a month calendar.
 
 export function StatRow({ children }: { children: React.ReactNode }) {
-  return <div className="flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-4">{children}</div>;
+  return <div className="stat-row flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-4">{children}</div>;
 }
 
 export function StatTile({ label, value, hint, accent }: { label: string; value: React.ReactNode; hint?: string; accent?: boolean }) {
   return (
-    <div className="w-40 shrink-0 snap-start rounded-xl border bg-card p-4 sm:w-auto sm:min-w-0 sm:shrink">
+    <div className="stat-card w-40 shrink-0 snap-start rounded-xl border bg-card p-4 sm:w-auto sm:min-w-0 sm:shrink">
       <p className="text-xs tracking-wide text-muted-foreground uppercase">{label}</p>
       <p className={cn("mt-1 text-2xl font-semibold tabular-nums", accent && "text-primary")}>{value}</p>
       {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}

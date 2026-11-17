@@ -5,6 +5,7 @@ import { AudioLines, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ModeBadge } from "@/components/shell/shell";
+import { StatsToggle } from "@/components/shell/stats-toggle";
 
 // Sticky top bar on phones; the menu opens the admin sidebar as a drawer.
 export function AdminMobileHeader() {
@@ -17,7 +18,8 @@ export function AdminMobileHeader() {
           <AudioLines className="size-5" />
           <span className="font-semibold tracking-[0.2em]">REDIAL</span>
         </Link>
-        <ModeBadge mode="admin" canAdmin className="ml-auto scale-90" />
+        <StatsToggle className="ml-auto" />
+        <ModeBadge mode="admin" canAdmin className="scale-90" />
       </div>
     </header>
   );

@@ -39,7 +39,7 @@ export default async function WaitlistPage({ searchParams }: { searchParams: Pro
 
   return (
     <AdminPage title="App waitlist" description="People who asked to hear when the iPhone and Android apps are ready." actions={<ExportCsv rows={rows} />}>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="On the list" value={all.length} />
         <StatCard label="iPhone" value={all.filter((e) => e.platforms.includes("ios")).length} />
         <StatCard label="Android" value={all.filter((e) => e.platforms.includes("android")).length} />

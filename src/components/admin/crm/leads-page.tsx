@@ -1,5 +1,6 @@
 "use client";
 
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Ban, CalendarDays, Download, Mail, Tag, UserRound, ExternalLink, GitBranchPlus, Kanban, LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2, Upload } from "lucide-react";
@@ -100,7 +101,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
       run: () => confirm(`Delete ${ids.length} leads? Their activity is deleted too.`) && run(async () => { const r = await bulkDelete("crm_contacts", ids); if (!r.error) setSelected(new Set()); return r; }) }]),
   ];
   const columns: Column<Contact>[] = [
-    { id: "name", label: "Lead", cell: (c) => <span className="font-medium">{contactName(c)}</span>, value: contactName },
+    { id: "name", label: "Lead", cell: (c) => <span className="flex items-center gap-2"><UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="sm" /><span className="font-medium">{contactName(c)}</span></span>, value: contactName },
     { id: "status", label: "Status", cell: (c) => <LeadStatusBadge status={c.lead_status} />, value: (c) => LEAD_STATUSES.find((s) => s.id === (c.lead_status ?? "new"))!.label, filter: true },
     { id: "company", label: "Company", cell: (c) => plain(c.company?.name), value: (c) => c.company?.name ?? null, filter: true },
     { id: "interest", label: "Interest", cell: (c) => plain(c.interest), value: (c) => c.interest, filter: true },
@@ -175,6 +176,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
           {shown.map((c) => (
             <div key={c.id} className="flex items-center gap-3 rounded-xl border bg-card p-3 hover:border-primary/40">
               {box(c)}
+              <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="md" />
               <button type="button" onClick={() => open(c.id)} className="min-w-0 flex-1 text-left">
                 <span className="flex items-center gap-2"><span className="truncate text-sm font-medium">{contactName(c)}</span><LeadStatusBadge status={c.lead_status} /></span>
                 <span className="block truncate text-xs text-muted-foreground">{sub(c) || c.email || "—"}</span>
@@ -192,6 +194,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
             <div key={c.id} className="space-y-2 rounded-xl border bg-card p-4">
               <div className="flex items-start gap-2">
                 <span className="pt-1">{box(c)}</span>
+                <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="sm" />
                 <button type="button" onClick={() => open(c.id)} className="min-w-0 flex-1 text-left"><p className="truncate font-medium">{contactName(c)}</p><p className="truncate text-xs text-muted-foreground">{sub(c) || c.email || "—"}</p></button>
                 <RowActions actions={actions(c)} />
               </div>

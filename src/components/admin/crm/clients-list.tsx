@@ -1,9 +1,10 @@
 "use client";
 
+import { CompanyLogo } from "./company-logo";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
-import { Building2, Download, Flag, LayoutGrid, Mail, Map as MapIcon, MapPin, Table as TableIcon, Tag, Tags as TagsIcon, Trash2, UserRound } from "lucide-react";
+import { Download, Flag, LayoutGrid, Mail, Map as MapIcon, MapPin, Table as TableIcon, Tag, Tags as TagsIcon, Trash2, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { geocodeClients } from "@/lib/admin/actions/crm";
 import { bulkDelete, bulkUpdate, type BulkChange } from "@/lib/admin/actions/crm-bulk";
@@ -63,7 +64,7 @@ export function ClientsList({ clients, staff, readOnly }: { clients: ClientRow[]
 
   const columns: Column<ClientRow>[] = [
     { id: "name", label: "Client", value: (c) => c.name, cell: (c) => (
-      <span className="flex items-center gap-2"><Building2 className="size-4 shrink-0 text-muted-foreground" /><span className="min-w-0"><span className="block truncate font-medium">{c.name}</span>
+      <span className="flex items-center gap-2"><CompanyLogo src={c.logo} /><span className="min-w-0"><span className="block truncate font-medium">{c.name}</span>
         {c.industry && <span className="block truncate text-xs text-muted-foreground">{c.industry}</span>}</span></span>) },
     { id: "status", label: "Status", cell: (c) => <Badge variant={c.status === "client" ? "default" : "outline"}>{statusLabel(c.status)}</Badge>, value: (c) => statusLabel(c.status), filter: true },
     { id: "industry", label: "Industry", cell: (c) => plain(c.industry), value: (c) => c.industry, filter: true, hidden: true },
@@ -114,6 +115,7 @@ export function ClientsList({ clients, staff, readOnly }: { clients: ClientRow[]
               <input type="checkbox" className="mt-1" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${c.name}`} />
               <button type="button" onClick={() => router.push(`/admin/clients/${c.id}`)} className="min-w-0 flex-1 space-y-2 text-left">
                 <span className="flex items-center gap-2">
+                  <CompanyLogo src={c.logo} size="md" />
                   <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
                   <Badge variant={c.status === "client" ? "default" : "outline"}>{statusLabel(c.status)}</Badge>
                 </span>

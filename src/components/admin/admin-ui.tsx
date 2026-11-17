@@ -21,7 +21,7 @@ export function AdminPage({ title, description, actions, children, className }: 
 
 export function StatCard({ label, value, hint, icon: Icon }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="space-y-1 rounded-xl border bg-card p-4">
+    <div className="stat-card space-y-1 rounded-xl border bg-card p-4">
       <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">{Icon && <Icon className="size-3.5" />}{label}</p>
       <p className="text-2xl font-semibold tabular-nums">{value}</p>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}

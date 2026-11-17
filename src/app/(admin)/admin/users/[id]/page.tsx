@@ -83,7 +83,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Recordings" value={d.usage.recordings} />
         <StatCard label="Minutes" value={d.usage.minutes} hint={`${d.usage.minutes_month} this month`} />
         <StatCard label="Workspaces" value={d.workspaces.length} />

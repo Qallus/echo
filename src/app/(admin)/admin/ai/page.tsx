@@ -84,7 +84,7 @@ export default async function AdminAiPage() {
         <TabsContent value="usage" className="space-y-8 pt-6">
           {!u ? <p className="text-sm text-muted-foreground">No usage data.</p> : (
             <>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <StatCard label="AI calls (30 days)" value={u.totals.calls} hint={`${u.totals.failed} failed`} />
                 <StatCard label="Estimated spend on Echo's keys" value={dollars(u.totals.echo_cost_cents)} />
                 <StatCard label="On customers' own keys" value={dollars(u.totals.own_cost_cents)} hint="Billed to them, not Echo" />

@@ -20,7 +20,7 @@ import { createClient } from "@/lib/supabase/server";
 // ---------------------------------------------------------------------------
 export type CompanyInput = {
   name: string; status: CompanyStatus; website?: string; industry?: string; phone?: string; email?: string;
-  address?: string; notes?: string; tags?: string; owner_id?: string;
+  address?: string; notes?: string; tags?: string; owner_id?: string; logo?: string;
 };
 
 export async function saveCompany(id: string | null, input: CompanyInput): Promise<Result> {
@@ -29,16 +29,26 @@ export async function saveCompany(id: string | null, input: CompanyInput): Promi
   if (!name) return { error: "Give the client a name." };
   const mail = email(input.email);
   if (mail === false) return { error: "That email address doesn't look right." };
+  const logo = image(input.logo);
+  if (logo === false) return { error: "The logo link must start with https://, or upload an image." };
   const row = {
+    ...(logo === undefined ? {} : { logo }),
     name, status: isCompanyStatus(input.status) ? input.status : "prospect",
     website: text(input.website, 300), industry: text(input.industry, 100), phone: text(input.phone, 40), email: mail,
     address: text(input.address, 400), notes: text(input.notes, 10000), tags: list(input.tags), owner_id: ref(input.owner_id),
   };
   const supabase = await createClient();
-  const { data, error } = id
-    ? await supabase.from("crm_companies").update(row).eq("id", id).select("id").single()
-    : await supabase.from("crm_companies").insert(row).select("id").single();
-  if (error) return { error: error.message };
+  const write = (r: typeof row) => (id
+    ? supabase.from("crm_companies").update(r).eq("id", id).select("id").single()
+    : supabase.from("crm_companies").insert(r).select("id").single());
+  let { data, error } = await write(row);
+  // Logo column not added yet (migration 20261116180000): save everything else.
+  if (error && /logo/.test(error.message) && "logo" in row) {
+    const rest = { ...row } as Partial<typeof row>;
+    delete rest.logo;
+    ({ data, error } = await write(rest as typeof row));
+  }
+  if (error || !data) return { error: error?.message ?? "Couldn't save." };
   await adminAudit(supabase, id ? "crm.client.update" : "crm.client.create", { type: "crm_company", id: data.id }, { name, status: row.status });
   // Place it on the clients map when the address is new or changed.
   if (row.address) {
@@ -67,8 +77,19 @@ export async function deleteCompany(id: string): Promise<Result> {
 export type ContactInput = {
   first_name: string; last_name?: string; email?: string; phone?: string; title?: string; company_id?: string;
   source?: string; notes?: string; tags?: string; owner_id?: string; role?: ContactRole; lead_status?: LeadStatus | "";
-  interest?: string; website?: string; city?: string; state?: string;
+  interest?: string; website?: string; city?: string; state?: string; photo?: string;
 };
+
+// A photo or logo from the form: a small uploaded image (data URL) or an
+// https link; "" removes it; undefined (field not sent) leaves it alone.
+function image(v: string | undefined): string | null | undefined | false {
+  if (v === undefined) return undefined;
+  const s = v.trim();
+  if (!s) return null;
+  if (/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length <= 40000) return s;
+  if (/^https:\/\/[^\s<>"'`]+$/.test(s) && s.length <= 500) return s;
+  return false;
+}
 
 export async function saveContact(id: string | null, input: ContactInput): Promise<Result> {
   await requireStaff("crm.manage");
@@ -76,7 +97,10 @@ export async function saveContact(id: string | null, input: ContactInput): Promi
   if (!first) return { error: "Enter a first name." };
   const mail = email(input.email);
   if (mail === false) return { error: "That email address doesn't look right." };
+  const photo = image(input.photo);
+  if (photo === false) return { error: "The photo link must start with https://, or upload an image." };
   const row = {
+    ...(photo === undefined ? {} : { photo }),
     first_name: first, last_name: text(input.last_name, 100), email: mail, phone: text(input.phone, 40), title: text(input.title, 120),
     company_id: ref(input.company_id), source: text(input.source, 100), notes: text(input.notes, 10000), tags: list(input.tags),
     owner_id: ref(input.owner_id), role: isContactRole(input.role) ? input.role : "contact",

@@ -57,7 +57,7 @@ export default async function LiveAgentsAdminPage() {
 
   return (
     <AdminPage title="Live Agents" description="Real people businesses can book to answer their calls. Approve profiles and voice clips before they're public.">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="To review" value={queue.length} />
         <StatCard label="Live" value={count("live")} hint={`${rows.filter((r) => r.is_demo && r.status === "live").length} demo profiles`} />
         <StatCard label="Drafts" value={count("draft")} />

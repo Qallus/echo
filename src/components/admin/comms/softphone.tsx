@@ -95,7 +95,7 @@ export function Softphone() {
 
   if (!call && !incoming && !error) return null;
   return (
-    <div role="dialog" aria-label="Phone" className="fixed right-4 bottom-4 z-50 w-72 space-y-3 rounded-2xl border bg-popover p-4 shadow-xl">
+    <div role="dialog" aria-label="Phone" className="fixed right-4 bottom-[calc(var(--bottom-nav)+1rem)] z-50 w-72 space-y-3 rounded-2xl border bg-popover p-4 shadow-xl">
       {incoming && !call ? (
         <>
           <p className="flex items-center gap-2 text-sm font-medium"><PhoneIncoming className="size-4 animate-pulse text-emerald-600" /> Incoming call</p>

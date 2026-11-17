@@ -138,9 +138,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <CardDescription>Recordings you made, in every workspace (Trash not counted).</CardDescription>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <dl className="stat-row grid grid-cols-2 gap-4 sm:grid-cols-4">
             {stats.map((s) => (
-              <div key={s.label} className="rounded-lg border p-3">
+              <div key={s.label} className="stat-card rounded-lg border p-3">
                 <dt className="text-xs text-muted-foreground">{s.label}</dt>
                 <dd className="mt-1 text-2xl font-semibold tabular-nums">{s.value}</dd>
               </div>

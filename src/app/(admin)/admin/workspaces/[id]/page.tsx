@@ -42,7 +42,7 @@ export default async function AdminWorkspacePage({ params }: { params: Promise<{
         <p className="text-sm text-muted-foreground">{w.is_personal ? "Personal" : "Business"} · created <LocalDate iso={w.created_at} short /></p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Members" value={w.members.length} />
         <StatCard label="Recordings" value={w.usage.recordings} />
         <StatCard label="Minutes" value={w.usage.minutes} hint={`${w.usage.minutes_month} this month`} />

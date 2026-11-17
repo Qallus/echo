@@ -71,7 +71,7 @@ function UsageBar({ usage: u }: { usage: RedialUsage }) {
   const pct = u.allowance ? Math.min(100, (u.used_minutes / u.allowance) * 100) : 100;
   const out = u.remaining_seconds < 30;
   return (
-    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border p-3", out && "border-destructive/40 bg-destructive/5")}>
+    <div className={cn("stat-card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border p-3", out && "border-destructive/40 bg-destructive/5")}>
       <div className="min-w-48 flex-1 space-y-1.5">
         <p className="text-sm">
           <span className="font-medium tabular-nums">{u.used_minutes}</span> of <span className="tabular-nums">{u.allowance}</span> screening minutes used this month

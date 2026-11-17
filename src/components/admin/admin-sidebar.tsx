@@ -10,11 +10,12 @@ import {
 import { SidebarAccount, SidebarBrand, type ShellUser } from "@/components/shell/shell";
 import type { Permission } from "@/lib/admin/permissions";
 
+export type AdminNavItem = Item;
 type Item = { href: string; label: string; icon: typeof Users; permission?: Permission; exact?: boolean };
 
 // Super Admin navigation (Channel-Cast-OS layout: Main, Operations, Account).
 // Sections join their group as they're built.
-const GROUPS: { label: string; items: Item[] }[] = [
+export const ADMIN_NAV: { label: string; items: Item[] }[] = [
   {
     label: "Main",
     items: [
@@ -69,7 +70,7 @@ export function AdminSidebar({ me, permissions }: { me: ShellUser; permissions: 
         <SidebarAccount me={me} mode="admin" canAdmin />
       </SidebarHeader>
       <SidebarContent>
-        {GROUPS.map((g) => {
+        {ADMIN_NAV.map((g) => {
           const items = g.items.filter(visible);
           if (!items.length) return null;
           return (

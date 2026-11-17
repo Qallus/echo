@@ -39,7 +39,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <AdminPage title="Dashboard" description="How Echo is doing right now.">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard icon={Users} label="Users" value={d.users} hint={`+${d.users_30d} in the last 30 days · ${d.active_users_30d} recorded`} />
         <StatCard icon={Briefcase} label="Business workspaces" value={d.business_workspaces} />
         <StatCard icon={AudioLines} label="Recordings this month" value={d.recordings_month} hint={`${d.minutes_month} minutes · ${d.recordings} all time`} />
@@ -52,7 +52,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {(d.pipeline || d.inbox_unread !== null) && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
           {d.pipeline && <>
             <Tile href="/admin/pipeline"><StatCard icon={SquareKanban} label="Open pipeline" value={money(d.pipeline.open_value)} hint={`${d.pipeline.open} deals · ${money(d.pipeline.weighted)} weighted`} /></Tile>
             <Tile href="/admin/pipeline"><StatCard icon={Trophy} label="Won this month" value={money(d.pipeline.won_month_value)} hint={`${d.pipeline.won_month} deals · ${d.pipeline.new_leads_7d} new leads this week`} /></Tile>

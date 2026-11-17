@@ -9,6 +9,7 @@ import { SidebarMenuButton, SidebarTrigger, useSidebar } from "@/components/ui/s
 import { NotificationBell } from "@/components/notifications/bell";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemeToggle } from "@/components/theme";
+import { StatsToggle } from "./stats-toggle";
 import { cn } from "@/lib/utils";
 
 // The pieces both dashboards share, so the user and admin sidebars look the
@@ -89,6 +90,7 @@ export function ModeBadge({ mode, canAdmin, className }: { mode: Mode; canAdmin:
 export function TopBar({ me, mode, canAdmin }: { me: ShellUser; mode: Mode; canAdmin: boolean }) {
   return (
     <div className="hidden items-center justify-end gap-1 px-4 pt-3 sm:px-6 md:flex">
+      <StatsToggle className="mr-1" />
       <ThemeToggle />
       <NotificationBell userId={me.id} initialUnread={me.unread} />
       <ModeBadge mode={mode} canAdmin={canAdmin} className="ml-2" />

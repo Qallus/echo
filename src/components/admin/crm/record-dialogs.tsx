@@ -5,6 +5,7 @@ import { saveCompany, saveContact, saveDeal, type CompanyInput, type ContactInpu
 import { OPPORTUNITY_TYPES } from "@/lib/crm/deals";
 import { COMPANY_STATUSES, CONTACT_ROLES, DEAL_STAGES, LEAD_STATUSES, type ContactRole, contactName, type Company, type Contact, type Deal, type StaffOption } from "@/lib/crm/types";
 import { Field, RecordDialog, SelectField } from "./crm-ui";
+import { ImageField } from "./image-field";
 
 // Add and edit forms for clients, contacts and deals. A new record opens its
 // page unless `stay` is set (e.g. adding a contact from a client's page).
@@ -22,6 +23,7 @@ export function CompanyDialog({ company, ...p }: Common & { company?: Company })
         if (res.id && !company && !p.stay) router.push(`/admin/clients/${res.id}`);
         return res;
       }}>
+      <ImageField name="logo" label="Logo" kind="logo" defaultValue={company?.logo} className="sm:col-span-2" />
       <Field label="Name" name="name" defaultValue={company?.name} required className="sm:col-span-2" />
       <SelectField label="Status" name="status" defaultValue={company?.status ?? "prospect"} options={COMPANY_STATUSES.map((s) => ({ value: s.id, label: s.label }))} />
       <SelectField label="Owner" name="owner_id" defaultValue={company?.owner_id} options={owners(p.staff)} empty="Unassigned" />
@@ -45,6 +47,7 @@ export function ContactDialog({ contact, companies, companyId, role, ...p }: Com
         if (res.id && !contact && !p.stay) router.push(`/admin/contacts/${res.id}`);
         return res;
       }}>
+      <ImageField name="photo" label="Photo" kind="photo" defaultValue={contact?.photo} className="sm:col-span-2" />
       <Field label="First name" name="first_name" defaultValue={contact?.first_name} required />
       <Field label="Last name" name="last_name" defaultValue={contact?.last_name} />
       <Field label="Email" name="email" type="email" defaultValue={contact?.email} />

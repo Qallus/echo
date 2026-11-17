@@ -32,7 +32,7 @@ export default async function RedialAdminPage() {
 
   return (
     <AdminPage title="Redial" description="AI call screening lines. Call content stays private to each member.">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-6">
         <StatCard label="Waiting for a number" value={((setups ?? []) as SetupRow[]).filter((x) => x.status === "submitted").length} />
         <StatCard label="Open ports" value={((ports ?? []) as PortQueueRow[]).filter((x) => !["completed", "rejected", "cancelled"].includes(x.status)).length} />
         <StatCard label="Lines" value={rows.length} />

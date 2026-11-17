@@ -64,6 +64,7 @@ export type Company = {
   id: string; name: string; status: CompanyStatus; website: string | null; industry: string | null; phone: string | null;
   email: string | null; address: string | null; notes: string | null; tags: string[]; owner_id: string | null;
   latitude: number | null; longitude: number | null; geocoded_address: string | null;
+  logo?: string | null; // migration 20261116180000
   created_at: string; updated_at: string;
 };
 
