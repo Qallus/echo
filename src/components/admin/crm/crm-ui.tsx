@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { money } from "@/lib/billing/catalog";
 import { stageOf, type Deal, type DealStage } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
@@ -57,35 +57,37 @@ export function SelectField({ label, name, defaultValue, options, empty, classNa
   );
 }
 
-// A modal form: collects the fields as a plain object and hands them to a
-// server action; closes on success.
-export function RecordDialog({ title, open, onOpenChange, submitLabel, onSubmit, children }: {
-  title: string; open: boolean; onOpenChange: (open: boolean) => void; submitLabel: string;
-  onSubmit: (values: Record<string, string>) => Promise<{ ok?: string; error?: string; id?: string }>; children: React.ReactNode;
+// A record form in a side panel (a bottom sheet on phones): collects the
+// fields as a plain object and hands them to a server action; closes on
+// success. The Save button sits in the panel's sticky footer.
+export function RecordDialog({ title, description, open, onOpenChange, submitLabel, onSubmit, children, panelId = "crm-record" }: {
+  title: string; description?: string; open: boolean; onOpenChange: (open: boolean) => void; submitLabel: string;
+  onSubmit: (values: Record<string, string>) => Promise<{ ok?: string; error?: string; id?: string }>; children: React.ReactNode; panelId?: string;
 }) {
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
+  const formId = useId();
   return (
-    <Dialog open={open} onOpenChange={(o) => { setError(undefined); onOpenChange(o); }}>
-      <DialogContent title={title} className="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto">
-        <form className="space-y-4" onSubmit={(e) => {
-          e.preventDefault();
-          const values = Object.fromEntries([...new FormData(e.currentTarget)].map(([k, v]) => [k, String(v)]));
-          start(async () => {
-            const res = await onSubmit(values);
-            if (res.error) setError(res.error);
-            else onOpenChange(false);
-          });
-        }}>
-          <div className="grid gap-3 sm:grid-cols-2">{children}</div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={pending}>{pending ? "Saving…" : submitLabel}</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <ResponsivePanel id={panelId} title={title} description={description} open={open} onOpenChange={(o) => { setError(undefined); onOpenChange(o); }}
+      footer={
+        <div className="flex items-center justify-end gap-2">
+          {error && <p className="mr-auto text-sm text-destructive">{error}</p>}
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" form={formId} disabled={pending}>{pending ? "Saving…" : submitLabel}</Button>
+        </div>
+      }>
+      <form id={formId} className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => {
+        e.preventDefault();
+        const values = Object.fromEntries([...new FormData(e.currentTarget)].map(([k, v]) => [k, String(v)]));
+        start(async () => {
+          const res = await onSubmit(values);
+          if (res.error) setError(res.error);
+          else onOpenChange(false);
+        });
+      }}>
+        {children}
+      </form>
+    </ResponsivePanel>
   );
 }
 

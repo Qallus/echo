@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { AlertTriangle, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
 import { Label } from "@/components/ui/label";
 import { TimePicker } from "@/components/ui/time-picker";
 
@@ -33,8 +33,7 @@ export function ScheduleDialog({ title, summary, cronReady, onSchedule, onClose 
   const label = iso ? new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose(Boolean(msg.ok))}>
-      <DialogContent title={title} className="max-w-md">
+    <ResizableDialog open onOpenChange={(o) => !o && onClose(Boolean(msg.ok))} title={title}>
         <div className="space-y-4">
           <div className="text-sm">{summary}</div>
           <div className="flex flex-wrap gap-1.5">
@@ -62,7 +61,6 @@ export function ScheduleDialog({ title, summary, cronReady, onSchedule, onClose 
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResizableDialog>
   );
 }

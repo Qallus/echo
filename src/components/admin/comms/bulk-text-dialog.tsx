@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { AlertTriangle, CalendarClock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -52,8 +52,7 @@ export function BulkTextDialog({ cronReady, onClose }: { cronReady: boolean; onC
   const go = () => start(async () => { const res = await scheduleTexts(input); setMsg(res); setConfirming(false); });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Text the waitlist" description="Only people who agreed to texts, following the frequency and topics each person chose." className="max-w-2xl">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title="Text the waitlist" description="Only people who agreed to texts, following the frequency and topics each person chose." id="bulk-text" defaultWidth={640}>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -121,7 +120,6 @@ export function BulkTextDialog({ cronReady, onClose }: { cronReady: boolean; onC
             {!msg.ok && <Button disabled={pending || blocked} onClick={() => setConfirming(true)}>{later ? <CalendarClock /> : <Send />} {later ? "Schedule" : "Send"}{preview ? ` to ${preview.sendable.toLocaleString()}` : ""}</Button>}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

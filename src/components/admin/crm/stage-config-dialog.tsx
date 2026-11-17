@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { saveStageConfig } from "@/lib/admin/actions/crm-pipeline";
@@ -40,9 +40,7 @@ export function StageConfigDialog({ open, onOpenChange, initial, startStage }: {
   });
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent title="Pipeline stages" description="The goal, guidance and Next Steps for each stage. Changes apply to every opportunity."
-        className="max-h-[calc(100dvh-2rem)] max-w-4xl overflow-y-auto">
+    <ResponsivePanel open={open} onOpenChange={(o) => !saving && onOpenChange(o)} title="Pipeline stages" description="The goal, guidance and Next Steps for each stage. Changes apply to every opportunity." id="stage-config" defaultWidth={760}>
         <div className="grid min-h-0 gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
           <div className="flex gap-1 overflow-x-auto sm:flex-col">
             {STAGE_ORDER.map((s) => (
@@ -106,7 +104,6 @@ export function StageConfigDialog({ open, onOpenChange, initial, startStage }: {
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save stages"}</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

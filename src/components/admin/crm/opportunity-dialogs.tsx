@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { CircleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -28,14 +28,12 @@ function Footer({ onClose, onSave, pending, label, disabled, extra }: { onClose:
 
 export function BlockedDialog({ items, onClose }: { items: string[]; onClose: Close }) {
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Finish this stage first" description="These steps are required before moving forward:">
+    <ResizableDialog open onOpenChange={(o) => !o && onClose()} title="Finish this stage first" description="These steps are required before moving forward:">
         <ul className="space-y-1.5">
           {items.map((b) => <li key={b} className="flex items-start gap-2 text-sm"><CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />{b}</li>)}
         </ul>
         <div className="flex justify-end"><Button onClick={onClose}>Got it</Button></div>
-      </DialogContent>
-    </Dialog>
+      </ResizableDialog>
   );
 }
 
@@ -52,8 +50,7 @@ export function CloseDialog({ deal, outcome, onClose }: { deal: Deal; outcome: "
     if (res.error) setError(res.error); else onClose();
   });
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={outcome === "won" ? "Mark Closed Won" : "Mark Closed Lost"}>
+    <ResizableDialog open onOpenChange={(o) => !o && onClose()} title={outcome === "won" ? "Mark Closed Won" : "Mark Closed Lost"}>
         {outcome === "lost" && (
           <div className="space-y-1.5"><Label htmlFor="lost-reason">Lost reason</Label>
             <Pick id="lost-reason" label="Lost reason" value={reason} onChange={(v) => setReason(v)} options={LOST_REASONS.map((r) => ({ value: r, label: r }))} />
@@ -65,8 +62,7 @@ export function CloseDialog({ deal, outcome, onClose }: { deal: Deal; outcome: "
         <p className="text-xs text-muted-foreground">The opportunity and its full history are kept either way.</p>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Footer onClose={onClose} onSave={save} pending={pending} label="Confirm" />
-      </DialogContent>
-    </Dialog>
+      </ResizableDialog>
   );
 }
 
@@ -84,8 +80,7 @@ export function NextStepDialog({ deal, onClose }: { deal: Deal; onClose: Close }
     if (res.error) setError(res.error); else onClose();
   });
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Next step">
+    <ResizableDialog open onOpenChange={(o) => !o && onClose()} title="Next step">
         <div className="space-y-1.5"><Label htmlFor="ns-action">What happens next</Label>
           <Input id="ns-action" autoFocus value={action} onChange={(e) => setAction(e.target.value)} placeholder="Send the proposal" />
         </div>
@@ -103,8 +98,7 @@ export function NextStepDialog({ deal, onClose }: { deal: Deal; onClose: Close }
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Footer onClose={onClose} onSave={() => save()} pending={pending} label="Save next step" disabled={!action.trim() || !due}
           extra={deal.next_step ? <Button variant="outline" disabled={pending} onClick={() => save(true)}>Clear</Button> : null} />
-      </DialogContent>
-    </Dialog>
+      </ResizableDialog>
   );
 }
 
@@ -121,8 +115,7 @@ export function AddFieldDialog({ deal, onClose }: { deal: Deal; onClose: Close }
     if (res.error) setError(res.error); else onClose();
   });
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Add a field" description="Shown under Key fields on this opportunity.">
+    <ResizableDialog open onOpenChange={(o) => !o && onClose()} title="Add a field" description="Shown under Key fields on this opportunity.">
         <div className="grid gap-3 sm:grid-cols-[1fr_9rem]">
           <div className="space-y-1.5"><Label htmlFor="fld-label">Label</Label><Input id="fld-label" autoFocus value={label} onChange={(e) => setLabel(e.target.value)} placeholder="PO number" /></div>
           <div className="space-y-1.5"><Label htmlFor="fld-type">Type</Label>
@@ -133,7 +126,6 @@ export function AddFieldDialog({ deal, onClose }: { deal: Deal; onClose: Close }
         {taken && <p className="text-sm text-destructive">There&apos;s already a field with that name.</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Footer onClose={onClose} onSave={save} pending={pending} label="Add field" disabled={!label.trim() || taken} />
-      </DialogContent>
-    </Dialog>
+      </ResizableDialog>
   );
 }

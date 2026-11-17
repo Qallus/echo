@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -88,19 +88,16 @@ export function PromoCodes({ codes, readOnly, products }: { codes: PromoRow[]; r
         </ul>
       )}
 
-      <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent title="New promo code" description="Customers type the code in their cart." className="max-h-[90dvh] max-w-2xl overflow-y-auto">
-          <CreateForm products={products} onDone={(m) => { setMsg(m); if (m.ok) setCreating(false); }} />
-        </DialogContent>
-      </Dialog>
+      <ResponsivePanel id="promo-code" open={creating} onOpenChange={setCreating} defaultWidth={640}
+        title="New promo code" description="Customers type the code in their cart.">
+        <CreateForm products={products} onDone={(m) => { setMsg(m); if (m.ok) setCreating(false); }} />
+      </ResponsivePanel>
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        {editing && (
-          <DialogContent title={`Edit ${editing.code}`} description="The discount, expiry, total uses, minimum order, products and first-time rule are fixed in Stripe. To change those, turn this code off and create a new one." className="max-h-[90dvh] max-w-2xl overflow-y-auto">
-            <EditForm row={editing} products={products} onDone={(m) => { setMsg(m); if (m.ok) setEditing(null); }} />
-          </DialogContent>
-        )}
-      </Dialog>
+      <ResponsivePanel id="promo-code" open={!!editing} onOpenChange={(o) => !o && setEditing(null)} defaultWidth={640}
+        title={editing ? `Edit ${editing.code}` : "Edit promo code"}
+        description="The discount, expiry, total uses, minimum order, products and first-time rule are fixed in Stripe. To change those, turn this code off and create a new one.">
+        {editing && <EditForm row={editing} products={products} onDone={(m) => { setMsg(m); if (m.ok) setEditing(null); }} />}
+      </ResponsivePanel>
     </div>
   );
 }

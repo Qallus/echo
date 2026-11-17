@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Download, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -91,8 +91,7 @@ export function ReportTable({ def, rows, range, since, until, saved }: {
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent title="Save report" description="Keeps this report and date range in the Reports list.">
+      <ResizableDialog open={open} onOpenChange={setOpen} title="Save report" description="Keeps this report and date range in the Reports list.">
           <form className="space-y-4" onSubmit={(e) => {
             e.preventDefault();
             start(async () => {
@@ -107,8 +106,7 @@ export function ReportTable({ def, rows, range, since, until, saved }: {
             {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
             <div className="flex justify-end"><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button></div>
           </form>
-        </DialogContent>
-      </Dialog>
+        </ResizableDialog>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -77,8 +77,7 @@ function AutomationDialog({ automation, templates, onClose }: { automation?: Aut
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={automation ? "Edit automation" : "New automation"} className="max-w-lg">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title={automation ? "Edit automation" : "New automation"} id="automation" defaultWidth={520}>
         <div className="space-y-3">
           <div className="space-y-1.5"><Label htmlFor="au-name">Name</Label><Input id="au-name" value={form.name} onChange={(e) => set({ name: e.target.value })} placeholder="Proposal follow-up" /></div>
           <div className="space-y-1.5"><Label htmlFor="au-trigger">When</Label>
@@ -119,7 +118,6 @@ function AutomationDialog({ automation, templates, onClose }: { automation?: Aut
             if (res.error) setError(res.error); else onClose();
           })}>{pending ? "Saving…" : "Save"}</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

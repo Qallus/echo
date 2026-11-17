@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Textarea } from "@/components/ui/textarea";
 import { importContacts } from "@/lib/admin/actions/crm-people";
 import { mapHeaders, parseCsv, rowsToImport } from "@/lib/crm/csv";
@@ -19,9 +19,7 @@ export function ImportDialog({ onClose, role }: { onClose: () => void; role: "co
   const records = useMemo(() => rowsToImport(rows), [rows]);
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={role === "lead" ? "Import leads" : "Import contacts"} description="CSV with a header row. Name, email, phone, company, title, city, state, website, source, tags and notes map automatically."
-        className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title={role === "lead" ? "Import leads" : "Import contacts"} description="CSV with a header row. Name, email, phone, company, title, city, state, website, source, tags and notes map automatically." id="crm-import" defaultWidth={640}>
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/40">
           <Upload className="size-4" /> Choose a .csv file
           <input type="file" accept=".csv,text/csv" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setText(await f.text()); }} />
@@ -46,7 +44,6 @@ export function ImportDialog({ onClose, role }: { onClose: () => void; role: "co
             {pending ? "Importing…" : `Import ${records.length || ""}`}
           </Button>}
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { CircleCheck, CircleSlash, CircleX, Clock, Pencil, Play, Plus, Trash2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
 import { Switch } from "@/components/ui/switch";
@@ -113,8 +113,7 @@ export function RulesPanel({ rules, runs, templates, people, records, readOnly }
 
       {editing && <RuleBuilder rule={editing === "new" ? null : editing} templates={templates} people={people} onClose={() => setEditing(null)} />}
 
-      <Dialog open={!!testing} onOpenChange={(o) => !o && setTesting(null)}>
-        <DialogContent title="Run on a record" description="Queues this rule for one record. It runs within five minutes, and only if the conditions match.">
+      <ResizableDialog open={!!testing} onOpenChange={(o) => !o && setTesting(null)} title="Run on a record" description="Queues this rule for one record. It runs within five minutes, and only if the conditions match.">
           {testing && (() => {
             const options = records[subjectOf(testing.trigger)];
             return (
@@ -130,8 +129,7 @@ export function RulesPanel({ rules, runs, templates, people, records, readOnly }
               </form>
             );
           })()}
-        </DialogContent>
-      </Dialog>
+        </ResizableDialog>
     </div>
   );
 }

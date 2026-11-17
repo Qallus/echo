@@ -5,7 +5,7 @@ import { CalendarDays, Check, Copy, Download, ExternalLink, List, Mail, Pencil, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -101,8 +101,7 @@ function EventDialog({ event, staff, timezone, onClose }: { event?: EventRow; st
   const set = (p: Partial<typeof f>) => setF({ ...f, ...p });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={event ? `Edit ${event.title}` : "New event"} className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title={event ? `Edit ${event.title}` : "New event"} id="event" defaultWidth={640}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="ev-title">Title</Label><Input id="ev-title" value={f.title} onChange={(x) => set({ title: x.target.value, ...(event ? {} : { slug: slugify(x.target.value) }) })} placeholder="Echo workshop" /></div>
           <div className="space-y-1.5"><Label htmlFor="ev-slug">Link</Label><Input id="ev-slug" value={f.slug} onChange={(x) => set({ slug: slugify(x.target.value) })} /></div>
@@ -141,8 +140,7 @@ function EventDialog({ event, staff, timezone, onClose }: { event?: EventRow; st
             if (r.error) setError(r.error); else onClose();
           })}>{pending ? "Saving…" : "Save event"}</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }
 

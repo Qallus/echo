@@ -6,7 +6,7 @@ import { CalendarDays, Check, List, Plus, Table as TableIcon, Trash2, UserX, X }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -142,8 +142,7 @@ function BookingDialog({ booking, types, staff, people, timezone, readOnly, onCl
   const set = (p: Partial<typeof f>) => setF({ ...f, ...p });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={booking ? booking.title : "New booking"} className="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title={booking ? booking.title : "New booking"} id="booking" defaultWidth={560}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="bk-contact">Contact</Label>
             <Pick id="bk-contact" label="Contact" value={f.contact_id} disabled={readOnly} onChange={(v) => {
@@ -186,7 +185,6 @@ function BookingDialog({ booking, types, staff, people, timezone, readOnly, onCl
             })}>{pending ? "Saving…" : booking ? "Save" : "Book"}</Button>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

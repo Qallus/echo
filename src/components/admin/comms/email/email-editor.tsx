@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { ArrowLeft, Check, Code, Copy, Eye, FlaskConical, LayoutTemplate, Monitor, PanelRightClose, PanelRightOpen, SlidersHorizontal, Smartphone, Trash2 } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -222,11 +222,9 @@ export function EmailEditor({ template, onDone }: { template?: Template; onDone:
         )
       )}
 
-      <Dialog open={previewing} onOpenChange={setPreviewing}>
-        <DialogContent title={subject ? applyMerge(subject, SAMPLE) : "Preview"} description="How it arrives, filled in for an example contact." className="max-w-4xl">
+      <ResponsivePanel open={previewing} onOpenChange={setPreviewing} title={subject ? applyMerge(subject, SAMPLE) : "Preview"} description="How it arrives, filled in for an example contact." id="email-preview" defaultWidth={900}>
           <EmailPreview html={preview} note="example contact" height={640} />
-        </DialogContent>
-      </Dialog>
+        </ResponsivePanel>
     </div>
   );
 }
