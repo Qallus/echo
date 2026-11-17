@@ -11,6 +11,7 @@ export type Line = {
   id: string; owner_id: string; label: string; number: string; forward_to: string | null; mode: Mode; paused: boolean; allow_connect: boolean;
   assistant_name: string; voice: string; greeting: string | null; about: string | null; max_seconds: number;
   live_routing: boolean;
+  record_calls?: boolean; record_notice?: boolean; // missing until migration 20261116150000
 };
 export type ListEntry = { id: string; line_id: string; number: string; kind: ListKind; label: string | null; created_at: string };
 export type Turn = { role: "caller" | "assistant"; text: string };
@@ -19,7 +20,13 @@ export type Call = {
   caller_name: string | null; purpose: string | null; callback_number: string | null; message: string | null; summary: string | null;
   category: Category | null; urgency: "low" | "normal" | "high" | null; transcript: Turn[]; duration_seconds: number | null;
   recording_path: string | null; started_at: string; ended_at: string | null; read_at: string | null; archived_at: string | null;
+  // The call log (migration 20261116150000); absent before it runs.
+  direction?: "inbound" | "outbound"; to_number?: string | null; recording_id?: string | null; cost_cents?: number | null; notes?: string | null;
+  verdict?: "legit" | "unverified" | "likely_scam" | null;
+  echo?: EchoCall | null;
 };
+// The call's Echo recording: transcription status, summary and action items.
+export type EchoCall = { id: string; status: string; overview: string | null; actions: { text: string; done: boolean }[] };
 // What the signed-in person may do on a line: everything for the owner,
 // otherwise what the owner granted (redial_line_grants).
 export type Access = { owner: boolean; capabilities: string[] };

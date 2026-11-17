@@ -36,7 +36,10 @@ export async function POST(req: Request) {
   }
 
   if (answered) {
-    await db.from("redial_calls").update({ status: call.status === "connecting" ? "connected" : "forwarded", ended_at: new Date().toISOString() }).eq("id", id);
+    await db.from("redial_calls").update({
+      status: call.status === "connecting" ? "connected" : "forwarded", ended_at: new Date().toISOString(),
+      duration_seconds: Math.max(0, Number(p.DialCallDuration ?? 0) || 0),
+    }).eq("id", id);
     return twiml("<Hangup/>");
   }
 

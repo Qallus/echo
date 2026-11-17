@@ -2,13 +2,37 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/data";
 import { MIRROR_DEFAULTS, type MirrorSettings } from "./mirror";
-import type { Access, Call, Callback, Line, ListEntry, Turn } from "./types";
+import type { Access, Call, Callback, EchoCall, Line, ListEntry, Turn } from "./types";
 
 // Redial reads for the signed-in member. RLS limits them to lines they own or
 // were granted; transcripts come through redial_transcripts(), which checks
 // the read_transcript capability.
 
 const CALL_COLS = "id, line_id, from_number, caller_id_name, status, reason, caller_name, purpose, callback_number, message, summary, category, urgency, duration_seconds, recording_path, started_at, ended_at, read_at, archived_at";
+// The call log's columns (migration 20261116150000); used when they exist.
+const LOG_COLS = `${CALL_COLS}, direction, to_number, recording_id, cost_cents, notes, verdict`;
+
+type Db = Awaited<ReturnType<typeof createClient>>;
+async function lineCalls(supabase: Db, lineId: string) {
+  const full = await supabase.from("redial_calls").select(LOG_COLS).eq("line_id", lineId).order("started_at", { ascending: false }).limit(200);
+  if (!full.error) return full;
+  return supabase.from("redial_calls").select(CALL_COLS).eq("line_id", lineId).order("started_at", { ascending: false }).limit(200);
+}
+
+// Each call's Echo recording: status, summary overview and action items.
+async function echoFor(supabase: Db, ids: string[]): Promise<Map<string, EchoCall>> {
+  if (!ids.length) return new Map();
+  const [recs, sums, acts] = await Promise.all([
+    supabase.from("recordings").select("id, status").in("id", ids),
+    supabase.from("summaries").select("recording_id, overview").in("recording_id", ids),
+    supabase.from("action_items").select("recording_id, text, done, position").in("recording_id", ids).order("position"),
+  ]);
+  const map = new Map<string, EchoCall>();
+  for (const r of recs.data ?? []) map.set(r.id, { id: r.id, status: r.status, overview: null, actions: [] });
+  for (const s of sums.data ?? []) { const e = map.get(s.recording_id); if (e) e.overview = s.overview || null; }
+  for (const a of acts.data ?? []) map.get(a.recording_id)?.actions.push({ text: a.text, done: a.done });
+  return map;
+}
 
 // For the sidebar: null when the member has no Redial line (owned or shared).
 export async function callsBadge(): Promise<number | null> {
@@ -43,7 +67,7 @@ export async function lineDetail(lineId: string, access: Access) {
   const supabase = await createClient();
   const directoryAccess = access.owner || access.capabilities.includes("transfer_call") || access.capabilities.includes("manage_directory");
   const [calls, entries, callbacks, people, directory, mirror] = await Promise.all([
-    supabase.from("redial_calls").select(CALL_COLS).eq("line_id", lineId).order("started_at", { ascending: false }).limit(200),
+    lineCalls(supabase, lineId),
     supabase.from("redial_list_entries").select("id, line_id, number, kind, label, created_at").eq("line_id", lineId).order("created_at", { ascending: false }),
     supabase.from("redial_callbacks").select("id, line_id, call_id, name, number, due_at, timezone, note, done_at").eq("line_id", lineId).order("due_at"),
     access.owner ? supabase.rpc("redial_line_people", { p_line: lineId }) : Promise.resolve({ data: [] }),
@@ -56,8 +80,9 @@ export async function lineDetail(lineId: string, access: Access) {
     ? await supabase.rpc("redial_transcripts", { p_line: lineId, p_ids: rows.map((c) => c.id) })
     : { data: [] };
   const byId = new Map(((transcripts ?? []) as { id: string; transcript: Turn[] }[]).map((t) => [t.id, t.transcript]));
+  const echo = await echoFor(supabase, rows.map((c) => c.recording_id).filter((x): x is string => Boolean(x)));
   return {
-    calls: rows.map((c) => ({ ...c, transcript: byId.get(c.id) ?? [] })) as Call[],
+    calls: rows.map((c) => ({ ...c, transcript: byId.get(c.id) ?? [], echo: c.recording_id ? echo.get(c.recording_id) ?? null : null })) as Call[],
     entries: (entries.data ?? []) as ListEntry[],
     callbacks: (callbacks.data ?? []) as Callback[],
     people: (people.data ?? []) as LinePerson[],

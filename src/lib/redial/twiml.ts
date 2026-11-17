@@ -19,7 +19,24 @@ export function ringOwner(line: Line, callId: string, announce: boolean, sip: st
     ...(line.forward_to ? [`<Number url="${hook("whisper", callId)}">${xml(line.forward_to)}</Number>`] : []),
     ...sip.map((uri) => `<Sip url="${hook("whisper", callId)}">${xml(uri)}</Sip>`),
   ].join("");
-  return `${announce ? `<Say>One moment while I connect you.</Say>` : ""}<Dial timeout="20" callerId="${xml(line.number)}" action="${hook("dial", callId)}">${legs}</Dial>`;
+  const say = [announce ? "One moment while I connect you." : "", recordsCalls(line) && line.record_notice !== false ? RECORDING_NOTICE : ""].filter(Boolean).join(" ");
+  return `${say ? `<Say>${say}</Say>` : ""}<Dial timeout="20" callerId="${xml(line.number)}" action="${hook("dial", callId)}"${recordAttrs(line, callId)}>${legs}</Dial>`;
+}
+
+// Call recording (the call log). A line records unless it's switched off;
+// lines from before the call-log migration have no setting and record.
+export const RECORDING_NOTICE = "This call may be recorded.";
+export const recordsCalls = (line: Pick<Line, "record_calls">) => line.record_calls !== false;
+// Both sides on separate channels, from when the call is answered; the audio
+// becomes an Echo recording (see /api/webhooks/twilio/redial/recording).
+export const recordAttrs = (line: Pick<Line, "record_calls">, callId: string) =>
+  recordsCalls(line) ? ` record="record-from-answer-dual" recordingStatusCallback="${hook("recording", callId, "&kind=call")}" recordingStatusCallbackEvent="completed"` : "";
+
+// A call placed from a desk phone on the line: logged, recorded, and the
+// person called hears the notice when they answer (Number url).
+export function dialOut(line: Pick<Line, "number" | "record_calls" | "record_notice">, callId: string, to: string, timeout?: number) {
+  const notice = recordsCalls(line) && line.record_notice !== false ? ` url="${hook("notice", callId)}"` : "";
+  return `<Dial callerId="${xml(line.number)}"${timeout ? ` timeout="${timeout}"` : ""} action="${hook("outbound", callId)}"${recordAttrs(line, callId)}><Number${notice}>${xml(to)}</Number></Dial>`;
 }
 
 // Desk phones on a line that ring for calls, as SIP URIs.

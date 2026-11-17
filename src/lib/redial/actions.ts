@@ -21,6 +21,7 @@ const done = (ok: string): Result => { revalidatePath("/calls"); return { ok }; 
 export type LineSettings = {
   label: string; forward_to: string; mode: Mode; paused: boolean; allow_connect: boolean;
   assistant_name: string; voice: string; greeting: string; about: string; max_seconds: number;
+  record_calls?: boolean; record_notice?: boolean; // the call log; left out by older clients
 };
 
 export async function saveLine(lineId: string, s: LineSettings): Promise<Result> {
@@ -40,7 +41,24 @@ export async function saveLine(lineId: string, s: LineSettings): Promise<Result>
     assistant_name: s.assistant_name.trim().slice(0, 40), voice: s.voice, greeting: s.greeting.trim().slice(0, 500) || null,
     about: s.about.trim().slice(0, 4000) || null, max_seconds: Math.min(300, Math.max(30, Math.round(s.max_seconds) || 120)),
   }).eq("id", lineId);
-  return error ? { error: error.message } : done("Saved.");
+  if (error) return { error: error.message };
+  if (typeof s.record_calls === "boolean" || typeof s.record_notice === "boolean") {
+    const { error: e } = await supabase.from("redial_lines").update({
+      ...(typeof s.record_calls === "boolean" ? { record_calls: s.record_calls } : {}),
+      ...(typeof s.record_notice === "boolean" ? { record_notice: s.record_notice } : {}),
+    }).eq("id", lineId);
+    if (e) return { error: /record_/.test(e.message) ? "Saved, but call recording settings need a database update first (ask your admin)." : e.message };
+  }
+  return done("Saved.");
+}
+
+// Notes on a call (the call log).
+export async function saveCallNotes(callId: string, notes: string): Promise<Result> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error, count } = await supabase.from("redial_calls").update({ notes: notes.trim().slice(0, 10000) || null }, { count: "exact" }).eq("id", callId);
+  if (error) return { error: error.message };
+  return count ? done("Notes saved.") : { error: "You can't edit this call." };
 }
 
 export async function addListEntry(lineId: string, raw: string, kind: ListKind, label: string): Promise<Result> {

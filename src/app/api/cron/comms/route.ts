@@ -3,6 +3,7 @@ import { sendBookingReminders, sendEventReminders } from "@/lib/bookings/reminde
 import { processRuleRuns, queueTimedRules } from "@/lib/automation/run";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
 import { runScheduled } from "@/lib/comms/schedule";
+import { fillCallCosts } from "@/lib/redial/call-log";
 import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -10,8 +11,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://redial.si/api/cron/comms
 // No user session: the shared CRON_SECRET is checked, then the service role
 // sends scheduled emails and texts that are due, queues time-based
-// automations and rules, runs everything that's due, and sends booking
-// reminders.
+// automations and rules, runs everything that's due, sends booking
+// reminders, and fills in Twilio's cost for Redial calls that just ended.
 
 export const maxDuration = 300;
 
@@ -32,7 +33,9 @@ async function run(req: Request) {
   const sent = await processDueRuns(db);
   const rules = await processRuleRuns(db);
   const reminders = (await sendBookingReminders(db)) + (await sendEventReminders(db));
-  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders });
+  // Twilio's price for Redial calls that just ended (no-op before the call-log migration).
+  const costs = await fillCallCosts(db).catch(() => 0);
+  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs });
 }
 
 export const GET = run;

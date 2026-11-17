@@ -1,6 +1,7 @@
 import { AdminPage } from "@/components/admin/admin-ui";
 import { EmailPanel } from "@/components/admin/comms/email-panel";
 import { CallsPanel } from "@/components/admin/comms/calls-panel";
+import { RedialCalls } from "@/components/admin/comms/redial-calls";
 import { InboxPanel } from "@/components/admin/comms/inbox-panel";
 import { NotificationsPanel } from "@/components/admin/comms/notifications-panel";
 import { TextsPanel } from "@/components/admin/comms/texts-panel";
@@ -48,7 +49,10 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
         </TabsList>
         <TabsContent value="inbox" className="pt-6"><InboxPanel messages={inbox} readOnly={readOnly} canCrm={can(staff, "crm.manage")} /></TabsContent>
         <TabsContent value="texts" className="pt-6"><TextsPanel texts={texts} people={phonePeople} optOuts={optOuts} ready={canText} readOnly={readOnly} scheduled={scheduled.filter((x) => x.channel === "sms")} cronReady={Boolean(cronSecret)} /></TabsContent>
-        <TabsContent value="calls" className="pt-6"><CallsPanel calls={calls} people={phonePeople} ready={canCall} number={number} readOnly={readOnly} /></TabsContent>
+        <TabsContent value="calls" className="space-y-8 pt-6">
+          <RedialCalls />
+          <CallsPanel calls={calls} people={phonePeople} ready={canCall} number={number} readOnly={readOnly} />
+        </TabsContent>
         <TabsContent value="email" className="pt-6">
           <EmailPanel scheduled={scheduled.filter((x) => x.channel === "email")} templates={templates} sends={sends} campaigns={campaigns} audiences={audiences} unsubscribes={unsubscribes} readOnly={readOnly} automations={automations} cronReady={Boolean(cronSecret)}
             knownTags={knownTags} canCustomers={can(staff, "users.view")}

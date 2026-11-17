@@ -23,6 +23,7 @@ export function useLineForm(line: Line) {
   const [s, setS] = useState<LineSettings>({
     label: line.label, forward_to: line.forward_to ? pretty(line.forward_to) : "", mode: line.mode, paused: line.paused, allow_connect: line.allow_connect,
     assistant_name: line.assistant_name, voice: line.voice, greeting: line.greeting ?? "", about: line.about ?? "", max_seconds: line.max_seconds,
+    record_calls: line.record_calls !== false, record_notice: line.record_notice !== false,
   });
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
@@ -72,6 +73,20 @@ export function RulesSettings({ line, form, entries }: { line: Line; form: LineF
             <span><span className="block text-sm font-medium">Let my assistant put important calls through</span><span className="block text-xs text-muted-foreground">Family, expected calls and urgent matters. Otherwise it always takes a message.</span></span>
             <Switch checked={s.allow_connect} onCheckedChange={(allow_connect) => set({ allow_connect })} />
           </label>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Recording</h2>
+          <label className="flex items-center justify-between gap-4 rounded-xl border p-3">
+            <span><span className="block text-sm font-medium">Record calls</span><span className="block text-xs text-muted-foreground">Calls you take or make on this line, including desk phones. Each one becomes an Echo recording with a transcript, summary and action items.</span></span>
+            <Switch checked={s.record_calls !== false} onCheckedChange={(record_calls) => set({ record_calls })} />
+          </label>
+          {s.record_calls !== false && (
+            <label className="flex items-center justify-between gap-4 rounded-xl border p-3">
+              <span><span className="block text-sm font-medium">Tell the other person</span><span className="block text-xs text-muted-foreground">They hear &ldquo;This call may be recorded.&rdquo; Some states (California, Florida, Washington and others) require everyone on the call to be told. Leave this on unless you&apos;re sure.</span></span>
+              <Switch checked={s.record_notice !== false} onCheckedChange={(record_notice) => set({ record_notice })} />
+            </label>
+          )}
         </section>
         <SaveBar form={form} />
 

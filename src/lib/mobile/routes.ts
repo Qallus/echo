@@ -75,6 +75,7 @@ export const ROUTES: Record<string, Route> = {
     settings: z.object({
       label: z.string().max(60), forward_to: z.string().max(40), mode: z.enum(["all", "unknown", "off", "spam"]), paused: z.boolean(), allow_connect: z.boolean(),
       assistant_name: z.string().max(40), voice: z.string().max(40), greeting: z.string().max(500), about: z.string().max(4000), max_seconds: z.number(),
+      record_calls: z.boolean().optional(), record_notice: z.boolean().optional(),
     }),
   }), ({ lineId, settings }) => saveLine(lineId, settings)),
   "lists.add": route("POST", z.object({ lineId: id, number: z.string().max(40), kind: z.enum(["allow", "block", "vip"]), label: z.string().max(100) }),

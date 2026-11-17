@@ -1,23 +1,34 @@
 import { after } from "next/server";
 import { deleteRecording, fetchRecording, verifyTwilio } from "@/lib/comms/twilio";
 import { isUuid } from "@/lib/data";
+import { saveCallRecording } from "@/lib/redial/call-log";
 import { secret } from "@/lib/secrets";
 import { transcribeWithOpenAI } from "@/lib/transcription/openai";
 import { getTranscriptionSetting } from "@/lib/transcription/run";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// A Redial voicemail is ready. Signed by Twilio. Copies it to the private
-// redial-voicemail bucket (<owner>/<call>.mp3), deletes Twilio's copy, then
-// transcribes it; saving the message notifies the owner.
+// A Redial recording is ready (signed by Twilio). A recorded conversation
+// (&kind=call, the call log) becomes an Echo recording. A voicemail is copied
+// to the private redial-voicemail bucket (<owner>/<call>.mp3), Twilio's copy
+// is deleted, then it's transcribed; saving the message notifies the owner.
 
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const p = await verifyTwilio(req);
   if (!p) return new Response("Invalid signature", { status: 403 });
-  const id = new URL(req.url).searchParams.get("call") ?? "";
+  const url = new URL(req.url);
+  const id = url.searchParams.get("call") ?? "";
   if (!isUuid(id) || p.RecordingStatus !== "completed" || !p.RecordingUrl) return new Response(null, { status: 204 });
   const seconds = Number(p.RecordingDuration ?? 0) || 0;
+
+  // A recorded conversation (the call log), not a voicemail: it becomes an
+  // Echo recording with a transcript, summary and action items.
+  if (url.searchParams.get("kind") === "call") {
+    if (seconds >= 2) after(() => saveCallRecording(createAdminClient(), id, p.RecordingUrl, p.RecordingSid, seconds).catch((e) => console.error("[redial recording]", e)));
+    else if (p.RecordingSid) after(() => deleteRecording(p.RecordingSid));
+    return new Response(null, { status: 204 });
+  }
 
   after(async () => {
     const db = createAdminClient();

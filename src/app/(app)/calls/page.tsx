@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Phone, PhoneIncoming, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CallsView } from "@/components/redial/calls-view";
+import { can, getStaff } from "@/lib/admin/guard";
 import { getMyProfile, requireUser } from "@/lib/data";
 import { lineDetail, myLines } from "@/lib/redial/data";
 import { redialUsage } from "@/lib/redial/usage";
@@ -15,7 +16,7 @@ export const metadata = { title: "Calls · Echo" };
 // the assistant, for one of the member's lines.
 export default async function CallsPage({ searchParams }: { searchParams: Promise<{ line?: string; call?: string; tab?: string }> }) {
   const user = await requireUser();
-  const [{ line: lineId, call, tab }, lines, profile] = await Promise.all([searchParams, myLines(), getMyProfile()]);
+  const [{ line: lineId, call, tab }, lines, profile, staff] = await Promise.all([searchParams, myLines(), getMyProfile(), getStaff()]);
   // No line yet: set Redial up first.
   if (!lines.length) redirect("/setup");
   const line = lines.find((l) => l.id === lineId) ?? lines[0];
@@ -28,7 +29,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
         <div className="space-y-1">
           <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><PhoneIncoming className="size-7" /> Calls</h1>
           <p className="text-sm text-muted-foreground">
-            Your assistant answers <span className="font-medium text-foreground">{pretty}</span>, screens callers and takes messages.
+            Every call in and out of <span className="font-medium text-foreground">{pretty}</span>: your assistant screens callers and takes messages, and calls are recorded, transcribed and summarized.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -43,7 +44,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           </nav>
         )}
       </div>
-      <CallsView key={line.id} line={line} access={line.access} {...detail} usage={usage} initialCall={call ?? null} initialTab={tab ?? null}
+      <CallsView key={line.id} line={line} access={line.access} {...detail} usage={usage} initialCall={call ?? null} initialTab={tab ?? null} canCrm={can(staff, "crm.manage")}
         ownerFirst={profile.fullName?.trim().split(/\s+/)[0] ?? "you"} />
     </div>
   );
