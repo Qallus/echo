@@ -1,5 +1,5 @@
 import {
-  AudioLines, AudioWaveform, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, Search, ShieldCheck, Tag, UserRoundPlus, Users, Waypoints, type LucideIcon,
+  AudioLines, AudioWaveform, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, Search, ShieldAlert, ShieldCheck, Tag, UserRoundPlus, Users, Waypoints, type LucideIcon,
 } from "lucide-react";
 
 // The public site's product navigation, shared by the desktop mega menu and
@@ -15,7 +15,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
     name: "Redial", tagline: "AI call screening", icon: AudioLines,
     links: [
       { href: "/#redial", title: "What Redial does", desc: "Screening, live controls, Mirror", icon: ShieldCheck },
-      { href: "/#how-redial", title: "How a call is handled", desc: "From the first ring to the summary", icon: Waypoints },
+      { href: "/protect", title: "Fraud protection", desc: "Stops likely scams before they ring", icon: ShieldAlert },
       { href: "/redial/business", title: "Redial for business", desc: "Leads, transfers, a line for the team", icon: Briefcase },
       { href: "/pricing", title: "Redial pricing", desc: "Free, Personal, Business and Team", icon: Tag },
       { href: "/faq#topic-redial", title: "Redial questions", desc: "Screening, live calls, sharing a line", icon: CircleHelp },

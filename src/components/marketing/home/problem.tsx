@@ -1,8 +1,9 @@
-import { BellOff, PhoneMissed, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, BellOff, PhoneMissed, ShieldAlert } from "lucide-react";
 import { AgentName } from "@/components/marketing/agent-name";
 
-const CARDS = [
-  { icon: ShieldAlert, title: "Spam and sales calls", desc: "Robocalls, “quick questions” and pitches look exactly like a real caller on your screen." },
+const CARDS: { icon: typeof ShieldAlert; title: string; desc: string; href?: string; more?: string }[] = [
+  { icon: ShieldAlert, title: "Spam, sales and scam calls", desc: "Robocalls, “quick questions” and scammers look exactly like a real caller on your screen.", href: "/protect", more: "How Redial stops scams" },
   { icon: PhoneMissed, title: "The call you missed", desc: "Ignore an unknown number and it might have been a new client, the school or your doctor." },
   { icon: BellOff, title: "A broken focus", desc: "Every ring pulls you out of a meeting, a job or dinner, even when it turns out to be nothing." },
 ];
@@ -18,11 +19,12 @@ export function ProblemSection() {
           Spam, sales pitches and the one call that matters all look alike. So you either answer everything, or risk missing what&apos;s important.
         </p>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {CARDS.map(({ icon: Icon, title, desc }) => (
+          {CARDS.map(({ icon: Icon, title, desc, href, more }) => (
             <div key={title} className="rounded-2xl border bg-muted/30 p-6">
               <span className="flex size-10 items-center justify-center rounded-full border bg-background"><Icon className="size-5" /></span>
               <h3 className="mt-4 font-semibold">{title}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+              {href && <Link href={href} className="mt-3 inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline">{more} <ArrowRight className="size-3.5" /></Link>}
             </div>
           ))}
         </div>
