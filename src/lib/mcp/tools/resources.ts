@@ -138,6 +138,7 @@ export function registerResourceTools(server: McpServer, ctx: McpContext, perms:
   }, async ({ resource: name, id: rowId }) => {
     const r = pick(name, perms);
     writable(r, perms);
+    if (r.delete === false) throw new ToolError(`${r.title} can't be deleted here.${r.updatable?.includes("archived_at") ? " Archive it instead (resource_update with archived_at)." : ""}`);
     const { data, error } = await ctx.supabase.from(r.table).select(r.select).eq("id", rowId).maybeSingle();
     check(error);
     const row = found(data, "Record") as unknown as Record<string, unknown>;
