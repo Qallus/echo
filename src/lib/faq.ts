@@ -144,6 +144,21 @@ export const FAQ_TOPICS: FaqTopic[] = [
     ],
   },
   {
+    id: "protect", title: "Fraud protection and caller verification", short: "Fraud protection",
+    blurb: "How Redial helps verify callers and stops likely scams before they reach someone you love.",
+    items: [
+      { q: "What is Redial fraud protection?", a: "Redial answers unknown calls first, then helps verify who's calling: it checks the caller ID with the phone network, asks callers who claim to be family for your family code word, can call the real relative on their saved number while the caller waits, and listens for known scam stories like bail money, gift cards, couriers and secrecy. Likely scams are ended before the phone rings.", tags: "scam fraud grandparent elder seniors verification", home: true },
+      { q: "Does Redial catch every scam?", a: "No screening catches everything. When Redial can't be sure, it says \"can't verify\" and takes a message instead of guessing. The safest habit is still to hang up and call back on a number you already trust.", tags: "guarantee 100 percent" },
+      { q: "What is a family code word?", a: "A word only your family knows. Anyone who calls claiming to be family is asked for it. Redial checks the answer on its own servers: the AI assistant never sees the word, so it can't give it away. AI can copy a voice, but it can't copy a secret.", tags: "voice clone ai deepfake" },
+      { q: "What is the call-back check?", a: "If a caller says they're a grandchild or another relative in trouble, Redial can call that person on the number you saved for them while the caller holds. They press a key to say they're safe, or that it really is them calling. You choose which family members Redial may call.", tags: "verify grandchild relative" },
+      { q: "What happens to a likely scam?", a: "Your phone never rings. Redial ends the call politely, can block the number, and, if you've added a trusted contact like a son or daughter, texts them what happened. Calls Redial can't verify go to a message with a written summary, so you decide whether to call back on a trusted number.", tags: "block alert trusted contact" },
+      { q: "Can my son or daughter get alerts?", a: "Yes. Add them as trusted contacts and they get a text when Redial stops a likely scam, plus a weekly summary if they want one. They opt in themselves by replying to a text, and can stop any time. The person whose phone it is stays in charge of their own line.", tags: "family caregiver adult children weekly summary" },
+      { q: "Does my parent need a smartphone?", a: "No. Redial works with a home phone or any cell phone, and saved contacts and family ring straight through. You can set it up and manage it from your own phone or computer.", tags: "seniors landline home phone" },
+      { q: "Is fraud protection extra?", a: "No. Fraud protection is included in every Redial plan, including Free.", tags: "price cost plan included", pricing: true },
+      { q: "What if money was already lost?", a: "Call your bank right away if money moved, then report it to local police, the FBI at ic3.gov and the FTC at reportfraud.ftc.gov. Echo keeps the transcript and summary of every screened call, with the number, time and exact words, so you have what they'll ask for. There's no shame in reporting: these are professional criminals.", tags: "report police fbi ftc ic3" },
+    ],
+  },
+  {
     id: "live-agents", title: "Redial Live Agents", short: "Live Agents",
     blurb: "Real people who answer your business calls, with your Redial AI assistant answering first.",
     items: [

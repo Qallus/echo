@@ -20,7 +20,10 @@ export const SITE_PAGES: SearchEntry[] = [
   // Residential
   { cat: "residential", title: "Home phone", desc: "Replace your landline with Redial home phone service", href: "/home-phone", words: "landline house family voip cordless" },
   { cat: "residential", title: "Keep your number", desc: "Bring your existing phone number to Redial", href: "/#keep-your-number", words: "port transfer number porting" },
-  { cat: "residential", title: "Stop spam and robocalls", desc: "Redial screens unknown callers before your phone rings", href: "/#redial", words: "spam robocall scam block screen telemarketer" },
+  { cat: "residential", title: "Stop spam and robocalls", desc: "Redial screens unknown callers before your phone rings", href: "/#redial", words: "spam robocall block screen telemarketer" },
+  { cat: "residential", title: "Fraud protection", desc: "Code word, call-back check and scam alerts for the people you love", href: "/protect", words: "scam fraud grandparent elder seniors parents verify caller id spoof voice clone deepfake bail gift cards" },
+  { cat: "residential", title: "Protect a parent's phone", desc: "Set Redial up for a mom, dad or grandparent", href: "/protect#families", words: "mom dad grandma grandpa aging parent caregiver family" },
+  { cat: "residential", title: "Pick a phone number", desc: "Search real local and toll-free numbers by area code or word", href: "/numbers", words: "new number area code local toll free vanity choose" },
   { cat: "residential", title: "Personal plans", desc: "Free and Personal plans for you and your family", href: "/pricing", words: "price cost personal family free" },
   { cat: "residential", title: "Phones that work", desc: "Desk and cordless phones that work with Redial", href: "/compatibility", words: "handset cordless compatible device grandstream yealink" },
   { cat: "residential", title: "Record calls and meetings", desc: "Echo records, transcribes and summarizes your conversations", href: "/#features", words: "record transcript summary notes" },
@@ -50,6 +53,7 @@ export const SITE_PAGES: SearchEntry[] = [
   { cat: "ai-agents", title: "Live call controls", desc: "Listen in, whisper, take over or end any call", href: "/#controls", words: "insider audible gavel listen whisper barge take over" },
   { cat: "ai-agents", title: "AI voices", desc: "Name your assistant and pick its voice", href: "/recording-studio", words: "voice ara rex eve leo name tts" },
   { cat: "ai-agents", title: "Privacy and security", desc: "How Redial keeps calls and recordings private", href: "/#trust", words: "secure private data encryption" },
+  { cat: "ai-agents", title: "How Redial spots a scam", desc: "Verdicts: looks legit, can't verify, likely scam", href: "/protect#how", words: "verdict scam script ai voice detection" },
   { cat: "ai-agents", title: "AI with your recordings", desc: "Ask questions about any call or meeting", href: "/#how-echo", words: "chat claude gpt summary action items" },
 
   // Apps
@@ -63,7 +67,7 @@ export const SITE_PAGES: SearchEntry[] = [
 // FAQ topic -> search category.
 const FAQ_CAT: Record<string, SearchEntry["cat"]> = {
   start: "apps", recording: "apps", ai: "ai-agents", organize: "apps", redial: "ai-agents", live: "ai-agents", sharing: "business",
-  studio: "business", phones: "residential", billing: "business", privacy: "ai-agents", support: "apps", "live-agents": "live-agents",
+  studio: "business", phones: "residential", protect: "residential", billing: "business", privacy: "ai-agents", support: "apps", "live-agents": "live-agents",
 };
 
 export const SITE_FAQ: (SearchEntry & { answer: string })[] = FAQ_TOPICS.flatMap((t) => t.items.map((f) => ({

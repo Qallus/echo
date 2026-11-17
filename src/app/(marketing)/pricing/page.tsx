@@ -4,6 +4,8 @@ import { getBillingSettings } from "@/lib/billing/settings";
 import { ALL_FAQ } from "@/lib/faq";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { ArrowRight, Check, ShieldCheck } from "lucide-react";
+import { NumberPicker } from "@/components/numbers/number-picker";
 import { AgentName } from "@/components/marketing/agent-name";
 
 export const metadata = {
@@ -28,6 +30,30 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
 
       <section className="mt-12">
         <PricingPlans initial={product === "echo" ? "echo" : "redial"} redialFreeMinutes={settings.redialFreeMinutes} echoFreeMinutes={settings.freeMinutes} />
+      </section>
+
+      <section id="protect" className="mt-16 scroll-mt-24 rounded-3xl border bg-muted/30 p-6 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <p className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground"><ShieldCheck className="size-4" /> Included in every plan, including Free</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Fraud protection</h2>
+            <p className="mt-1 text-muted-foreground">Redial helps verify callers and stops likely scams before the phone rings.</p>
+          </div>
+          <Link href="/protect" className="inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline">How it works <ArrowRight className="size-3.5" /></Link>
+        </div>
+        <ul className="mt-6 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          {["Family code word", "Call-back check to the real relative", "Caller ID and spoof check", "Scam-story and payment red flags", "Likely scams stopped and blocked", "Trusted contact alerts and a weekly summary"].map((f) => (
+            <li key={f} className="flex items-center gap-2"><Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />{f}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section id="numbers" className="mt-24 scroll-mt-24 space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Pick your number</h2>
+          <p className="mt-1 text-muted-foreground">Search real local and toll-free numbers, or keep the one you have. <Link href="/numbers" className="font-medium text-foreground underline underline-offset-2">More ways to search</Link></p>
+        </div>
+        <NumberPicker compact />
       </section>
 
       <section id="bolt-ons" className="mt-24 scroll-mt-24 space-y-6">
