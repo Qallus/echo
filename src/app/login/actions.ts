@@ -56,13 +56,17 @@ export async function resendConfirmation(email: string): Promise<LoginState> {
   return { sent: email };
 }
 
-// Account types: Personal, or Business (also creates the company's workspace,
-// done by the sign-up trigger from this metadata). Team members join by invite.
+// Account types: Personal, Business (also creates the company's workspace,
+// done by the sign-up trigger from this metadata) or Live Agent (people who
+// answer calls for businesses; they start in the Agent Desk profile builder).
+// Team members join by invite. The type routes and labels accounts; access
+// is still decided by RLS and staff roles, never by this metadata.
 export async function signUp(_: LoginState, form: FormData): Promise<LoginState> {
   const fullName = String(form.get("full_name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim();
   const password = String(form.get("password") ?? "");
-  const accountType = form.get("account_type") === "business" ? "business" : "personal";
+  const rawType = form.get("account_type");
+  const accountType = rawType === "business" ? "business" : rawType === "live_agent" ? "live_agent" : "personal";
   const company = String(form.get("company_name") ?? "").trim().slice(0, 120);
   const next = safeNext(String(form.get("next") ?? "/"));
 

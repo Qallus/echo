@@ -51,7 +51,7 @@ export default async function BecomeALiveAgentPage() {
   const [skills, fees, user] = await Promise.all([listSkills(), getFees(), getUser()]);
   const ex = feeSplit(3000, fees);
   // Signed in: straight to the profile builder. Otherwise create an account first.
-  const start = user ? "/agent-desk/setup" : `/signup?next=${encodeURIComponent("/agent-desk/setup")}`;
+  const start = user ? "/agent-desk/setup" : "/signup?type=live_agent";
 
   return (
     <>

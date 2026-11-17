@@ -3,12 +3,14 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/billing/stripe";
 import { sendOrderEmail } from "@/lib/billing/emails";
+import { isNumberKey, provisionNumber } from "@/lib/redial/numbers";
 import { secret as getSecret } from "@/lib/secrets";
 
 // Stripe -> Echo. Verified by Stripe's signature (STRIPE_WEBHOOK_SECRET); no
 // user session, so it writes with the service-role client. Every handler is
 // idempotent because Stripe retries deliveries.
 //
+// Also buys a picked phone number after payment (lib/redial/numbers.ts).
 // Events to enable: checkout.session.completed, invoice.paid,
 // customer.subscription.created, customer.subscription.updated,
 // customer.subscription.deleted, charge.refunded
@@ -126,6 +128,16 @@ async function onCheckoutCompleted(db: Db, s: Stripe, session: Stripe.Checkout.S
     invoice_pdf: invoice?.invoice_pdf ?? null,
   }, lines);
   if (order) await sendOrderEmail(order, lines);
+
+  // A phone number was bought: get it from Twilio and set up their line
+  // (once per checkout, even if Stripe sends this event again).
+  const picked = session.metadata?.phone_number;
+  if (picked && (session.payment_status === "paid" || session.payment_status === "no_payment_required")) {
+    await provisionNumber(db, {
+      userId, email: session.customer_details?.email ?? null, picked, sessionId: session.id,
+      priceKey: lines.find((l) => l.price_key && isNumberKey(l.price_key))?.price_key ?? null,
+    }).catch((e) => console.error("[redial number]", e));
+  }
 }
 
 // Renewals (and seat changes billed later). The first invoice of a new
@@ -222,3 +234,6 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ received: true });
 }
+
+// Buying a phone number (Twilio) can take a few seconds.
+export const maxDuration = 60;

@@ -2,21 +2,47 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
-import { Check, Loader2, MapPin, MessageSquare, Phone, Search, X } from "lucide-react";
+import { Check, Loader2, MapPin, MessageSquare, Phone, Search, ShoppingCart, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { PICK_KEY, toDigits, type NumberResult } from "./keypad";
+import { addToCart } from "@/lib/billing/cart";
 
-// Search real, available phone numbers and pick one. Nothing is bought here:
-// the pick is remembered in this browser for checkout, and the number is
-// bought only after payment (TODO: wire into checkout once Stripe is back).
-// Numbers aren't held, so one can be taken by someone else meanwhile.
+// Search real, available phone numbers and get one: "Get this number" keeps
+// the pick in this browser and puts a Phone number in the cart ($5/mo, or
+// $2.50/mo with a Redial plan). It's bought from Twilio after payment (Stripe
+// webhook -> lib/redial/numbers.ts). Numbers aren't held until then.
 
-const AREAS = [
-  { code: "480", place: "Phoenix East Valley" }, { code: "602", place: "Phoenix" }, { code: "623", place: "Phoenix West Valley" },
-  { code: "520", place: "Tucson" }, { code: "212", place: "New York" }, { code: "310", place: "Los Angeles" },
-  { code: "312", place: "Chicago" }, { code: "512", place: "Austin" }, { code: "305", place: "Miami" },
+// Popular places by region. A chip with a city searches that city within the
+// area code (Vancouver WA shares 360 with much of western Washington).
+type Place = { label: string; area: string; city?: string; state?: string };
+const REGIONS: { name: string; places: Place[] }[] = [
+  { name: "Arizona", places: [
+    { label: "Phoenix", area: "602" }, { label: "East Valley", area: "480" }, { label: "West Valley", area: "623" },
+    { label: "Tucson", area: "520" }, { label: "Flagstaff", area: "928" },
+  ] },
+  { name: "Pacific Northwest", places: [
+    { label: "Seattle", area: "206" }, { label: "Tacoma", area: "253" }, { label: "Vancouver, WA", area: "360", city: "Vancouver", state: "WA" },
+    { label: "Bellevue / Everett", area: "425" }, { label: "Spokane", area: "509" }, { label: "Portland", area: "503" },
+  ] },
+  { name: "California & West", places: [
+    { label: "Los Angeles", area: "213" }, { label: "San Francisco", area: "415" }, { label: "San Diego", area: "619" },
+    { label: "San Jose", area: "408" }, { label: "Sacramento", area: "916" }, { label: "Las Vegas", area: "702" },
+    { label: "Salt Lake City", area: "801" }, { label: "Denver", area: "303" },
+  ] },
+  { name: "Texas & Central", places: [
+    { label: "Dallas", area: "214" }, { label: "Houston", area: "713" }, { label: "Austin", area: "512" }, { label: "San Antonio", area: "210" },
+    { label: "Chicago", area: "312" }, { label: "Minneapolis", area: "612" }, { label: "Kansas City", area: "816" }, { label: "Detroit", area: "313" },
+  ] },
+  { name: "Southeast", places: [
+    { label: "Atlanta", area: "404" }, { label: "Miami", area: "305" }, { label: "Orlando", area: "407" }, { label: "Tampa", area: "813" },
+    { label: "Charlotte", area: "704" }, { label: "Nashville", area: "615" },
+  ] },
+  { name: "Northeast", places: [
+    { label: "New York", area: "212" }, { label: "Brooklyn / Queens", area: "718" }, { label: "Boston", area: "617" },
+    { label: "Philadelphia", area: "215" }, { label: "Washington, DC", area: "202" }, { label: "Columbus", area: "614" },
+  ] },
 ];
 
 type Picked = { number: string; display: string; place: string | null; at: number };
@@ -47,25 +73,27 @@ export function NumberPicker({ compact = false }: { compact?: boolean }) {
   const [kind, setKind] = useState<"local" | "tollfree">("local");
   const [area, setArea] = useState("");
   const [contains, setContains] = useState("");
+  const [region, setRegion] = useState(REGIONS[0].name);
+  const [place, setPlace] = useState<Place | null>(null);
   const [results, setResults] = useState<NumberResult[] | null>(null);
   const [note, setNote] = useState<string>();
   const [pending, start] = useTransition();
   const raw = useSyncExternalStore(subscribe, readPick, () => null);
   const picked = (() => { try { return raw ? (JSON.parse(raw) as Picked) : null; } catch { return null; } })();
 
-  const run = useCallback((a: string, c: string, k: "local" | "tollfree") => start(async () => {
+  const run = useCallback((a: string, c: string, k: "local" | "tollfree", at?: Place | null) => start(async () => {
     setNote(undefined);
-    const qs = new URLSearchParams({ type: k, ...(a ? { area: a } : {}), ...(c ? { contains: c } : {}) });
+    const qs = new URLSearchParams({ type: k, ...(a ? { area: a } : {}), ...(c ? { contains: c } : {}), ...(at?.city ? { city: at.city } : {}), ...(at?.state ? { state: at.state } : {}) });
     const res = await fetch(`/api/numbers/search?${qs}`).catch(() => null);
     const data = (await res?.json().catch(() => null)) as { numbers?: NumberResult[]; note?: string; error?: string } | null;
     if (!res || !data) { setResults([]); setNote("Couldn't search right now. Try again."); return; }
     setResults(data.numbers ?? []);
     setNote(data.error ?? data.note);
   }), []);
-  const search = (a = area, c = contains, k = kind) => run(a, c, k);
+  const search = (a = area, c = contains, k = kind, at: Place | null = place?.area === a ? place : null) => run(a, c, k, at);
 
   // A first look on /numbers: local numbers in the first area code.
-  useEffect(() => { if (!compact) run(AREAS[0].code, "", "local"); }, [compact, run]);
+  useEffect(() => { if (!compact) run(REGIONS[0].places[0].area, "", "local"); }, [compact, run]);
 
   return (
     <div className="space-y-5">
@@ -74,9 +102,10 @@ export function NumberPicker({ compact = false }: { compact?: boolean }) {
           <Check className="size-5 text-emerald-700 dark:text-emerald-400" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold tabular-nums">{picked.display}</p>
-            <p className="text-xs text-muted-foreground">Your pick{picked.place ? ` · ${picked.place}` : ""}. It&apos;s yours once you choose a plan; numbers aren&apos;t held, so finish soon.</p>
+            <p className="text-xs text-muted-foreground">In your cart{picked.place ? ` · ${picked.place}` : ""}. $5/mo, or $2.50/mo with a Redial plan. Numbers aren&apos;t held, so check out soon.</p>
           </div>
-          <Button size="sm" nativeButton={false} render={<Link href="/pricing" />}>Choose a plan</Button>
+          <Button size="sm" nativeButton={false} render={<Link href="/cart" />}><ShoppingCart /> Go to cart</Button>
+          <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/pricing#plans" />}>Add a plan</Button>
           <Button size="sm" variant="ghost" onClick={() => savePick(null)} aria-label="Clear my pick"><X /></Button>
         </div>
       )}
@@ -96,13 +125,21 @@ export function NumberPicker({ compact = false }: { compact?: boolean }) {
           <Button type="submit" disabled={pending}>{pending ? <Loader2 className="animate-spin" /> : <Search />} Search</Button>
         </div>
         {kind === "local" && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-            {AREAS.map((a) => (
-              <button key={a.code} type="button" onClick={() => { setArea(a.code); search(a.code); }} title={a.place}
-                className={cn("shrink-0 rounded-full border px-3 py-1 text-xs font-medium tabular-nums", area === a.code ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
-                {a.code} <span className="font-normal opacity-70">{a.place}</span>
-              </button>
-            ))}
+          <div className="space-y-2">
+            <div className="flex gap-1 overflow-x-auto pb-1 text-xs [scrollbar-width:none]" role="tablist" aria-label="Regions">
+              {REGIONS.map((r) => (
+                <button key={r.name} type="button" role="tab" aria-selected={region === r.name} onClick={() => setRegion(r.name)}
+                  className={cn("shrink-0 rounded-md px-2.5 py-1 font-medium", region === r.name ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>{r.name}</button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {REGIONS.find((r) => r.name === region)!.places.map((p) => (
+                <button key={p.label} type="button" onClick={() => { setArea(p.area); setPlace(p); run(p.area, contains, "local", p); }}
+                  className={cn("rounded-full border px-3 py-1 text-xs font-medium", place?.label === p.label ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                  {p.label} <span className="tabular-nums opacity-70">{p.area}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </form>
@@ -125,8 +162,8 @@ export function NumberPicker({ compact = false }: { compact?: boolean }) {
                       </p>
                     </div>
                     <Button size="sm" variant={mine ? "secondary" : "outline"} className="mt-auto" disabled={mine}
-                      onClick={() => savePick({ number: n.number, display: n.display, place, at: Date.now() })}>
-                      {mine ? <><Check /> Picked</> : "Pick this number"}
+                      onClick={() => { savePick({ number: n.number, display: n.display, place, at: Date.now() }); addToCart("redial_number_monthly"); }}>
+                      {mine ? <><Check /> In your cart</> : "Get this number"}
                     </Button>
                   </li>
                 );
@@ -135,7 +172,7 @@ export function NumberPicker({ compact = false }: { compact?: boolean }) {
           </>
         )
       )}
-      <p className="text-xs text-muted-foreground">Real numbers available right now. We buy your number only after you choose a plan. Want to keep the number you have? You can <Link href="/home-phone" className="underline underline-offset-2">bring it to Redial</Link> instead.</p>
+      <p className="text-xs text-muted-foreground">Real numbers available right now: $5 a month, or $2.50 a month with any Redial plan. We set up your number as soon as you check out. Want to keep the number you have? You can <Link href="/home-phone" className="underline underline-offset-2">bring it to Redial</Link> instead.</p>
     </div>
   );
 }

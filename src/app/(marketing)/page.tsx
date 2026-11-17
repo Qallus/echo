@@ -11,6 +11,7 @@ import { FaqSection } from "@/components/marketing/faq-list";
 import { FinalCta } from "@/components/marketing/home/final-cta";
 import { PhoneServiceSection } from "@/components/marketing/home/phone-service";
 import { KeepNumberSection } from "@/components/marketing/home/keep-number";
+import { NumbersCtaSection } from "@/components/marketing/home/numbers-cta";
 import { PricingPreviewSection } from "@/components/marketing/home/pricing-preview";
 import { TrustSection } from "@/components/marketing/home/trust";
 import { FAQ_TOPICS } from "@/lib/faq";
@@ -59,6 +60,7 @@ export default function LandingPage() {
       <LiveControlsSection />
       <UseCasesSection />
       <KeepNumberSection />
+      <NumbersCtaSection />
       <PhoneServiceSection />
 
       <section className="border-t">

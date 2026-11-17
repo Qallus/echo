@@ -208,6 +208,20 @@ export function ProductGrid({ kind }: { kind: Product["kind"] }) {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {products().filter((p) => p.kind === kind).map((p) => {
         const price = p.prices[0];
+        // A phone number is picked first (the purchase needs the exact number).
+        if (p.id === "redial_number") {
+          const withPlan = p.prices.find((x) => x.key === "redial_number_plan_monthly");
+          return (
+            <div key={p.id} className="flex flex-col rounded-xl border p-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="font-medium">{p.name}</h3>
+                <span className="shrink-0 font-semibold tabular-nums">{money(price.unitAmount!)}<span className="text-sm font-normal text-muted-foreground">/mo</span></span>
+              </div>
+              <p className="mt-1 flex-1 text-sm text-muted-foreground">{p.tagline}{withPlan ? ` ${money(withPlan.unitAmount!)}/mo with any Redial plan.` : ""}</p>
+              <Button size="sm" className="mt-4 self-start" nativeButton={false} render={<Link href="/numbers" />}>Pick your number</Button>
+            </div>
+          );
+        }
         return (
           <div key={p.id} className="flex flex-col rounded-xl border p-5">
             <div className="flex items-baseline justify-between gap-3">

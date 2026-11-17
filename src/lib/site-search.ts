@@ -10,8 +10,9 @@ export const SEARCH_CATEGORIES = [
   { id: "residential", label: "Residential" },
   { id: "business", label: "Business" },
   { id: "live-agents", label: "Live Agents" },
+  { id: "numbers", label: "Numbers" },
   { id: "ai-agents", label: "AI Agents" },
-  { id: "apps", label: "Mobile & Desktop Apps" },
+  { id: "apps", label: "Apps" },
 ] as const;
 export type SearchCategory = (typeof SEARCH_CATEGORIES)[number]["id"];
 export type SearchEntry = { title: string; desc: string; href: string; cat: Exclude<SearchCategory, "all">; words?: string; faq?: boolean };
@@ -23,7 +24,13 @@ export const SITE_PAGES: SearchEntry[] = [
   { cat: "residential", title: "Stop spam and robocalls", desc: "Redial screens unknown callers before your phone rings", href: "/#redial", words: "spam robocall block screen telemarketer" },
   { cat: "residential", title: "Fraud protection", desc: "Code word, call-back check and scam alerts for the people you love", href: "/protect", words: "scam fraud grandparent elder seniors parents verify caller id spoof voice clone deepfake bail gift cards" },
   { cat: "residential", title: "Protect a parent's phone", desc: "Set Redial up for a mom, dad or grandparent", href: "/protect#families", words: "mom dad grandma grandpa aging parent caregiver family" },
-  { cat: "residential", title: "Pick a phone number", desc: "Search real local and toll-free numbers by area code or word", href: "/numbers", words: "new number area code local toll free vanity choose" },
+  // Numbers
+  { cat: "numbers", title: "Pick a phone number", desc: "Real local and toll-free numbers you can buy now: $5/mo, or $2.50/mo with a plan", href: "/numbers", words: "new number area code local toll free vanity choose buy purchase" },
+  { cat: "numbers", title: "Seattle and Washington numbers", desc: "206 Seattle, 253 Tacoma, 360 Vancouver WA, 425 Bellevue, 509 Spokane", href: "/numbers", words: "seattle tacoma vancouver washington wa bellevue everett spokane 206 253 360 425 509" },
+  { cat: "numbers", title: "Arizona numbers", desc: "602 Phoenix, 480 East Valley, 623 West Valley, 520 Tucson, 928 Flagstaff", href: "/numbers", words: "phoenix arizona az tucson mesa chandler scottsdale 480 602 623 520 928" },
+  { cat: "numbers", title: "Toll-free numbers", desc: "800, 833, 844, 855, 866, 877 and 888 numbers", href: "/numbers", words: "toll free 800 888 877 866 855 844 833" },
+  { cat: "numbers", title: "Numbers that spell a word", desc: "Search a word like CALL or your business name", href: "/numbers", words: "vanity word spell letters custom memorable" },
+  { cat: "numbers", title: "Keep your number", desc: "Bring your existing number to Redial instead", href: "/#keep-your-number", words: "port transfer existing number porting" },
   { cat: "residential", title: "Personal plans", desc: "Free and Personal plans for you and your family", href: "/pricing", words: "price cost personal family free" },
   { cat: "residential", title: "Phones that work", desc: "Desk and cordless phones that work with Redial", href: "/compatibility", words: "handset cordless compatible device grandstream yealink" },
   { cat: "residential", title: "Record calls and meetings", desc: "Echo records, transcribes and summarizes your conversations", href: "/#features", words: "record transcript summary notes" },

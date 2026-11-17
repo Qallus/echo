@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight, Bot, Building2, CircleHelp, Globe, Headset, House, Loader2, Mic, Search, Smartphone, Sparkles, X, type LucideIcon,
+  ArrowRight, Bot, Building2, CircleHelp, Globe, Hash, House, Loader2, Mic, Search, Smartphone, Sparkles, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEARCH_CATEGORIES, searchSite, suggestionsFor, type SearchCategory, type SearchEntry } from "@/lib/site-search";
 import { cn } from "@/lib/utils";
+import { AgentIcon } from "./agent-icon";
 
-const ICONS: Record<SearchCategory, LucideIcon> = {
-  all: Globe, residential: House, business: Building2, "live-agents": Headset, "ai-agents": Bot, apps: Smartphone,
+const ICONS: Record<SearchCategory, React.ComponentType<{ className?: string }>> = {
+  all: Globe, residential: House, business: Building2, "live-agents": AgentIcon, numbers: Hash, "ai-agents": Bot, apps: Smartphone,
 };
 const LABEL = Object.fromEntries(SEARCH_CATEGORIES.map((c) => [c.id, c.label])) as Record<SearchCategory, string>;
 const POPULAR = ["/home-phone", "/redial/business", "/live-agents", "/#redial", "/#app", "/business-phone", "/become-a-live-agent", "/pricing"];
@@ -188,7 +189,7 @@ export function SiteSearch() {
                     if (row.kind === "agents") return (
                       <li key="agents" role="option" aria-selected={on}>
                         <Link href={`/live-agents?q=${encodeURIComponent(q.trim())}`} onClick={close} className={cls} onMouseEnter={() => setActive(i)}>
-                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border"><Headset className="size-4" /></span>
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border"><AgentIcon className="size-4" /></span>
                           <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">Search Live Agents for “{q.trim()}”</span><span className="block text-xs text-muted-foreground">By name, skill, language or industry</span></span>
                         </Link>
                       </li>

@@ -1,5 +1,6 @@
+import { AgentIcon } from "./agent-icon";
 import {
-  AudioLines, AudioWaveform, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, Search, ShieldAlert, ShieldCheck, Tag, UserRoundPlus, Users, Waypoints, type LucideIcon,
+  AudioLines, AudioWaveform, Briefcase, Building2, CircleHelp, Code, FileAudio, Headset, House, Mic, Phone, Search, ShieldAlert, ShieldCheck, Tag, UserRoundPlus, Waypoints, type LucideIcon,
 } from "lucide-react";
 
 // The public site's product navigation, shared by the desktop mega menu and
@@ -7,8 +8,9 @@ import {
 // worded so the columns don't read as duplicates. Five links each with a
 // one-line description, so the columns line up.
 
-export type NavLink = { href: string; title: string; desc: string; icon: LucideIcon };
-export type NavProduct = { name: string; tagline: string; icon: LucideIcon; links: NavLink[] };
+type Icon = LucideIcon | React.ComponentType<{ className?: string }>;
+export type NavLink = { href: string; title: string; desc: string; icon: Icon };
+export type NavProduct = { name: string; tagline: string; icon: Icon; links: NavLink[] };
 
 export const NAV_PRODUCTS: NavProduct[] = [
   {
@@ -32,7 +34,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
     ],
   },
   {
-    name: "Live Agents", tagline: "Real people on your phones", icon: Users,
+    name: "Live Agents", tagline: "Real people on your phones", icon: AgentIcon,
     links: [
       { href: "/live-agents", title: "Search Live Agents", desc: "By skill, language and availability", icon: Search },
       { href: "/live-agents/how-it-works", title: "How it works", desc: "AI answers first, then a person", icon: Waypoints },

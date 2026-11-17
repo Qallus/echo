@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Briefcase, Lock } from "lucide-react";
+import { AgentIcon } from "@/components/marketing/agent-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -12,13 +13,19 @@ import { MIN_PASSWORD } from "@/lib/auth-rules";
 import { cn } from "@/lib/utils";
 
 const TYPES = [
-  { value: "personal", icon: Lock, title: "Personal", desc: "Just me. Private recordings." },
+  { value: "personal", icon: Lock, title: "Personal", desc: "Me and my family." },
   { value: "business", icon: Briefcase, title: "Business", desc: "My company and team." },
+  { value: "live_agent", icon: AgentIcon, title: "Live Agent", desc: "Answer calls, get paid." },
 ] as const;
+type AccountType = (typeof TYPES)[number]["value"];
 
-export function SignupForm({ next, initialType = "personal" }: { next: string; initialType?: "personal" | "business" }) {
+// Live Agents start in their own profile builder; everyone else in Redial setup.
+const nextFor = (type: AccountType, next: string) =>
+  type === "live_agent" && next === "/setup" ? "/agent-desk/setup" : type !== "live_agent" && next === "/agent-desk/setup" ? "/setup" : next;
+
+export function SignupForm({ next, initialType = "personal" }: { next: string; initialType?: AccountType }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(signUp, {});
-  const [type, setType] = useState<"personal" | "business">(initialType);
+  const [type, setType] = useState<AccountType>(initialType);
 
   if (state.sent) return <CheckEmail email={state.sent} what="a link to confirm your account" />;
 
@@ -26,9 +33,9 @@ export function SignupForm({ next, initialType = "personal" }: { next: string; i
     <div className="space-y-4">
       <GoogleButton next={next} label="Sign up with Google" />
       <form action={action} className="space-y-3">
-        <input type="hidden" name="next" value={next} />
+        <input type="hidden" name="next" value={nextFor(type, next)} />
         <input type="hidden" name="account_type" value={type} />
-        <fieldset className="grid grid-cols-2 gap-2">
+        <fieldset className="grid grid-cols-3 gap-2">
           <legend className="sr-only">Account type</legend>
           {TYPES.map(({ value, icon: Icon, title, desc }) => (
             <button key={value} type="button" aria-pressed={type === value} onClick={() => setType(value)}
@@ -53,7 +60,9 @@ export function SignupForm({ next, initialType = "personal" }: { next: string; i
       <p className="text-center text-xs text-muted-foreground">
         {type === "business"
           ? "You'll own the business workspace and can invite your team. You also get a private Personal space."
-          : "Joining a team? Use the invite link you were sent instead."}
+          : type === "live_agent"
+            ? "Next you'll build your Live Agent profile: skills, languages, hours and your rate. We review every profile before it's listed."
+            : "Joining a team? Use the invite link you were sent instead."}
       </p>
     </div>
   );

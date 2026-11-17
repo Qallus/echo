@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { Loader2, Lock, Minus, Plus, ShoppingCart, Tag, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { previewPromo, startCheckout } from "@/lib/billing/actions";
 import { removeFromCart, setQuantity, useCart } from "@/lib/billing/cart";
-import { amountFor, findPrice, KIND_LABEL, money, per } from "@/lib/billing/catalog";
+import { amountFor, findPrice, KIND_LABEL, lineOf, money, per } from "@/lib/billing/catalog";
+import { PICK_KEY } from "@/components/numbers/keypad";
+
+// The number picked on /numbers (kept in this browser).
+const readPick = () => { try { return localStorage.getItem(PICK_KEY); } catch { return null; } };
+const subscribePick = (fn: () => void) => { window.addEventListener("storage", fn); return () => window.removeEventListener("storage", fn); };
 
 export function CartView({ checkoutReady }: { checkoutReady: boolean }) {
   const cart = useCart();
@@ -29,7 +34,12 @@ export function CartView({ checkoutReady }: { checkoutReady: boolean }) {
   const monthly = lines.filter((l) => l.hit.price.interval === "month").reduce((n, l) => n + amount(l), 0);
   const yearly = lines.filter((l) => l.hit.price.interval === "year").reduce((n, l) => n + amount(l), 0);
   const hasPlan = lines.some((l) => l.hit.product.kind === "plan");
-  const hasBoltOn = lines.some((l) => l.hit.product.kind === "bolt_on");
+  const hasBoltOn = lines.some((l) => l.hit.product.kind === "bolt_on" && l.hit.product.id !== "redial_number");
+  // A phone number in the cart: the one picked on /numbers ($2.50/mo with a Redial plan, applied at checkout).
+  const numberLine = lines.find((l) => l.hit.product.id === "redial_number");
+  const pickRaw = useSyncExternalStore(subscribePick, readPick, () => null);
+  const pick = (() => { try { return pickRaw ? (JSON.parse(pickRaw) as { number: string; display: string; place: string | null }) : null; } catch { return null; } })();
+  const redialPlan = lines.some((l) => l.hit.product.kind === "plan" && lineOf(l.hit.product) === "redial");
 
   const apply = () => check(async () => {
     setCodeError(undefined);
@@ -40,7 +50,8 @@ export function CartView({ checkoutReady }: { checkoutReady: boolean }) {
 
   const checkout = () => start(async () => {
     setError(undefined);
-    const res = await startCheckout(cart, promo?.code);
+    if (numberLine && !pick) { setError("Pick your phone number first."); return; }
+    const res = await startCheckout(cart, promo?.code, { phoneNumber: pick?.number ?? null });
     if (res.needLogin) router.push("/login?next=/cart");
     else if (res.url) window.location.href = res.url;
     else setError(res.error);
@@ -67,7 +78,13 @@ export function CartView({ checkoutReady }: { checkoutReady: boolean }) {
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted-foreground">{KIND_LABEL[l.hit.product.kind].replace(/s$/, "")}</p>
                 <p className="font-medium">{l.hit.product.name}{l.hit.price.interval && <span className="font-normal text-muted-foreground"> · billed {l.hit.price.interval === "month" ? "monthly" : "annually"}</span>}</p>
-                <p className="truncate text-sm text-muted-foreground">{l.hit.product.tagline}</p>
+                {l.hit.product.id === "redial_number" ? (
+                  <p className="text-sm">
+                    {pick ? <><span className="font-semibold tabular-nums">{pick.display}</span>{pick.place ? <span className="text-muted-foreground"> · {pick.place}</span> : null} <Link href="/numbers" className="text-xs underline underline-offset-2">Change</Link></>
+                      : <Link href="/numbers" className="font-medium text-amber-700 underline underline-offset-2 dark:text-amber-400">Pick your number</Link>}
+                    <span className="block text-xs text-muted-foreground">{redialPlan ? "$2.50/mo with your Redial plan (applied at checkout)." : "$5/mo, or $2.50/mo with a Redial plan (applied at checkout)."}</span>
+                  </p>
+                ) : <p className="truncate text-sm text-muted-foreground">{l.hit.product.tagline}</p>}
               </div>
               {!fixedQty && (
                 <div className="flex items-center rounded-lg border" aria-label={l.hit.product.perSeat ? "Seats" : "Quantity"}>
