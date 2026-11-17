@@ -151,7 +151,7 @@ export function TableView({ agents, selected, toggle, open, sort, onSort, onTogg
 // ---------------------------------------------------------------------------
 export function CardsView({ agents, selected, toggle, open }: ViewProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
       {agents.map((a) => (
         <article key={a.id} role="button" tabIndex={0} onClick={() => open(a.id)} onKeyDown={(e) => e.key === "Enter" && open(a.id)}
           className={cn("relative flex cursor-pointer flex-col gap-3 rounded-2xl border bg-card p-4 transition-shadow hover:shadow-md", selected.has(a.id) && "ring-2 ring-primary")}>
@@ -183,7 +183,7 @@ export function MapView({ agents, selected, toggle, open, hover, setHover }: Vie
   const placed = agents.filter((a) => a.lat != null && a.lng != null);
   const unplaced = agents.filter((a) => a.lat == null || a.lng == null);
   return (
-    <div className="grid gap-3 lg:grid-cols-[1fr_20rem]">
+    <div className="grid gap-3 lg:grid-cols-[1fr_22rem] 2xl:grid-cols-[1fr_26rem]">
       <AgentsMap
         agents={placed.map((a) => ({ id: a.id, handle: a.handle, name: a.name, lat: a.lat!, lng: a.lng!, label: a.name, avatar: a.avatarUrl, initials: initials(a.name) }))}
         active={hover} onHover={setHover} onPick={open}
