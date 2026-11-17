@@ -94,8 +94,15 @@ const GROUPS: { title: string; ids: string[] }[] = [
   { title: "Payments", ids: ["stripe"] },
   { title: "AI providers (Echo's own keys)", ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
   { title: "Social media", ids: ["linkedin", "meta"] },
+  { title: "Redial voice", ids: ["redial"] },
   { title: "Scheduled jobs", ids: ["cron"] },
 ];
+// Any service not placed in a group above still shows, under "Other".
+const ALL_GROUPS = () => {
+  const placed = new Set(GROUPS.flatMap((g) => g.ids));
+  const rest = SERVICES.filter((s) => !placed.has(s.id)).map((s) => s.id);
+  return rest.length ? [...GROUPS, { title: "Other", ids: rest }] : GROUPS;
+};
 
 // Credentials for every service Echo uses. A value saved here replaces the
 // Coolify variable of the same name; clear it to fall back to Coolify.
@@ -106,7 +113,7 @@ export function Integrations({ state, readOnly }: { state: Record<string, KeySta
         Keys are encrypted before they&apos;re stored and never shown again; only owners and admins can change them, and every change is in the audit log.
         A value saved here is used instead of the Coolify variable with the same name, within a minute and without a redeploy.
       </p>
-      {GROUPS.map((g) => (
+      {ALL_GROUPS().map((g) => (
         <div key={g.title} className="space-y-3">
           <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">{g.title}</h2>
           {g.ids.map((id) => { const s = SERVICES.find((x) => x.id === id)!; return <ServiceCard key={id} service={s} state={state} readOnly={readOnly} />; })}
