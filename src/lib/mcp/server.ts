@@ -43,7 +43,7 @@ High-risk actions, and any tool your owner marked, wait for a person: the tool r
 // permissions are empty until the session has passed two-step sign-in,
 // when that is required).
 export async function createEchoServer(ctx: McpContext) {
-  const server = new McpServer({ name: "echo", title: "Redial and Echo", version: "0.7.0" }, { instructions: ctx.agent ? INSTRUCTIONS + AGENT_INSTRUCTIONS : INSTRUCTIONS });
+  const server = new McpServer({ name: "echo", title: "Redial and Echo", version: "0.8.0" }, { instructions: ctx.agent ? INSTRUCTIONS + AGENT_INSTRUCTIONS : INSTRUCTIONS });
   registerAccountTools(server, ctx);
   registerFolderTools(server, ctx);
   registerRecordingTools(server, ctx);

@@ -50,4 +50,5 @@ export const AGENT_STATUS: Record<string, { label: string; tone: "outline" | "se
   live: { label: "Live", tone: "success", detail: "Businesses can find and message you." },
   paused: { label: "Paused", tone: "outline", detail: "Hidden from businesses until you turn it back on." },
   suspended: { label: "Suspended", tone: "destructive", detail: "Your profile is hidden. Contact support@redial.si." },
+  archived: { label: "Archived", tone: "outline", detail: "Your profile is archived and hidden. Contact support@redial.si to bring it back." },
 };

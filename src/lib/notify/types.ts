@@ -12,6 +12,7 @@ export const NOTIFICATION_TYPES = [
   { type: "live_agent_review", label: "Live Agent profile review", desc: "The Redial team approved your Live Agent profile or asked for changes." },
   { type: "live_agent_message", label: "Live Agent messages", desc: "A business or Live Agent sent you a message." },
   { type: "live_agent_offer", label: "Live Agent offers", desc: "An offer or counter-offer for Live Agent work." },
+  { type: "live_agent_team", label: "Messages from the Redial team", desc: "The Redial team sent a message to Live Agents." },
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]["type"] | "test";

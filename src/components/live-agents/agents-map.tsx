@@ -5,20 +5,23 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Map as LeafletMap, Marker, Circle } from "leaflet";
 
-export type MapAgent = { id: string; handle: string; name: string; lat: number; lng: number; label: string };
+export type MapAgent = { id: string; handle: string; name: string; lat: number; lng: number; label: string; avatar?: string | null; initials?: string };
 
 // Live Agents on an OpenStreetMap map. Each agent is a rate pin inside a
 // ~3 km circle: the spot is already moved from where they live, and the
 // circle makes clear it's an area, not an address. Hovering a card
 // highlights its pin; clicking a pin opens the profile.
-export function AgentsMap({ agents, active, onHover, className }: {
-  agents: MapAgent[]; active?: string | null; onHover?: (id: string | null) => void; className?: string;
+// `onPick` replaces opening the profile (the admin opens its own panel).
+export function AgentsMap({ agents, active, onHover, onPick, className }: {
+  agents: MapAgent[]; active?: string | null; onHover?: (id: string | null) => void; onPick?: (id: string) => void; className?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<LeafletMap | null>(null);
   const pins = useRef(new Map<string, { marker: Marker; circle: Circle }>());
   const hover = useRef(onHover);
   useEffect(() => { hover.current = onHover; }, [onHover]);
+  const pick = useRef(onPick);
+  useEffect(() => { pick.current = onPick; }, [onPick]);
   const router = useRouter();
   const go = useRef((handle: string) => router.push(`/live-agents/${handle}`));
   useEffect(() => { go.current = (handle: string) => router.push(`/live-agents/${handle}`); }, [router]);
@@ -39,10 +42,10 @@ export function AgentsMap({ agents, active, onHover, className }: {
       const layers = agents.map((a) => {
         const circle = L.circle([a.lat, a.lng], { radius: 3000, color: "#10b981", weight: 1, fillColor: "#10b981", fillOpacity: 0.08 }).addTo(m);
         const marker = L.marker([a.lat, a.lng], {
-          icon: L.divIcon({ className: "", iconSize: undefined, html: `<span class="la-pin" data-id="${esc(a.id)}">${esc(a.label)}</span>` }),
+          icon: L.divIcon({ className: "", iconSize: undefined, html: `<span class="la-pin" data-id="${esc(a.id)}">${a.avatar ? `<img class="la-face" src="${esc(a.avatar)}" alt="" />` : a.initials ? `<span class="la-face la-initials">${esc(a.initials)}</span>` : ""}${esc(a.label)}</span>` }),
           title: a.name, riseOnHover: true,
         }).addTo(m);
-        marker.on("click", () => go.current(a.handle));
+        marker.on("click", () => (pick.current ? pick.current(a.id) : go.current(a.handle)));
         marker.on("mouseover", () => hover.current?.(a.id));
         marker.on("mouseout", () => hover.current?.(null));
         store.set(a.id, { marker, circle });
@@ -76,6 +79,9 @@ export function AgentsMap({ agents, active, onHover, className }: {
       <style>{`
         .la-pin { display:inline-block; transform:translate(-50%,-50%); white-space:nowrap; border-radius:9999px; padding:3px 9px; font:600 12px/1.4 var(--font-sans, system-ui);
           background:#fff; color:#171717; border:1px solid #d4d4d4; box-shadow:0 1px 3px rgb(0 0 0 / .18); cursor:pointer; transition:all .15s; }
+        .la-pin:has(.la-face) { display:inline-flex; align-items:center; gap:5px; padding-left:3px; }
+        .la-face { width:20px; height:20px; border-radius:9999px; object-fit:cover; flex:none; }
+        .la-initials { display:inline-flex; align-items:center; justify-content:center; background:#e0f2fe; color:#075985; font-size:9px; }
         .la-pin-active, .la-pin:hover { background:#171717; color:#fff; border-color:#171717; transform:translate(-50%,-50%) scale(1.08); }
       `}</style>
       <div ref={el} className={className ?? "z-0 h-[60dvh] min-h-80 w-full overflow-hidden rounded-xl border"} />
