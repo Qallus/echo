@@ -150,7 +150,7 @@ export function RecordingView({ detail, list, space, moveTargets, audioSrc, proc
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+            <div className="w-full py-6 sm:py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
               <TabsContent value="transcript" className="space-y-5">
                 {r.status === "processing" ? <Transcribing /> : r.status === "failed" && !segments.length ? (
                   <TranscriptionFailed recordingId={r.id} message={processingError} />

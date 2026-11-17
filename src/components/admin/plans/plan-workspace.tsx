@@ -97,7 +97,7 @@ export function PlanWorkspace({ plan, groups, tasks, staff, companies, readOnly 
   );
 
   return (
-    <div className="mx-auto w-full max-w-[96rem] space-y-4 px-4 py-6 sm:px-6">
+    <div className="w-full space-y-4 py-6 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <Link href="/admin/plans" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Plans</Link>
 
       <div className="space-y-3 rounded-xl border bg-card p-4">

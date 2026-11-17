@@ -43,7 +43,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   ];
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="w-full space-y-6 py-8 sm:py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <h1 className="text-3xl font-semibold tracking-tight">Billing</h1>
       {portal === "unavailable" && (
         <p className="rounded-lg border bg-muted/40 p-3 text-sm">Billing management opens after your first purchase.</p>

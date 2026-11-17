@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ModeBadge } from "@/components/shell/shell";
 import { StatsToggle } from "@/components/shell/stats-toggle";
+import { DashboardSearch } from "@/components/shell/dashboard-search";
 
 // Sticky top bar on phones; the menu opens the admin sidebar as a drawer.
-export function AdminMobileHeader() {
+export function AdminMobileHeader({ permissions }: { permissions: string[] }) {
   const { toggleSidebar } = useSidebar();
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
@@ -18,8 +19,9 @@ export function AdminMobileHeader() {
           <AudioLines className="size-5" />
           <span className="font-semibold tracking-[0.2em]">REDIAL</span>
         </Link>
-        <StatsToggle className="ml-auto" />
-        <ModeBadge mode="admin" canAdmin className="scale-90" />
+        <StatsToggle className="ml-auto max-[359px]:hidden" />
+        <DashboardSearch mode="admin" permissions={permissions} />
+        <ModeBadge mode="admin" canAdmin compact />
       </div>
     </header>
   );

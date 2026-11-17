@@ -6,7 +6,7 @@ export function AdminPage({ title, description, actions, children, className }: 
   title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode; className?: string;
 }) {
   return (
-    <div className={cn("mx-auto w-full max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-8", className)}>
+    <div className={cn("w-full space-y-8 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 2xl:px-10", className)}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>

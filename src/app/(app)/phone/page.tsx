@@ -21,7 +21,7 @@ export default async function PhonePage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="w-full space-y-6 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><Phone className="size-7" /> Phone</h1>
         <p className="text-sm text-muted-foreground">Record your phone calls into Echo. They&apos;re transcribed and summarized like any recording.</p>

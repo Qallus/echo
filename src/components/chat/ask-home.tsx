@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatError, Composer, MessageList } from "@/components/chat/chat-parts";
@@ -8,8 +10,17 @@ import { useEchoChat } from "@/hooks/use-echo-chat";
 const SUGGESTIONS = ["What did I commit to this week?", "Summarize my calls from the last 3 days", "Which recordings mention MJG?"];
 
 // Library-wide chat: the "What's on your mind?" page.
-export function AskHome() {
+export function AskHome({ initial }: { initial?: string }) {
   const chat = useEchoChat();
+  const router = useRouter();
+  // A question typed in the top-bar search (/ask?q=…) is sent once.
+  const asked = useRef(false);
+  useEffect(() => {
+    if (!initial || asked.current) return;
+    asked.current = true;
+    chat.send(initial);
+    router.replace("/ask");
+  }, [initial, chat, router]);
   const empty = !chat.messages.length;
 
   const composer = (
@@ -22,7 +33,7 @@ export function AskHome() {
 
   if (empty) {
     return (
-      <div className="mx-auto flex min-h-[80svh] w-full max-w-2xl flex-col justify-center gap-6 px-6">
+      <div className="mx-auto flex min-h-[80svh] w-full max-w-4xl flex-col justify-center gap-6 px-4 sm:px-6 lg:px-8">
         <h1 className="text-center text-3xl font-semibold tracking-tight">What&apos;s on your mind?</h1>
         {composer}
         <div className="flex flex-wrap justify-center gap-2">
@@ -36,7 +47,7 @@ export function AskHome() {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100svh-3rem)] w-full max-w-3xl flex-col px-6 md:h-svh">
+    <div className="mx-auto flex h-[calc(100svh-3rem)] w-full max-w-5xl flex-col px-4 sm:px-6 lg:px-8 md:h-svh">
       <div className="flex justify-end py-3">
         <Button variant="ghost" size="sm" onClick={chat.reset}><RotateCcw /> New chat</Button>
       </div>

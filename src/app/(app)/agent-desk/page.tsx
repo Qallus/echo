@@ -23,7 +23,7 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
 
   if (!agent) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="w-full py-10 sm:py-14 px-4 sm:px-6 lg:px-8 2xl:px-10">
         <p className="text-sm font-medium text-muted-foreground">Redial Live Agents</p>
         <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Get paid to answer business calls, on your schedule.</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">Build your profile in about 15 minutes: a photo, your experience, skills, three short voice clips, and your rates and hours. The Redial team reviews it, then businesses can find and book you.</p>
@@ -61,7 +61,7 @@ export default async function AgentDeskPage({ searchParams }: { searchParams: Pr
   const first = agent.displayName.split(" ")[0];
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <div className="w-full py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <AgentAvatar name={agent.displayName} url={agent.avatarUrl} online={agent.availableNow && agent.status === "live"} />

@@ -59,7 +59,7 @@ export default async function PhonesPage() {
     return live;
   }))).filter((x): x is E911Row => Boolean(x));
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="w-full space-y-6 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         <Button variant="ghost" size="sm" className="-ml-2" nativeButton={false} render={<Link href="/calls" />}><ArrowLeft /> Calls</Button>
         <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><Phone className="size-7" /> Phones</h1>

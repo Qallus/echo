@@ -11,7 +11,7 @@ export const metadata = { title: "Orders · Redial" };
 export default async function OrdersPage() {
   const orders = await listOrders();
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="w-full space-y-6 py-8 sm:py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Orders</h1>

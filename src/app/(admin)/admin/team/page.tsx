@@ -36,7 +36,7 @@ export default async function TeamPage() {
   const unowned = deals.filter((d) => !d.owner_id && OPEN_STAGES.includes(d.stage)).length;
 
   return (
-    <AdminPage title="Team" description="Everyone on staff, their role, and what's on their plate." className="max-w-[96rem]"
+    <AdminPage title="Team" description="Everyone on staff, their role, and what's on their plate."
       actions={can(staff, "staff.manage") ? <Link href="/admin/users?tab=staff" className="text-sm text-primary hover:underline">Manage staff and roles</Link> : undefined}>
       <StatRow>
         <StatTile label="Staff" value={members.length} />

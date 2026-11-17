@@ -25,7 +25,7 @@ const FEATURES: Feature[] = [
 
 export default function ExplorePage() {
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-10 px-6 py-10">
+    <div className="w-full space-y-10 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
         <p className="text-sm text-muted-foreground">What Redial does today, and what&apos;s coming.</p>

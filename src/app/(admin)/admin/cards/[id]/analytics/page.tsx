@@ -18,7 +18,7 @@ export default async function CardAnalyticsPage({ params }: { params: Promise<{ 
   const card = await getCard(id);
   if (!card) notFound();
   return (
-    <AdminPage title={cardName(card)} description="Card analytics" className="max-w-[96rem]"
+    <AdminPage title={cardName(card)} description="Card analytics"
       actions={<div className="flex gap-2">
         <Button variant="outline" render={<Link href="/admin/cards" />} nativeButton={false}><ArrowLeft /> All cards</Button>
         {card.status === "published" && <Button variant="outline" render={<a href={cardPath(card.slug)} target="_blank" rel="noopener noreferrer" />} nativeButton={false}><Eye /> Public page</Button>}

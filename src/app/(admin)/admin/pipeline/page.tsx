@@ -10,7 +10,7 @@ export default async function Pipeline() {
   const staff = await requireStaff("crm.view");
   const [deals, companies, contacts, people] = await Promise.all([listDeals(), listCompanies(), listContacts(), crmStaff()]);
   return (
-    <AdminPage title="Pipeline" description="The lead-to-client sales lifecycle: opportunities by stage, with a weighted forecast." className="max-w-[96rem]">
+    <AdminPage title="Pipeline" description="The lead-to-client sales lifecycle: opportunities by stage, with a weighted forecast.">
       <PipelinePage deals={deals} companies={companies.map(({ id, name }) => ({ id, name }))} contacts={contacts} staff={people} readOnly={!can(staff, "crm.manage")} />
     </AdminPage>
   );

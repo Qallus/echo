@@ -40,7 +40,7 @@ export default async function LibraryPage({ params }: { params: Promise<{ view: 
   if (!data) notFound();
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
+    <div className="w-full space-y-6 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         {data.space && (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">

@@ -35,7 +35,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const workspaceOf = new Map(recordings.map((r) => [r.id, workspaces.find((w) => w.id === r.workspaceId)]));
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-10">
+    <div className="w-full space-y-6 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <h1 className="text-3xl font-semibold tracking-tight">Search</h1>
       <form action="/search" className="flex gap-2">
         <div className="relative flex-1">

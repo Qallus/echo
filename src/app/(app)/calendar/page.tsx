@@ -17,7 +17,7 @@ export default async function CalendarPage() {
     listWorkspaces(),
   ]);
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="w-full space-y-6 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Calendar</h1>
         <p className="text-sm text-muted-foreground">Appointments, events and deadlines, including dates picked up from your recordings.</p>

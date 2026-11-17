@@ -11,7 +11,7 @@ export default async function StudioPage({ searchParams }: { searchParams: Promi
   await requireUser();
   const [{ tab }, items] = await Promise.all([searchParams, myStudioAudio()]);
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="w-full space-y-6 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><AudioWaveform className="size-7" /> Recording Studio</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">

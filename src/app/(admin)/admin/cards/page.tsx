@@ -14,7 +14,7 @@ export default async function BusinessCards({ searchParams }: { searchParams: Pr
   const { tab } = await searchParams;
   const [cards, stats, leads, people, user] = await Promise.all([listCards(), cardStats(), listCardLeads(), crmStaff(), getUser()]);
   return (
-    <AdminPage title="Business Cards" description="Digital business cards with a public page, QR code and NFC tap, lead capture and analytics." className="max-w-[96rem]">
+    <AdminPage title="Business Cards" description="Digital business cards with a public page, QR code and NFC tap, lead capture and analytics.">
       <CardsPanel cards={cards} stats={stats} leads={leads} staff={people} me={user?.id ?? ""} origin={siteUrl("")} canManage={can(staff, "crm.manage")}
         initialTab={tab === "leads" ? "leads" : "cards"} />
     </AdminPage>

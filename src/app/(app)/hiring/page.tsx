@@ -39,7 +39,7 @@ export default async function HiringPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+    <div className="w-full space-y-8 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">Redial Live Agents</p>

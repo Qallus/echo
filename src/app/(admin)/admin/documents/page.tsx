@@ -11,7 +11,7 @@ export default async function Documents() {
   const staff = await requireStaff("crm.view");
   const [docs, folders, companies, people] = await Promise.all([listDocuments(), listFolders(), listCompanies(), crmStaff()]);
   return (
-    <AdminPage title="Documents" description="Contracts, proposals and files. Drag files in to upload; share links expire after 7 days." className="max-w-[96rem]">
+    <AdminPage title="Documents" description="Contracts, proposals and files. Drag files in to upload; share links expire after 7 days.">
       <DocumentsPanel docs={docs} folders={folders} staff={people} companies={companies.map(({ id, name }) => ({ id, name }))}
         readOnly={!can(staff, "crm.manage") && !can(staff, "projects.manage")} />
     </AdminPage>

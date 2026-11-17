@@ -12,7 +12,7 @@ export const metadata = { title: "Templates · Redial" };
 export default async function TemplatesPage() {
   const designs = await listDesigns();
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-12 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="w-full space-y-12 py-8 sm:py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="space-y-1">

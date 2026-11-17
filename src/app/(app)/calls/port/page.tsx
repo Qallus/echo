@@ -18,7 +18,7 @@ export default async function PortPage() {
     supabase.from("redial_port_requests").select("id, number, carrier, status, foc_date, staff_note, created_at").eq("owner_id", user.id).order("created_at", { ascending: false }),
   ]);
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="w-full space-y-6 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         <Button variant="ghost" size="sm" className="-ml-2" nativeButton={false} render={<Link href="/calls/phones" />}><ArrowLeft /> Phones</Button>
         <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><ArrowRightLeft className="size-7" /> Bring your number</h1>

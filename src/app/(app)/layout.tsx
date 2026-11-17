@@ -11,15 +11,21 @@ import { redirect } from "next/navigation";
 import { callsBadge } from "@/lib/redial/data";
 import { lineNumber } from "@/lib/line/server";
 import { hasLiveAgentProfile } from "@/lib/live-agents/agent-data";
+import { getStaff } from "@/lib/admin/guard";
 import { countUnreadNotifications, getMyProfile, isSuperAdmin, isSuspended, listFolders, listRecordings, listWorkspaces, requireUser } from "@/lib/data";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   if (await isSuspended()) redirect("/suspended");
-  const [workspaces, recordings, folders, superAdmin, profile, unread, catalog, callsUnread, line, liveAgent] = await Promise.all([
-    listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile(), countUnreadNotifications(), loadCatalog(), callsBadge(), lineNumber(), hasLiveAgentProfile(),
+  const [workspaces, recordings, folders, superAdmin, profile, unread, catalog, callsUnread, line, liveAgent, staff] = await Promise.all([
+    listWorkspaces(), listRecordings(), listFolders(), isSuperAdmin(), getMyProfile(), countUnreadNotifications(), loadCatalog(), callsBadge(), lineNumber(), hasLiveAgentProfile(), getStaff(),
   ]);
   const me = { id: user.id, name: profile.fullName, email: user.email, avatarUrl: profile.avatarUrl, unread };
+  // The top-bar search: pages for this person, plus their recent recordings by title.
+  const search = {
+    permissions: staff?.mfaVerified ? staff.permissions : [], phoneLine: Boolean(line), liveAgent,
+    recordings: recordings.filter((r) => !r.deletedAt).slice(0, 300).map((r) => ({ id: r.id, title: r.title, source: r.source, createdAt: r.createdAt })),
+  };
 
   return (
     <RecorderProvider workspaces={workspaces} userId={user.id}>
@@ -28,8 +34,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppSidebar me={me} workspaces={workspaces} recordings={recordings} folders={folders} superAdmin={superAdmin} callsUnread={callsUnread} phoneLine={Boolean(line)} liveAgent={liveAgent} />
       {/* overflow-x-clip (not hidden): trims sub-pixel overflow without breaking the sticky header. */}
       <SidebarInset className="min-w-0 overflow-x-clip">
-        <MobileHeader me={me} canAdmin={superAdmin} />
-        <TopBar me={me} mode="user" canAdmin={superAdmin} />
+        <MobileHeader me={me} canAdmin={superAdmin} search={search} />
+        <TopBar me={me} mode="user" canAdmin={superAdmin} search={search} />
         {/* Phones: leave room for the fixed bottom bar (--bottom-nav in globals.css). */}
         <main className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
         <BottomNav workspaces={workspaces} />

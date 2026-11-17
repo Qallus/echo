@@ -11,7 +11,7 @@ export default async function Plans() {
   const staff = await requireStaff("crm.view");
   const [plans, companies, people] = await Promise.all([listPlans(), listCompanies(), crmStaff()]);
   return (
-    <AdminPage title="Plans" description="Task plans for onboarding, projects and launches: boards, lists, grids and calendars." className="max-w-[96rem]">
+    <AdminPage title="Plans" description="Task plans for onboarding, projects and launches: boards, lists, grids and calendars.">
       <PlansIndex plans={plans} companies={companies.map(({ id, name }) => ({ id, name }))} staff={people}
         readOnly={!can(staff, "crm.manage") && !can(staff, "projects.manage")} />
     </AdminPage>

@@ -25,7 +25,7 @@ export default async function TeamPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-8 px-6 py-10">
+    <div className="w-full space-y-8 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Business &amp; team</h1>
         <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">

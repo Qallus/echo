@@ -10,6 +10,7 @@ import { NotificationBell } from "@/components/notifications/bell";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { ThemeToggle } from "@/components/theme";
 import { StatsToggle } from "./stats-toggle";
+import { DashboardSearch, type DashboardSearchProps } from "./dashboard-search";
 import { cn } from "@/lib/utils";
 
 // The pieces both dashboards share, so the user and admin sidebars look the
@@ -71,26 +72,29 @@ export function SidebarAccount({ me, mode, canAdmin }: { me: ShellUser; mode: Mo
 }
 
 // "User" or "Admin". Staff get both, as a switch between the dashboards.
-export function ModeBadge({ mode, canAdmin, className }: { mode: Mode; canAdmin: boolean; className?: string }) {
-  const pill = "inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold tracking-wide uppercase transition-colors";
+// `compact` (phone headers): icons only below 400px wide, with the name kept for screen readers.
+export function ModeBadge({ mode, canAdmin, className, compact = false }: { mode: Mode; canAdmin: boolean; className?: string; compact?: boolean }) {
+  const pill = cn("inline-flex h-7 items-center gap-1.5 rounded-full text-xs font-semibold tracking-wide uppercase transition-colors", compact ? "px-2 min-[400px]:px-3" : "px-3");
+  const word = (w: string) => <span className={compact ? "sr-only min-[400px]:not-sr-only" : undefined}>{w}</span>;
   const user = "bg-primary text-primary-foreground shadow-sm";
   const admin = "bg-primary text-primary-foreground shadow-sm";
-  if (!canAdmin) return <span className={cn(pill, user, className)}><UserRound className="size-3.5" /> User</span>;
+  if (!canAdmin) return <span className={cn(pill, user, className)}><UserRound className="size-3.5" /> {word("User")}</span>;
   return (
     <nav aria-label="Switch dashboard" className={cn("inline-flex items-center gap-0.5 rounded-full border bg-muted/60 p-0.5", className)}>
       <Link href="/home" aria-current={mode === "user" ? "page" : undefined} title="User dashboard"
-        className={cn(pill, mode === "user" ? user : "text-muted-foreground hover:text-foreground")}><UserRound className="size-3.5" /> User</Link>
+        className={cn(pill, mode === "user" ? user : "text-muted-foreground hover:text-foreground")}><UserRound className="size-3.5" /> {word("User")}</Link>
       <Link href="/admin" aria-current={mode === "admin" ? "page" : undefined} title="Admin dashboard"
-        className={cn(pill, mode === "admin" ? admin : "text-muted-foreground hover:text-foreground")}><ShieldCheck className="size-3.5" /> Admin</Link>
+        className={cn(pill, mode === "admin" ? admin : "text-muted-foreground hover:text-foreground")}><ShieldCheck className="size-3.5" /> {word("Admin")}</Link>
     </nav>
   );
 }
 
 // The page area's top-right corner on desktop (phones have their own header).
-export function TopBar({ me, mode, canAdmin }: { me: ShellUser; mode: Mode; canAdmin: boolean }) {
+export function TopBar({ me, mode, canAdmin, search }: { me: ShellUser; mode: Mode; canAdmin: boolean; search: Omit<DashboardSearchProps, "mode"> }) {
   return (
     <div className="hidden items-center justify-end gap-1 px-4 pt-3 sm:px-6 md:flex">
       <StatsToggle className="mr-1" />
+      <DashboardSearch {...search} mode={mode} hotkeys />
       <ThemeToggle />
       <NotificationBell userId={me.id} initialUnread={me.unread} />
       <ModeBadge mode={mode} canAdmin={canAdmin} className="ml-2" />

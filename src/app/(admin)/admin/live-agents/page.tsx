@@ -47,7 +47,7 @@ export default async function LiveAgentsAdminPage() {
   const count = (s: string) => rows.filter((r) => r.status === s && !r.isDemo).length;
 
   return (
-    <AdminPage title="Live Agents" description="Real people businesses can book to answer their calls. Approve profiles and voice clips before they're public." className="max-w-none lg:px-8 2xl:px-10">
+    <AdminPage title="Live Agents" description="Real people businesses can book to answer their calls. Approve profiles and voice clips before they're public.">
       <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="To review" value={queue.length} />
         <StatCard label="Live" value={count("live")} hint={`${rows.filter((r) => r.isDemo && r.status === "live").length} demo profiles`} />

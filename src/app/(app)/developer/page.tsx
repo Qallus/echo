@@ -30,7 +30,7 @@ export default async function DeveloperPage() {
     (clientId && apps.find((g) => g.client.id === clientId)?.client.name) || (clientId ? "Connected app" : "Direct");
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-6 py-10">
+    <div className="w-full space-y-8 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Developer</h1>
         <p className="text-sm text-muted-foreground">

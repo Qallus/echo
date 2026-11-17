@@ -18,7 +18,7 @@ export default async function HomePage() {
   const recent = all.filter((r) => !r.deletedAt).slice(0, 5);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-14 px-6 py-10">
+    <div className="w-full space-y-14 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <RedialSetupCard />
       <section className="space-y-4">
         <div className="flex items-end justify-between">

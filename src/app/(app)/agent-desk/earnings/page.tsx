@@ -42,7 +42,7 @@ export default async function EarningsPage() {
   const day = (iso: string) => new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="w-full space-y-6 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <Link href="/agent-desk" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Agent Desk</Link>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Earnings and payouts</h1>

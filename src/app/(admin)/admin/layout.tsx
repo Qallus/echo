@@ -31,8 +31,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <SidebarProvider defaultOpen={(await cookies()).get("sidebar_state")?.value !== "false"}>
       <AdminSidebar me={me} permissions={staff.permissions} />
       <SidebarInset className="min-w-0 overflow-x-clip">
-        <AdminMobileHeader />
-        <TopBar me={me} mode="admin" canAdmin />
+        <AdminMobileHeader permissions={staff.permissions} />
+        <TopBar me={me} mode="admin" canAdmin search={{ permissions: staff.permissions }} />
         {mfaOff && (
           <p className="flex items-center gap-2 border-b bg-amber-500/10 px-4 py-2 text-xs text-amber-800 sm:px-6 dark:text-amber-200">
             <ShieldOff className="size-3.5 shrink-0" /> Two-step sign-in is off for staff.

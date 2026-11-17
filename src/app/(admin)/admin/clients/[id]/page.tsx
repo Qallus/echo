@@ -32,7 +32,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const website = safeUrl(company.website);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="w-full space-y-8 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/admin/clients" />}><ArrowLeft /> Clients</Button>
 
       <div className="flex flex-wrap items-start gap-4">

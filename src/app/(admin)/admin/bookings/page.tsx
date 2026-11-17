@@ -23,7 +23,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
   const nowIso = new Date().toISOString();
   const readOnly = !can(staff, "crm.manage");
   return (
-    <AdminPage title="Bookings" description="Appointments and events from your booking page and the team, appointment types and availability." className="max-w-[96rem]">
+    <AdminPage title="Bookings" description="Appointments and events from your booking page and the team, appointment types and availability.">
       <Tabs defaultValue={["events", "types", "availability"].includes(tab ?? "") ? tab : "bookings"}>
         <TabsList variant="line">
           <TabsTrigger value="bookings">Bookings</TabsTrigger>

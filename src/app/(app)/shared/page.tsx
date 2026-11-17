@@ -17,7 +17,7 @@ export default async function SharedWithMePage() {
   const rows = (data ?? []) as Row[];
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-10">
+    <div className="w-full space-y-6 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Shared with me</h1>
         <p className="mt-1 text-sm text-muted-foreground">Recordings other people shared with your email address. You can read them, but not change them.</p>

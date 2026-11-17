@@ -10,7 +10,7 @@ export default async function Contacts({ searchParams }: { searchParams: Promise
   const staff = await requireStaff("crm.view");
   const [contacts, companies, people, sp] = await Promise.all([listContacts(), listCompanies(), crmStaff(), searchParams]);
   return (
-    <AdminPage title="Contacts" description="Everyone Qallus works with, from first lead to paying client. Internal; customers never see this." className="max-w-[96rem]">
+    <AdminPage title="Contacts" description="Everyone Qallus works with, from first lead to paying client. Internal; customers never see this.">
       <ContactsPage contacts={contacts} companies={companies.map(({ id, name }) => ({ id, name }))} staff={people} readOnly={!can(staff, "crm.manage")} phoneImport={sp.import === "phone"} />
     </AdminPage>
   );

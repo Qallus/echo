@@ -17,7 +17,7 @@ export default async function AgentPreviewPage() {
   return (
     <>
       <div className="border-b bg-muted/40">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm sm:px-6">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 py-3 text-sm px-4 sm:px-6 lg:px-8 2xl:px-10">
           <span className="inline-flex items-center gap-2"><Eye className="size-4" /> Preview · {AGENT_STATUS[agent.status].label}: {AGENT_STATUS[agent.status].detail}</span>
           <Link href="/agent-desk" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Agent Desk</Link>
         </div>

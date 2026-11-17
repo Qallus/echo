@@ -32,7 +32,7 @@ export default async function AdminWorkspacePage({ params }: { params: Promise<{
   const nonOwners = w.members.filter((m) => m.role !== "owner").map((m) => ({ user_id: m.user_id, label: m.full_name ? `${m.full_name} (${m.email})` : m.email }));
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="w-full space-y-8 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
       <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/admin/users" />}><ArrowLeft /> User Management</Button>
       <div className="space-y-1">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
