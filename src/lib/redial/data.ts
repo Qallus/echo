@@ -10,7 +10,7 @@ import type { Access, Call, Callback, EchoCall, Line, ListEntry, Turn } from "./
 
 const CALL_COLS = "id, line_id, from_number, caller_id_name, status, reason, caller_name, purpose, callback_number, message, summary, category, urgency, duration_seconds, recording_path, started_at, ended_at, read_at, archived_at";
 // The call log's columns (migration 20261116150000); used when they exist.
-const LOG_COLS = `${CALL_COLS}, direction, to_number, recording_id, cost_cents, notes, verdict`;
+const LOG_COLS = `${CALL_COLS}, direction, to_number, recording_id, cost_cents, notes, verdict, risk_signals`;
 
 type Db = Awaited<ReturnType<typeof createClient>>;
 async function lineCalls(supabase: Db, lineId: string) {
@@ -101,6 +101,25 @@ export async function lineDetail(lineId: string, access: Access) {
     people: (people.data ?? []) as LinePerson[],
     directory: (directory.data ?? []) as DirectoryEntry[],
     mirror: { ...MIRROR_DEFAULTS, line_id: lineId, ...(mirror.data ?? {}) } as MirrorSettings,
+  };
+}
+
+// Fraud protection for a line (its owner): settings, family, trusted contacts.
+export type ProtectionData = {
+  settings: { enabled: boolean; has_code_word: boolean; auto_block_scams: boolean; warn_on_courier: boolean };
+  family: { id: string; name: string; relationship: string | null; phone: string | null; callback_ok: boolean }[];
+  trusted: { id: string; name: string; phone: string | null; email: string | null; alert_scams: boolean; weekly_summary: boolean; invited_at: string | null; sms_consent_at: string | null; opted_out_at: string | null }[];
+};
+export async function lineProtectionData(lineId: string): Promise<ProtectionData> {
+  const supabase = await createClient();
+  const [s, f, t] = await Promise.all([
+    supabase.from("redial_protection").select("enabled, has_code_word, auto_block_scams, warn_on_courier").eq("line_id", lineId).maybeSingle(),
+    supabase.from("redial_family").select("id, name, relationship, phone, callback_ok").eq("line_id", lineId).order("created_at"),
+    supabase.from("redial_trusted_contacts").select("id, name, phone, email, alert_scams, weekly_summary, invited_at, sms_consent_at, opted_out_at").eq("line_id", lineId).order("created_at"),
+  ]);
+  return {
+    settings: s.data ?? { enabled: true, has_code_word: false, auto_block_scams: true, warn_on_courier: true },
+    family: (f.data ?? []) as ProtectionData["family"], trusted: (t.data ?? []) as ProtectionData["trusted"],
   };
 }
 

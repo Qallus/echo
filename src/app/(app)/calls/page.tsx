@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CallsView } from "@/components/redial/calls-view";
 import { can, getStaff } from "@/lib/admin/guard";
 import { getMyProfile, requireUser } from "@/lib/data";
-import { lineDetail, myLines } from "@/lib/redial/data";
+import { lineDetail, lineProtectionData, myLines } from "@/lib/redial/data";
 import { redialUsage } from "@/lib/redial/usage";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,10 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
   // No line yet: set Redial up first.
   if (!lines.length) redirect("/setup");
   const line = lines.find((l) => l.id === lineId) ?? lines[0];
-  const [detail, usage] = await Promise.all([lineDetail(line.id, line.access), line.access.owner ? createClient().then((s) => redialUsage(s, user.id)) : Promise.resolve(null)]);
+  const [detail, usage, protection] = await Promise.all([
+    lineDetail(line.id, line.access), line.access.owner ? createClient().then((s) => redialUsage(s, user.id)) : Promise.resolve(null),
+    line.access.owner ? lineProtectionData(line.id) : Promise.resolve(null),
+  ]);
   const pretty = line.number.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 
   return (
@@ -44,7 +47,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
           </nav>
         )}
       </div>
-      <CallsView key={line.id} line={line} access={line.access} {...detail} usage={usage} initialCall={call ?? null} initialTab={tab ?? null} canCrm={can(staff, "crm.manage")}
+      <CallsView key={line.id} line={line} access={line.access} {...detail} usage={usage} initialCall={call ?? null} initialTab={tab ?? null} canCrm={can(staff, "crm.manage")} protection={protection}
         ownerFirst={profile.fullName?.trim().split(/\s+/)[0] ?? "you"} />
     </div>
   );

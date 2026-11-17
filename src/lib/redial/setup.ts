@@ -81,6 +81,17 @@ export const ANSWERS = {
     vip: z.array(phone).max(20, "Up to 20 VIP numbers here; add more later."),
     block: z.array(phone).max(20, "Up to 20 blocked numbers here; add more later."),
     hours: z.object({ start: time, end: time, weekdays: z.boolean() }).optional(),
+    // Protect a parent (fraud protection): a family code word (sent once, then
+    // stored encrypted as codeWordCipher by the server) and a trusted contact.
+    protect: z.object({
+      codeWord: z.string().trim().max(40).refine((w) => !w || w.length >= 2, "A code word needs at least 2 characters.").optional(),
+      codeWordCipher: z.string().max(500).optional(),
+      trusted: z.object({
+        name: text(80).min(1, "Enter the trusted contact's name."),
+        phone: phone.optional(),
+        email: z.email("Enter a valid email.").max(200).optional(),
+      }).refine((t) => t.phone || t.email, { message: "Add the trusted contact's mobile number or email.", path: ["phone"] }).optional(),
+    }).optional(),
   }),
   assistant: z.object({
     name: text(40).min(1, "Give your assistant a name."),

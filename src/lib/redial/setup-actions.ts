@@ -7,6 +7,7 @@ import { findPrice, lineOf } from "@/lib/billing/catalog";
 import { loadCatalog } from "@/lib/billing/catalog-server";
 import { requireUser } from "@/lib/data";
 import { toE164 } from "@/lib/notify/senders";
+import { encryptKey } from "@/lib/ai/keys";
 import { createClient } from "@/lib/supabase/server";
 import { ANSWERS, LAST_STEP, setupGreeting, stepAt, type SetupAnswers } from "./setup";
 
@@ -57,6 +58,27 @@ export async function saveSetupStep(n: number, values: unknown): Promise<Result>
       user_id: user.id, type: "redial_call", in_app: true, email: a.alerts.email, sms: a.alerts.sms, push: a.alerts.push,
     });
     if (error) return { error: error.message };
+  }
+
+  // Protect a parent: the code word is encrypted now and never kept as typed;
+  // leaving it blank keeps one saved earlier. Applied to the line when it's
+  // ready (private.redial_setup_apply), or right away if it already exists.
+  if (step.key === "screening") {
+    const a = ANSWERS.screening.parse(values);
+    const p = a.protect;
+    if (p) {
+      const cipher = p.codeWord ? encryptKey(p.codeWord) : saved.screening?.protect?.codeWordCipher;
+      const protect = { ...(cipher ? { codeWordCipher: cipher } : {}), ...(p.trusted ? { trusted: p.trusted } : {}) };
+      data = { ...a, protect: Object.keys(protect).length ? protect : undefined };
+      const { data: line } = await supabase.from("redial_lines").select("id").eq("owner_id", user.id).order("created_at").limit(1).maybeSingle();
+      if (line && p.codeWord) await supabase.from("redial_protection").upsert({ line_id: line.id, code_word_cipher: cipher }, { onConflict: "line_id" });
+      if (line && p.trusted) {
+        const t = p.trusted;
+        const { data: dup } = await supabase.from("redial_trusted_contacts").select("id").eq("line_id", line.id)
+          .or([t.phone && `phone.eq.${t.phone}`, t.email && `email.eq.${t.email.toLowerCase()}`].filter(Boolean).join(",")).limit(1).maybeSingle();
+        if (!dup) await supabase.from("redial_trusted_contacts").insert({ line_id: line.id, name: t.name, phone: t.phone ?? null, email: t.email?.toLowerCase() ?? null });
+      }
+    }
   }
 
   if (step.key === "plan") {

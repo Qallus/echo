@@ -23,6 +23,7 @@ export type Call = {
   // The call log (migration 20261116150000); absent before it runs.
   direction?: "inbound" | "outbound"; to_number?: string | null; recording_id?: string | null; cost_cents?: number | null; notes?: string | null;
   verdict?: "legit" | "unverified" | "likely_scam" | null;
+  risk_signals?: { code: string; detail: string }[] | null;
   echo?: EchoCall | null;
 };
 // The call's Echo recording: transcription status, summary and action items.

@@ -18,6 +18,7 @@ import { addListEntry, saveCallNotes, updateCall, voicemailUrl } from "@/lib/red
 import { CATEGORY_LABEL, STATUS_LABEL, normalizeNumber, type Call, type Category, type Line, type ListEntry } from "@/lib/redial/types";
 import { cn } from "@/lib/utils";
 import { CallbackDialog } from "./callbacks";
+import { CHECK_SIGNALS, RISK_SIGNALS, VERDICT_LABEL, type Verdict } from "@/lib/redial/protection-shared";
 import { useBrowserPhone } from "./use-browser-phone";
 
 // The Phone: a dial pad on the left (calls from the browser on a Redial line,
@@ -41,6 +42,12 @@ const STATUS_TONE: Record<string, string> = {
   forwarded: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300", message: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
   missed: "bg-amber-500/15 text-amber-800 dark:text-amber-300", failed: "bg-red-500/15 text-red-700 dark:text-red-300", blocked: "bg-red-500/15 text-red-700 dark:text-red-300",
 };
+// Fraud protection verdicts: label colors, and each signal in plain words.
+const VERDICT_TONE: Record<Verdict, string> = {
+  legit: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300", unverified: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+  likely_scam: "bg-red-500/15 text-red-700 dark:text-red-300",
+};
+const signalText = (s: { code: string; detail: string }) => (RISK_SIGNALS as Record<string, string>)[s.code] ?? CHECK_SIGNALS[s.code] ?? s.detail;
 const FILTERS = [["all", "All"], ["in", "Inbound"], ["out", "Outbound"], ["voicemail", "Voicemail"], ["archived", "Archived"]] as const;
 type Filter = (typeof FILTERS)[number][0];
 
@@ -158,7 +165,7 @@ export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false
                         <span className={cn("truncate text-sm", unread(c) ? "font-semibold" : "font-medium")}>{who(c)}</span>
                         <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium", STATUS_TONE[c.status] ?? "bg-muted text-muted-foreground")}>{statusText(c)}</span>
                         {c.recording_id && <span className="rounded-full bg-violet-500/15 px-1.5 py-px text-[10px] font-medium text-violet-700 dark:text-violet-300">Recorded</span>}
-                        {c.verdict === "likely_scam" && <span className="rounded-full bg-red-500/15 px-1.5 py-px text-[10px] font-medium text-red-700 dark:text-red-300">Likely scam</span>}
+                        {c.verdict && <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium", VERDICT_TONE[c.verdict])}>{VERDICT_LABEL[c.verdict]}</span>}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">
                         {c.duration_seconds ? `${clock(c.duration_seconds)} · ` : ""}{lines.length > 1 && lineOf ? `${lineOf.label} · ` : ""}{c.summary || c.message || c.reason || ""}
@@ -222,9 +229,7 @@ function CallBody({ call: c, line, entries, manage, canCrm, canDial, onCall, sho
         {canCrm && other && <Button size="sm" variant="outline" disabled={pending} onClick={addContact}><UserPlus /> Add to contacts</Button>}
       </div>
 
-      {c.verdict === "likely_scam" && (
-        <p className="flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-800 dark:text-red-300"><ShieldAlert className="mt-0.5 size-4 shrink-0" /> Redial flagged this as a likely scam and didn&apos;t put it through.</p>
-      )}
+      {c.verdict && <Verdict call={c} />}
       {c.summary && <p className="rounded-lg bg-muted/60 p-3 text-sm">{c.summary}</p>}
       {c.purpose && <p className="text-sm"><span className="text-xs text-muted-foreground">Why they called: </span>{c.purpose}</p>}
       <EchoSection call={c} line={line} />
@@ -306,6 +311,29 @@ function EchoSection({ call: c, line }: { call: Call; line: Line }) {
             </div>
           )}
         </>
+      )}
+    </section>
+  );
+}
+
+// The fraud-protection verdict and what Redial noticed, with the report page.
+function Verdict({ call: c }: { call: Call }) {
+  const v = c.verdict!;
+  const signals = (c.risk_signals ?? []).filter((s) => !s.code.startsWith("code_word_try"));
+  const box = v === "likely_scam" ? "border-red-500/40 bg-red-500/10" : v === "unverified" ? "border-amber-500/40 bg-amber-500/10" : "border-emerald-500/40 bg-emerald-500/10";
+  return (
+    <section className={cn("space-y-2 rounded-lg border p-3 text-sm", box)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <ShieldAlert className="size-4 shrink-0" />
+        <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", VERDICT_TONE[v])}>{VERDICT_LABEL[v]}</span>
+        <span className="text-xs text-muted-foreground">{v === "likely_scam" ? "Redial stopped this call and didn't put it through." : v === "unverified" ? "Redial couldn't confirm who this was." : "Redial confirmed this caller."}</span>
+        <span className="flex-1" />
+        <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/calls/report/${c.id}`} />}>Report page</Button>
+      </div>
+      {signals.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-5 text-xs">
+          {signals.map((s) => <li key={s.code}>{signalText(s)}</li>)}
+        </ul>
       )}
     </section>
   );

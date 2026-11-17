@@ -15,21 +15,23 @@ import { MirrorSettingsPanel } from "./mirror-settings";
 import type { MirrorSettings } from "@/lib/redial/mirror";
 import { AssistantSettings, RulesSettings, useLineForm } from "./line-settings";
 import { PhoneCenter } from "./phone-center";
+import { ProtectionSettings } from "./protection-settings";
+import type { ProtectionData } from "@/lib/redial/data";
 
 export { prettyNumber } from "./phone-center";
 
 // One Redial line: the Phone (dial pad and every call in and out), callbacks,
 // rules, the assistant, directory, Mirror and the people it's shared with.
-export function CallsView({ line, access, calls, entries, callbacks, people, directory, mirror, initialCall, initialTab, ownerFirst, usage, canCrm = false }: {
+export function CallsView({ line, access, calls, entries, callbacks, people, directory, mirror, initialCall, initialTab, ownerFirst, usage, canCrm = false, protection = null }: {
   line: Line; access: Access; calls: Call[]; entries: ListEntry[]; callbacks: Callback[]; people: LinePerson[]; directory: DirectoryEntry[]; mirror: MirrorSettings;
-  initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null; canCrm?: boolean;
+  initialCall: string | null; initialTab: string | null; ownerFirst: string; usage: RedialUsage | null; canCrm?: boolean; protection?: ProtectionData | null;
 }) {
   const manage = allows(access, "manage_rules");
   const editDirectory = allows(access, "manage_directory");
   const form = useLineForm(line);
   const openCallbacks = callbacks.filter((c) => !c.done_at).length;
   const needsSetup = !line.forward_to;
-  const tabs = ["phone", "callbacks", ...(manage ? ["rules", "assistant"] : []), ...(editDirectory ? ["directory"] : []), ...(manage ? ["mirror"] : []), ...(access.owner ? ["people"] : [])];
+  const tabs = ["phone", "callbacks", ...(manage ? ["rules", "assistant"] : []), ...(editDirectory ? ["directory"] : []), ...(manage ? ["mirror"] : []), ...(access.owner ? ["protection", "people"] : [])];
   const start = initialTab === "inbox" ? "phone" : tabs.includes(initialTab ?? "") ? initialTab! : "phone";
 
   return (
@@ -49,6 +51,7 @@ export function CallsView({ line, access, calls, entries, callbacks, people, dir
           {manage && <TabsTrigger value="assistant">Assistant</TabsTrigger>}
           {editDirectory && <TabsTrigger value="directory">Directory</TabsTrigger>}
           {manage && <TabsTrigger value="mirror">Mirror</TabsTrigger>}
+          {access.owner && protection && <TabsTrigger value="protection">Protection</TabsTrigger>}
           {access.owner && <TabsTrigger value="people">People{people.length ? ` (${people.length})` : ""}</TabsTrigger>}
         </TabsList>
 
@@ -60,6 +63,7 @@ export function CallsView({ line, access, calls, entries, callbacks, people, dir
         {manage && <TabsContent value="assistant" className="pt-4"><AssistantSettings line={line} form={form} ownerFirst={ownerFirst} /></TabsContent>}
         {editDirectory && <TabsContent value="directory" className="pt-4"><DirectorySettings lineId={line.id} entries={directory} canEdit /></TabsContent>}
         {manage && <TabsContent value="mirror" className="pt-4"><MirrorSettingsPanel lineId={line.id} initial={mirror} /></TabsContent>}
+        {access.owner && protection && <TabsContent value="protection" className="pt-4"><ProtectionSettings lineId={line.id} data={protection} ownerFirst={ownerFirst} /></TabsContent>}
         {access.owner && <TabsContent value="people" className="pt-4"><LinePeople lineId={line.id} people={people} /></TabsContent>}
       </Tabs>
     </div>

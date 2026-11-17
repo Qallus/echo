@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { twiml, verifyTwilio } from "@/lib/comms/twilio";
 import { isUuid } from "@/lib/data";
+import { alertScam } from "@/lib/redial/alerts";
 import { autoBlock } from "@/lib/redial/protection";
 import { lineSipUris, ringOwner, voicemail } from "@/lib/redial/twiml";
 import type { Line } from "@/lib/redial/types";
@@ -28,6 +30,8 @@ export async function POST(req: Request) {
       status: "completed", ended_at: new Date().toISOString(), category: "spam",
       reason: blocked ? "Stopped a likely scam; number blocked" : "Stopped a likely scam",
     }).eq("id", id).in("status", ["screening"]);
+    // Tell the trusted contacts (once per call; see alerts.ts).
+    after(() => alertScam(db, id).catch((e) => console.error("[protection alert]", e)));
     return twiml("<Hangup/>");
   }
   if (call.verdict === "unverified" && call.connect_requested) {

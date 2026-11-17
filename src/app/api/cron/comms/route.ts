@@ -4,6 +4,7 @@ import { processRuleRuns, queueTimedRules } from "@/lib/automation/run";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
 import { runScheduled } from "@/lib/comms/schedule";
 import { fillCallCosts } from "@/lib/redial/call-log";
+import { sendWeeklySummaries } from "@/lib/redial/alerts";
 import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -35,7 +36,9 @@ async function run(req: Request) {
   const reminders = (await sendBookingReminders(db)) + (await sendEventReminders(db));
   // Twilio's price for Redial calls that just ended (no-op before the call-log migration).
   const costs = await fillCallCosts(db).catch(() => 0);
-  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs });
+  // Sundays: fraud protection weekly summaries for trusted contacts.
+  const summaries = await sendWeeklySummaries(db).catch((e) => { console.error("[weekly summary]", e); return 0; });
+  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries });
 }
 
 export const GET = run;

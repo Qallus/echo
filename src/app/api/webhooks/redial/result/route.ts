@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { isUuid } from "@/lib/data";
 import { verifyGateway } from "@/lib/redial/gateway";
+import { alertScam } from "@/lib/redial/alerts";
 import { reviewCall } from "@/lib/redial/protection";
 import type { Category, Turn } from "@/lib/redial/types";
 import { redialUsage } from "@/lib/redial/usage";
@@ -39,7 +40,11 @@ export async function POST(req: Request) {
     // The assistant is done: a second read of the call for missed scam signs
     // (runs after this response, once the transcript below is saved).
     const callId = body.callId;
-    after(() => reviewCall(db, callId).catch((e) => console.error("[protection review]", e)));
+    // A likely scam (live or from the review) then alerts the trusted contacts, once.
+    after(async () => {
+      await reviewCall(db, callId).catch((e) => console.error("[protection review]", e));
+      await alertScam(db, callId).catch((e) => console.error("[protection alert]", e));
+    });
   }
   const patch: Record<string, unknown> = {};
   if (Array.isArray(body.transcript)) {
