@@ -18,7 +18,7 @@ const JSON_LD = {
 
 export default function FaqPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 sm:py-24">
+    <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, "\\u003c") }} />
       <header>
         <p className="text-sm font-medium text-muted-foreground">Help</p>

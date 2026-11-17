@@ -10,6 +10,7 @@ import { PricingPreviewSection } from "@/components/marketing/home/pricing-previ
 import { Button } from "@/components/ui/button";
 import { ALL_FAQ } from "@/lib/faq";
 import { AgentName, Named } from "@/components/marketing/agent-name";
+import { BusinessHeroPhone } from "@/components/marketing/business-hero-phone";
 
 export const metadata = {
   title: "Redial for business · An assistant on the line for every customer",
@@ -42,16 +43,19 @@ const FAQ = ALL_FAQ.filter((f) => [
 export default function RedialBusinessPage() {
   return (
     <>
-      <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24">
-        <p className="text-sm font-medium text-muted-foreground">Redial for business</p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">An assistant on the line for every customer.</h1>
-        <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          <AgentName /> answers the calls you can&apos;t, knows your business, catches every lead after hours and puts the right calls through. You keep your number.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Button size="lg" nativeButton={false} render={<Link href="/signup?type=business" />}>Set up your business line <ArrowRight /></Button>
-          <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/pricing" />}>See pricing</Button>
+      <section className="mx-auto grid w-full max-w-6xl items-center gap-8 px-4 pt-16 pb-12 sm:px-6 sm:pt-24 lg:grid-cols-[1fr_1.05fr] lg:gap-4">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Redial for business</p>
+          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">An assistant on the line for every customer.</h1>
+          <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+            <AgentName /> answers the calls you can&apos;t, knows your business, catches every lead after hours and puts the right calls through. You keep your number.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button size="lg" nativeButton={false} render={<Link href="/signup?type=business" />}>Set up your business line <ArrowRight /></Button>
+            <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/pricing" />}>See pricing</Button>
+          </div>
         </div>
+        <BusinessHeroPhone />
       </section>
 
       <section className="border-t">

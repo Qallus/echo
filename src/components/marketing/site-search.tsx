@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight, Bot, Building2, CircleHelp, Globe, Hash, House, Loader2, Mic, Search, Smartphone, Sparkles, X,
+  ArrowRight, Bot, Building2, CircleHelp, Globe, Hash, House, Loader2, Mic, Search, Smartphone, Sparkles, UsersRound, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEARCH_CATEGORIES, searchSite, suggestionsFor, type SearchCategory, type SearchEntry } from "@/lib/site-search";
@@ -203,11 +203,11 @@ export function SiteSearch() {
                   <p className="px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{cat === "all" ? "Popular" : LABEL[cat]}</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {suggestions.map((e) => {
-                      const Icon = ICONS[e.cat];
+                      const Icon = e.group ? UsersRound : ICONS[e.cat];
                       return (
                         <Link key={e.href + e.title} href={e.href} onClick={close} className="flex items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/60">
                           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><Icon className="size-4" /></span>
-                          <span className="min-w-0"><span className="block text-sm font-medium">{e.title}</span><span className="block text-xs text-muted-foreground">{e.desc}</span></span>
+                          <span className="min-w-0"><span className="block text-sm font-medium">{e.title}</span><span className="block truncate text-xs text-muted-foreground">{e.desc}</span></span>
                         </Link>
                       );
                     })}
@@ -224,7 +224,7 @@ export function SiteSearch() {
 }
 
 function ResultRow({ e, cls, on, onHover, onPick }: { e: SearchEntry; cls: string; on: boolean; onHover: () => void; onPick: () => void }) {
-  const Icon = e.faq ? CircleHelp : ICONS[e.cat];
+  const Icon = e.faq ? CircleHelp : e.group ? UsersRound : ICONS[e.cat];
   return (
     <li role="option" aria-selected={on}>
       <Link href={e.href} onClick={onPick} className={cls} onMouseEnter={onHover}>

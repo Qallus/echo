@@ -18,3 +18,14 @@ export const BUSINESS_FRAMES: ScreenFrame[] = [
   { tag: "Transfer from {agent}", title: "Dana Ortiz → Sales (101)", detail: "Wants a roof repair quote this week. Press 1 to take it.", soft: ["Answer", "Press 1", "Decline"], tone: "dj" },
   { tag: "After hours", title: "Callback booked", detail: "Dana Ortiz, 8:30 AM tomorrow. Summary sent to the team.", tone: "dj" },
 ];
+
+// The Redial for business hero: an urgent lead qualified and dispatched,
+// a robocall stopped, and the summary to the team.
+export const BUSINESS_HERO_FRAMES: ScreenFrame[] = [
+  { tag: "Incoming · Main line", title: "(480) 555-0193", detail: "New caller", soft: ["Answer", "Redial", "Decline"], tone: "call" },
+  { tag: "{agent} is answering", title: "Marcus Lee", detail: "“My water heater is leaking. Can someone come today?”", soft: ["Menu", "Listen", "History"], tone: "dj" },
+  { tag: "Qualified by {agent}", title: "Urgent · Same day", detail: "Water heater leak in Mesa. In your service area.", soft: ["Menu", "Listen", "History"], tone: "dj" },
+  { tag: "Transfer from {agent}", title: "Marcus Lee → Dispatch (102)", detail: "Urgent leak, wants someone today. Press 1 to take it.", soft: ["Answer", "Press 1", "Decline"], tone: "dj" },
+  { tag: "Blocked", title: "Warranty robocall", detail: "{agent} hung up. Your team never heard it ring.", tone: "blocked" },
+  { tag: "Summary sent", title: "Job booked for 2 PM", detail: "Lead added, details shared with the crew.", tone: "dj" },
+];

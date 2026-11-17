@@ -74,9 +74,14 @@ export default async function HowItWorksPage() {
           <ol className="grid gap-4 md:grid-cols-5">
             {STEPS.map(({ icon: Icon, title, desc }, i) => (
               <li key={title} className="rounded-2xl border bg-muted/30 p-5">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="flex size-6 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">{i + 1}</span><Icon className="size-4" /></div>
-                <h2 className="mt-4 font-semibold">{title}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+                <div className="flex items-start gap-3">
+                  <span className="relative flex size-11 shrink-0 items-center justify-center rounded-xl border bg-background">
+                    <Icon className="size-5" />
+                    <span className="absolute -top-2 -left-2 flex size-5 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background" aria-label={`Step ${i + 1}`}>{i + 1}</span>
+                  </span>
+                  <h2 className="pt-0.5 font-semibold leading-snug">{title}</h2>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">{desc}</p>
               </li>
             ))}
           </ol>

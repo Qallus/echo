@@ -15,7 +15,7 @@ export const SEARCH_CATEGORIES = [
   { id: "apps", label: "Apps" },
 ] as const;
 export type SearchCategory = (typeof SEARCH_CATEGORIES)[number]["id"];
-export type SearchEntry = { title: string; desc: string; href: string; cat: Exclude<SearchCategory, "all">; words?: string; faq?: boolean };
+export type SearchEntry = { title: string; desc: string; href: string; cat: Exclude<SearchCategory, "all">; words?: string; faq?: boolean; group?: boolean };
 
 export const SITE_PAGES: SearchEntry[] = [
   // Residential
@@ -46,7 +46,7 @@ export const SITE_PAGES: SearchEntry[] = [
   { cat: "business", title: "Book a demo", desc: "Talk to us about Redial for your business", href: "/contact", words: "sales demo contact call us quote" },
 
   // Live Agents
-  { cat: "live-agents", title: "Search Live Agents", desc: "Real people who answer your business calls, by skill, language and rate", href: "/live-agents", words: "find hire human receptionist answering service virtual assistant" },
+  { cat: "live-agents", title: "Search Live Agents", desc: "Real people who answer your calls", group: true, href: "/live-agents", words: "skill language rate find hire human receptionist answering service virtual assistant" },
   { cat: "live-agents", title: "How Live Agents work", desc: "Your AI answers first, then hands callers to a person", href: "/live-agents/how-it-works", words: "handoff transfer overflow after hours" },
   { cat: "live-agents", title: "Live Agent rates", desc: "Per minute, per shift or monthly, with the service fee shown", href: "/live-agents/how-it-works#pricing", words: "price cost fee hourly per minute retainer" },
   { cat: "live-agents", title: "Become a Live Agent", desc: "Answer calls from home, set your own hours and rate", href: "/become-a-live-agent", words: "job work from home earn money apply remote" },

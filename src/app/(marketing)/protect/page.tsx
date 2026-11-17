@@ -86,12 +86,12 @@ export default function ProtectPage() {
       <section className="mx-auto grid w-full max-w-6xl items-center gap-12 overflow-x-clip px-4 pt-16 pb-16 sm:px-6 sm:pt-24 lg:grid-cols-[1fr_22rem]">
         <div>
         <p className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground"><ShieldCheck className="size-3.5" /> Fraud protection, in every Redial plan</p>
-        <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">Scammers are calling your parents. Redial answers first.</h1>
+        <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">Scammers are calling everyone. Redial calls them out.</h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
           &ldquo;Grandma, I&apos;m in jail and need bail money.&rdquo; Today that voice can be cloned by AI. Redial screens unknown calls, checks the story, and stops likely scams before your mom or dad hears them.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Protect a parent&apos;s phone <ArrowRight /></Button>
+          <Button size="lg" nativeButton={false} render={<Link href="/signup" />}>Protect your phone <ArrowRight /></Button>
           <Button size="lg" variant="outline" nativeButton={false} render={<Link href="#play-by-play" />}>See how it works</Button>
         </div>
         <p className="mt-4 text-sm text-muted-foreground">Works with the phone they already have. Same number. Scammers talk to Redial; you talk to the people who matter.</p>
