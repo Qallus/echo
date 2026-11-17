@@ -34,7 +34,7 @@ export function AdminBottomNav({ permissions }: { permissions: Permission[] }) {
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined}
                 className={cn("flex w-[4.5rem] shrink-0 snap-start flex-col items-center justify-center gap-1 text-[11px] transition-colors", active ? "text-foreground" : "text-muted-foreground")}>
-                <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-violet-500/15 text-violet-700 dark:text-violet-300")}>
+                <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-primary/10 text-foreground")}>
                   <Icon className="size-5" />
                 </span>
                 <span className="max-w-full truncate px-1">{label}</span>
@@ -45,7 +45,7 @@ export function AdminBottomNav({ permissions }: { permissions: Permission[] }) {
         </div>
         <div className="flex items-center border-l px-3">
           <button type="button" onClick={toggleSidebar} aria-label="All admin pages"
-            className="flex size-11 items-center justify-center rounded-full bg-violet-600 text-white shadow-md active:scale-95 dark:bg-violet-500 dark:text-violet-950">
+            className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95">
             <Menu className="size-5" />
           </button>
         </div>

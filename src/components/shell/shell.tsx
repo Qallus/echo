@@ -73,8 +73,8 @@ export function SidebarAccount({ me, mode, canAdmin }: { me: ShellUser; mode: Mo
 // "User" or "Admin". Staff get both, as a switch between the dashboards.
 export function ModeBadge({ mode, canAdmin, className }: { mode: Mode; canAdmin: boolean; className?: string }) {
   const pill = "inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold tracking-wide uppercase transition-colors";
-  const user = "bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950";
-  const admin = "bg-violet-600 text-white dark:bg-violet-500 dark:text-violet-950";
+  const user = "bg-primary text-primary-foreground shadow-sm";
+  const admin = "bg-primary text-primary-foreground shadow-sm";
   if (!canAdmin) return <span className={cn(pill, user, className)}><UserRound className="size-3.5" /> User</span>;
   return (
     <nav aria-label="Switch dashboard" className={cn("inline-flex items-center gap-0.5 rounded-full border bg-muted/60 p-0.5", className)}>
