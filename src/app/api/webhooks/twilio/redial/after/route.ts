@@ -1,5 +1,6 @@
 import { twiml, verifyTwilio } from "@/lib/comms/twilio";
 import { isUuid } from "@/lib/data";
+import { autoBlock } from "@/lib/redial/protection";
 import { lineSipUris, ringOwner, voicemail } from "@/lib/redial/twiml";
 import type { Line } from "@/lib/redial/types";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -14,9 +15,25 @@ export async function POST(req: Request) {
   const id = new URL(req.url).searchParams.get("call") ?? "";
   if (!isUuid(id)) return twiml("<Hangup/>");
   const db = createAdminClient();
-  const { data: call } = await db.from("redial_calls").select("id, status, connect_requested, summary, message, line:redial_lines(*)").eq("id", id).maybeSingle();
+  const { data: call } = await db.from("redial_calls").select("id, status, connect_requested, summary, message, verdict, from_number, line:redial_lines(*)").eq("id", id).maybeSingle();
   const line = call?.line as unknown as Line | null;
   if (!call || !line) return twiml("<Hangup/>");
+
+  // Fraud protection: a likely scam never rings through (and its number is
+  // blocked when the line allows it); a caller who couldn't be verified
+  // leaves a message instead.
+  if (call.verdict === "likely_scam") {
+    const blocked = await autoBlock(db, line.id, call.from_number);
+    await db.from("redial_calls").update({
+      status: "completed", ended_at: new Date().toISOString(), category: "spam",
+      reason: blocked ? "Stopped a likely scam; number blocked" : "Stopped a likely scam",
+    }).eq("id", id).in("status", ["screening"]);
+    return twiml("<Hangup/>");
+  }
+  if (call.verdict === "unverified" && call.connect_requested) {
+    await db.from("redial_calls").update({ connect_requested: false, reason: "Couldn't verify the caller, so not put through" }).eq("id", id);
+    call.connect_requested = false;
+  }
 
   const sipUris = call.connect_requested ? await lineSipUris(db, line.id) : [];
   if (call.connect_requested && line.allow_connect && (line.forward_to || sipUris.length) && !line.paused) {

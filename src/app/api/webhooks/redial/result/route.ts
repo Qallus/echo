@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { isUuid } from "@/lib/data";
 import { verifyGateway } from "@/lib/redial/gateway";
+import { reviewCall } from "@/lib/redial/protection";
 import type { Category, Turn } from "@/lib/redial/types";
 import { redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // is recorded once at the end and may trigger a low-minutes notification.
 // `turn` is one line of the live transcript, sent as it's spoken.
 // `direction` says the gateway has given a private direction to the AI.
+// The final report (with aiSeconds) also starts the fraud-protection review.
 
 type Body = {
   callId?: string; connect?: boolean; transcript?: Turn[]; aiSeconds?: number; turn?: Turn; direction?: { id?: string };
@@ -31,7 +34,13 @@ export async function POST(req: Request) {
     }
     return Response.json({ ok: true });
   }
-  if (typeof body.aiSeconds === "number" && body.aiSeconds > 0) await recordAiTime(db, body.callId, Math.min(3600, Math.round(body.aiSeconds)));
+  if (typeof body.aiSeconds === "number" && body.aiSeconds > 0) {
+    await recordAiTime(db, body.callId, Math.min(3600, Math.round(body.aiSeconds)));
+    // The assistant is done: a second read of the call for missed scam signs
+    // (runs after this response, once the transcript below is saved).
+    const callId = body.callId;
+    after(() => reviewCall(db, callId).catch((e) => console.error("[protection review]", e)));
+  }
   const patch: Record<string, unknown> = {};
   if (Array.isArray(body.transcript)) {
     patch.transcript = body.transcript.filter((t) => (t.role === "caller" || t.role === "assistant") && typeof t.text === "string")

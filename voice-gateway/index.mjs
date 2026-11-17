@@ -8,6 +8,8 @@
 // token and returns the instructions, voice, tools, time limit and xAI key.
 // Tool calls and the transcript go back to /api/webhooks/redial/result, and
 // each line of the transcript is also sent as it's spoken (the live view).
+// Fraud-protection tools (code word, call-back check, flag a risk) go to
+// /api/webhooks/redial/protect; their answers go straight back to the AI.
 // Closing the stream hands the call back to Echo: on the direct path the
 // caller's TwiML continues (<Redirect>); on a conference call the AI's own
 // leg hangs up and Echo moves the caller on. Either way Echo rings the owner
@@ -32,6 +34,7 @@ const MAX_CALLS = Number(process.env.MAX_CALLS) || 20;
 if (!APP_URL || !SECRET) { console.error("Set APP_URL and REDIAL_GATEWAY_SECRET."); process.exit(1); }
 
 const log = (id, ...args) => console.log(new Date().toISOString(), `[${id ?? "-"}]`, ...args);
+const PROTECT_TOOLS = new Set(["check_code_word", "call_back_check", "flag_risk"]);
 
 async function echo(path, body) {
   const json = JSON.stringify(body);
@@ -274,6 +277,11 @@ wss.on("connection", (tw) => {
       reply({ ok: true });
       endAfterResponse = true;
       hangUpSoon();
+    } else if (PROTECT_TOOLS.has(item.name)) {
+      // Fraud protection: Echo checks (the code word never reaches the AI).
+      const out = await echo("protect", { callId, tool: item.name, args }).catch((e) => ({ error: e.message || "Couldn't check right now." }));
+      reply(out);
+      toXai({ type: "response.create" });
     } else {
       reply({ error: "Unknown tool." });
       toXai({ type: "response.create" });

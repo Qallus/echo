@@ -1,6 +1,6 @@
 import { instructions, tools } from "@/lib/redial/assistant";
 import { gatewayConfig, readCallToken, verifyGateway } from "@/lib/redial/gateway";
-import { callFacts, type Signal } from "@/lib/redial/protection";
+import { callFacts, protectBrief, type Signal } from "@/lib/redial/protection";
 import type { Line } from "@/lib/redial/types";
 import { MIN_SECONDS_TO_SCREEN, redialUsage } from "@/lib/redial/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,9 +25,10 @@ export async function POST(req: Request) {
   const usage = await redialUsage(db, call.owner_id);
   if (!usage || usage.remaining_seconds < MIN_SECONDS_TO_SCREEN) return Response.json({ error: "No screening minutes left." }, { status: 409 });
   const maxSeconds = Math.max(MIN_SECONDS_TO_SCREEN, Math.min(line.max_seconds, usage.remaining_seconds));
+  const protect = await protectBrief(db, line.id);
 
   return Response.json({
     callId: call.id, xaiKey, model: "grok-voice-latest", voice: line.voice, maxSeconds,
-    instructions: instructions(line, first, call.from_number, canConnect, callFacts(call as { risk_signals?: Signal[] | null })), tools: tools(canConnect),
+    instructions: instructions(line, first, call.from_number, canConnect, callFacts(call as { risk_signals?: Signal[] | null }), protect), tools: tools(canConnect, protect),
   });
 }
