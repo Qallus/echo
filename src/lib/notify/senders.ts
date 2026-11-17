@@ -11,13 +11,13 @@ export type SendResult = { ok: boolean; id?: string; error?: string; gone?: bool
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-// Echo-branded email, matching the auth email templates.
-export function emailHtml({ title, body, url, cta = "Open in Echo", footer }: { title: string; body?: string | null; url?: string | null; cta?: string; footer?: string }) {
-  const foot = footer ? esc(footer) : `You're receiving this because of your Echo notification settings. <a href="${esc(siteUrl("/settings/notifications"))}" style="color:#737373">Manage notifications</a>`;
+// Redial-branded email, matching the auth email templates.
+export function emailHtml({ title, body, url, cta = "Open in Redial", footer }: { title: string; body?: string | null; url?: string | null; cta?: string; footer?: string }) {
+  const foot = footer ? esc(footer) : `You're receiving this because of your Redial notification settings. <a href="${esc(siteUrl("/settings/notifications"))}" style="color:#737373">Manage notifications</a>`;
   return `<!doctype html><html><body style="margin:0;background:#f5f5f5;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#0a0a0a">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border:1px solid #e5e5e5;border-radius:16px">
-<tr><td style="padding:28px 32px 0;font-weight:600;letter-spacing:.2em;font-size:15px">ECHO</td></tr>
+<tr><td style="padding:28px 32px 0;font-weight:600;letter-spacing:.2em;font-size:15px">REDIAL</td></tr>
 <tr><td style="padding:20px 32px 0;font-size:20px;font-weight:600;line-height:1.3">${esc(title)}</td></tr>
 ${body ? `<tr><td style="padding:12px 32px 0;font-size:15px;line-height:1.6;color:#404040">${esc(body)}</td></tr>` : ""}
 ${url ? `<tr><td style="padding:24px 32px 0"><a href="${esc(url)}" style="display:inline-block;background:#0a0a0a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 20px;border-radius:10px">${esc(cta)}</a></td></tr>` : ""}
@@ -41,7 +41,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}) },
       body: JSON.stringify({
-        from: from.includes("<") ? from : `Echo <${from}>`, to: [to], subject, html, text,
+        from: from.includes("<") ? from : `Redial <${from}>`, to: [to], subject, html, text,
         ...(opts.headers ? { headers: opts.headers } : {}),
         // Replies go to the team inbox.
         ...(replyTo ? { reply_to: replyTo } : {}),
@@ -68,7 +68,7 @@ export async function sendEmailBatch(items: BatchEmail[], idempotencyKey?: strin
       method: "POST",
       headers: { Authorization: `Bearer ${s.RESEND_API_KEY}`, "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
       body: JSON.stringify(items.slice(0, 100).map((i) => ({
-        from: from.includes("<") ? from : `Echo <${from}>`, to: [i.to], subject: i.subject, html: i.html, text: i.text,
+        from: from.includes("<") ? from : `Redial <${from}>`, to: [i.to], subject: i.subject, html: i.html, text: i.text,
         ...(i.headers ? { headers: i.headers } : {}), ...(s.RESEND_REPLY_TO ? { reply_to: s.RESEND_REPLY_TO } : {}),
       }))),
     });
