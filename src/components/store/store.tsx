@@ -151,7 +151,7 @@ export function PlanSection({ line = "echo", freeMinutes, interval: fixed }: { l
   const main = plans.filter((p) => !p.echoMinutes && !p.phones);
   const free = line === "redial"
     ? { title: "Redial Free", sub: "Try {agent} on the calls you miss.", features: [`${freeMinutes ?? 10} AI screening minutes a month`, "Forward the calls you miss", "VIP and block lists", "A summary of every call"] }
-    : { title: "Free", sub: "Try Echo on your own calls.", features: [`${(freeMinutes ?? 300).toLocaleString()} transcription minutes a month`, "30 days of history", "Browser recording with notes and flags", "Search and Ask Echo"] };
+    : { title: "Free", sub: "Record and transcribe your own calls.", features: [`${(freeMinutes ?? 300).toLocaleString()} transcription minutes a month`, "30 days of history", "Browser recording with notes and flags", "Search and Ask Echo"] };
   return (
     <div className="space-y-8">
       {!fixed && <div className="flex justify-center"><IntervalToggle value={interval} onChange={setInterval} /></div>}

@@ -83,7 +83,7 @@ export default async function RedialAdminPage() {
       </Section>
 
       {manage && (
-        <Section title="Assign a number" description="Use a Twilio number on Echo's account that isn't the notification number.">
+        <Section title="Assign a number" description="Use a Twilio number on Redial's account that isn't the notification number.">
           <AssignLine />
           <div className="space-y-1 rounded-xl border p-4 text-sm">
             <p className="font-medium">Set these on the number in the Twilio console (Phone Numbers → the number → Voice):</p>

@@ -105,7 +105,7 @@ export function ShareDialog({ recordingId, open, onOpenChange, canManage }: {
                   <Input readOnly value={made} onFocus={(e) => e.currentTarget.select()} aria-label="Share link" className="font-mono text-xs" />
                   <Button variant="outline" onClick={copy}>{copied ? <><Check /> Copied</> : <><Copy /> Copy</>}</Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Copy it now. For security, Echo can&apos;t show this link again; you can always make a new one.</p>
+                <p className="text-xs text-muted-foreground">Copy it now. For security, Redial can&apos;t show this link again; you can always make a new one.</p>
               </div>
             )}
 

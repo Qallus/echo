@@ -84,7 +84,7 @@ export function UsersTable({ users, canInvite }: { users: UserRow[]; canInvite: 
           onSubmit={(e) => { e.preventDefault(); start(async () => { const res = await inviteUser(email); setMsg(res); if (res.ok) setEmail(""); }); }}>
           <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" className="max-w-xs" aria-label="Email to invite" />
           <Button type="submit" size="sm" disabled={pending}>{pending ? "Sending…" : "Send invitation"}</Button>
-          <span className="text-xs text-muted-foreground">They get an email to set a password and join Echo.</span>
+          <span className="text-xs text-muted-foreground">They get an email to set a password and join Redial.</span>
           {msg.error && <p className="w-full text-sm text-destructive">{msg.error}</p>}
           {msg.ok && <p className="w-full text-sm text-muted-foreground">{msg.ok}</p>}
         </form>

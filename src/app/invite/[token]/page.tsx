@@ -67,7 +67,7 @@ function Note({ text, home }: { text: string; home?: boolean }) {
   return (
     <div className="space-y-4 text-center text-sm text-muted-foreground">
       <p>{text}</p>
-      {home && <Button variant="outline" nativeButton={false} render={<Link href="/" />}>Go to Echo</Button>}
+      {home && <Button variant="outline" nativeButton={false} render={<Link href="/home" />}>Go to Redial</Button>}
     </div>
   );
 }

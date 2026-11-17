@@ -105,7 +105,7 @@ export const SEED_PRODUCTS: Product[] = [
   { id: "redial_min100", kind: "pack", meter: "redial", minutes: 100, name: "100 screening minutes", tagline: "Extra Redial screening minutes. Valid for 12 months.", prices: [{ key: "pack_redial_100", interval: null, unitAmount: 1500 }] },
   { id: "onboarding", kind: "service", name: "Guided onboarding", tagline: "A 60-minute session to set up workspaces, templates and the Claude connector for your team.", prices: [{ key: "svc_onboarding", interval: null, unitAmount: 29900 }] },
   { id: "templates", kind: "service", name: "Custom template pack", tagline: "Three summary templates written for your calls (sales, support, interviews…).", prices: [{ key: "svc_templates", interval: null, unitAmount: 14900 }] },
-  { id: "integration", kind: "service", name: "Custom integration", tagline: "We connect Echo to the tools you already use. Scoped on a call first.", prices: [{ key: "svc_integration", interval: null, unitAmount: 150000 }] },
+  { id: "integration", kind: "service", name: "Custom integration", tagline: "We connect Redial to the tools you already use. Scoped on a call first.", prices: [{ key: "svc_integration", interval: null, unitAmount: 150000 }] },
 ];
 
 export const KIND_LABEL: Record<Kind, string> = { plan: "Plans", bolt_on: "Bolt-ons", pack: "Minute packs", service: "Services" };

@@ -23,7 +23,7 @@ export default async function AccountSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">Account <Badge variant="outline">{accountType}</Badge></CardTitle>
-          <CardDescription>What you can reach in Echo.</CardDescription>
+          <CardDescription>What you can reach in Redial.</CardDescription>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm">

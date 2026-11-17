@@ -1,7 +1,7 @@
 // Public company details: legal pages, receipts, emails and the footer.
 export const COMPANY = {
   name: "Qallus LLC",
-  product: "Echo",
+  product: "Redial",
   state: "Arizona",
   email: "hello@redial.si",
   phone: "(480) 999-9906",

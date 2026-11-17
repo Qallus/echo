@@ -41,7 +41,7 @@ export function CatalogEditor({ products, stripeReady, readOnly }: { products: P
             <Settings2 /> Set up customer portal
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAdding((v) => !v)}><Plus /> Add product</Button>
-          <span className="text-xs text-muted-foreground">{stripeReady ? "Stripe connected." : "Stripe isn't connected yet: changes save to Echo and sync once STRIPE_SECRET_KEY is set."}</span>
+          <span className="text-xs text-muted-foreground">{stripeReady ? "Stripe connected." : "Stripe isn't connected yet: changes save to Redial and sync once STRIPE_SECRET_KEY is set."}</span>
         </div>
       )}
       {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}

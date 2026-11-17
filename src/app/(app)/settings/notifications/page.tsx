@@ -27,7 +27,7 @@ export default async function NotificationSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Where to reach you</CardTitle>
-          <CardDescription>Echo emails your account address. Add more addresses or a phone number for texts; each needs a quick code to confirm it&apos;s yours.</CardDescription>
+          <CardDescription>Redial emails your account address. Add more addresses or a phone number for texts; each needs a quick code to confirm it&apos;s yours.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <ChannelList kind="email" accountEmail={user.email} channels={list.filter((c) => c.kind === "email")} />

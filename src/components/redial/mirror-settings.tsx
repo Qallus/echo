@@ -23,7 +23,7 @@ const GROUPS: { title: string; items: { key: Toggle; label: string; detail: stri
   ] },
   { title: "What it can draft", items: [
     { key: "allow_sms", label: "Texts to the caller", detail: "Sent from this line's number, only after you review and press Send." },
-    { key: "allow_email", label: "Emails to the caller", detail: "Sent by Echo with replies going to you, only after you review and press Send." },
+    { key: "allow_email", label: "Emails to the caller", detail: "Sent by Redial with replies going to you, only after you review and press Send." },
   ] },
 ];
 

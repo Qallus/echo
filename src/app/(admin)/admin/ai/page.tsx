@@ -28,7 +28,7 @@ const providerLabel = (p: string) => MODELS.find((m) => m.id === p)?.label ?? (p
 
 // AI: which models customers get with Echo's keys, custom/local providers,
 // transcription, usage and cost (Echo's keys vs customers' own), customer key
-// health and Echo connector (MCP) usage.
+// health and Redial connector (MCP) usage.
 export default async function AdminAiPage() {
   const staff = await requireStaff("ai.view");
   const manage = can(staff, "ai.manage");
@@ -86,9 +86,9 @@ export default async function AdminAiPage() {
             <>
               <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <StatCard label="AI calls (30 days)" value={u.totals.calls} hint={`${u.totals.failed} failed`} />
-                <StatCard label="Estimated spend on Echo's keys" value={dollars(u.totals.echo_cost_cents)} />
-                <StatCard label="On customers' own keys" value={dollars(u.totals.own_cost_cents)} hint="Billed to them, not Echo" />
-                <StatCard label="Fallbacks to Echo's keys" value={u.totals.fallbacks} hint="A customer key failed" />
+                <StatCard label="Estimated spend on Redial's keys" value={dollars(u.totals.echo_cost_cents)} />
+                <StatCard label="On customers' own keys" value={dollars(u.totals.own_cost_cents)} hint="Billed to them, not Redial" />
+                <StatCard label="Fallbacks to Redial's keys" value={u.totals.fallbacks} hint="A customer key failed" />
               </div>
               <Section title="By model and feature">
                 {u.by_model.length === 0 ? <p className="rounded-xl border p-4 text-sm text-muted-foreground">No AI calls in the last 30 days.</p> : (
@@ -157,7 +157,7 @@ export default async function AdminAiPage() {
         </TabsContent>
 
         <TabsContent value="mcp" className="space-y-6 pt-6">
-          <Section title="Echo connector, last 30 days" description="Tool calls from Claude and other AI apps through the Echo MCP connector.">
+          <Section title="Redial connector, last 30 days" description="Tool calls from Claude and other AI apps through the Redial MCP connector.">
             {mcpByTool.length === 0 ? <p className="rounded-xl border p-4 text-sm text-muted-foreground">No connector calls in the last 30 days.</p> : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {mcpByTool.map((t) => (

@@ -15,7 +15,7 @@ export default async function ProfileSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Profile</CardTitle>
-          <CardDescription>How teammates see you across Echo: in the team list, on shared recordings and when you&apos;re mentioned.</CardDescription>
+          <CardDescription>How teammates see you across Redial: in the team list, on shared recordings and when you&apos;re mentioned.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <AvatarUpload userId={profile.id} name={profile.fullName} email={profile.email} src={profile.avatarUrl} />

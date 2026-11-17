@@ -33,7 +33,7 @@ export function MfaForm({ next = "/admin" }: { next?: string }) {
       for (const f of data.all.filter((f) => f.factor_type === "totp" && f.status !== "verified")) {
         await supabase.auth.mfa.unenroll({ factorId: f.id });
       }
-      const res = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Echo admin ${new Date().toISOString().slice(0, 10)}` });
+      const res = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Redial admin ${new Date().toISOString().slice(0, 10)}` });
       if (res.error) setError(res.error.message);
       else {
         setFactorId(res.data.id);

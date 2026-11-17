@@ -107,7 +107,7 @@ export async function setNewPassword(_: LoginState, form: FormData): Promise<Log
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: friendly(error.message) };
-  redirect("/");
+  redirect("/home");
 }
 
 export async function googleSignInUrl(next: string): Promise<{ url?: string; error?: string }> {

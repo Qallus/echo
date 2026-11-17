@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 const main = [
   { href: "/search", label: "Search", icon: Search },
-  { href: "/", label: "Home", icon: Home },
+  { href: "/home", label: "Home", icon: Home },
   { href: "/ask", label: "Ask Echo", icon: Sparkles },
   { href: "/shared", label: "Shared with me", icon: Users },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },

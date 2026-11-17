@@ -39,7 +39,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
             <SiteSearch />
             <CartButton />
             {user ? (
-              <Button nativeButton={false} render={<Link href="/" />}>Open Echo</Button>
+              <Button nativeButton={false} render={<Link href="/home" />}>Dashboard</Button>
             ) : (
               <>
                 <Button variant="ghost" className="hidden sm:inline-flex" nativeButton={false} render={<Link href="/login" />}>Sign in</Button>

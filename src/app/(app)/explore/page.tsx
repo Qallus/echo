@@ -11,7 +11,7 @@ type Feature = { icon: typeof Mic; title: string; desc: string; href?: string; l
 
 const FEATURES: Feature[] = [
   { icon: Mic, title: "Record meetings and calls", desc: "Record in the browser with notes and flags, or pop the panel out over Zoom and Meet.", live: true },
-  { icon: FileAudio, title: "Upload audio", desc: "Drop audio files anywhere in Echo.", live: true },
+  { icon: FileAudio, title: "Upload audio", desc: "Drop audio files anywhere in Redial.", live: true },
   { icon: MessageSquareText, title: "Transcription", desc: "Speaker-labelled transcripts, started automatically after every recording.", live: true },
   { icon: Sparkles, title: "Ask Echo", desc: "Ask Claude, ChatGPT, Grok or Kimi about one recording or your whole library.", href: "/ask", live: true },
   { icon: Briefcase, title: "Business and Personal", desc: "Share recordings with your team, keep others private, move between them.", href: "/team", live: true },
@@ -20,7 +20,7 @@ const FEATURES: Feature[] = [
   { icon: Share2, title: "Share", desc: "Share a recording by link or invite, choosing audio, transcript, highlights and summary.", live: false },
   { icon: Workflow, title: "AutoFlow", desc: "Rules that summarize, file and route new recordings automatically.", live: false },
   { icon: Bot, title: "AI agents", desc: "Agents that act on every call: follow-ups, tasks and CRM updates.", live: false },
-  { icon: Phone, title: "Phone calls and SMS", desc: "Record and send from your Echo phone numbers.", live: false },
+  { icon: Phone, title: "Phone calls and SMS", desc: "Record and send from your Redial phone numbers.", live: false },
 ];
 
 export default function ExplorePage() {
@@ -28,7 +28,7 @@ export default function ExplorePage() {
     <div className="mx-auto w-full max-w-5xl space-y-10 px-6 py-10">
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
-        <p className="text-sm text-muted-foreground">What Echo does today, and what&apos;s coming.</p>
+        <p className="text-sm text-muted-foreground">What Redial does today, and what&apos;s coming.</p>
       </div>
       {[true, false].map((live) => (
         <section key={String(live)} className="space-y-4">

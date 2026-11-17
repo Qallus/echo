@@ -55,14 +55,14 @@ function ProviderRow({ provider, label, scope, workspaceId, saved, canEdit, defa
               ? <Badge variant="outline" className="gap-1 text-emerald-600 dark:text-emerald-400"><CircleCheck className="size-3" /> Working</Badge>
               : <Badge variant="outline" className="gap-1 text-destructive"><CircleAlert className="size-3" /> Not working</Badge>}
           </>
-        ) : <span className="text-xs text-muted-foreground">Using Echo&apos;s key</span>}
+        ) : <span className="text-xs text-muted-foreground">Using Redial&apos;s key</span>}
         {canEdit && (
           <span className="ml-auto flex gap-1">
             {saved && <Button size="sm" variant="ghost" disabled={pending} onClick={() => run(() => testAiKey(saved.id))}>Test</Button>}
             <Button size="sm" variant="outline" disabled={pending} onClick={() => setAdding((v) => !v)}>{saved ? "Replace" : "Add key"}</Button>
             {saved && (
               <Button size="icon-sm" variant="ghost" aria-label={`Remove ${label} key`} disabled={pending}
-                onClick={() => confirm(`Remove your ${label} key? Echo's own key is used instead.`) && run(() => removeAiKey(saved.id))}><Trash2 /></Button>
+                onClick={() => confirm(`Remove your ${label} key? Redial's own key is used instead.`) && run(() => removeAiKey(saved.id))}><Trash2 /></Button>
             )}
           </span>
         )}

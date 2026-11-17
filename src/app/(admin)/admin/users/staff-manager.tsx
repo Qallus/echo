@@ -32,7 +32,7 @@ export function StaffManager({ staff, meId }: { staff: StaffMember[]; meId: stri
     <div className="space-y-6">
       <form className="flex flex-wrap items-end gap-2 rounded-xl border p-4" onSubmit={(ev) => { ev.preventDefault(); run(email, role); }}>
         <label className="min-w-56 flex-1 space-y-1.5">
-          <span className="text-sm font-medium">Email of an Echo account</span>
+          <span className="text-sm font-medium">Email of a Redial account</span>
           <Input type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} placeholder="name@company.com" required />
         </label>
         <div className="space-y-1.5">

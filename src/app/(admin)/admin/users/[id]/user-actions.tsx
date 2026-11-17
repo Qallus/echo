@@ -23,7 +23,7 @@ export function UserActions({ userId, email, suspended, isStaff }: { userId: str
         ) : (
           <Button size="sm" variant="destructive" disabled={pending || isStaff} title={isStaff ? "Remove them from staff first" : undefined}
             onClick={() => {
-              const reason = prompt(`Suspend ${email}? They'll be signed out and blocked from Echo until restored.\n\nReason (kept in the audit log):`);
+              const reason = prompt(`Suspend ${email}? They'll be signed out and blocked from Redial until restored.\n\nReason (kept in the audit log):`);
               if (reason !== null) run(() => suspendUser(userId, reason));
             }}>
             <Ban /> Suspend

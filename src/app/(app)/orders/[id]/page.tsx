@@ -30,7 +30,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
       <article className="overflow-hidden rounded-2xl border bg-background print:rounded-none print:border-0">
         <header className="flex items-center justify-between bg-neutral-900 px-6 py-5 text-white sm:px-8">
-          <span className="flex items-center gap-2 font-semibold tracking-[0.2em]"><AudioLines className="size-5" /> ECHO</span>
+          <span className="flex items-center gap-2 font-semibold tracking-[0.2em]"><AudioLines className="size-5" /> REDIAL</span>
           <span className="text-xs tracking-wide text-white/60">{order.kind === "renewal" ? "RENEWAL RECEIPT" : "RECEIPT"}</span>
         </header>
 
@@ -45,7 +45,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
               <dt className="text-muted-foreground">Billed to</dt><dd>{me.fullName || order.email}</dd>
               {me.company && <><dt className="text-muted-foreground">Company</dt><dd>{me.company}</dd></>}
               <dt className="text-muted-foreground">Email</dt><dd>{order.email ?? me.email}</dd>
-              <dt className="text-muted-foreground">From</dt><dd>{COMPANY.name} (Echo)<br /><span className="text-muted-foreground">{COMPANY.address}</span></dd>
+              <dt className="text-muted-foreground">From</dt><dd>{COMPANY.name} ({COMPANY.product})<br /><span className="text-muted-foreground">{COMPANY.address}</span></dd>
             </dl>
           </div>
 

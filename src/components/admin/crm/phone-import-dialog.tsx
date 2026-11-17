@@ -239,7 +239,7 @@ export function PhoneImportDialog({ existing, onClose }: { existing: Contact[]; 
                         <span className="block truncate text-sm font-medium">{name}</span>
                         <span className="block truncate text-xs text-muted-foreground">{summary(c.row) || "Name only"}</span>
                       </span>
-                      {c.duplicate && <Badge variant="outline" className="shrink-0 text-[10px]">In Echo</Badge>}
+                      {c.duplicate && <Badge variant="outline" className="shrink-0 text-[10px]">In Redial</Badge>}
                     </label>
                   </li>
                 );
@@ -248,7 +248,7 @@ export function PhoneImportDialog({ existing, onClose }: { existing: Contact[]; 
             {dupeCount > 0 && (
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <UserRoundCheck className="size-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{dupeCount} already in Echo:</span>
+                <span className="text-muted-foreground">{dupeCount} already in Redial:</span>
                 <Button size="sm" variant={dupes === "skip" ? "secondary" : "ghost"} onClick={() => chooseDupes("skip")}>Skip them</Button>
                 <Button size="sm" variant={dupes === "fill" ? "secondary" : "ghost"} onClick={() => chooseDupes("fill")}>Fill in missing details</Button>
               </div>

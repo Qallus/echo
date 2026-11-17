@@ -14,7 +14,7 @@ export async function requestTranscription(recordingId: string): Promise<string 
     if (res.ok) return null;
     return ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? "Couldn't start transcription.";
   } catch {
-    return "Couldn't reach Echo to start transcription.";
+    return "Couldn't reach Redial to start transcription.";
   }
 }
 

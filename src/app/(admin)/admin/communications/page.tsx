@@ -39,7 +39,7 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
   const unread = inbox.filter((m) => m.status === "new").length;
 
   return (
-    <AdminPage title="Communications" description="Your inbox, texts and calls, email and automations, and every notification Echo delivers." className="max-w-[96rem]">
+    <AdminPage title="Communications" description="Your inbox, texts and calls, email and automations, and every notification Redial delivers." className="max-w-[96rem]">
       <Tabs defaultValue={initial}>
         <TabsList variant="line">
           <TabsTrigger value="inbox">Inbox{unread > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{unread}</span>}</TabsTrigger>

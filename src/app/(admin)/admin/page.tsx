@@ -38,7 +38,7 @@ export default async function AdminDashboardPage() {
   const billing = d.subscriptions !== null;
 
   return (
-    <AdminPage title="Dashboard" description="How Echo is doing right now.">
+    <AdminPage title="Dashboard" description="How Redial is doing right now.">
       <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard icon={Users} label="Users" value={d.users} hint={`+${d.users_30d} in the last 30 days · ${d.active_users_30d} recorded`} />
         <StatCard icon={Briefcase} label="Business workspaces" value={d.business_workspaces} />

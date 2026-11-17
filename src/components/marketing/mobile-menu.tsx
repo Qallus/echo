@@ -40,7 +40,7 @@ export function MarketingMobileMenu({ signedIn }: { signedIn: boolean }) {
         </nav>
         <div className="grid gap-2 border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {signedIn ? (
-            <Button nativeButton={false} render={<Link href="/" onClick={close} />}>Open Echo</Button>
+            <Button nativeButton={false} render={<Link href="/home" onClick={close} />}>Dashboard</Button>
           ) : (
             <>
               <Button nativeButton={false} render={<Link href="/signup" onClick={close} />}>Get started</Button>

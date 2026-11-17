@@ -19,7 +19,7 @@ export function BottomNav({ workspaces }: { workspaces: Workspace[] }) {
   const scroller = useRef<HTMLDivElement>(null);
 
   const items = [
-    { href: "/", label: "Home", icon: Home },
+    { href: "/home", label: "Home", icon: Home },
     { href: "/ask", label: "Ask Echo", icon: Sparkles },
     ...workspaces.map((w) => ({
       href: `/library/space/${w.id}`,
@@ -33,7 +33,7 @@ export function BottomNav({ workspaces }: { workspaces: Workspace[] }) {
     { href: "/team", label: "Team", icon: Users },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
-  const isActive = (href: string) => (href === "/" ? pathname === "/" || pathname === "/home" : pathname.startsWith(href));
+  const isActive = (href: string) => (href === "/home" ? pathname === "/home" : pathname.startsWith(href));
 
   // Keep the current page's button in view after navigating.
   useEffect(() => {

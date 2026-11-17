@@ -36,7 +36,7 @@ export function AppBadges({ source, signedIn = false, size = "default", classNam
                 {!signedIn && (
                   <Option href="/signup" icon={<UserPlus />} title="Set up your account" detail="Start on the web now; sign in to the app with the same account later." />
                 )}
-                <Option href={signedIn ? "/" : "/login"} icon={<LogIn />} title={signedIn ? "Open Echo" : "Sign in"} detail={signedIn ? "You're signed in. Use Echo on the web." : "Already have an account? Use Echo on the web."} />
+                <Option href={signedIn ? "/home" : "/login"} icon={<LogIn />} title={signedIn ? "Open your dashboard" : "Sign in"} detail={signedIn ? "You're signed in. Use Redial on the web." : "Already have an account? Use Redial on the web."} />
                 <button type="button" onClick={() => setView("notify")} className="flex items-start gap-3 rounded-xl border p-4 text-left hover:bg-muted/60 [&_svg]:mt-0.5 [&_svg]:size-5 [&_svg]:shrink-0">
                   <BellRing />
                   <span><span className="block font-medium">Get notified</span><span className="block text-sm text-muted-foreground">Join the list and hear first when the app is ready.</span></span>

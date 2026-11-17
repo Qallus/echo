@@ -41,8 +41,8 @@ export default async function DeveloperPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Plug className="size-4" /> Echo connector (MCP)</CardTitle>
-          <CardDescription>Gives Claude (web, desktop, phone) and Claude Code the same access you have in Echo.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Plug className="size-4" /> Redial connector (MCP)</CardTitle>
+          <CardDescription>Gives Claude (web, desktop, phone) and Claude Code the same access you have in Redial.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-3">
@@ -61,9 +61,9 @@ export default async function DeveloperPage() {
               <h3 className="flex items-center gap-2 font-medium"><Smartphone className="size-4" /> Claude (web and phone)</h3>
               <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
                 <li>On claude.ai: Customize → Connectors → <span className="text-foreground">Add custom connector</span>.</li>
-                <li>Name <span className="text-foreground">Echo</span>, URL above. Authentication: sign in when needed, register automatically.</li>
-                <li>Click Connect, sign in to Echo, then <span className="text-foreground">Allow</span>.</li>
-                <li>On your phone, in a chat: + → Connectors → turn on Echo.</li>
+                <li>Name <span className="text-foreground">Redial</span>, URL above. Authentication: sign in when needed, register automatically.</li>
+                <li>Click Connect, sign in to Redial, then <span className="text-foreground">Allow</span>.</li>
+                <li>On your phone, in a chat: + → Connectors → turn on Redial.</li>
               </ol>
             </div>
             <div className="space-y-2 text-sm">
@@ -81,7 +81,7 @@ export default async function DeveloperPage() {
       <Card>
         <CardHeader>
           <CardTitle>Connected apps</CardTitle>
-          <CardDescription>Apps you allowed on the Echo consent screen. Disconnecting signs them out right away.</CardDescription>
+          <CardDescription>Apps you allowed on the Redial consent screen. Disconnecting signs them out right away.</CardDescription>
         </CardHeader>
         <CardContent>
           {grants.error ? (

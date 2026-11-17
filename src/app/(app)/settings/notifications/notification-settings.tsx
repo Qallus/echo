@@ -152,11 +152,11 @@ export function PushCard({ devices, vapidKey }: { devices: { id: string; address
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><MonitorSmartphone className="size-4" /> Desktop &amp; mobile notifications</CardTitle>
-        <CardDescription>Pop-up notifications on this computer or phone, even when Echo isn&apos;t open.</CardDescription>
+        <CardDescription>Pop-up notifications on this computer or phone, even when Redial isn&apos;t open.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {support === "ios-install" && (
-          <p className="rounded-lg border bg-muted/40 p-3 text-sm">On iPhone and iPad, first add Echo to your Home Screen: tap <span className="font-medium">Share</span>, then <span className="font-medium">Add to Home Screen</span>. Open Echo from there and come back to this page.</p>
+          <p className="rounded-lg border bg-muted/40 p-3 text-sm">On iPhone and iPad, first add Redial to your Home Screen: tap <span className="font-medium">Share</span>, then <span className="font-medium">Add to Home Screen</span>. Open Echo from there and come back to this page.</p>
         )}
         {support === "none" && <p className="text-sm text-muted-foreground">This browser doesn&apos;t support push notifications.</p>}
         {support === "ok" && (

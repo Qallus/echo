@@ -129,7 +129,7 @@ export default function DevelopersPage() {
 
       <DevTabs tabs={[
         { id: "mcp", label: "Claude connector (MCP)", icon: <Bot />, content: (
-      <Section id="mcp" icon={Bot} title="Claude connector (MCP)" className="pt-8 pb-14" intro="Give Claude on the web, desktop and phone, and Claude Code, the same access you have in Echo. Every tool call is checked against your permissions and logged.">
+      <Section id="mcp" icon={Bot} title="Claude connector (MCP)" className="pt-8 pb-14" intro="Give Claude on the web, desktop and phone, and Claude Code, the same access you have in Redial. Every tool call is checked against your permissions and logged.">
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-3">
           <code className="flex-1 truncate text-sm">{MCP_URL}</code>
           <CopyButton value={MCP_URL} label="Copy URL" />

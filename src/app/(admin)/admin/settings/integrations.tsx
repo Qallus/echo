@@ -92,7 +92,7 @@ function ServiceCard({ service, state, readOnly }: { service: Service; state: Re
 const GROUPS: { title: string; ids: string[] }[] = [
   { title: "Phone and email", ids: ["twilio", "resend"] },
   { title: "Payments", ids: ["stripe"] },
-  { title: "AI providers (Echo's own keys)", ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
+  { title: "AI providers (Redial's own keys)", ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
   { title: "Social media", ids: ["linkedin", "meta"] },
   { title: "Redial voice", ids: ["redial"] },
   { title: "Scheduled jobs", ids: ["cron"] },

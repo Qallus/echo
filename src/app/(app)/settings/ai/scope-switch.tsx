@@ -19,7 +19,7 @@ export function ScopeSwitch({ workspaceId, value }: { workspaceId: string; value
     <div className="space-y-2">
       <div className="grid gap-2 sm:grid-cols-2">
         {([["workspace", "Team keys", "Everyone in this workspace uses the keys below."],
-           ["member", "Each person's own keys", "Members use the keys they add under Your keys; Echo's otherwise."]] as const).map(([v, title, hint]) => (
+           ["member", "Each person's own keys", "Members use the keys they add under Your keys; Redial's otherwise."]] as const).map(([v, title, hint]) => (
           <button key={v} type="button" disabled={pending} aria-pressed={scope === v} onClick={() => choose(v)}
             className={cn("rounded-lg border p-3 text-left text-sm hover:bg-muted/50", scope === v && "border-primary ring-1 ring-primary")}>
             <span className="block font-medium">{title}</span>

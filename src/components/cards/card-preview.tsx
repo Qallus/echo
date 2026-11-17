@@ -180,7 +180,7 @@ export function CardPreview({ card, publicUrl, onLink, onAction }: {
         ...(bgImage ? { backgroundImage: `linear-gradient(${hexAlpha(bg, 0.82)}, ${hexAlpha(bg, 0.92)}), url(${card.background_image_url})`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
       }}>
       {sections.map(render)}
-      <div className="mt-4 text-center text-[10px]" style={{ color: hexAlpha(text, 0.4) }}>Powered by Echo</div>
+      <div className="mt-4 text-center text-[10px]" style={{ color: hexAlpha(text, 0.4) }}>Powered by Redial</div>
     </div>
   );
 }

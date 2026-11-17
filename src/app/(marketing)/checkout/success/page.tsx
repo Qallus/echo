@@ -46,7 +46,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
 
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Button nativeButton={false} render={<Link href="/orders" />}>View your orders</Button>
-        <Button variant="outline" nativeButton={false} render={<Link href="/home" />}>Open Echo</Button>
+        <Button variant="outline" nativeButton={false} render={<Link href="/home" />}>Open Redial</Button>
       </div>
     </div>
   );

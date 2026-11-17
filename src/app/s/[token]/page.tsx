@@ -53,7 +53,7 @@ export default async function SharedLinkPage({ params }: { params: Promise<{ tok
         )}
       </main>
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-        Shared with <Link href="/" className="underline underline-offset-2">Echo</Link>: recordings, transcripts and summaries in one place.
+        Shared with <Link href="/" className="underline underline-offset-2">Redial</Link>: recordings, transcripts and summaries in one place.
       </footer>
     </div>
   );

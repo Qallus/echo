@@ -51,7 +51,7 @@ export function CustomProviders({ providers, readOnly }: { providers: CustomProv
           run(() => addCustomProvider(form), () => { setAdding(false); setForm({ name: "", baseUrl: "", key: "", model: "" }); });
         }}>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Input required placeholder="Name, e.g. Echo Local (Llama)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} aria-label="Name" />
+            <Input required placeholder="Name, e.g. Redial Local (Llama)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} aria-label="Name" />
             <Input required placeholder="Model, e.g. llama3.3" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} aria-label="Model" />
             <Input required placeholder="Base URL, e.g. https://ai.example.com/v1" value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} aria-label="Base URL" />
             <PasswordInput placeholder="API key (if the server needs one)" value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} aria-label="API key" autoComplete="off" />
