@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bot, BotMessageSquare, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, Headset, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, ShieldCheck, SquareKanban, UserRound, Users, Smartphone } from "lucide-react";
+import { ArrowLeft, Bot, BotMessageSquare, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, Headset, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, MessagesSquare, Settings, SquareKanban, UserRound, Users, Smartphone } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
-  SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarTrigger, useSidebar,
+  SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar,
 } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme";
-import type { Permission, StaffRole } from "@/lib/admin/permissions";
-import { roleLabel } from "@/lib/admin/permissions";
+import { SidebarAccount, SidebarBrand, type ShellUser } from "@/components/shell/shell";
+import type { Permission } from "@/lib/admin/permissions";
 
 type Item = { href: string; label: string; icon: typeof Users; permission?: Permission; exact?: boolean };
 
@@ -57,31 +56,17 @@ const GROUPS: { label: string; items: Item[] }[] = [
   },
 ];
 
-export function AdminSidebar({ role, permissions }: { role: StaffRole; permissions: Permission[] }) {
+export function AdminSidebar({ me, permissions }: { me: ShellUser; permissions: Permission[] }) {
   const pathname = usePathname();
-  const { setOpenMobile, state, isMobile } = useSidebar();
-  const collapsed = state === "collapsed" && !isMobile;
+  const { setOpenMobile } = useSidebar();
   const visible = (i: Item) => !i.permission || permissions.includes(i.permission);
   const isActive = (i: Item) => (i.exact ? pathname === i.href : pathname === i.href || pathname.startsWith(`${i.href}/`));
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        {collapsed ? (
-          <div className="flex justify-center pt-1"><SidebarTrigger aria-label="Expand sidebar" title="Expand sidebar" /></div>
-        ) : (
-          <div className="flex items-center gap-2 pt-1 pl-2">
-            <ShieldCheck className="size-5 shrink-0" />
-            <span className="min-w-0 leading-tight">
-              <span className="block text-sm font-semibold tracking-[0.2em]">REDIAL ADMIN</span>
-              <span className="block text-xs text-muted-foreground">{roleLabel(role)}</span>
-            </span>
-            <span className="ml-auto flex items-center">
-              <ThemeToggle />
-              {!isMobile && <SidebarTrigger aria-label="Collapse sidebar" title="Collapse sidebar" />}
-            </span>
-          </div>
-        )}
+      <SidebarHeader className="gap-3">
+        <SidebarBrand />
+        <SidebarAccount me={me} mode="admin" canAdmin />
       </SidebarHeader>
       <SidebarContent>
         {GROUPS.map((g) => {
@@ -106,7 +91,7 @@ export function AdminSidebar({ role, permissions }: { role: StaffRole; permissio
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Back to Echo" render={<Link href="/" />}><ArrowLeft /> <span>Back to Echo</span></SidebarMenuButton>
+            <SidebarMenuButton tooltip="User dashboard" render={<Link href="/home" />}><ArrowLeft /> <span>User dashboard</span></SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <form action="/auth/signout" method="post">

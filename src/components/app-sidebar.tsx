@@ -4,24 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  AudioLines, AudioWaveform, Briefcase, CalendarDays, PhoneIncoming, ChevronDown, Receipt, CircleHelp, Compass, CreditCard, Files, Folder, FolderPlus, Headphones, Headset, Home, Inbox,
-  LayoutTemplate, ListTodo, Lock, MessagesSquare, LogOut, Mic, Monitor, Phone, Plug, Plus, Search, Settings, ShieldCheck, Sparkles, Trash2, Upload, UserRound, Users, Video, Workflow,
+  AudioWaveform, Briefcase, CalendarDays, PhoneIncoming, Compass, Files, Folder, FolderPlus, Headphones, Headset, Home, Inbox,
+  LayoutTemplate, ListTodo, Lock, MessagesSquare, Mic, Monitor, Phone, Plug, Plus, Search, Sparkles, Trash2, Upload, Users, Video, Workflow,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator, SidebarTrigger, useSidebar,
+  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator, useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { createFolder, fileRecordings, moveRecordings, type BulkResult } from "@/lib/actions";
 import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
 import { useRecorder } from "@/components/recorder/recorder-provider";
-import { UserAvatar } from "@/components/profile/user-avatar";
-import { NotificationBell } from "@/components/notifications/bell";
-import { ThemeToggle } from "@/components/theme";
+import { SidebarAccount, SidebarBrand } from "@/components/shell/shell";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -114,53 +109,8 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3">
-        {collapsed ? (
-          <div className="flex flex-col items-center gap-1 pt-1">
-            <SidebarTrigger aria-label="Expand sidebar" title="Expand sidebar" />
-            <NotificationBell userId={me.id} initialUnread={me.unread} />
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 pt-1 pl-2">
-            <AudioLines className="size-5" />
-            <span className="text-lg font-semibold tracking-[0.2em]">REDIAL</span>
-            {/* Phones show the bell in the top header instead. */}
-            <span className="ml-auto flex items-center">
-              <ThemeToggle />
-              {!isMobile && <NotificationBell userId={me.id} initialUnread={me.unread} />}
-              {!isMobile && <SidebarTrigger aria-label="Collapse sidebar" title="Collapse sidebar" />}
-            </span>
-          </div>
-        )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<SidebarMenuButton size="lg" className="justify-between" />}>
-            <span className="flex min-w-0 items-center gap-2">
-              <UserAvatar name={me.name} email={email} src={me.avatarUrl} size="sm" />
-              <span className="min-w-0 text-left leading-tight">
-                <span className="block truncate font-medium">{me.name || email}</span>
-                {me.name && <span className="block truncate text-xs text-muted-foreground">{email}</span>}
-              </span>
-            </span>
-            <ChevronDown className="opacity-60" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-60" align="start">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
-              <DropdownMenuItem render={<Link href="/settings" />}><UserRound /> Profile</DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/settings/account" />}><Settings /> Account settings</DropdownMenuItem>
-              {superAdmin && <DropdownMenuItem render={<Link href="/admin" />}><ShieldCheck /> Admin</DropdownMenuItem>}
-              <DropdownMenuItem render={<Link href="/team" />}><Users /> Business workspaces &amp; team</DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem render={<Link href="/billing" />}><CreditCard /> Billing &amp; plan</DropdownMenuItem>
-            <DropdownMenuItem render={<Link href="/orders" />}><Receipt /> Orders &amp; receipts</DropdownMenuItem>
-            <DropdownMenuItem><CircleHelp /> Support</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <form action="/auth/signout" method="post">
-              <DropdownMenuItem render={<button type="submit" className="w-full" />}><LogOut /> Sign out</DropdownMenuItem>
-            </form>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <SidebarBrand />
+        <SidebarAccount me={{ ...me, email }} mode="user" canAdmin={superAdmin} />
 
         <DropdownMenu>
           {collapsed ? (

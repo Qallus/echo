@@ -1,8 +1,10 @@
 "use client";
 
-import { Menu, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { AudioLines, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import { ModeBadge } from "@/components/shell/shell";
 
 // Sticky top bar on phones; the menu opens the admin sidebar as a drawer.
 export function AdminMobileHeader() {
@@ -11,8 +13,11 @@ export function AdminMobileHeader() {
     <header className="sticky top-0 z-30 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
       <div className="flex h-12 items-center gap-1 px-2">
         <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu"><Menu className="size-5" /></Button>
-        <ShieldCheck className="size-5" />
-        <span className="font-semibold tracking-[0.2em]">REDIAL ADMIN</span>
+        <Link href="/admin" className="flex items-center gap-1.5 px-1">
+          <AudioLines className="size-5" />
+          <span className="font-semibold tracking-[0.2em]">REDIAL</span>
+        </Link>
+        <ModeBadge mode="admin" canAdmin className="ml-auto scale-90" />
       </div>
     </header>
   );

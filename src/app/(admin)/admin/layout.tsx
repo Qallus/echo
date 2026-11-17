@@ -6,7 +6,9 @@ import { AdminMobileHeader } from "@/components/admin/admin-mobile-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Softphone } from "@/components/admin/comms/softphone";
+import { TopBar } from "@/components/shell/shell";
 import { can, getStaff } from "@/lib/admin/guard";
+import { countUnreadNotifications, getMyProfile, requireUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Admin · Redial" };
@@ -17,14 +19,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const staff = await getStaff();
   if (!staff) notFound();
   if (!staff.mfaVerified) return <main className="min-h-svh bg-background">{children}</main>;
-  const { data: security } = await (await createClient()).from("platform_settings").select("value").eq("key", "admin_security").maybeSingle();
+  const [{ data: security }, user, profile, unread] = await Promise.all([
+    (await createClient()).from("platform_settings").select("value").eq("key", "admin_security").maybeSingle(),
+    requireUser(), getMyProfile(), countUnreadNotifications(),
+  ]);
+  const me = { id: user.id, name: profile.fullName, email: user.email ?? "", avatarUrl: profile.avatarUrl, unread };
   const mfaOff = (security?.value as { requireMfa?: boolean } | null)?.requireMfa === false;
 
   return (
     <SidebarProvider defaultOpen={(await cookies()).get("sidebar_state")?.value !== "false"}>
-      <AdminSidebar role={staff.role} permissions={staff.permissions} />
+      <AdminSidebar me={me} permissions={staff.permissions} />
       <SidebarInset className="min-w-0 overflow-x-clip">
         <AdminMobileHeader />
+        <TopBar me={me} mode="admin" canAdmin />
         {mfaOff && (
           <p className="flex items-center gap-2 border-b bg-amber-500/10 px-4 py-2 text-xs text-amber-800 sm:px-6 dark:text-amber-200">
             <ShieldOff className="size-3.5 shrink-0" /> Two-step sign-in is off for staff.

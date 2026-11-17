@@ -7,9 +7,10 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { NotificationBell } from "@/components/notifications/bell";
 import type { Me } from "@/components/app-sidebar";
+import { ModeBadge } from "@/components/shell/shell";
 
 // Sticky top bar on phones: the menu button opens the full sidebar as a drawer.
-export function MobileHeader({ me }: { me: Me }) {
+export function MobileHeader({ me, canAdmin = false }: { me: Me; canAdmin?: boolean }) {
   const { toggleSidebar } = useSidebar();
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
@@ -20,6 +21,7 @@ export function MobileHeader({ me }: { me: Me }) {
           <span className="font-semibold tracking-[0.2em]">REDIAL</span>
         </Link>
         <div className="ml-auto flex items-center gap-1">
+          {canAdmin && <ModeBadge mode="user" canAdmin className="scale-90" />}
           <Button variant="ghost" size="icon" nativeButton={false} render={<Link href="/search" aria-label="Search" />}><Search className="size-5" /></Button>
           <NotificationBell userId={me.id} initialUnread={me.unread} />
           <Link href="/settings" aria-label="Account settings" className="flex size-9 items-center justify-center">

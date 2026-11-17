@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { AppSidebar } from "@/components/app-sidebar";
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { MobileHeader } from "@/components/mobile/mobile-header";
+import { TopBar } from "@/components/shell/shell";
 import { RecorderProvider } from "@/components/recorder/recorder-provider";
 import { CatalogSync } from "@/components/store/catalog-sync";
 import { loadCatalog } from "@/lib/billing/catalog-server";
@@ -27,7 +28,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppSidebar me={me} workspaces={workspaces} recordings={recordings} folders={folders} superAdmin={superAdmin} callsUnread={callsUnread} phoneLine={Boolean(line)} liveAgent={liveAgent} />
       {/* overflow-x-clip (not hidden): trims sub-pixel overflow without breaking the sticky header. */}
       <SidebarInset className="min-w-0 overflow-x-clip">
-        <MobileHeader me={me} />
+        <MobileHeader me={me} canAdmin={superAdmin} />
+        <TopBar me={me} mode="user" canAdmin={superAdmin} />
         {/* Phones: leave room for the fixed bottom bar (--bottom-nav in globals.css). */}
         <main className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
         <BottomNav workspaces={workspaces} />
