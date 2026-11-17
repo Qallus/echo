@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/data";
 import { builderContext, flowForEditing } from "@/lib/flows/data";
 
-export const metadata = { title: "Call Tree · Echo" };
+export const metadata = { title: "Call Tree · Redial" };
 
 // Call Tree for one flow. The canvas needs a larger screen; phones get a
 // pointer back to the list.

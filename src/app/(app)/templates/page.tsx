@@ -7,7 +7,7 @@ import { listDesigns } from "@/lib/data";
 import { normalizeDesign } from "@/lib/designs/schema";
 import { DesignActions } from "./design-actions";
 
-export const metadata = { title: "Templates · Echo" };
+export const metadata = { title: "Templates · Redial" };
 
 export default async function TemplatesPage() {
   const designs = await listDesigns();

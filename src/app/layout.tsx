@@ -7,8 +7,8 @@ import "./globals.css";
 
 
 export const metadata: Metadata = {
-  title: "Echo",
-  description: "Record, transcribe and act on every call and meeting.",
+  title: "Redial",
+  description: "Your AI phone assistant answers, screens and records your calls. Echo turns every call and meeting into transcripts, summaries and action items.",
 };
 
 // viewportFit cover: lets the sticky bars use the safe-area insets on notched phones.

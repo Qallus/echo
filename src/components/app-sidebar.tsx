@@ -122,7 +122,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
         ) : (
           <div className="flex items-center gap-2 pt-1 pl-2">
             <AudioLines className="size-5" />
-            <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
+            <span className="text-lg font-semibold tracking-[0.2em]">REDIAL</span>
             {/* Phones show the bell in the top header instead. */}
             <span className="ml-auto flex items-center">
               <ThemeToggle />

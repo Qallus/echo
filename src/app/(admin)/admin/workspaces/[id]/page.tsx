@@ -11,7 +11,7 @@ import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { TransferOwner } from "./transfer-owner";
 
-export const metadata = { title: "Workspace · Admin · Echo" };
+export const metadata = { title: "Workspace · Admin · Redial" };
 
 type Detail = {
   id: string; name: string; is_personal: boolean; created_at: string;

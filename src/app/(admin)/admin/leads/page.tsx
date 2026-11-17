@@ -3,7 +3,7 @@ import { LeadsPage } from "@/components/admin/crm/leads-page";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, listCompanies, listContacts } from "@/lib/crm/data";
 
-export const metadata = { title: "Leads · Admin · Echo" };
+export const metadata = { title: "Leads · Admin · Redial" };
 
 // Inquiries before they become opportunities.
 export default async function Leads() {

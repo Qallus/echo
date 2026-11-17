@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const supabase = await createClient();
   const { data } = await supabase.rpc("events_public", { p_slug: slug }).maybeSingle<PublicEvent>();
-  return { title: data ? `${data.title} · Echo` : "Event · Echo", description: data?.summary ?? undefined, alternates: { canonical: `/book/events/${slug}` } };
+  return { title: data ? `${data.title} · Redial` : "Event · Redial", description: data?.summary ?? undefined, alternates: { canonical: `/book/events/${slug}` } };
 }
 
 export default async function EventPage({ params }: { params: Promise<{ slug: string }> }) {

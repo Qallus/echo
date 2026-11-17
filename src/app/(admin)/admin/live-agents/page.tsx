@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { adminAudit } from "@/lib/admin/audit";
 import { ClipReview, MoneyActions, ProfileDecision, ResolveReport, type AdminClip } from "./review-card";
 
-export const metadata = { title: "Live Agents · Admin · Echo" };
+export const metadata = { title: "Live Agents · Admin · Redial" };
 
 type Row = {
   id: string; user_id: string | null; email: string | null; handle: string; display_name: string; headline: string; bio: string | null; city: string; region: string;

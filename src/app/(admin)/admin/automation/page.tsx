@@ -7,7 +7,7 @@ import type { Rule, RuleRun } from "@/lib/automation/rules";
 import { secret } from "@/lib/secrets";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Automation · Admin · Echo" };
+export const metadata = { title: "Automation · Admin · Redial" };
 
 // Rules: when something happens, if it matches, do these things. Database
 // triggers queue each run; the scheduled job (/api/cron/comms) carries it out.

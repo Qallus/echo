@@ -9,7 +9,7 @@ import { Softphone } from "@/components/admin/comms/softphone";
 import { can, getStaff } from "@/lib/admin/guard";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Admin · Echo" };
+export const metadata = { title: "Admin · Redial" };
 
 // The Super Admin area. Customers get a 404. Staff who haven't passed two-step
 // sign-in this session see only the MFA page (every other page sends them there).

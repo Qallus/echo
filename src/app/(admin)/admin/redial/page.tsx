@@ -11,7 +11,7 @@ import { sipConfig } from "@/lib/comms/sip";
 import { SetupQueue, type SetupRow } from "./setup-queue";
 import { PortQueue, type PortQueueRow } from "./port-queue";
 
-export const metadata = { title: "Redial · Admin · Echo" };
+export const metadata = { title: "Redial · Admin · Redial" };
 
 type Row = { id: string; owner_id: string; owner_email: string; owner_name: string | null; label: string; number: string; has_destination: boolean; mode: string; paused: boolean; calls_30d: number; last_call_at: string | null };
 const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");

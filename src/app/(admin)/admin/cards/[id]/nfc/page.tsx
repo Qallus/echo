@@ -7,7 +7,7 @@ import { cardName, cardPath } from "@/lib/cards/types";
 import { isUuid } from "@/lib/data";
 import { siteUrl } from "@/lib/notify/senders";
 
-export const metadata = { title: "Write NFC tag · Echo" };
+export const metadata = { title: "Write NFC tag · Redial" };
 
 // Opened on an Android phone from the QR code in "Write NFC".
 export default async function NfcPage({ params }: { params: Promise<{ id: string }> }) {

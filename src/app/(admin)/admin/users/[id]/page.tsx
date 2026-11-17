@@ -16,7 +16,7 @@ import { formatDuration } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { UserActions } from "./user-actions";
 
-export const metadata = { title: "Customer · Admin · Echo" };
+export const metadata = { title: "Customer · Admin · Redial" };
 
 type Detail = {
   id: string; email: string; created_at: string; last_sign_in_at: string | null; confirmed: boolean; banned_until: string | null;

@@ -5,7 +5,7 @@ import { Booker } from "./booker";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return { title: `Book · Echo`, alternates: { canonical: `/book/${slug}` } };
+  return { title: `Book · Redial`, alternates: { canonical: `/book/${slug}` } };
 }
 
 export default async function BookType({ params }: { params: Promise<{ slug: string }> }) {

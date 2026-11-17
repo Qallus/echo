@@ -6,7 +6,7 @@ import { crmStaff } from "@/lib/crm/data";
 import { getUser, isUuid } from "@/lib/data";
 import { siteUrl } from "@/lib/notify/senders";
 
-export const metadata = { title: "Edit card · Business Cards · Echo" };
+export const metadata = { title: "Edit card · Business Cards · Redial" };
 
 export default async function EditCard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

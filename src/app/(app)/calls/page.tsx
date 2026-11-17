@@ -10,7 +10,7 @@ import { redialUsage } from "@/lib/redial/usage";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Calls · Echo" };
+export const metadata = { title: "Calls · Redial" };
 
 // Redial call screening: screened calls and messages, callbacks, rules and
 // the assistant, for one of the member's lines.

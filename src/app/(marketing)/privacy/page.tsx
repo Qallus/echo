@@ -2,7 +2,7 @@ import Link from "next/link";
 import { COMPANY, LegalDoc, type LegalSection } from "@/components/marketing/legal-doc";
 
 export const metadata = {
-  title: "Privacy Policy · Echo",
+  title: "Privacy Policy · Redial",
   description: "What Echo collects, why, who processes it, and the choices you have.",
   alternates: { canonical: "/privacy" },
 };

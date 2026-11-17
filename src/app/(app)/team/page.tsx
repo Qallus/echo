@@ -10,7 +10,7 @@ import { UserAvatar } from "@/components/profile/user-avatar";
 import { listInvites, listMembers, listWorkspaces, requireUser } from "@/lib/data";
 import { siteOrigin } from "@/lib/site";
 
-export const metadata = { title: "Team · Echo" };
+export const metadata = { title: "Team · Redial" };
 
 export default async function TeamPage() {
   const user = await requireUser();

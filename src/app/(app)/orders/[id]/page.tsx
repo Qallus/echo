@@ -8,7 +8,7 @@ import { COMPANY } from "@/lib/company";
 import { OrderStatusBadge } from "@/components/billing/status-badge";
 import { PrintButton } from "@/components/print-button";
 
-export const metadata = { title: "Receipt · Echo" };
+export const metadata = { title: "Receipt · Redial" };
 
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

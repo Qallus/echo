@@ -6,7 +6,7 @@ import { money } from "@/lib/billing/catalog";
 import { stripe } from "@/lib/billing/stripe";
 import { ClearCart } from "./clear-cart";
 
-export const metadata = { title: "Thank you · Echo", robots: { index: false } };
+export const metadata = { title: "Thank you · Redial", robots: { index: false } };
 
 // Reads the order straight from Stripe, so it shows even if the webhook
 // hasn't recorded it yet.

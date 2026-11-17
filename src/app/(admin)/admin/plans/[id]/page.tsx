@@ -5,7 +5,7 @@ import { crmStaff, listCompanies } from "@/lib/crm/data";
 import { isUuid } from "@/lib/data";
 import { getPlan } from "@/lib/plans/data";
 
-export const metadata = { title: "Plan · Admin · Echo" };
+export const metadata = { title: "Plan · Admin · Redial" };
 
 export default async function PlanPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff("crm.view");

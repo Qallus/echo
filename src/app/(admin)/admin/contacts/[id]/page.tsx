@@ -5,7 +5,7 @@ import { crmStaff, getContact, listActivities, listCompanies, listDeals } from "
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Contact · Admin · Echo" };
+export const metadata = { title: "Contact · Admin · Redial" };
 
 export default async function ContactPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff("crm.view");

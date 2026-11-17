@@ -3,7 +3,7 @@ import { PipelinePage } from "@/components/admin/crm/pipeline-page";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, listCompanies, listContacts, listDeals } from "@/lib/crm/data";
 
-export const metadata = { title: "Pipeline · Admin · Echo" };
+export const metadata = { title: "Pipeline · Admin · Redial" };
 
 // Qallus's sales pipeline for Echo: opportunities by stage, with a weighted forecast.
 export default async function Pipeline() {

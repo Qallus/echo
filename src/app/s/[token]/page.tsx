@@ -28,7 +28,7 @@ const load = cache(async (token: string) => {
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const shared = await load((await params).token);
   return {
-    title: shared ? `${shared.r.title} · Echo` : "Link not available · Echo",
+    title: shared ? `${shared.r.title} · Redial` : "Link not available · Redial",
     robots: { index: false, follow: false },
     referrer: "no-referrer", // the token is in the URL; don't pass it on to other sites
   };
@@ -40,7 +40,7 @@ export default async function SharedLinkPage({ params }: { params: Promise<{ tok
     <div className="flex min-h-svh flex-col bg-background">
       <header className="border-b">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-2 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2"><AudioLines className="size-4" /><span className="font-semibold tracking-[0.2em]">ECHO</span></Link>
+          <Link href="/" className="flex items-center gap-2"><AudioLines className="size-4" /><span className="font-semibold tracking-[0.2em]">REDIAL</span></Link>
           <Button size="sm" variant="outline" className="ml-auto" nativeButton={false} render={<Link href="/signup" />}>Try Echo free</Button>
         </div>
       </header>

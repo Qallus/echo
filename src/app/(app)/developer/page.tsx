@@ -9,7 +9,7 @@ import { siteOrigin } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { RevokeButton } from "./revoke-button";
 
-export const metadata = { title: "Developer · Echo" };
+export const metadata = { title: "Developer · Redial" };
 
 const PRODUCTION_MCP = "https://redial.si/api/mcp";
 

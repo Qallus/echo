@@ -10,7 +10,7 @@ export function AuthShell({ title, subtitle, children, footer }: {
         <div className="space-y-2 text-center">
           <div className="flex items-center justify-center gap-2">
             <AudioLines className="size-5" />
-            <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
+            <span className="text-lg font-semibold tracking-[0.2em]">REDIAL</span>
           </div>
           <h1 className="pt-2 text-base font-semibold">{title}</h1>
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}

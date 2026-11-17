@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_PREFS, NOTIFICATION_TYPES, type Preference } from "@/lib/notify/types";
 import { ChannelList, PreferenceGrid, PushCard, QuietHours, TestButton } from "./notification-settings";
 
-export const metadata = { title: "Notifications · Settings · Echo" };
+export const metadata = { title: "Notifications · Settings · Redial" };
 
 export default async function NotificationSettingsPage() {
   const user = await requireUser();

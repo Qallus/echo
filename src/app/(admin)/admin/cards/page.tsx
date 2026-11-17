@@ -6,7 +6,7 @@ import { crmStaff } from "@/lib/crm/data";
 import { getUser } from "@/lib/data";
 import { siteUrl } from "@/lib/notify/senders";
 
-export const metadata = { title: "Business Cards · Admin · Echo" };
+export const metadata = { title: "Business Cards · Admin · Redial" };
 
 // Digital business cards: public pages with QR and NFC, lead capture, analytics.
 export default async function BusinessCards({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {

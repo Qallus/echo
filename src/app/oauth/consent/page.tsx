@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { getStaff } from "@/lib/admin/guard";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Allow access · Echo" };
+export const metadata = { title: "Allow access · Redial" };
 
 // Plain-language labels for the OIDC scopes Supabase issues.
 const SCOPE_LABELS: Record<string, string> = {
@@ -93,7 +93,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="w-full max-w-md space-y-6 rounded-xl border bg-background p-8 shadow-sm">
         <div className="flex items-center justify-center gap-2">
           <AudioLines className="size-5" />
-          <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
+          <span className="text-lg font-semibold tracking-[0.2em]">REDIAL</span>
         </div>
         {children}
       </div>

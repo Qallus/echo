@@ -5,7 +5,7 @@ import { AcceptInviteButton } from "@/components/team/team-forms";
 import { isUuid, requireUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Join workspace · Echo" };
+export const metadata = { title: "Join workspace · Redial" };
 
 type InviteInfo = {
   workspace_name: string; email: string; role: string; invited_by_email: string | null; expires_at: string; accepted: boolean;
@@ -55,7 +55,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       <div className="w-full max-w-md space-y-6 rounded-xl border bg-background p-8 shadow-sm">
         <div className="flex items-center justify-center gap-2">
           <AudioLines className="size-5" />
-          <span className="text-lg font-semibold tracking-[0.2em]">ECHO</span>
+          <span className="text-lg font-semibold tracking-[0.2em]">REDIAL</span>
         </div>
         {body}
       </div>

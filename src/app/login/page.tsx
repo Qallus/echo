@@ -3,7 +3,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { safeNext } from "@/lib/safe-next";
 import { LoginForm } from "./login-form";
 
-export const metadata = { title: "Sign in · Echo" };
+export const metadata = { title: "Sign in · Redial" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
   const { next, error } = await searchParams;

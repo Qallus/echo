@@ -2,7 +2,7 @@ import Link from "next/link";
 import { stripeReady } from "@/lib/billing/stripe";
 import { CartView } from "./cart-view";
 
-export const metadata = { title: "Cart · Echo", robots: { index: false } };
+export const metadata = { title: "Cart · Redial", robots: { index: false } };
 
 export default async function CartPage() {
   return (

@@ -7,7 +7,7 @@ import { getDesign, listWorkspaces, requireUser } from "@/lib/data";
 import { builderPreview } from "@/lib/designs/preview";
 import { DEFAULT_DESIGN, normalizeDesign } from "@/lib/designs/schema";
 
-export const metadata = { title: "Summary Builder · Echo" };
+export const metadata = { title: "Summary Builder · Redial" };
 
 export default async function DesignBuilderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

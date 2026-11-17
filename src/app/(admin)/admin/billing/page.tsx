@@ -18,7 +18,7 @@ import { PromoCodes } from "./promo-codes";
 import { toPromoRow } from "@/lib/billing/promo";
 import type { PromoRow } from "@/lib/billing/promo-rules";
 
-export const metadata = { title: "Billing · Admin · Echo" };
+export const metadata = { title: "Billing · Admin · Redial" };
 
 type SubRow = { id: string; user_id: string; user_email: string | null; status: string; items: { price_key: string; quantity: number }[]; current_period_end: string | null; cancel_at_period_end: boolean; created_at: string; updated_at: string };
 

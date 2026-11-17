@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { eventWhen, type PublicEvent } from "@/lib/bookings/events";
 import type { PublicType } from "./actions";
 
-export const metadata = { title: "Book a time · Echo", description: "Schedule a call or meeting with the Echo team.", alternates: { canonical: "/book" } };
+export const metadata = { title: "Book a time · Redial", description: "Schedule a call or meeting with the Echo team.", alternates: { canonical: "/book" } };
 
 const ICON = { video: Video, phone: Phone, in_person: MapPin } as const;
 

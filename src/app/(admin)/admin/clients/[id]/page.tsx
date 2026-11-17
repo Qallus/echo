@@ -13,7 +13,7 @@ import { crmStaff, getCompany, listActivities, listCompanies, listContacts, list
 import { COMPANY_STATUSES, contactName, ownerName } from "@/lib/crm/types";
 import { isUuid } from "@/lib/data";
 
-export const metadata = { title: "Client · Admin · Echo" };
+export const metadata = { title: "Client · Admin · Redial" };
 
 const safeUrl = (u: string | null) => (u ? (/^https?:\/\//i.test(u) ? u : `https://${u}`) : null);
 

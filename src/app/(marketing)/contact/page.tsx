@@ -3,7 +3,7 @@ import { COMPANY } from "@/lib/company";
 import { ContactForm } from "./contact-form";
 
 export const metadata = {
-  title: "Contact · Echo",
+  title: "Contact · Redial",
   description: "Questions about Echo, sales, partnerships or support. We reply within one business day.",
   alternates: { canonical: "/contact" },
 };

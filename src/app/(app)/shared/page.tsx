@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/data";
 import { formatDuration } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Shared with me · Echo" };
+export const metadata = { title: "Shared with me · Redial" };
 
 type Row = { recording_id: string; title: string; created_at: string; duration_sec: number; shared_by: string; shared_at: string };
 

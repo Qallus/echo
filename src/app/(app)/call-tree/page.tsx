@@ -3,7 +3,7 @@ import { FlowList } from "@/components/flows/flow-list";
 import { requireUser } from "@/lib/data";
 import { myFlows } from "@/lib/flows/data";
 
-export const metadata = { title: "Call Tree · Echo" };
+export const metadata = { title: "Call Tree · Redial" };
 
 // Call flows the person owns or can edit (manage_flows on a line it runs on).
 export default async function FlowsPage() {

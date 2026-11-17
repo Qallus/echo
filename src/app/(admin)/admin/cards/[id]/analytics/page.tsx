@@ -9,7 +9,7 @@ import { getCard } from "@/lib/cards/data";
 import { cardName, cardPath } from "@/lib/cards/types";
 import { isUuid } from "@/lib/data";
 
-export const metadata = { title: "Card analytics · Echo" };
+export const metadata = { title: "Card analytics · Redial" };
 
 export default async function CardAnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

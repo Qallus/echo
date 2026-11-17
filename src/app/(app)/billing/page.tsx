@@ -13,7 +13,7 @@ import { minutesUsage } from "@/lib/billing/usage";
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/format";
 
-export const metadata = { title: "Billing · Echo" };
+export const metadata = { title: "Billing · Redial" };
 
 const ACTIVE = ["active", "trialing", "past_due"];
 

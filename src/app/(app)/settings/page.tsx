@@ -4,7 +4,7 @@ import { ProfileSummary } from "@/components/profile/profile-card";
 import { getMyProfile } from "@/lib/data";
 import { ProfileForm } from "./profile-form";
 
-export const metadata = { title: "Profile · Settings · Echo" };
+export const metadata = { title: "Profile · Settings · Redial" };
 
 export default async function ProfileSettingsPage() {
   const profile = await getMyProfile();

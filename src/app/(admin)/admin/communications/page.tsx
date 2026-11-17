@@ -1,7 +1,8 @@
 import { AdminPage } from "@/components/admin/admin-ui";
 import { EmailPanel } from "@/components/admin/comms/email-panel";
 import { CallsPanel } from "@/components/admin/comms/calls-panel";
-import { RedialCalls } from "@/components/admin/comms/redial-calls";
+import { PhoneCenter } from "@/components/redial/phone-center";
+import { phoneCenterData } from "@/lib/redial/data";
 import { InboxPanel } from "@/components/admin/comms/inbox-panel";
 import { NotificationsPanel } from "@/components/admin/comms/notifications-panel";
 import { TextsPanel } from "@/components/admin/comms/texts-panel";
@@ -13,7 +14,7 @@ import { secret } from "@/lib/secrets";
 import { listContacts } from "@/lib/crm/data";
 import { contactName } from "@/lib/crm/types";
 
-export const metadata = { title: "Communications · Admin · Echo" };
+export const metadata = { title: "Communications · Admin · Redial" };
 
 const TABS = ["inbox", "texts", "calls", "email", "notifications"] as const;
 
@@ -30,7 +31,7 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
     listTexts(), listCalls(), listOptOuts(), listAutomations(), listCampaigns(), listAudiences(), listScheduled(),
   ]);
   const knownTags = [...new Set(contacts.flatMap((c) => c.tags ?? []))].sort();
-  const [canText, canCall, number, cronSecret] = await Promise.all([textsReady(), callsReady(), phoneNumber(), secret("CRON_SECRET")]);
+  const [canText, canCall, number, cronSecret, phone] = await Promise.all([textsReady(), callsReady(), phoneNumber(), secret("CRON_SECRET"), phoneCenterData()]);
   const phonePeople = contacts.map((c) => ({ id: c.id, name: contactName(c), phone: c.phone }));
   const unreadTexts = texts.filter((t) => t.direction === "inbound" && !t.read_at).length;
   const initial = TABS.includes(tab as (typeof TABS)[number]) ? tab! : "inbox";
@@ -50,8 +51,15 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
         <TabsContent value="inbox" className="pt-6"><InboxPanel messages={inbox} readOnly={readOnly} canCrm={can(staff, "crm.manage")} /></TabsContent>
         <TabsContent value="texts" className="pt-6"><TextsPanel texts={texts} people={phonePeople} optOuts={optOuts} ready={canText} readOnly={readOnly} scheduled={scheduled.filter((x) => x.channel === "sms")} cronReady={Boolean(cronSecret)} /></TabsContent>
         <TabsContent value="calls" className="space-y-8 pt-6">
-          <RedialCalls />
-          <CallsPanel calls={calls} people={phonePeople} ready={canCall} number={number} readOnly={readOnly} />
+          {phone.lines.length > 0
+            ? <PhoneCenter {...phone} canCrm={can(staff, "crm.manage")} />
+            : <CallsPanel calls={calls} people={phonePeople} ready={canCall} number={number} readOnly={readOnly} />}
+          {phone.lines.length > 0 && calls.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Older calls on the admin browser phone</h2>
+              <CallsPanel calls={calls} people={phonePeople} ready={canCall} number={number} readOnly={readOnly} />
+            </section>
+          )}
         </TabsContent>
         <TabsContent value="email" className="pt-6">
           <EmailPanel scheduled={scheduled.filter((x) => x.channel === "email")} templates={templates} sends={sends} campaigns={campaigns} audiences={audiences} unsubscribes={unsubscribes} readOnly={readOnly} automations={automations} cronReady={Boolean(cronSecret)}

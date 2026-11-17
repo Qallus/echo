@@ -12,7 +12,7 @@ export function AdminMobileHeader() {
       <div className="flex h-12 items-center gap-1 px-2">
         <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu"><Menu className="size-5" /></Button>
         <ShieldCheck className="size-5" />
-        <span className="font-semibold tracking-[0.2em]">ECHO ADMIN</span>
+        <span className="font-semibold tracking-[0.2em]">REDIAL ADMIN</span>
       </div>
     </header>
   );

@@ -9,7 +9,7 @@ import { loadOrganization } from "@/lib/settings/organization";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Reports · Admin · Echo" };
+export const metadata = { title: "Reports · Admin · Redial" };
 
 type Params = { kind?: string; range?: string; since?: string; until?: string };
 

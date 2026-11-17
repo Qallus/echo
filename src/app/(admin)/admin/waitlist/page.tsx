@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { ExportCsv, StatusSelect } from "./waitlist-controls";
 
-export const metadata = { title: "App waitlist · Admin · Echo" };
+export const metadata = { title: "App waitlist · Admin · Redial" };
 
 export type Entry = {
   id: string; first_name: string; last_name: string; email: string; phone: string; platforms: string[]; products: string[];

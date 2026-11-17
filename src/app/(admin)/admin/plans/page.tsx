@@ -4,7 +4,7 @@ import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, listCompanies } from "@/lib/crm/data";
 import { listPlans } from "@/lib/plans/data";
 
-export const metadata = { title: "Plans · Admin · Echo" };
+export const metadata = { title: "Plans · Admin · Redial" };
 
 // Task plans: onboarding, projects, launches; started from templates.
 export default async function Plans() {

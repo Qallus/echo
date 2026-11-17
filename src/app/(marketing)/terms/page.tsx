@@ -2,7 +2,7 @@ import Link from "next/link";
 import { COMPANY, LegalDoc, type LegalSection } from "@/components/marketing/legal-doc";
 
 export const metadata = {
-  title: "Terms of Service · Echo",
+  title: "Terms of Service · Redial",
   description: "The terms that apply when you use Echo to record, transcribe and share calls and meetings.",
   alternates: { canonical: "/terms" },
 };

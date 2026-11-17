@@ -10,7 +10,7 @@ import { DEFAULT_DESIGN, normalizeDesign } from "@/lib/designs/schema";
 import { siteOrigin } from "@/lib/site";
 import { DesignSelect } from "./design-select";
 
-export const metadata = { title: "Branded summary · Echo" };
+export const metadata = { title: "Branded summary · Redial" };
 
 // A recording's summary in one of your designs, ready to print or save as PDF.
 export default async function ReportPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ design?: string }> }) {

@@ -4,7 +4,7 @@ import { getStaff } from "@/lib/admin/guard";
 import { safeNext } from "@/lib/safe-next";
 import { MfaForm } from "./mfa-form";
 
-export const metadata = { title: "Two-step sign-in · Admin · Echo" };
+export const metadata = { title: "Two-step sign-in · Admin · Redial" };
 
 export default async function MfaPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const sp = await searchParams;

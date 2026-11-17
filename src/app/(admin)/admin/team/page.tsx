@@ -14,7 +14,7 @@ import { crmStaff, listContacts, listDeals } from "@/lib/crm/data";
 import { listBookings } from "@/lib/bookings/data";
 import { openTasksByAssignee } from "@/lib/plans/data";
 
-export const metadata = { title: "Team · Admin · Echo" };
+export const metadata = { title: "Team · Admin · Redial" };
 
 type Member = { user_id: string; name: string; email: string; role: StaffRole; avatar_url: string | null; job_title: string | null; phone: string | null; last_sign_in_at: string | null; mfa: boolean };
 

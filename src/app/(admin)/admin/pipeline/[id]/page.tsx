@@ -4,7 +4,7 @@ import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, dealHistory, getContact, getDeal, getStageConfig, listActivities } from "@/lib/crm/data";
 import { isUuid } from "@/lib/data";
 
-export const metadata = { title: "Opportunity · Admin · Echo" };
+export const metadata = { title: "Opportunity · Admin · Redial" };
 
 export default async function OpportunityPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff("crm.view");

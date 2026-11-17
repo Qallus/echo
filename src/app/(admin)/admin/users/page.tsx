@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StaffManager, type StaffMember } from "./staff-manager";
 import { UsersTable, type UserRow } from "./users-table";
 
-export const metadata = { title: "User Management · Admin · Echo" };
+export const metadata = { title: "User Management · Admin · Redial" };
 
 type WorkspaceRow = {
   workspace_id: string; name: string; is_personal: boolean; owner_email: string | null; members: number; recordings: number; created_at: string;

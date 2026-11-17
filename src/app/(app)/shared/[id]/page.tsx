@@ -8,7 +8,7 @@ import { readShared } from "@/lib/share";
 import { audioUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Shared recording · Echo" };
+export const metadata = { title: "Shared recording · Redial" };
 
 // One recording shared with you: everything, read-only.
 export default async function SharedRecordingPage({ params }: { params: Promise<{ id: string }> }) {

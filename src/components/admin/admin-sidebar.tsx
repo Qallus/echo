@@ -73,7 +73,7 @@ export function AdminSidebar({ role, permissions }: { role: StaffRole; permissio
           <div className="flex items-center gap-2 pt-1 pl-2">
             <ShieldCheck className="size-5 shrink-0" />
             <span className="min-w-0 leading-tight">
-              <span className="block text-sm font-semibold tracking-[0.2em]">ECHO ADMIN</span>
+              <span className="block text-sm font-semibold tracking-[0.2em]">REDIAL ADMIN</span>
               <span className="block text-xs text-muted-foreground">{roleLabel(role)}</span>
             </span>
             <span className="ml-auto flex items-center">

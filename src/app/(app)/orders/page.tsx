@@ -6,7 +6,7 @@ import { LocalDate } from "@/components/local-date";
 import { listOrders } from "@/lib/data";
 import { money } from "@/lib/billing/catalog";
 
-export const metadata = { title: "Orders · Echo" };
+export const metadata = { title: "Orders · Redial" };
 
 export default async function OrdersPage() {
   const orders = await listOrders();

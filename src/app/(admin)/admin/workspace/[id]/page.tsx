@@ -8,7 +8,7 @@ import { getWorkspaceDoc, listWorkspaceComments, listWorkspaceDocs } from "@/lib
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const doc = isUuid(id) ? await getWorkspaceDoc(id) : null;
-  return { title: `${doc?.title ?? "Page"} · Workspace · Echo` };
+  return { title: `${doc?.title ?? "Page"} · Workspace · Redial` };
 }
 
 export default async function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {

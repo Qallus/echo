@@ -10,7 +10,7 @@ import { crmStaff, listContacts } from "@/lib/crm/data";
 import { contactName } from "@/lib/crm/types";
 import { siteUrl } from "@/lib/notify/senders";
 
-export const metadata = { title: "Bookings · Admin · Echo" };
+export const metadata = { title: "Bookings · Admin · Redial" };
 
 // Appointments booked on the website or by staff, the appointment types on
 // the public /book page, and weekly availability.

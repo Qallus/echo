@@ -11,7 +11,7 @@ import { MfaSwitch } from "./mfa-switch";
 import { OrganizationForm } from "./organization-form";
 import { readOrg } from "@/lib/settings/organization";
 
-export const metadata = { title: "Settings · Admin · Echo" };
+export const metadata = { title: "Settings · Admin · Redial" };
 
 type AuditRow = { id: number; actor_email: string | null; action: string; target_type: string | null; target_id: string | null; detail: Record<string, unknown>; created_at: string };
 

@@ -63,6 +63,19 @@ export async function myLines(): Promise<(Line & { access: Access })[]> {
   ];
 }
 
+// The Phone across every line the member can see (Admin -> Communications):
+// all their calls, newest first, and each line's lists.
+export async function phoneCenterData() {
+  const lines = await myLines();
+  const details = await Promise.all(lines.map((l) => lineDetail(l.id, l.access)));
+  return {
+    lines: lines as Line[],
+    calls: details.flatMap((d) => d.calls).sort((a, b) => b.started_at.localeCompare(a.started_at)),
+    entries: details.flatMap((d) => d.entries),
+    manageLines: lines.filter((l) => l.access.owner).map((l) => l.id),
+  };
+}
+
 export async function lineDetail(lineId: string, access: Access) {
   const supabase = await createClient();
   const directoryAccess = access.owner || access.capabilities.includes("transfer_call") || access.capabilities.includes("manage_directory");

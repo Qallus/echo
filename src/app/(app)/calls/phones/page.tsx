@@ -9,7 +9,7 @@ import { getMyProfile, requireUser } from "@/lib/data";
 import { myLines } from "@/lib/redial/data";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Phones · Echo" };
+export const metadata = { title: "Phones · Redial" };
 
 type Db = Awaited<ReturnType<typeof createClient>>;
 

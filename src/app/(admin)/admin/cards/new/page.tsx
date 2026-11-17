@@ -5,7 +5,7 @@ import { crmStaff } from "@/lib/crm/data";
 import { getUser } from "@/lib/data";
 import { siteUrl } from "@/lib/notify/senders";
 
-export const metadata = { title: "New card · Business Cards · Echo" };
+export const metadata = { title: "New card · Business Cards · Redial" };
 
 export default async function NewCard() {
   const staff = await requireStaff("crm.view");

@@ -3,7 +3,7 @@ import { ContactsPage } from "@/components/admin/crm/contacts-page";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, listCompanies, listContacts } from "@/lib/crm/data";
 
-export const metadata = { title: "Contacts · Admin · Echo" };
+export const metadata = { title: "Contacts · Admin · Redial" };
 
 // Everyone Qallus works with: leads, prospects, clients and partners.
 export default async function Contacts({ searchParams }: { searchParams: Promise<{ import?: string }> }) {

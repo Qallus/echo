@@ -4,7 +4,7 @@ import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, listCompanies, listContacts, listDeals } from "@/lib/crm/data";
 import { OPEN_STAGES } from "@/lib/crm/types";
 
-export const metadata = { title: "Clients · Admin · Echo" };
+export const metadata = { title: "Clients · Admin · Redial" };
 
 // Companies Qallus sells to or works with, with contact and pipeline totals.
 export default async function ClientsPage() {

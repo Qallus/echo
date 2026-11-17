@@ -6,7 +6,7 @@ import { getMyProfile, requireUser } from "@/lib/data";
 import { myLines } from "@/lib/redial/data";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Bring your number · Echo" };
+export const metadata = { title: "Bring your number · Redial" };
 
 // Requests to move (port) an existing number to Redial.
 export default async function PortPage() {

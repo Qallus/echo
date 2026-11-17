@@ -5,7 +5,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata = { title: "Explore · Echo" };
+export const metadata = { title: "Explore · Redial" };
 
 type Feature = { icon: typeof Mic; title: string; desc: string; href?: string; live: boolean };
 

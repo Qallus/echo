@@ -5,7 +5,7 @@ import { listWorkspaces, requireUser } from "@/lib/data";
 import { lineNumber } from "@/lib/line/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Phone · Echo" };
+export const metadata = { title: "Phone · Redial" };
 
 // The Echo call line: verify your cell, then place recorded calls (they see
 // your own number) or merge the line into a call you're already on.

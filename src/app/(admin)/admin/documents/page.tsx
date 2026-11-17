@@ -4,7 +4,7 @@ import { can, requireStaff } from "@/lib/admin/guard";
 import { crmStaff, listCompanies } from "@/lib/crm/data";
 import { listDocuments, listFolders } from "@/lib/documents/data";
 
-export const metadata = { title: "Documents · Admin · Echo" };
+export const metadata = { title: "Documents · Admin · Redial" };
 
 // Business files: contracts, proposals, brand assets, linked to clients.
 export default async function Documents() {

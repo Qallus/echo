@@ -6,7 +6,7 @@ import { isSuperAdmin, listWorkspaces, requireUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { EmailForm, PasswordForm, SignOutEverywhereButton } from "../settings-forms";
 
-export const metadata = { title: "Account · Settings · Echo" };
+export const metadata = { title: "Account · Settings · Redial" };
 
 const PROVIDERS: Record<string, string> = { email: "Email (password or sign-in link)", google: "Google" };
 

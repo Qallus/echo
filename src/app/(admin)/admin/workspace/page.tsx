@@ -8,7 +8,7 @@ import { listWorkspaceDocs } from "@/lib/workspace/data";
 import { TEMPLATES } from "@/lib/workspace/templates";
 import { TemplateButton } from "./template-button";
 
-export const metadata = { title: "Workspace · Admin · Echo" };
+export const metadata = { title: "Workspace · Admin · Redial" };
 
 // Workspace home: start from a template, pinned and recent pages, full-text search.
 export default async function Workspace({ searchParams }: { searchParams: Promise<{ q?: string }> }) {

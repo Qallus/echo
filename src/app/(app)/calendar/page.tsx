@@ -1,7 +1,7 @@
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { listCalendarEvents, listWorkspaces } from "@/lib/data";
 
-export const metadata = { title: "Calendar · Echo" };
+export const metadata = { title: "Calendar · Redial" };
 
 // Six months back to about a year ahead.
 function range() {

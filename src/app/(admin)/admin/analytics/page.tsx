@@ -8,7 +8,7 @@ import { loadOrganization } from "@/lib/settings/organization";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Analytics · Admin · Echo" };
+export const metadata = { title: "Analytics · Admin · Redial" };
 
 // Real numbers over time, in the organization's time zone.
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {

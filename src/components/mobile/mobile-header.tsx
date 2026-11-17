@@ -17,7 +17,7 @@ export function MobileHeader({ me }: { me: Me }) {
         <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu"><Menu className="size-5" /></Button>
         <Link href="/" className="flex items-center gap-1.5 px-1">
           <AudioLines className="size-5" />
-          <span className="font-semibold tracking-[0.2em]">ECHO</span>
+          <span className="font-semibold tracking-[0.2em]">REDIAL</span>
         </Link>
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="icon" nativeButton={false} render={<Link href="/search" aria-label="Search" />}><Search className="size-5" /></Button>

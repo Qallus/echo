@@ -4,7 +4,7 @@ import { siteUrl } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
 import { AgentsView, type AgentRow, type ApprovalRow } from "./agents-view";
 
-export const metadata = { title: "Agents · Admin · Echo" };
+export const metadata = { title: "Agents · Admin · Redial" };
 
 // AI agents that run the business through the MCP (Paperclip, Hermes,
 // OpenClaw, Herdr...): their keys, what each may do, and the actions waiting

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { KeysCard, type KeyRow } from "./keys-card";
 import { ScopeSwitch } from "./scope-switch";
 
-export const metadata = { title: "AI models · Settings · Echo" };
+export const metadata = { title: "AI models · Settings · Redial" };
 
 // Customers' own AI keys: yours (Personal workspace, and Business workspaces
 // set to "each person") and, for owners/admins, each Business workspace's keys.

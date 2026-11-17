@@ -8,7 +8,7 @@ import { listRecordings, listWorkspaces } from "@/lib/data";
 import { spaceLabel } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Search · Echo" };
+export const metadata = { title: "Search · Redial" };
 
 type Hit = { recording_id: string; title: string; source: string; created_at: string; match_in: string; snippet: string };
 

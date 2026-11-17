@@ -6,7 +6,7 @@ import { AREA_LABEL, AREAS, label, OPEN_STATUSES, PRIORITIES, SOURCE_LABEL, STAT
 import { createClient } from "@/lib/supabase/server";
 import { Filters, ItemDrawer, NewItemForm, priorityClass, StatusSelect } from "./backlog-ui";
 
-export const metadata = { title: "Backlog · Echo" };
+export const metadata = { title: "Backlog · Redial" };
 
 type Search = { status?: string; area?: string; priority?: string; workspace?: string; item?: string };
 

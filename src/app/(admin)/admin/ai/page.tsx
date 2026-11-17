@@ -13,7 +13,7 @@ import { AiSettingsForm } from "./ai-settings-form";
 import { CustomProviders, type CustomProvider } from "./custom-providers";
 import { TranscriptionSettingForm } from "./transcription-setting";
 
-export const metadata = { title: "AI · Admin · Echo" };
+export const metadata = { title: "AI · Admin · Redial" };
 
 type McpRow = { tool: string; user_email: string | null; calls: number; errors: number; last_at: string };
 type Usage = {
