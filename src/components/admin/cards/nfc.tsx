@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { Check, Loader2, Nfc } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
 import { useQr } from "@/components/cards/card-preview";
 
 type NdefWriter = { write: (msg: { records: { recordType: string; data: string }[] }) => Promise<void> };
@@ -44,15 +44,13 @@ export function NfcDialog({ open, onOpenChange, name, tagUrl, writerUrl, onWritt
   const supported = useWebNfc();
   const qr = useQr(writerUrl, 480);
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Write NFC tag" description={`Program a tag so a tap opens ${name}'s card.`} className="sm:max-w-sm">
+    <ResizableDialog open={open} onOpenChange={onOpenChange} title="Write NFC tag" description={`Program a tag so a tap opens ${name}'s card.`}>
         {supported ? <NfcWriter url={tagUrl} onWritten={onWritten} /> : (
           <div className="space-y-3 text-center">
             {qr && <img src={qr} alt="QR code to open the NFC writer on your phone" className="mx-auto w-56 rounded-lg border bg-white p-2" />} {/* eslint-disable-line @next/next/no-img-element */}
             <p className="text-sm text-muted-foreground">Scan with an Android phone (Chrome, signed in to Echo), then tap <span className="font-medium text-foreground">Write NFC tag</span>.</p>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </ResizableDialog>
   );
 }

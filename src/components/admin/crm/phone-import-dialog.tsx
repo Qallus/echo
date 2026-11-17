@@ -7,7 +7,7 @@ import { ArrowLeft, BookUser, Check, FileUp, Loader2, Search, Smartphone, UserRo
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { importContacts } from "@/lib/admin/actions/crm-people";
 import {
@@ -153,9 +153,7 @@ export function PhoneImportDialog({ existing, onClose }: { existing: Contact[]; 
   );
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Import from phone" description={candidates ? "Pick who to add. People already in Echo are marked." : undefined}
-        className="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title="Import from phone" description={candidates ? "Pick who to add. People already in Echo are marked." : undefined} id="phone-import" defaultWidth={640}>
         {busy ? (
           <p className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> {busy}</p>
         ) : !candidates ? (
@@ -267,7 +265,6 @@ export function PhoneImportDialog({ existing, onClose }: { existing: Contact[]; 
           <Button variant="ghost" onClick={onClose}>{msg.ok ? "Done" : "Cancel"}</Button>
           {candidates && !busy && <Button onClick={commit} disabled={pending || selected.size === 0}>{pending ? "Importing…" : `Import ${selected.size}`}</Button>}
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

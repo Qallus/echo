@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { AlertTriangle, CalendarClock, FlaskConical, Pencil, Send, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -161,8 +161,7 @@ export function SendPanel({ templates, people, audiences, knownTags, canCustomer
       )}
 
       {confirming && preview && (
-        <Dialog open onOpenChange={(o) => !o && setConfirming(false)}>
-          <DialogContent title="Send this email?" className="max-w-md">
+        <ResizableDialog open onOpenChange={(o) => !o && setConfirming(false)} title="Send this email?">
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">{preview.firstSubject}</span></p>
               <p>To <span className="font-medium">{preview.sendable.toLocaleString()} {preview.sendable === 1 ? "person" : "people"}</span> · {mode === "audience" ? audienceLabel(audience) : preview.label}</p>
@@ -173,8 +172,7 @@ export function SendPanel({ templates, people, audiences, knownTags, canCustomer
               <Button variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
               <Button disabled={pending} onClick={send}>{pending ? "Sending…" : `Send to ${preview.sendable.toLocaleString()}`}</Button>
             </div>
-          </DialogContent>
-        </Dialog>
+          </ResizableDialog>
       )}
     </div>
   );

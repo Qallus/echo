@@ -5,7 +5,7 @@ import { CalendarClock, Check, CheckSquare, ChevronRight, Mail, MessageSquare, P
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -140,9 +140,10 @@ export function TimelinePanel({ activities, staff, target, readOnly, seenKey }: 
         </div>
       )}
 
-      <Dialog open={Boolean(openItem)} onOpenChange={(o) => !o && setOpenItem(null)}>
+      <ResponsivePanel id="timeline-item" defaultWidth={640} open={Boolean(openItem)} onOpenChange={(o) => !o && setOpenItem(null)}
+        title={openItem ? `${(CHANNEL[openItem.kind] ?? CHANNEL.note).label} · ${fmtWhen(openItem.occurred_at)}` : "Activity"}>
         {openItem && (
-          <DialogContent title={`${(CHANNEL[openItem.kind] ?? CHANNEL.note).label} · ${fmtWhen(openItem.occurred_at)}`} className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
+          <div className="space-y-4">
             <div className="grid gap-x-6 sm:grid-cols-2">
               <DetailRow label="Direction">{openItem.direction}</DetailRow>
               <DetailRow label="Status">{openItem.status ?? (openItem.kind === "task" ? (openItem.done_at ? "Done" : "Open") : null)}</DetailRow>
@@ -155,9 +156,9 @@ export function TimelinePanel({ activities, staff, target, readOnly, seenKey }: 
             {openItem.ai_summary && <div className="rounded-lg border bg-muted/30 p-3 text-sm"><p className="mb-1 text-xs font-semibold text-muted-foreground uppercase">AI summary</p>{openItem.ai_summary}</div>}
             {openItem.body && <p className="max-h-80 overflow-y-auto rounded-lg border p-3 text-sm whitespace-pre-wrap break-words">{openItem.body}</p>}
             {openItem.transcript && <div><p className="mb-1 text-xs font-semibold text-muted-foreground uppercase">Transcript</p><p className="max-h-64 overflow-y-auto rounded-lg border p-3 text-sm whitespace-pre-wrap">{openItem.transcript}</p></div>}
-          </DialogContent>
+          </div>
         )}
-      </Dialog>
+      </ResponsivePanel>
 
       {log && <LogDialog initial={log === "pick" ? null : log} target={target} onClose={() => setLog(null)} />}
     </Panel>
@@ -196,8 +197,7 @@ export function LogDialog({ initial, target, onClose }: { initial: LogKind | nul
   });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={`Add ${spec.label.toLowerCase()}`} className="max-w-lg">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title={`Add ${spec.label.toLowerCase()}`} id="timeline" defaultWidth={520}>
         <div className="flex flex-wrap gap-1">
           {(Object.keys(LOG) as LogKind[]).map((k) => (
             <Button key={k} type="button" size="sm" variant={k === kind ? "secondary" : "ghost"} onClick={() => setKind(k)}>{LOG[k].label}</Button>
@@ -225,7 +225,6 @@ export function LogDialog({ initial, target, onClose }: { initial: LogKind | nul
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={save} disabled={pending || !(body.trim() || subject.trim())}>{pending ? "Saving…" : "Save"}</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

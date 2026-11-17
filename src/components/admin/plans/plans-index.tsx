@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { CalendarClock, Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -76,8 +76,7 @@ function NewPlanDialog({ companies, staff, onClose }: { companies: { id: string;
   const [pending, start] = useTransition();
   const tpl = PLAN_TEMPLATES.find((t) => t.id === template)!;
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="New plan" className="max-h-[calc(100dvh-2rem)] max-w-3xl overflow-y-auto">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title="New plan" id="new-plan" defaultWidth={760}>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {PLAN_TEMPLATES.map((t) => (
             <button key={t.id} type="button" onClick={() => setTemplate(t.id)}
@@ -110,7 +109,6 @@ function NewPlanDialog({ companies, staff, onClose }: { companies: { id: string;
             if (r.error) setError(r.error); else router.push(`/admin/plans/${r.id}`);
           })}>{pending ? "Creating…" : "Create plan"}</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }

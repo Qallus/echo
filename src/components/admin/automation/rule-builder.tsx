@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -50,8 +50,7 @@ export function RuleBuilder({ rule, templates, people, onClose }: { rule: Rule |
   };
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={rule ? "Edit rule" : "New rule"} description="When something happens, if it matches, do these things." className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title={rule ? "Edit rule" : "New rule"} description="When something happens, if it matches, do these things." id="automation-rule" defaultWidth={640}>
         <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
             <div className="space-y-1.5"><Label htmlFor="rule-name">Name</Label><Input id="rule-name" value={r.name} maxLength={120} onChange={(e) => set({ name: e.target.value })} placeholder="Text new website leads" /></div>
@@ -140,8 +139,7 @@ export function RuleBuilder({ rule, templates, people, onClose }: { rule: Rule |
             <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save rule"}</Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }
 

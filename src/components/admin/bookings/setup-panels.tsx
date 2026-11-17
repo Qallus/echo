@@ -5,7 +5,7 @@ import { Copy, ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
@@ -65,8 +65,7 @@ function TypeDialog({ type, staff, onClose }: { type?: BookingType; staff: Staff
   const [pending, start] = useTransition();
   const set = (p: Partial<typeof f>) => setF({ ...f, ...p });
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={type ? `Edit ${type.name}` : "New appointment type"} className="max-h-[calc(100dvh-2rem)] max-w-xl overflow-y-auto">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title={type ? `Edit ${type.name}` : "New appointment type"} id="booking-type" defaultWidth={560}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5"><Label htmlFor="ty-name">Name</Label><Input id="ty-name" value={f.name} onChange={(e) => set({ name: e.target.value, ...(type ? {} : { slug: slugify(e.target.value) }) })} placeholder="Discovery call" /></div>
           <div className="space-y-1.5"><Label htmlFor="ty-slug">Link</Label><Input id="ty-slug" value={f.slug} onChange={(e) => set({ slug: slugify(e.target.value) })} placeholder="discovery-call" /></div>
@@ -89,8 +88,7 @@ function TypeDialog({ type, staff, onClose }: { type?: BookingType; staff: Staff
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button disabled={pending} onClick={() => start(async () => { const r = await saveBookingType(type?.id ?? null, { ...f, host_id: f.host_id || null }); if (r.error) setError(r.error); else onClose(); })}>{pending ? "Saving…" : "Save"}</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,8 +41,7 @@ export function ComposeDialog({ people = [], initial = [], dealId, onClose, onSe
   });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title="Send email" className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
+    <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title="Send email" id="compose-email" defaultWidth={640}>
         <div className="space-y-1.5"><Label>To</Label><PeopleField people={people} to={to} setTo={setTo} typed={typed} setTyped={setTyped} /></div>
         <div className="flex items-end gap-2">
           <div className="min-w-0 flex-1 space-y-1.5">
@@ -68,7 +67,6 @@ export function ComposeDialog({ people = [], initial = [], dealId, onClose, onSe
           <Button variant="outline" disabled={pending || (!templateId && !(subject.trim() && body.trim()))} onClick={() => start(async () => setResult(await sendTestEmail(content, target)))}><FlaskConical /> Test to me</Button>
           <Button onClick={send} disabled={pending || (!to.some((p) => p.email) && !typed.trim()) || (!templateId && !body.trim())}>{pending ? "Sending…" : "Send"}</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsivePanel>
   );
 }
