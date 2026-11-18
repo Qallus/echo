@@ -94,6 +94,7 @@ const GROUPS: { title: string; ids: string[] }[] = [
   { title: "Payments", ids: ["stripe"] },
   { title: "AI providers (Redial's own keys)", ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
   { title: "Social media", ids: ["linkedin", "meta"] },
+  { title: "Calendar sync", ids: ["google_calendar", "microsoft_calendar"] },
   { title: "Redial voice", ids: ["redial"] },
   { title: "Scheduled jobs", ids: ["cron"] },
 ];

@@ -81,6 +81,20 @@ export const SERVICES: Service[] = [
     ],
   },
   {
+    id: "google_calendar", name: "Google Calendar sync", description: "Lets people connect their Google Calendar for two-way sync. From your Google Cloud project's OAuth client (Web application). Redirect URI: https://redial.si/api/calendar/google/callback",
+    fields: [
+      { key: "GOOGLE_CLIENT_ID", label: "OAuth client ID", placeholder: "….apps.googleusercontent.com", required: true },
+      { key: "GOOGLE_CLIENT_SECRET", label: "OAuth client secret", secret: true, required: true },
+    ],
+  },
+  {
+    id: "microsoft_calendar", name: "Microsoft Outlook calendar sync", description: "Lets people connect an Outlook / Microsoft 365 calendar for two-way sync. From your Microsoft Entra app registration. Redirect URI: https://redial.si/api/calendar/microsoft/callback",
+    fields: [
+      { key: "MICROSOFT_CLIENT_ID", label: "Application (client) ID", placeholder: "00000000-0000-0000-0000-000000000000", required: true },
+      { key: "MICROSOFT_CLIENT_SECRET", label: "Client secret (Value)", secret: true, required: true },
+    ],
+  },
+  {
     id: "mobile", name: "Redial mobile app", description: "Push notifications to the Redial app go through Expo's push service. Optional: only needed if you turn on enhanced push security in your Expo account.",
     fields: [{ key: "EXPO_ACCESS_TOKEN", label: "Expo access token (push security)", secret: true }],
   },

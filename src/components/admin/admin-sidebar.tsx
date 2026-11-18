@@ -13,7 +13,7 @@ import type { Permission } from "@/lib/admin/permissions";
 export type AdminNavItem = Item;
 type Item = { href: string; label: string; icon: typeof Users; permission?: Permission; exact?: boolean };
 
-// Super Admin navigation (Channel-Cast-OS layout: Main, Operations, Account).
+// Super Admin navigation: Main, Manage, Operations, Account.
 // Sections join their group as they're built.
 export const ADMIN_NAV: { label: string; items: Item[] }[] = [
   {
@@ -25,11 +25,16 @@ export const ADMIN_NAV: { label: string; items: Item[] }[] = [
       { href: "/admin/bookings", label: "Bookings", icon: CalendarDays, permission: "crm.view" },
       { href: "/admin/contacts", label: "Contacts", icon: Contact, permission: "crm.view" },
       { href: "/admin/leads", label: "Leads", icon: Magnet, permission: "crm.view" },
-      { href: "/admin/waitlist", label: "App waitlist", icon: Smartphone, permission: "comms.view" },
+    ],
+  },
+  {
+    label: "Manage",
+    items: [
       { href: "/admin/pipeline", label: "Pipeline", icon: SquareKanban, permission: "crm.view" },
       { href: "/admin/plans", label: "Plans", icon: ListChecks, permission: "crm.view" },
       { href: "/admin/workspace", label: "Workspace", icon: NotebookPen, permission: "crm.view" },
       { href: "/admin/reports", label: "Reports", icon: FileChartColumn, permission: "analytics.view" },
+      { href: "/admin/waitlist", label: "App waitlist", icon: Smartphone, permission: "comms.view" },
     ],
   },
   {
