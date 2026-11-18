@@ -223,13 +223,13 @@ function HoursForm({ config, onChange }: FormProps) {
   );
 }
 
-type Target = { directoryId?: string; extensionId?: string; number?: string };
+type Target = { directoryId?: string; extensionId?: string; number?: string; owner?: true };
 function ConnectForm({ config, onChange }: FormProps) {
   const { directory, extensions, lines } = useBuilder();
   const targets = (config.targets as Target[]) ?? [];
   const set = (t: Target[]) => onChange({ ...config, targets: t });
   const lineLabel = (id: string) => (lines.length > 1 ? ` · ${lines.find((l) => l.id === id)?.label ?? ""}` : "");
-  const kind = (t: Target) => (t.extensionId !== undefined ? "extension" : t.directoryId !== undefined ? "directory" : "number");
+  const kind = (t: Target) => (t.owner ? "owner" : t.extensionId !== undefined ? "extension" : t.directoryId !== undefined ? "directory" : "number");
   return (
     <div className="space-y-4">
       <Field label="Who to ring">
@@ -237,11 +237,13 @@ function ConnectForm({ config, onChange }: FormProps) {
           {targets.map((t, i) => (
             <div key={i} className="space-y-2 rounded-lg border p-2.5">
               <div className="flex items-center gap-2">
-                <div className="flex-1"><Seg value={kind(t)} options={[["extension", "Extension"], ["directory", "Directory"], ["number", "Number"]]}
-                  onChange={(k) => set(targets.map((x, j) => (j === i ? (k === "extension" ? { extensionId: extensions[0]?.id ?? "" } : k === "directory" ? { directoryId: directory[0]?.id ?? "" } : { number: "" }) : x)))} /></div>
+                <div className="flex-1"><Seg value={kind(t)} options={[["owner", "My phones"], ["extension", "Extension"], ["directory", "Directory"], ["number", "Number"]]}
+                  onChange={(k) => set(targets.map((x, j) => (j === i ? (k === "owner" ? { owner: true as const } : k === "extension" ? { extensionId: extensions[0]?.id ?? "" } : k === "directory" ? { directoryId: directory[0]?.id ?? "" } : { number: "" }) : x)))} /></div>
                 <Button variant="ghost" size="icon-sm" aria-label="Remove" onClick={() => set(targets.filter((_, j) => j !== i))}><X /></Button>
               </div>
-              {kind(t) === "extension" ? (
+              {kind(t) === "owner" ? (
+                <p className="text-xs text-muted-foreground">Your cell (the line&apos;s ring-my-phone number) and your desk phones ring together. Calls are recorded and transcribed when the line records calls.</p>
+              ) : kind(t) === "extension" ? (
                 extensions.length ? (
                   <Pick label="Extension" value={t.extensionId ?? ""} onChange={(v) => set(targets.map((x, j) => (j === i ? { extensionId: v } : x)))}
                     options={extensions.map((x) => ({ value: x.id, label: `${x.ext} · ${x.name}${lineLabel(x.lineId)}` }))} />
@@ -295,6 +297,67 @@ function HangupForm({ config, onChange }: FormProps) {
   return <PromptField label="Goodbye message" optional value={config.prompt as Prompt | undefined} onChange={(p) => onChange({ ...config, prompt: p })} />;
 }
 
+const TOGGLE = "flex items-center justify-between gap-3 rounded-lg border p-3";
+const VARS_HINT = "Use {{call.from}} (the caller's number), {{call.callerName}}, {{flow.contact_name}}, {{flow.company}} and {{line.number}}.";
+
+function CrmUpdateForm({ config, onChange }: FormProps) {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">Logs the call on the caller&apos;s record in Admin → Contacts. Works for staff call trees only.</p>
+      <label className={TOGGLE}>
+        <span><span className="block text-sm font-medium">Add new callers as leads</span><span className="block text-xs text-muted-foreground">Callers who aren&apos;t in the CRM yet are added to Admin → Leads.</span></span>
+        <Switch checked={config.createLead !== false} onCheckedChange={(v) => onChange({ ...config, createLead: v })} />
+      </label>
+      <Field label="Interest" hint="Shown on the lead, e.g. Sales or Residential.">
+        <Input maxLength={200} value={String(config.interest ?? "")} onChange={(e) => onChange({ ...config, interest: e.target.value || undefined })} />
+      </Field>
+      <Field label="Note on the record" hint={VARS_HINT}>
+        <Textarea rows={3} maxLength={1000} value={String(config.note ?? "")} placeholder="Called the main line and chose Sales." onChange={(e) => onChange({ ...config, note: e.target.value })} />
+      </Field>
+      <Field label="Tags" hint="Separate with commas.">
+        <Input value={((config.tags as string[]) ?? []).join(", ")} onChange={(e) => onChange({ ...config, tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 10) })} />
+      </Field>
+    </div>
+  );
+}
+
+function MessageForm({ config, onChange }: FormProps) {
+  const sms = config.channel !== "email";
+  return (
+    <div className="space-y-4">
+      <label className={TOGGLE}>
+        <span><span className="block text-sm font-medium">Send</span><span className="block text-xs text-muted-foreground">Turn off until the number is registered for business texting (A2P 10DLC).</span></span>
+        <Switch checked={config.enabled !== false} onCheckedChange={(v) => onChange({ ...config, enabled: v })} />
+      </label>
+      <Field label="Send by"><Seg value={sms ? "sms" : "email"} options={[["sms", "Text"], ["email", "Email"]]} onChange={(v) => onChange({ ...config, channel: v })} /></Field>
+      <Field label="To" hint={sms ? "{{call.from}} texts the caller. Or a number like +14805550142." : "One or more email addresses, separated by commas."}>
+        <Input maxLength={200} value={String(config.to ?? "")} placeholder={sms ? "{{call.from}}" : "you@company.com"} onChange={(e) => onChange({ ...config, to: e.target.value })} />
+      </Field>
+      {!sms && (
+        <Field label="Subject"><Input maxLength={200} value={String(config.subject ?? "")} placeholder="Missed call from {{call.from}}" onChange={(e) => onChange({ ...config, subject: e.target.value || undefined })} /></Field>
+      )}
+      <Field label="Message" hint={VARS_HINT}>
+        <Textarea rows={4} maxLength={1600} value={String(config.body ?? "")} onChange={(e) => onChange({ ...config, body: e.target.value })} />
+      </Field>
+      {sms && <p className="text-xs text-muted-foreground">Texts come from this line&apos;s number. People who replied STOP are skipped. Email includes a link to the call.</p>}
+    </div>
+  );
+}
+
+function DirectoryForm({ config, onChange }: FormProps) {
+  return (
+    <div className="space-y-4">
+      <PromptField label="What the caller hears" value={config.prompt as Prompt | undefined} onChange={(p) => onChange({ ...config, prompt: p })} optional />
+      <p className="text-xs text-muted-foreground">The caller says a name. It&apos;s matched to your extensions and Directory contacts (first name, last name or both), then that person&apos;s phone rings.</p>
+      <Field label="Ring for">
+        <Pick label="Ring for" value={String(config.ringSeconds ?? 20)} onChange={(v) => onChange({ ...config, ringSeconds: Number(v) })}
+          options={[10, 15, 20, 25, 30, 45, 60].map((s) => ({ value: String(s), label: `${s} seconds` }))} />
+      </Field>
+    </div>
+  );
+}
+
 export const FORMS: Partial<Record<BlockType, (p: FormProps) => React.ReactNode>> = {
   say: SayForm, gather: GatherForm, split: SplitForm, hours: HoursForm, connect: ConnectForm, voicemail: VoicemailForm, hangup: HangupForm,
+  crm_update: CrmUpdateForm, message: MessageForm, directory: DirectoryForm,
 };

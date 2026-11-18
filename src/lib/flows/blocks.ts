@@ -4,7 +4,7 @@ import { BLOCKS, FLOW_SCHEMA, type BlockType, type Flow, type FlowNode } from ".
 // settings a new block starts with, and the starter flow for a new flow.
 
 export const CATEGORIES: { title: string; types: BlockType[] }[] = [
-  { title: "Call handling", types: ["say", "gather", "split", "hours", "connect", "ai", "human", "queue", "voicemail", "callback", "flow", "hangup"] },
+  { title: "Call handling", types: ["say", "gather", "split", "hours", "connect", "ai", "human", "queue", "voicemail", "callback", "directory", "flow", "hangup"] },
   { title: "Data and integrations", types: ["set", "http", "crm_lookup", "crm_update", "message"] },
 ];
 
@@ -27,6 +27,7 @@ export const DESCRIPTIONS: Record<BlockType, string> = {
   crm_lookup: "Find the caller in the CRM",
   crm_update: "Add a note or tag",
   message: "Text or email someone",
+  directory: "Callers say a name to be connected",
 };
 
 export const DEFAULT_CONFIG: Record<BlockType, Record<string, unknown>> = {
@@ -46,8 +47,9 @@ export const DEFAULT_CONFIG: Record<BlockType, Record<string, unknown>> = {
   set: { vars: [{ key: "note", value: "" }] },
   http: { method: "POST", url: "https://", headers: [], body: "" },
   crm_lookup: {},
-  crm_update: { note: "", tags: [] },
-  message: { channel: "sms", to: "", body: "" },
+  crm_update: { note: "", tags: [], createLead: true },
+  message: { channel: "sms", to: "", body: "", enabled: true },
+  directory: { prompt: { text: "Please say the name of the person you're trying to reach." }, ringSeconds: 20 },
 };
 
 // A fresh id for a new block of this type: say, say_2, say_3…

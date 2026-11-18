@@ -23,13 +23,14 @@ export const callsReady = async () => { const e = await env(); return Boolean(e.
 const auth = (e: { sid?: string; token?: string }) => `Basic ${Buffer.from(`${e.sid}:${e.token}`).toString("base64")}`;
 const api = (sid: string | undefined, path: string) => `https://api.twilio.com/2010-04-01/Accounts/${sid}${path}`;
 
-export async function twilioSms(to: string, body: string): Promise<{ ok: boolean; sid?: string; status?: string; error?: string }> {
+// `from`: send from a Redial line's own number (defaults to Redial's number).
+export async function twilioSms(to: string, body: string, from?: string): Promise<{ ok: boolean; sid?: string; status?: string; error?: string }> {
   const e = await env();
-  if (!e.sid || !e.token || !e.from) return { ok: false, error: "Texting isn't set up (Admin → Settings → Integrations → Twilio)." };
+  if (!e.sid || !e.token || !(from || e.from)) return { ok: false, error: "Texting isn't set up (Admin → Settings → Integrations → Twilio)." };
   try {
     const res = await fetch(api(e.sid, "/Messages.json"), {
       method: "POST", headers: { Authorization: auth(e), "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ To: to, From: e.from, Body: body, StatusCallback: siteUrl("/api/webhooks/twilio/sms-status") }),
+      body: new URLSearchParams({ To: to, From: (from || e.from)!, Body: body, StatusCallback: siteUrl("/api/webhooks/twilio/sms-status") }),
     });
     const json = (await res.json().catch(() => ({}))) as { sid?: string; status?: string; message?: string };
     return res.ok ? { ok: true, sid: json.sid, status: json.status } : { ok: false, error: json.message ?? `Twilio ${res.status}` };

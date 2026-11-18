@@ -2,6 +2,7 @@ import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { addCallDatesToCalendar } from "./call-calendar";
 import { customerKeys, logUsage, reportKeyFailure, resolveCandidates, type ModelChoice, type Resolved } from "@/lib/ai/providers";
 import { getAiSettings } from "@/lib/ai/settings";
 import { formatClock } from "@/lib/format";
@@ -119,6 +120,8 @@ async function save(supabase: SupabaseClient, recordingId: string, s: z.infer<ty
     dates: readDates(s.dates.map((d) => ({ ...d, allDay: !d.start }))),
   });
   if (error) throw new Error(error.message);
+  // Dates mentioned on a Redial call go onto the calendar (first summary only).
+  await addCallDatesToCalendar(supabase, recordingId, readDates(s.dates.map((d) => ({ ...d, allDay: !d.start })))).catch((e) => console.error("[summary] call calendar", e));
 
   await supabase.from("action_items").delete().eq("recording_id", recordingId);
   if (s.actionItems.length) {

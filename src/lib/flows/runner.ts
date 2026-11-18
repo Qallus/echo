@@ -3,11 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { phoneNumber, xml } from "@/lib/comms/twilio";
 import { siteUrl, toE164 } from "@/lib/notify/senders";
 import { assistantTwiml, VOICEMAIL_PROMPT } from "@/lib/redial/screen";
-import { redialUrl, voicemail } from "@/lib/redial/twiml";
+import { lineSipUris, RECORDING_NOTICE, recordAttrs, recordsCalls, redialUrl, voicemail } from "@/lib/redial/twiml";
 import type { Line } from "@/lib/redial/types";
 import { BLOCKS, flowSchema, type Flow, type FlowNode } from "./schema";
 import { emptyVars, hoursOut, matchOption, render, splitOut, type Vars } from "./eval";
 import { callWebhook } from "./http";
+import { crmLookup, crmUpdate, matchName, namesOnLine, sendFlowMessage } from "./live-blocks";
 
 // Runs a call through its line's published call tree. Twilio asks what to do
 // at each step: server-side blocks (hours, split, variables, webhooks) run
@@ -154,10 +155,26 @@ async function advance(ctx: Ctx, start: string | undefined, hops = 0): Promise<s
         nodeId = next.start;
         continue;
       }
+      case "crm_lookup": {
+        const hit = ctx.test ? null : await crmLookup(ctx.db, ctx.ownerId, vars.call.from ?? "").catch(() => null);
+        if (hit) Object.assign(vars.flow, { contact_id: hit.id, contact_name: hit.name, contact_email: hit.email, company: hit.company, client: hit.role === "client" ? "yes" : "no" });
+        vars.blocks[node.id] = { found: Boolean(hit) };
+        out = hit ? "found" : "notFound";
+        break;
+      }
+      case "crm_update": {
+        const id = ctx.test ? null : await crmUpdate(ctx.db, ctx.ownerId, vars, cfg as Parameters<typeof crmUpdate>[3], ctx.flow.name).catch((e) => { console.error("[call tree] crm update", e); return null; });
+        vars.blocks[node.id] = { contact: id, newLead: vars.flow.new_lead === "yes" };
+        out = "next";
+        break;
+      }
+      case "message": {
+        const r = ctx.test ? { ok: true, skipped: "test call" } : await sendFlowMessage(ctx.db, ctx.line, vars, cfg as Parameters<typeof sendFlowMessage>[3], ctx.run.call_id).catch((e) => ({ ok: false, error: e instanceof Error ? e.message : "failed" }));
+        vars.blocks[node.id] = r;
+        out = r.ok ? "sent" : "failed";
+        break;
+      }
       // Not available yet on calls: take the "nothing happened" output.
-      case "crm_lookup": out = "notFound"; break;
-      case "crm_update": out = "next"; break;
-      case "message": out = "failed"; break;
       case "human": out = "none"; break;
       case "queue": out = "timedOut"; break;
       default:
@@ -225,6 +242,12 @@ async function enter(ctx: Ctx, node: FlowNode): Promise<string> {
       return `<Gather ${attrs}>${await promptTwiml(ctx, cfg.prompt as Prompt)}</Gather><Redirect method="POST">${hook(run, node.id, "noinput")}</Redirect>`;
     }
     case "connect": return dialTargets(ctx, node, 0);
+    case "directory": {
+      const people = ctx.line.id ? await namesOnLine(ctx.db, ctx.line.id) : [];
+      const hints = people.map((x) => x.name).join(", ").slice(0, 900);
+      const prompt = (await promptTwiml(ctx, cfg.prompt as Prompt)) || "<Say>Please say the name of the person you're trying to reach.</Say>";
+      return `<Gather input="speech" speechTimeout="auto" action="${hook(run, node.id, "name")}" method="POST" actionOnEmptyResult="true"${hints ? ` hints="${xml(hints)}"` : ""}>${prompt}</Gather><Redirect method="POST">${hook(run, node.id, "name")}</Redirect>`;
+    }
     case "voicemail": {
       const prompt = (await promptTwiml(ctx, cfg.prompt as Prompt)) || `<Say>${xml(VOICEMAIL_PROMPT)}</Say>`;
       if (ctx.test) { await logStep(ctx, node, "recorded", { test: true }); await complete(ctx); return testVoicemail(prompt); }
@@ -255,9 +278,15 @@ async function enter(ctx: Ctx, node: FlowNode): Promise<string> {
 }
 
 // Numbers to ring for a Connect block (the owner's extensions and Directory only).
-async function resolveTargets(ctx: Ctx, targets: { directoryId?: string; extensionId?: string; number?: string }[]) {
-  const out: { number: string; seconds?: number }[] = [];
+async function resolveTargets(ctx: Ctx, targets: { directoryId?: string; extensionId?: string; number?: string; owner?: boolean }[]) {
+  const out: { number: string; seconds?: number; sip?: boolean }[] = [];
   for (const t of targets) {
+    if (t.owner) {
+      // The line owner's phones: their cell (the line's "ring my phone" number) and desk phones.
+      if (ctx.line.forward_to) out.push({ number: ctx.line.forward_to });
+      if (ctx.line.id) for (const uri of await lineSipUris(ctx.db, ctx.line.id)) out.push({ number: uri, sip: true });
+      continue;
+    }
     if (t.number) { const n = toE164(t.number); if (n) out.push({ number: n }); continue; }
     if (t.extensionId) {
       const { data: e } = await ctx.db.from("redial_extensions").select("number, ring_seconds, directory:redial_directory(number), line:redial_lines(owner_id)").eq("id", t.extensionId).maybeSingle();
@@ -276,18 +305,25 @@ async function resolveTargets(ctx: Ctx, targets: { directoryId?: string; extensi
 }
 
 async function dialTargets(ctx: Ctx, node: FlowNode, index: number, extraParams = ""): Promise<string> {
-  const cfg = node.config as { targets: { directoryId?: string; extensionId?: string; number?: string }[]; mode: string; ringSeconds: number; whisper?: string };
+  const cfg = node.config as { targets: { directoryId?: string; extensionId?: string; number?: string; owner?: boolean }[]; mode: string; ringSeconds: number; whisper?: string };
   const targets = await resolveTargets(ctx, cfg.targets ?? []);
-  const pick = cfg.mode === "all" ? targets : targets.slice(index, index + 1);
+  // "Your phones" (cell and desk phones) ring together when they're the only target.
+  const ownerOnly = cfg.targets?.length === 1 && Boolean(cfg.targets[0].owner);
+  const pick = cfg.mode === "all" || ownerOnly ? targets : targets.slice(index, index + 1);
   if (!pick.length) {
     await logStep(ctx, node, "failed", { reason: "nobody to ring" });
     return advance(ctx, node.next.failed);
   }
   const whisper = cfg.whisper ? ` url="${hook(ctx.run.id, node.id, "whisper")}"` : "";
   const seconds = pick[0].seconds ?? cfg.ringSeconds ?? 20;
-  const numbers = pick.map((t) => `<Number${whisper}>${xml(t.number)}</Number>`).join("");
+  const numbers = pick.map((t) => (t.sip ? `<Sip${whisper}>${xml(t.number)}</Sip>` : `<Number${whisper}>${xml(t.number)}</Number>`)).join("");
   await ctx.db.from("redial_calls").update({ status: "connecting" }).eq("id", ctx.run.call_id);
-  return `<Dial timeout="${seconds}" callerId="${xml(ctx.line.number)}" action="${hook(ctx.run.id, node.id, "dial", `&i=${index}${extraParams}`)}">${numbers}</Dial>`;
+  // Recorded like every call on the line (two channels), so it becomes an Echo
+  // recording with a transcript, summary and action items.
+  const record = !ctx.test && ctx.run.call_id && recordsCalls(ctx.line);
+  const notice = record && ctx.line.record_notice !== false && !ctx.run.vars.flow.noticed ? `<Say>${RECORDING_NOTICE}</Say>` : "";
+  if (notice) ctx.run.vars.flow.noticed = "yes";
+  return `${notice}<Dial timeout="${seconds}" callerId="${xml(ctx.line.number)}" action="${hook(ctx.run.id, node.id, "dial", `&i=${index}${extraParams}`)}"${record ? recordAttrs(ctx.line, ctx.run.call_id!) : ""}>${numbers}</Dial>`;
 }
 
 // What happened in the block Twilio is reporting on.
@@ -325,6 +361,22 @@ async function resume(ctx: Ctx, node: FlowNode, ev: string, p: Record<string, st
       if (tries[node.id] <= MAX_TRIES) return `${sorry}${await enter(ctx, node)}`;
       return unconnected(ctx);
     }
+    case "name": {
+      const said = (p.SpeechResult ?? "").slice(0, 200);
+      const people = ctx.line.id ? await namesOnLine(ctx.db, ctx.line.id) : [];
+      const hit = matchName(people, said);
+      vars.blocks[node.id] = { said, matched: hit?.name ?? null };
+      if (!hit) {
+        const tries = (vars.tries ??= {});
+        tries[node.id] = (tries[node.id] ?? 0) + 1;
+        await logStep(ctx, node, "retry", { said, retry: tries[node.id] });
+        if (said && tries[node.id] <= MAX_TRIES) return `<Say>Sorry, I didn't find ${xml(said)}.</Say>${await enter(ctx, node)}`;
+        return go("notFound", { said });
+      }
+      await logStep(ctx, node, "dialing", { said, name: hit.name });
+      const ghost: FlowNode = { ...node, config: { targets: [hit.target], mode: "one", ringSeconds: Number(cfg.ringSeconds) || 20 } };
+      return `<Say>Connecting you to ${xml(hit.name)}.</Say>${await dialTargets(ctx, ghost, 0)}`;
+    }
     case "dial": {
       const status = p.DialCallStatus ?? "failed";
       if (status === "completed") {
@@ -353,7 +405,7 @@ async function resume(ctx: Ctx, node: FlowNode, ev: string, p: Record<string, st
           ? `${greeting}<Record maxLength="120" playBeep="true" trim="trim-silence" recordingStatusCallback="${xml(redialUrl("recording", ctx.run.call_id!))}" recordingStatusCallbackEvent="completed"/><Hangup/>`
           : voicemail(ctx.run.call_id!, `${e?.name ?? "They"} can't take your call right now. Please leave a message after the tone.`);
       }
-      const out = status === "busy" ? "busy" : status === "no-answer" ? "noAnswer" : "failed";
+      const out = node.type === "directory" ? "noAnswer" : status === "busy" ? "busy" : status === "no-answer" ? "noAnswer" : "failed";
       return go(out, { status });
     }
     case "record": {

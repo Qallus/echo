@@ -19,7 +19,8 @@ const prompt = z.object({ audioId: uuid.optional(), text: text(1000).optional() 
   .refine((p) => p.audioId || p.text, "Add a recording or the words to say.");
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-const target = z.union([z.object({ directoryId: uuid }), z.object({ extensionId: uuid }), z.object({ number: e164 })]);
+// owner: the line owner's own phones (their cell, desk phones and the Redial app).
+const target = z.union([z.object({ directoryId: uuid }), z.object({ extensionId: uuid }), z.object({ number: e164 }), z.object({ owner: z.literal(true) })]);
 
 // Block settings, by type. `outs` lists the fixed transitions; gather, split
 // and ai add one per option, rule or intent.
@@ -103,10 +104,17 @@ export const BLOCKS = {
     }),
   },
   crm_lookup: { label: "CRM lookup", icon: "contact", caller: false, outs: ["found", "notFound"], config: z.object({}) },
-  crm_update: { label: "CRM update", icon: "user-pen", caller: false, outs: ["next"], config: z.object({ note: text(1000).default(""), tags: z.array(text(40)).max(10).default([]) }) },
+  crm_update: {
+    label: "CRM update", icon: "user-pen", caller: false, outs: ["next"],
+    config: z.object({ note: text(1000).default(""), tags: z.array(text(40)).max(10).default([]), createLead: z.boolean().default(true), interest: text(200).optional() }),
+  },
   message: {
     label: "Send SMS / email", icon: "mail", caller: false, outs: ["sent", "failed"],
-    config: z.object({ channel: z.enum(["sms", "email"]), to: text(200).min(1), body: text(1600).min(1), subject: text(200).optional() }),
+    config: z.object({ channel: z.enum(["sms", "email"]), to: text(200).min(1), body: text(1600).min(1), subject: text(200).optional(), enabled: z.boolean().default(true) }),
+  },
+  directory: {
+    label: "Dial by name", icon: "book-user", caller: true, outs: ["connected", "noAnswer", "notFound"],
+    config: z.object({ prompt: prompt.optional(), ringSeconds: z.number().int().min(5).max(60).default(20) }),
   },
 } as const;
 
