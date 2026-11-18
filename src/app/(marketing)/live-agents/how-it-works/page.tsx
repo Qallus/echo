@@ -10,7 +10,7 @@ import { getFees, listSkills } from "@/lib/live-agents/data";
 import { feeSplit, money } from "@/lib/live-agents/types";
 
 export const metadata = {
-  title: "How Redial Live Agents work · AI answers first, a person when it matters",
+  title: "How Redial Live Agents work · Answer, transfer, schedule and more, on demand",
   description: "Your Redial AI answers every call. When a caller needs a person, it hands them to a Live Agent you picked, with the details already captured. Book on demand, by the shift or monthly.",
   alternates: { canonical: "/live-agents/how-it-works" },
 };
@@ -59,9 +59,9 @@ export default async function HowItWorksPage() {
     <>
       <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-12 sm:px-6 sm:pt-24">
         <p className="text-sm font-medium text-muted-foreground">Redial Live Agents · How it works</p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">AI answers first. A real person when it matters.</h1>
+        <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">Live Agents. Answer, transfer, schedule and more, on demand.</h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          A call center you build yourself, one Live Agent at a time. Your Redial AI handles the routine calls; vetted people take the calls that need a human touch.
+          Live Agents answer, transfer and schedule calls for your business. Your Redial AI handles the routine calls; vetted people take the calls that need a human touch.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button size="lg" nativeButton={false} render={<Link href="/live-agents" />}>Browse Live Agents <ArrowRight /></Button>
