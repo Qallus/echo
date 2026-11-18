@@ -1,7 +1,5 @@
 import { cookies } from "next/headers";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ShieldOff } from "lucide-react";
 import { AdminMobileHeader } from "@/components/admin/admin-mobile-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminBottomNav } from "@/components/admin/admin-bottom-nav";
@@ -10,7 +8,6 @@ import { Softphone } from "@/components/admin/comms/softphone";
 import { TopBar } from "@/components/shell/shell";
 import { can, getStaff } from "@/lib/admin/guard";
 import { countUnreadNotifications, getMyProfile, requireUser } from "@/lib/data";
-import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Admin · Redial" };
 
@@ -20,12 +17,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const staff = await getStaff();
   if (!staff) notFound();
   if (!staff.mfaVerified) return <main className="min-h-svh bg-background">{children}</main>;
-  const [{ data: security }, user, profile, unread] = await Promise.all([
-    (await createClient()).from("platform_settings").select("value").eq("key", "admin_security").maybeSingle(),
-    requireUser(), getMyProfile(), countUnreadNotifications(),
-  ]);
+  const [user, profile, unread] = await Promise.all([requireUser(), getMyProfile(), countUnreadNotifications()]);
   const me = { id: user.id, name: profile.fullName, email: user.email ?? "", avatarUrl: profile.avatarUrl, unread };
-  const mfaOff = (security?.value as { requireMfa?: boolean } | null)?.requireMfa === false;
 
   return (
     <SidebarProvider defaultOpen={(await cookies()).get("sidebar_state")?.value !== "false"}>
@@ -33,12 +26,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <SidebarInset className="min-w-0 overflow-x-clip">
         <AdminMobileHeader permissions={staff.permissions} />
         <TopBar me={me} mode="admin" canAdmin search={{ permissions: staff.permissions }} />
-        {mfaOff && (
-          <p className="flex items-center gap-2 border-b bg-amber-500/10 px-4 py-2 text-xs text-amber-800 sm:px-6 dark:text-amber-200">
-            <ShieldOff className="size-3.5 shrink-0" /> Two-step sign-in is off for staff.
-            <Link href="/admin/settings" className="font-medium underline underline-offset-2">Turn it back on before launch</Link>
-          </p>
-        )}
         {/* Phones: leave room for the fixed bottom bar. */}
         <main className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
         <AdminBottomNav permissions={staff.permissions} />

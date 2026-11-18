@@ -93,10 +93,10 @@ export function ModeBadge({ mode, canAdmin, className, compact = false }: { mode
 export function TopBar({ me, mode, canAdmin, search }: { me: ShellUser; mode: Mode; canAdmin: boolean; search: Omit<DashboardSearchProps, "mode"> }) {
   return (
     <div className="hidden items-center justify-end gap-1 px-4 pt-3 sm:px-6 md:flex">
-      <StatsToggle className="mr-1" />
       <DashboardSearch {...search} mode={mode} hotkeys />
       <ThemeToggle />
       <NotificationBell userId={me.id} initialUnread={me.unread} />
+      <StatsToggle className="ml-1" />
       <ModeBadge mode={mode} canAdmin={canAdmin} className="ml-2" />
     </div>
   );

@@ -25,6 +25,7 @@ export function MfaSwitch({ initial, readOnly }: { initial: boolean; readOnly: b
             start(async () => { const res = await setRequireMfa(next); setMsg(res); if (res.error) setOn(!next); });
           }} />
       </div>
+      {!on && <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">Two-step sign-in is off for staff. Turn it back on before launch.</p>}
       {readOnly && <p className="text-xs text-muted-foreground">Only owners can change this.</p>}
       {(msg.ok || msg.error) && <p className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.error ?? msg.ok}</p>}
     </div>

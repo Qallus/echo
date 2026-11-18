@@ -42,9 +42,9 @@ export function StatsToggle({ className }: { className?: string }) {
   return (
     <button type="button" onClick={() => setHidden(!hidden)} aria-pressed={!hidden}
       title={hidden ? "Show the stat cards" : "Hide the stat cards"}
-      className={cn("inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground", className)}>
-      {hidden ? <EyeOff className="size-3.5" /> : <ChartNoAxesColumn className="size-3.5" />}
-      <span className="hidden sm:inline">{hidden ? "Show stats" : "Hide stats"}</span>
+      className={cn("inline-flex h-8 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium text-muted-foreground hover:text-foreground", hidden && "opacity-70", className)}>
+      <span className="hidden sm:inline">Stats</span>
+      {hidden ? <EyeOff className="size-4" /> : <ChartNoAxesColumn className="size-4" />}
     </button>
   );
 }
