@@ -16,7 +16,7 @@ import { contactName } from "@/lib/crm/types";
 
 export const metadata = { title: "Communications · Admin · Redial" };
 
-const TABS = ["inbox", "texts", "calls", "email", "notifications"] as const;
+const TABS = ["calls", "texts", "inbox", "email", "notifications"] as const;
 
 // The inbox (contact form and inbound email), texts and calls on Echo's
 // number, email (templates, automations, sending, history) and the
@@ -34,7 +34,7 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
   const [canText, canCall, number, cronSecret, phone] = await Promise.all([textsReady(), callsReady(), phoneNumber(), secret("CRON_SECRET"), phoneCenterData()]);
   const phonePeople = contacts.map((c) => ({ id: c.id, name: contactName(c), phone: c.phone }));
   const unreadTexts = texts.filter((t) => t.direction === "inbound" && !t.read_at).length;
-  const initial = TABS.includes(tab as (typeof TABS)[number]) ? tab! : "inbox";
+  const initial = TABS.includes(tab as (typeof TABS)[number]) ? tab! : "calls";
   const readOnly = !can(staff, "comms.manage");
   const unread = inbox.filter((m) => m.status === "new").length;
 
@@ -42,9 +42,9 @@ export default async function CommunicationsPage({ searchParams }: { searchParam
     <AdminPage title="Communications" description="Your inbox, texts and calls, email and automations, and every notification Redial delivers.">
       <Tabs defaultValue={initial}>
         <TabsList variant="line">
-          <TabsTrigger value="inbox">Inbox{unread > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{unread}</span>}</TabsTrigger>
-          <TabsTrigger value="texts">Texts{unreadTexts > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{unreadTexts}</span>}</TabsTrigger>
           <TabsTrigger value="calls">Calls</TabsTrigger>
+          <TabsTrigger value="texts">Texts (SMS){unreadTexts > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{unreadTexts}</span>}</TabsTrigger>
+          <TabsTrigger value="inbox">Inbox{unread > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{unread}</span>}</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           {showNotifications && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
         </TabsList>

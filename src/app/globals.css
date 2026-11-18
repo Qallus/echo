@@ -235,7 +235,9 @@
   [data-slot="sidebar"], [data-slot="sidebar-gap"], header.sticky, nav[aria-label="App"] { display: none !important; }
 }
 
-/* Stat cards switched off with the "Hide stats" switch (components/shell/stats-toggle.tsx).
-   A row that holds only stat cards collapses too. */
+/* Stat cards switched off with the Stats switch (components/shell/stats-toggle.tsx),
+   page by page. A row that holds only stat cards collapses too. No nested
+   :has() here: browsers reject it, and the minifier merges these two rules,
+   so one bad selector would drop both. */
 html[data-stats="hidden"] .stat-card { display: none !important; }
-html[data-stats="hidden"] .stat-row:not(:has(> :not(.stat-card):not(:has(> .stat-card)))) { display: none !important; }
+html[data-stats="hidden"] .stat-row:not(:has(> :not(.stat-card))) { display: none !important; }

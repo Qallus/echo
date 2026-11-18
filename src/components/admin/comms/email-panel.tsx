@@ -1,21 +1,22 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Bot, Copy, Mail, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
+import { Copy, Mail, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { deleteAudience, deleteTemplate, resubscribe, saveTemplate } from "@/lib/admin/actions/comms";
 import { audienceLabel } from "@/lib/comms/audience";
-import { CATEGORIES, STATUSES } from "@/lib/comms/blocks";
+import { STATUSES } from "@/lib/comms/blocks";
 import type { Automation, Campaign, SavedAudience, Scheduled, Send, Template, Unsubscribe } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
+import { CollectionView } from "@/components/collection/collection-view";
 import { AutomationsPanel } from "./automations-panel";
 import { EmailEditor } from "./email/email-editor";
 import { History } from "./email/history";
 import { ScheduledList } from "./scheduled-list";
 import { type Person } from "./email/people-field";
-import { Pick, cap, optionsOf } from "./email/pick";
+import { cap } from "./email/pick";
 import { SendPanel } from "./email/send-panel";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -88,59 +89,65 @@ function TemplateList({ templates, automations, readOnly, pending, onEdit, onDup
   templates: Template[]; automations: Automation[]; readOnly: boolean; pending: boolean;
   onEdit: (t: Template) => void; onDuplicate: (t: Template) => void; onDelete: (t: Template) => void;
 }) {
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<string>("current");
-  const [category, setCategory] = useState("all");
-  const shown = templates.filter((t) => (status === "current" ? t.status !== "archived" : status === "all" || t.status === status)
-    && (category === "all" || t.category === category) && `${t.name} ${t.subject}`.toLowerCase().includes(q.trim().toLowerCase()));
   const uses = useMemo(() => {
     const m = new Map<string, Automation[]>();
     for (const a of automations) m.set(a.template_id, [...(m.get(a.template_id) ?? []), a]);
     return m;
   }, [automations]);
+  const status = (t: Template) => <Badge variant="outline" className={cn("capitalize", STATUS_TONE[t.status])}>{t.status}</Badge>;
+  const icon = () => <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><Mail className="size-4" /></span>;
 
   if (!templates.length) return <EmptyState message="No templates yet. Build one with New template, or ask Claude to write one." />;
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-64 max-w-full">
-          <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates" aria-label="Search templates" className="h-8 w-full rounded-lg border bg-transparent pr-2 pl-8 text-sm outline-none focus-visible:border-ring" />
-        </div>
-        <Pick label="Status" className="w-36" value={status} onChange={setStatus} options={[{ value: "current", label: "Draft & active" }, ...optionsOf(STATUSES), { value: "all", label: "All" }]} />
-        <Pick label="Category" className="w-40" value={category} onChange={setCategory} options={[{ value: "all", label: "All categories" }, ...optionsOf(CATEGORIES)]} />
-      </div>
-      {shown.length === 0 ? <EmptyState message="No templates match." /> : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map((t) => {
-            const used = uses.get(t.id) ?? [];
-            return (
-              <div key={t.id} className="flex flex-col gap-2 rounded-xl border bg-card p-4">
-                <div className="flex items-start gap-2">
-                  <Mail className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1"><p className="truncate font-medium">{t.name}</p><p className="truncate text-xs text-muted-foreground">{t.subject || "No subject"}</p></div>
-                  <Badge variant="outline" className={cn("capitalize", STATUS_TONE[t.status])}>{t.status}</Badge>
-                </div>
-                <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
-                  <span className="rounded border px-1.5 py-px">{cap(t.category)}</span>
-                  <span className="rounded border px-1.5 py-px">{t.mode === "html" ? "HTML" : "Blocks"}</span>
-                  {t.created_via === "claude" && <span className="flex items-center gap-1 rounded border px-1.5 py-px"><Bot className="size-3" />By Claude</span>}
-                  {used.length > 0 && <span className="rounded border px-1.5 py-px" title={used.map((a) => `${a.name}${a.enabled ? "" : " (off)"}`).join(", ")}>Used by {used.length} automation{used.length > 1 ? "s" : ""}</span>}
-                </div>
-                <p className="text-xs text-muted-foreground">{t.sends} sent{t.last_sent_at ? ` · last ${when(t.last_sent_at)}` : ""}</p>
-                {!readOnly && (
-                  <div className="mt-auto flex gap-1 pt-1">
-                    <Button size="sm" variant="outline" onClick={() => onEdit(t)}><Pencil /> Edit</Button>
-                    <Button size="sm" variant="ghost" disabled={pending} onClick={() => onDuplicate(t)} title="Copies it as a draft"><Copy /> Duplicate</Button>
-                    <Button size="icon-sm" variant="ghost" aria-label={`Delete ${t.name}`} className="ml-auto" disabled={pending} onClick={() => onDelete(t)}><Trash2 /></Button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+    <CollectionView<Template>
+      items={templates} getId={(t) => t.id} title={(t) => t.name} subtitle={(t) => t.subject || "No subject"} media={icon} badge={status}
+      noun={["template", "templates"]} storageKey="admin-email-templates" defaultView="cards"
+      searchText={(t) => `${t.name} ${t.subject} ${t.category} ${t.status}`}
+      meta={(t) => <>{cap(t.category)} · {t.mode === "html" ? "HTML" : "Blocks"} · {t.sends} sent{t.last_sent_at ? ` · last ${when(t.last_sent_at)}` : ""}</>}
+      filters={[
+        { id: "current", label: "Draft & active", test: (t) => t.status !== "archived" },
+        ...STATUSES.map((st) => ({ id: st, label: cap(st), test: (t: Template) => t.status === st })),
+        { id: "all", label: "All", test: () => true },
+      ]}
+      date={(t) => t.last_sent_at ?? t.updated_at}
+      columns={[
+        { id: "name", label: "Name", sort: (t) => t.name.toLowerCase(), cell: (t) => <div className="flex items-center gap-2.5">{icon()}<div className="min-w-0"><p className="truncate font-medium">{t.name}</p><p className="truncate text-xs text-muted-foreground">{t.subject || "No subject"}</p></div></div> },
+        { id: "status", label: "Status", sort: (t) => t.status, cell: status },
+        { id: "category", label: "Category", sort: (t) => t.category, cell: (t) => <span className="text-muted-foreground">{cap(t.category)}</span> },
+        { id: "mode", label: "Type", sort: (t) => t.mode, cell: (t) => <span className="text-muted-foreground">{t.mode === "html" ? "HTML" : "Blocks"}</span> },
+        { id: "uses", label: "Automations", sort: (t) => (uses.get(t.id) ?? []).length, cell: (t) => <span className="text-muted-foreground">{(uses.get(t.id) ?? []).length || "—"}</span> },
+        { id: "sends", label: "Sent", sort: (t) => t.sends, cell: (t) => <span className="text-muted-foreground">{t.sends}</span> },
+        { id: "updated", label: "Updated", sort: (t) => t.updated_at, cell: (t) => <span className="text-muted-foreground">{when(t.updated_at)}</span> },
+      ]}
+      actions={readOnly ? [] : [
+        { label: "Edit", icon: Pencil, single: true, run: ([t]) => onEdit(t) },
+        { label: "Duplicate", icon: Copy, single: true, run: ([t]) => onDuplicate(t) },
+        { label: "Delete", icon: Trash2, destructive: true, run: (rows) => rows.forEach(onDelete) },
+      ]}
+      previewActions={(t, close) => !readOnly && (
+        <>
+          <Button size="sm" variant="outline" onClick={() => { close(); onEdit(t); }}><Pencil /> Edit</Button>
+          <Button size="sm" variant="ghost" disabled={pending} onClick={() => onDuplicate(t)}><Copy /> Duplicate</Button>
+        </>
       )}
-    </div>
+      preview={(t) => {
+        const used = uses.get(t.id) ?? [];
+        return (
+          <div className="space-y-4">
+            <dl className="divide-y rounded-xl border px-3 text-sm">
+              {[["Subject", t.subject || "No subject"], ["Preview text", t.preheader || "—"], ["Category", cap(t.category)], ["Type", t.mode === "html" ? "HTML" : "Blocks"],
+                ["Sent", `${t.sends}${t.last_sent_at ? ` · last ${when(t.last_sent_at)}` : ""}`], ["Automations", used.length ? used.map((a) => `${a.name}${a.enabled ? "" : " (off)"}`).join(", ") : "None"],
+                ["Made by", t.created_via === "claude" ? "Claude" : "The team"], ["Updated", when(t.updated_at)]].map(([k, v]) => (
+                <div key={k} className="grid grid-cols-[7rem_1fr] gap-2 py-1.5"><dt className="text-muted-foreground">{k}</dt><dd className="min-w-0 break-words">{v}</dd></div>
+              ))}
+            </dl>
+            {t.html ? (
+              <iframe title={`Preview of ${t.name}`} srcDoc={t.html} sandbox="" className="h-[60dvh] w-full rounded-xl border bg-white" />
+            ) : <p className="text-sm text-muted-foreground">Nothing to preview yet. Open it in the editor to build it.</p>}
+          </div>
+        );
+      }}
+    />
   );
 }
 
