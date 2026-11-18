@@ -8,6 +8,7 @@ import type { Line } from "@/lib/redial/types";
 import { BLOCKS, flowSchema, type Flow, type FlowNode } from "./schema";
 import { emptyVars, hoursOut, matchOption, render, splitOut, type Vars } from "./eval";
 import { callWebhook } from "./http";
+import { sayVoice, voiceKey } from "./voices";
 import { crmLookup, crmUpdate, matchName, namesOnLine, sendFlowMessage } from "./live-blocks";
 
 // Runs a call through its line's published call tree. Twilio asks what to do
@@ -108,7 +109,9 @@ export async function stepFlowRun(db: SupabaseClient, runId: string, nodeId: str
 
 async function finish(ctx: Ctx, inner: string): Promise<string> {
   await ctx.db.from("call_flow_runs").update({ vars: ctx.run.vars, current_node: ctx.run.current_node }).eq("id", ctx.run.id);
-  return inner;
+  // Everything said live uses the voice closest to the call tree's AI voice.
+  const live = sayVoice(ctx.flow.settings.voice);
+  return live ? inner.replace(/<Say(?![^>]*\bvoice=)/g, `<Say voice="${live}"`) : inner;
 }
 
 async function logStep(ctx: Ctx, node: FlowNode, transition: string | null, data: Record<string, unknown> = {}) {
@@ -204,13 +207,17 @@ async function unconnected(ctx: Ctx): Promise<string> {
   return assistant(ctx);
 }
 
-type Prompt = { audioId?: string; text?: string } | undefined;
+type Prompt = { audioId?: string; text?: string; ai?: { audioId: string; text: string; voice: string } } | undefined;
 
 // <Play> a Studio clip (only the call tree owner's) or <Say> the text.
 async function promptTwiml(ctx: Ctx, prompt: Prompt, loop = 1): Promise<string> {
   if (!prompt) return "";
-  if (prompt.audioId) {
-    const { data: clip } = await ctx.db.from("studio_audio").select("storage_path, owner_id").eq("id", prompt.audioId).maybeSingle();
+  // The clip made in the call tree's AI voice, while the words and voice still match.
+  const v = ctx.flow.settings.voice;
+  const aiClip = !prompt.audioId && prompt.ai && v && prompt.ai.voice === voiceKey(v) && prompt.ai.text === prompt.text?.trim() ? prompt.ai.audioId : null;
+  const clipId = prompt.audioId ?? aiClip;
+  if (clipId) {
+    const { data: clip } = await ctx.db.from("studio_audio").select("storage_path, owner_id").eq("id", clipId).maybeSingle();
     if (clip && clip.owner_id === ctx.ownerId) {
       const { data } = await ctx.db.storage.from(BUCKET).createSignedUrl(clip.storage_path, 3600);
       if (data?.signedUrl) return `<Play loop="${loop}">${xml(data.signedUrl)}</Play>`;
@@ -243,7 +250,7 @@ async function enter(ctx: Ctx, node: FlowNode): Promise<string> {
     }
     case "connect": return dialTargets(ctx, node, 0);
     case "directory": {
-      const people = ctx.line.id ? await namesOnLine(ctx.db, ctx.line.id) : [];
+      const people = ctx.line.id ? await namesOnLine(ctx.db, ctx.line) : [];
       const hints = people.map((x) => x.name).join(", ").slice(0, 900);
       const prompt = (await promptTwiml(ctx, cfg.prompt as Prompt)) || "<Say>Please say the name of the person you're trying to reach.</Say>";
       return `<Gather input="speech" speechTimeout="auto" action="${hook(run, node.id, "name")}" method="POST" actionOnEmptyResult="true"${hints ? ` hints="${xml(hints)}"` : ""}>${prompt}</Gather><Redirect method="POST">${hook(run, node.id, "name")}</Redirect>`;
@@ -363,7 +370,7 @@ async function resume(ctx: Ctx, node: FlowNode, ev: string, p: Record<string, st
     }
     case "name": {
       const said = (p.SpeechResult ?? "").slice(0, 200);
-      const people = ctx.line.id ? await namesOnLine(ctx.db, ctx.line.id) : [];
+      const people = ctx.line.id ? await namesOnLine(ctx.db, ctx.line) : [];
       const hit = matchName(people, said);
       vars.blocks[node.id] = { said, matched: hit?.name ?? null };
       if (!hit) {

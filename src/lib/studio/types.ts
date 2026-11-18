@@ -26,8 +26,18 @@ export type StudioAudio = {
   id: string; name: string; description: string | null; kind: StudioKind; status: StudioStatus; source: StudioSource;
   ai_provider: string | null; ai_voice: string | null; mime: string; size_bytes: number; duration_seconds: number | null;
   image: string | null; archived_at: string | null; created_at: string;
+  extension: string | null; // the extension or person it was made for, e.g. "101" or "Sales"
+  used_in: string[]; // call trees and extensions that play it (worked out on load)
   url: string | null; // short-lived signed URL for playback and download
 };
+
+export const AI_PROVIDERS = [{ id: "gemini", label: "Gemini" }, { id: "openai", label: "OpenAI" }, { id: "xai", label: "xAI" }] as const;
+// "Despina · Gemini", "Jeremy (recorded)", or null.
+export function voiceLabel(a: Pick<StudioAudio, "ai_voice" | "ai_provider" | "source">): string | null {
+  if (!a.ai_voice) return null;
+  const provider = AI_PROVIDERS.find((p) => p.id === a.ai_provider)?.label;
+  return provider ? `${a.ai_voice} · ${provider}` : a.ai_voice;
+}
 
 export const kindLabel = (k: string) => STUDIO_KINDS.find((x) => x.id === k)?.label ?? "Other";
 export const isKind = (k: unknown): k is StudioKind => STUDIO_KINDS.some((x) => x.id === k);

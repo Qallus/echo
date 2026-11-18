@@ -4,7 +4,11 @@
   "settings": {
     "timezone": "America/Phoenix",
     "recording": "off",
-    "onUnconnected": "ai_or_voicemail"
+    "onUnconnected": "ai_or_voicemail",
+    "voice": {
+      "provider": "gemini",
+      "id": "Despina"
+    }
   },
   "start": "incoming",
   "nodes": [
@@ -66,60 +70,34 @@
           "text": "If you know your party's extension, please dial it at any time. For sales, press 1. For support, press 2. To speak to our business team, press 3. To speak to our residential team, press 4. For a dial by name directory, press 5. To speak to an operator, press 0."
         },
         "input": [
-          "dtmf",
-          "speech"
+          "dtmf"
         ],
         "timeout": 6,
         "extensions": true,
         "options": [
           {
             "out": "sales",
-            "key": "1",
-            "speech": [
-              "sales"
-            ]
+            "key": "1"
           },
           {
             "out": "support",
-            "key": "2",
-            "speech": [
-              "support",
-              "help"
-            ]
+            "key": "2"
           },
           {
             "out": "business",
-            "key": "3",
-            "speech": [
-              "business",
-              "business team"
-            ]
+            "key": "3"
           },
           {
             "out": "residential",
-            "key": "4",
-            "speech": [
-              "residential",
-              "home",
-              "home phone"
-            ]
+            "key": "4"
           },
           {
             "out": "directory",
-            "key": "5",
-            "speech": [
-              "directory",
-              "dial by name"
-            ]
+            "key": "5"
           },
           {
             "out": "operator",
-            "key": "0",
-            "speech": [
-              "operator",
-              "representative",
-              "a person"
-            ]
+            "key": "0"
           }
         ]
       },

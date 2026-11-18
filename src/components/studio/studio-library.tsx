@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Archive, ArchiveRestore, CalendarDays, ChevronLeft, ChevronRight, Download, ImagePlus, LayoutGrid, List, MoreVertical, Pencil,
-  SquareKanban, Table as TableIcon, Trash2, Upload, X,
+  Sparkles, SquareKanban, Table as TableIcon, Trash2, Upload, X,
 } from "lucide-react";
 import { AudioPlayer } from "@/components/studio/audio-player";
 import { CoverThumb } from "@/components/studio/cover-thumb";
@@ -19,7 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { archiveStudioAudio, deleteStudioAudio, updateStudioAudio } from "@/lib/studio/actions";
 import { imageToDataUrl } from "@/lib/studio/image";
-import { STATUS_META, STUDIO_KINDS, STUDIO_STATUSES, kindLabel, type StudioAudio, type StudioKind, type StudioStatus } from "@/lib/studio/types";
+import { AI_PROVIDERS, STATUS_META, STUDIO_KINDS, STUDIO_STATUSES, kindLabel, voiceLabel, type StudioAudio, type StudioKind, type StudioStatus } from "@/lib/studio/types";
+import { GEMINI_VOICES } from "@/lib/flows/voices";
 import { cn } from "@/lib/utils";
 
 // The Library tab (adapted from Channel Cast's audio library): every
@@ -124,6 +125,13 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
       </DropdownMenuContent>
     </DropdownMenu>
   );
+  const details = (a: StudioAudio) => (
+    <>
+      {voiceLabel(a) && <Badge variant="outline" className="gap-1"><Sparkles className="size-3" />{voiceLabel(a)}</Badge>}
+      {a.extension && <Badge variant="outline">Ext {a.extension}</Badge>}
+      {a.used_in.length > 0 && <Badge variant="outline" title={a.used_in.join(", ")}>In {a.used_in.length === 1 ? a.used_in[0] : `${a.used_in.length} places`}</Badge>}
+    </>
+  );
   const check = (a: StudioAudio) => <Checkbox checked={selected.has(a.id)} onCheckedChange={(v) => toggle(a.id, Boolean(v))} aria-label={`Select ${a.name}`} />;
   const player = (a: StudioAudio, compact?: boolean) => (a.url ? <AudioPlayer src={a.url} downloadName={`${a.name}.${ext(a).toLowerCase()}`} compact={compact} /> : <p className="text-xs text-muted-foreground">File unavailable.</p>);
 
@@ -182,7 +190,7 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
                 <span className="pt-2.5">{check(a)}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate pt-1.5 font-medium" title={a.name}>{a.name}</p>
-                  <div className="mt-1 flex flex-wrap gap-1.5"><StatusBadge status={a.status} /><Badge variant="outline">{kindLabel(a.kind)}</Badge></div>
+                  <div className="mt-1 flex flex-wrap gap-1.5"><StatusBadge status={a.status} /><Badge variant="outline">{kindLabel(a.kind)}</Badge>{details(a)}</div>
                 </div>
                 <CoverThumb image={a.image} size="lg" />
                 {menu(a)}
@@ -200,7 +208,8 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
               <CoverThumb image={a.image} />
               <div className="w-48 min-w-0 shrink-0">
                 <p className="truncate text-sm font-medium" title={a.name}>{a.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{STATUS_META[a.status].label} · {kindLabel(a.kind)} · {ext(a)} · {mb(a.size_bytes)}</p>
+                <p className="truncate text-xs text-muted-foreground">{[STATUS_META[a.status].label, kindLabel(a.kind), voiceLabel(a), a.extension && `Ext ${a.extension}`, ext(a), mb(a.size_bytes)].filter(Boolean).join(" · ")}</p>
+                {a.used_in.length > 0 && <p className="truncate text-xs text-muted-foreground">Used in {a.used_in.join(", ")}</p>}
               </div>
               <div className="order-last w-full sm:order-none sm:w-auto sm:flex-1">{player(a)}</div>
               {menu(a)}
@@ -211,7 +220,7 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
         <div className="overflow-x-auto rounded-xl border">
           <Table className="min-w-[44rem]">
             <TableHeader>
-              <TableRow><TableHead className="w-10" /><TableHead>Name</TableHead><TableHead>For</TableHead><TableHead>Status</TableHead><TableHead>Length</TableHead><TableHead>Size</TableHead><TableHead>Created</TableHead><TableHead className="w-10" /></TableRow>
+              <TableRow><TableHead className="w-10" /><TableHead>Name</TableHead><TableHead>For</TableHead><TableHead>Voice</TableHead><TableHead>Extension</TableHead><TableHead>Used in</TableHead><TableHead>Status</TableHead><TableHead>Length</TableHead><TableHead>Size</TableHead><TableHead>Created</TableHead><TableHead className="w-10" /></TableRow>
             </TableHeader>
             <TableBody>
               {shown.map((a) => (
@@ -219,6 +228,9 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
                   <TableCell>{check(a)}</TableCell>
                   <TableCell className="max-w-64"><span className="flex items-center gap-2"><CoverThumb image={a.image} size="sm" /><span className="truncate font-medium">{a.name}</span></span></TableCell>
                   <TableCell>{kindLabel(a.kind)}</TableCell>
+                  <TableCell className="whitespace-nowrap">{voiceLabel(a) ?? "—"}</TableCell>
+                  <TableCell>{a.extension ?? "—"}</TableCell>
+                  <TableCell className="max-w-48 truncate" title={a.used_in.join(", ")}>{a.used_in.join(", ") || "—"}</TableCell>
                   <TableCell><StatusBadge status={a.status} /></TableCell>
                   <TableCell className="tabular-nums">{secs(a.duration_seconds) || "—"}</TableCell>
                   <TableCell className="tabular-nums">{mb(a.size_bytes)}</TableCell>
@@ -239,7 +251,7 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
                 {col.map((a) => (
                   <div key={a.id} className={cn("space-y-2 rounded-xl border bg-card p-3", selected.has(a.id) && "border-primary ring-1 ring-primary")}>
                     <div className="flex items-center gap-2">{check(a)}<p className="min-w-0 flex-1 truncate text-sm font-medium" title={a.name}>{a.name}</p>{menu(a)}</div>
-                    <p className="text-xs text-muted-foreground">{kindLabel(a.kind)} · {secs(a.duration_seconds) || ext(a)}</p>
+                    <p className="text-xs text-muted-foreground">{[kindLabel(a.kind), voiceLabel(a), a.extension && `Ext ${a.extension}`, secs(a.duration_seconds) || ext(a)].filter(Boolean).join(" · ")}</p>
                     {player(a, true)}
                   </div>
                 ))}
@@ -294,7 +306,7 @@ function CalendarView({ items, onPick }: { items: StudioAudio[]; onPick: (a: Stu
             <div key={i} className={cn("min-h-24 space-y-1 border-r border-b p-1.5 text-xs [&:nth-child(7n)]:border-r-0", (n < 1 || n > days) && "bg-muted/30")}>
               {n >= 1 && n <= days && <span className={cn("inline-flex size-6 items-center justify-center rounded-full", key(date) === today && "bg-primary text-primary-foreground")}>{n}</span>}
               {list.slice(0, 3).map((a) => (
-                <button key={a.id} type="button" onClick={() => onPick(a)} className="block w-full truncate rounded bg-muted px-1.5 py-0.5 text-left hover:bg-muted/70" title={a.name}>{a.name}</button>
+                <button key={a.id} type="button" onClick={() => onPick(a)} className="block w-full truncate rounded bg-muted px-1.5 py-0.5 text-left hover:bg-muted/70" title={[a.name, voiceLabel(a)].filter(Boolean).join(" · ")}>{a.name}{a.ai_voice ? <span className="text-muted-foreground"> · {a.ai_voice}</span> : null}</button>
               ))}
               {list.length > 3 && <span className="block px-1 text-muted-foreground">+{list.length - 3} more</span>}
             </div>
@@ -321,6 +333,9 @@ function EditForm({ item, onSaved }: { item: StudioAudio; onSaved: () => void })
   const [kind, setKind] = useState<StudioKind>(item.kind);
   const [status, setStatus] = useState<StudioStatus>(item.status);
   const [description, setDescription] = useState(item.description ?? "");
+  const [voice, setVoice] = useState(item.ai_voice ?? "");
+  const [provider, setProvider] = useState(item.ai_provider ?? "");
+  const [extension, setExtension] = useState(item.extension ?? "");
   const [image, setImage] = useState<string | null>(item.image);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -329,7 +344,7 @@ function EditForm({ item, onSaved }: { item: StudioAudio; onSaved: () => void })
     <>
       <SheetHeader>
         <SheetTitle>Edit recording</SheetTitle>
-        <SheetDescription>{item.source === "ai" && item.ai_provider ? `AI voice · ${item.ai_provider} · ${item.ai_voice ?? ""}` : meta(item)}</SheetDescription>
+        <SheetDescription>{[voiceLabel(item), meta(item)].filter(Boolean).join(" · ")}{item.used_in.length > 0 && <><br />Used in {item.used_in.join(", ")}</>}</SheetDescription>
       </SheetHeader>
       <div className="space-y-4 px-4">
         {item.url && <AudioPlayer src={item.url} downloadName={item.name} />}
@@ -348,12 +363,25 @@ function EditForm({ item, onSaved }: { item: StudioAudio; onSaved: () => void })
             <Pick label="Status" value={status} onChange={(v) => setStatus(v as StudioStatus)} options={STUDIO_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }))} />
           </label>
         </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1.5"><span className="text-sm font-medium">Voice</span>
+            <Input list="studio-voices" value={voice} maxLength={80} placeholder="Despina, or who recorded it" onChange={(e) => { setVoice(e.target.value); if (!provider && (GEMINI_VOICES as readonly string[]).includes(e.target.value)) setProvider("gemini"); }} />
+            <datalist id="studio-voices">{GEMINI_VOICES.map((v) => <option key={v} value={v} />)}</datalist>
+          </label>
+          <label className="block space-y-1.5"><span className="text-sm font-medium">AI voice from</span>
+            <Pick label="AI voice from" value={provider} onChange={setProvider} options={[{ value: "", label: "Not an AI voice" }, ...AI_PROVIDERS.map((p) => ({ value: p.id, label: p.label }))]} />
+          </label>
+        </div>
+        <label className="block space-y-1.5"><span className="text-sm font-medium">Extension</span>
+          <Input value={extension} maxLength={40} placeholder="101, or Sales" onChange={(e) => setExtension(e.target.value)} />
+          <span className="block text-xs text-muted-foreground">The extension or person this greeting is for, so it&apos;s easy to find later.</span>
+        </label>
         <label className="block space-y-1.5"><span className="text-sm font-medium">Description</span><Textarea rows={4} maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} /></label>
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
       <SheetFooter>
         <Button disabled={pending} onClick={() => start(async () => {
-          const r = await updateStudioAudio(item.id, { name, kind, status, description, image });
+          const r = await updateStudioAudio(item.id, { name, kind, status, description, image, voice, provider, extension });
           if (r.error) setError(r.error); else onSaved();
         })}>{pending ? "Saving…" : "Save"}</Button>
       </SheetFooter>

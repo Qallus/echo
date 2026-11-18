@@ -1,5 +1,6 @@
 "use client";
 
+import { GEMINI_VOICES } from "@/lib/flows/voices";
 import { useState } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { BlockIcon } from "@/components/flows/block-icon";
@@ -63,6 +64,11 @@ function FlowSettings({ flow, issues, onChange, onSelect }: { flow: Flow; issues
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-medium">Time zone</span>
         <Input value={flow.settings.timezone} maxLength={60} onChange={(e) => set({ timezone: e.target.value })} placeholder="America/Phoenix" />
+      </label>
+      <label className="block space-y-1.5"><span className="text-sm font-medium">AI voice</span>
+        <Pick label="AI voice" value={flow.settings.voice?.id ?? ""} onChange={(v) => set({ voice: v ? { provider: "gemini", id: v } : undefined })}
+          options={[{ value: "", label: "Standard phone voice" }, ...GEMINI_VOICES.map((id) => ({ value: id, label: `${id} (Gemini)` }))]} />
+        <span className="block text-xs text-muted-foreground">When you publish, every greeting and menu written as text is made into a clip in this voice and saved in Recording Studio. Text with {"{{…}}"} is read live in the closest matching voice.</span>
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-medium">Record calls</span>
         <Pick label="Record calls" value={flow.settings.recording} onChange={(v) => set({ recording: v as Flow["settings"]["recording"] })}

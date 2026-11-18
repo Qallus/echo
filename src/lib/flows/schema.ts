@@ -15,7 +15,12 @@ const e164 = z.string().regex(/^\+[1-9]\d{7,14}$/, "Use a full number like +1480
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 // Something the caller hears: a Recording Studio clip, or text read aloud.
-const prompt = z.object({ audioId: uuid.optional(), text: text(1000).optional() })
+// `ai`: the clip made from the text in the call tree's AI voice when it was
+// published (used while the text and voice still match).
+const prompt = z.object({
+  audioId: uuid.optional(), text: text(1000).optional(),
+  ai: z.object({ audioId: uuid, text: text(1000), voice: text(100) }).optional(),
+})
   .refine((p) => p.audioId || p.text, "Add a recording or the words to say.");
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -140,6 +145,8 @@ export const flowSchema = z.object({
     // Where an unconnected output goes: the AI receptionist when the line has
     // AI minutes, otherwise voicemail (decided by the runner).
     onUnconnected: z.enum(["ai_or_voicemail", "voicemail", "goodbye"]).default("ai_or_voicemail"),
+    // The AI voice prompts are spoken in (src/lib/flows/voices.ts).
+    voice: z.object({ provider: z.literal("gemini"), id: z.string().regex(/^[A-Za-z]{2,30}$/) }).optional(),
   }).default({ timezone: "America/Phoenix", recording: "off", onUnconnected: "ai_or_voicemail" }),
   start: id,
   nodes: z.array(node).min(1).max(MAX_NODES),

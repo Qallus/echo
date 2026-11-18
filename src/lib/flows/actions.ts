@@ -10,6 +10,7 @@ import { sampleFlow, starterFlow } from "./blocks";
 import { flowRuns } from "./data";
 import { makeTestTicket } from "./test-call";
 import { canPublish, flowSchema, validateFlow } from "./schema";
+import { voiceFlow } from "./voice-clips";
 
 // Call Tree edits, as the signed-in person (RLS decides who can edit).
 
@@ -91,19 +92,31 @@ export async function deleteExtension(id: string): Promise<{ ok?: string; error?
 // Publish the saved draft as the next version, and set which lines answer
 // with it. A line runs one call tree, so choosing a line here takes it from
 // any other tree.
-export async function publishFlow(id: string, note: string, lineIds: string[]): Promise<{ version?: number; error?: string }> {
-  await requireUser();
+export async function publishFlow(id: string, note: string, lineIds: string[]): Promise<{ version?: number; error?: string; voiced?: number }> {
+  const user = await requireUser();
   const supabase = await createClient();
-  const { data: f } = await supabase.from("call_flows").select("draft").eq("id", id).maybeSingle();
+  const { data: f } = await supabase.from("call_flows").select("draft, owner_id").eq("id", id).maybeSingle();
   if (!f) return { error: "This call tree was deleted, or you no longer have access." };
-  const { issues } = validateFlow(f.draft);
-  if (!canPublish(issues)) return { error: "Fix the problems marked in red first." };
+  const { flow, issues } = validateFlow(f.draft);
+  if (!canPublish(issues) || !flow) return { error: "Fix the problems marked in red first." };
+  // Prompts in the call tree's AI voice become Studio clips (the owner's).
+  let voiced = 0;
+  if (flow.settings.voice) {
+    if (f.owner_id !== user.id) return { error: "Only the call tree's owner can publish it with an AI voice (the clips go in their Recording Studio)." };
+    const v = await voiceFlow(supabase, user.id, flow, flow.name);
+    if (v.errors.length) return { error: `Couldn't make the voice clips: ${v.errors.slice(0, 2).join("; ")}` };
+    voiced = v.made;
+    if (voiced) {
+      const { error } = await supabase.from("call_flows").update({ draft: v.flow }).eq("id", id);
+      if (error) return { error: "Couldn't save the voice clips to the call tree." };
+    }
+  }
   const { data: version, error } = await supabase.rpc("call_flow_publish", { p_flow: id, p_note: note.trim().slice(0, 300) || null });
   if (error) return { error: "Couldn't publish the call tree." };
   const lines = await setFlowLines(supabase, id, lineIds);
   revalidatePath(`/call-tree/${id}`);
   revalidatePath("/call-tree");
-  return lines.error ? { version: version as number, error: lines.error } : { version: version as number };
+  return lines.error ? { version: version as number, error: lines.error, voiced } : { version: version as number, voiced };
 }
 
 async function setFlowLines(supabase: Awaited<ReturnType<typeof createClient>>, id: string, lineIds: string[]): Promise<{ error?: string }> {

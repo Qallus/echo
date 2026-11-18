@@ -69,7 +69,8 @@ export function PublishDialog({ open, onOpenChange, flowId, issues, saved, lineI
               if (r.error && !r.version) { setError(r.error); return; }
               setError(r.error ?? null);
               if (!r.error) onOpenChange(false);
-              router.refresh();
+              // New voice clips were saved into the draft: load it fresh.
+              if (r.voiced) window.location.reload(); else router.refresh();
             })}><Rocket /> {!saved ? "Saving…" : pending ? "Publishing…" : "Publish"}</Button>
           </div>
         </DialogContent>

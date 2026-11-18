@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { BUCKET } from "./data";
-import { isKind, isStatus } from "./types";
+import { AI_PROVIDERS, isKind, isStatus } from "./types";
 
 // Recording Studio edits. Everything runs as the signed-in person; RLS limits
 // it to their own recordings and files.
@@ -13,7 +13,9 @@ type Result = { ok?: string; error?: string };
 const done = (ok: string): Result => { revalidatePath("/studio"); return { ok }; };
 const ids = (v: string[]) => v.filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 200);
 
-export async function updateStudioAudio(id: string, f: { name: string; description: string; kind: string; status: string; image: string | null }): Promise<Result> {
+export async function updateStudioAudio(id: string, f: {
+  name: string; description: string; kind: string; status: string; image: string | null; voice?: string; provider?: string; extension?: string;
+}): Promise<Result> {
   await requireUser();
   if (!f.name.trim()) return { error: "Give the recording a name." };
   if (!isKind(f.kind) || !isStatus(f.status)) return { error: "Choose what it's for and its status." };
@@ -21,6 +23,8 @@ export async function updateStudioAudio(id: string, f: { name: string; descripti
   const supabase = await createClient();
   const { error } = await supabase.from("studio_audio").update({
     name: f.name.trim().slice(0, 120), description: f.description.trim().slice(0, 1000) || null, kind: f.kind, status: f.status, image: f.image,
+    ...(f.voice !== undefined ? { ai_voice: f.voice.trim().slice(0, 80) || null, ai_provider: AI_PROVIDERS.some((p) => p.id === f.provider) && f.voice.trim() ? f.provider : null } : {}),
+    ...(f.extension !== undefined ? { extension: f.extension.trim().slice(0, 40) || null } : {}),
   }).eq("id", id);
   return error ? { error: "Couldn't save the changes." } : done("Saved.");
 }

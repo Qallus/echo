@@ -21,7 +21,7 @@ const team = (id: string, label: string, script: string, next = "ring") => [
 const flow = {
   schema: FLOW_SCHEMA,
   name: "Redial main Greeting",
-  settings: { timezone: "America/Phoenix", recording: "off", onUnconnected: "ai_or_voicemail" },
+  settings: { timezone: "America/Phoenix", recording: "off", onUnconnected: "ai_or_voicemail", voice: { provider: "gemini", id: "Despina" } },
   start: "incoming",
   nodes: [
     { id: "incoming", type: "trigger.call", label: "Incoming call", pos: [0, 0], config: {}, next: { next: "lookup" } },
@@ -31,14 +31,14 @@ const flow = {
       id: "menu", type: "gather", label: "Main menu", pos: [0, 0],
       config: {
         prompt: { text: "If you know your party's extension, please dial it at any time. For sales, press 1. For support, press 2. To speak to our business team, press 3. To speak to our residential team, press 4. For a dial by name directory, press 5. To speak to an operator, press 0." },
-        input: ["dtmf", "speech"], timeout: 6, extensions: true,
+        input: ["dtmf"], timeout: 6, extensions: true,
         options: [
-          { out: "sales", key: "1", speech: ["sales"] },
-          { out: "support", key: "2", speech: ["support", "help"] },
-          { out: "business", key: "3", speech: ["business", "business team"] },
-          { out: "residential", key: "4", speech: ["residential", "home", "home phone"] },
-          { out: "directory", key: "5", speech: ["directory", "dial by name"] },
-          { out: "operator", key: "0", speech: ["operator", "representative", "a person"] },
+          { out: "sales", key: "1" },
+          { out: "support", key: "2" },
+          { out: "business", key: "3" },
+          { out: "residential", key: "4" },
+          { out: "directory", key: "5" },
+          { out: "operator", key: "0" },
         ],
       },
       next: { sales: "team_sales", support: "team_support", business: "team_business", residential: "team_residential", directory: "team_directory", operator: "team_operator" },
@@ -86,6 +86,8 @@ const sql = `-- Redial main Greeting: creates the call tree as a DRAFT, attaches
 -- (480) 999-9906 and sets the line's cell number to (480) 352-7598.
 -- The line keeps working as it does now until you publish the call tree
 -- (Call Tree → Redial main Greeting → Publish). Safe to run again: it updates the draft.
+-- The call tree speaks in Gemini's Despina: press Publish in Call Tree (not SQL)
+-- so the greetings are made into Despina clips in your Recording Studio.
 do $$
 declare
   v_line uuid;

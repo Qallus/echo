@@ -104,14 +104,27 @@ export async function sendFlowMessage(db: Db, line: { number: string }, vars: Va
 // extensions, by first name, last name or full name).
 const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 1);
 
-export async function namesOnLine(db: Db, lineId: string) {
-  const [{ data: dir }, { data: ext }] = await Promise.all([
-    db.from("redial_directory").select("id, label").eq("line_id", lineId).limit(200),
-    db.from("redial_extensions").select("id, name").eq("line_id", lineId).limit(200),
+// The line's owner (rings their phones) and the people they shared the line
+// with (their profile phone), then extensions and Directory contacts.
+type Target = { owner?: true; extensionId?: string; directoryId?: string; number?: string };
+export async function namesOnLine(db: Db, line: { id: string; owner_id: string }) {
+  const [{ data: dir }, { data: ext }, { data: grants }] = await Promise.all([
+    db.from("redial_directory").select("id, label").eq("line_id", line.id).limit(200),
+    db.from("redial_extensions").select("id, name").eq("line_id", line.id).limit(200),
+    db.from("redial_line_grants").select("user_id").eq("line_id", line.id).limit(50),
   ]);
+  const ids = [line.owner_id, ...(grants ?? []).map((g) => g.user_id as string)];
+  const { data: profiles } = await db.from("profiles").select("id, full_name, phone").in("id", ids);
+  const people: { name: string; target: Target }[] = [];
+  for (const pr of profiles ?? []) {
+    if (!pr.full_name) continue;
+    if (pr.id === line.owner_id) people.push({ name: pr.full_name, target: { owner: true } });
+    else { const n = toE164(pr.phone ?? ""); if (n) people.push({ name: pr.full_name, target: { number: n } }); }
+  }
   return [
-    ...(ext ?? []).map((e) => ({ name: e.name as string, target: { extensionId: e.id as string } })),
-    ...(dir ?? []).map((d) => ({ name: d.label as string, target: { directoryId: d.id as string } })),
+    ...people,
+    ...(ext ?? []).map((e) => ({ name: e.name as string, target: { extensionId: e.id as string } as Target })),
+    ...(dir ?? []).map((d) => ({ name: d.label as string, target: { directoryId: d.id as string } as Target })),
   ];
 }
 
