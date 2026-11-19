@@ -1,61 +1,75 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
-import { Search } from "lucide-react";
-import { LocalDate } from "@/components/local-date";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Download, ExternalLink, ReceiptText, Undo2, UserRound } from "lucide-react";
+import { CollectionView } from "@/components/collection/collection-view";
+import { downloadCsv } from "@/components/admin/list-csv";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { refundOrder } from "@/lib/admin/actions/billing";
 import { money } from "@/lib/billing/catalog";
 
 export type OrderRow = { id: string; number: number; user_id: string; user_email: string | null; status: string; kind: string; total: number; currency: string; items: string | null; created_at: string; refundable: boolean; receipt_url: string | null };
 
+const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const status = (o: OrderRow) => <Badge variant="outline" className={o.status.includes("refund") ? "text-destructive" : ""}>{o.status.replace("_", " ")}</Badge>;
+const icon = () => <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><ReceiptText className="size-4" /></span>;
+
+// Admin → Billing → Orders: every order in the shared list layout. Refunds
+// are one order at a time from its preview, with a reason for the audit log.
 export function OrdersTable({ orders, canRefund }: { orders: OrderRow[]; canRefund: boolean }) {
-  const [query, setQuery] = useState("");
+  const router = useRouter();
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return q ? orders.filter((o) => `${o.number} ${o.user_email ?? ""} ${o.items ?? ""}`.toLowerCase().includes(q)) : orders;
-  }, [orders, query]);
+  const refund = (o: OrderRow) => {
+    const reason = prompt(`Refund order #${o.number} (${money(o.total, o.currency)}) in full?\n\nReason (kept in the audit log):`);
+    if (reason !== null) start(async () => { setMsg(await refundOrder(o.id, reason)); router.refresh(); });
+  };
 
   return (
     <div className="space-y-3">
-      <div className="relative max-w-xs">
-        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Order number, email or item" className="pl-8" aria-label="Search orders" />
-      </div>
       {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
       {msg.ok && <p className="text-sm text-muted-foreground">{msg.ok}</p>}
-      {shown.length === 0 ? <p className="rounded-xl border p-4 text-sm text-muted-foreground">No orders yet.</p> : (
-        <Table>
-          <TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Customer</TableHead><TableHead>Items</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Total</TableHead><TableHead>Date</TableHead><TableHead /></TableRow></TableHeader>
-          <TableBody>
-            {shown.map((o) => (
-              <TableRow key={o.id}>
-                <TableCell className="font-medium">#{o.number}{o.kind === "renewal" && <span className="text-xs text-muted-foreground"> renewal</span>}</TableCell>
-                <TableCell><Link href={`/admin/users/${o.user_id}`} className="hover:underline">{o.user_email ?? "—"}</Link></TableCell>
-                <TableCell className="max-w-xs truncate text-muted-foreground">{o.items ?? "—"}</TableCell>
-                <TableCell><Badge variant="outline" className={o.status.includes("refund") ? "text-destructive" : ""}>{o.status.replace("_", " ")}</Badge></TableCell>
-                <TableCell className="text-right tabular-nums">{money(o.total, o.currency)}</TableCell>
-                <TableCell className="text-muted-foreground"><LocalDate iso={o.created_at} short /></TableCell>
-                <TableCell className="text-right">
-                  {o.receipt_url && <a href={o.receipt_url} target="_blank" rel="noreferrer" className="mr-2 text-xs text-muted-foreground hover:text-foreground">Receipt</a>}
-                  {canRefund && o.refundable && (
-                    <Button size="sm" variant="ghost" disabled={pending} onClick={() => {
-                      const reason = prompt(`Refund order #${o.number} (${money(o.total, o.currency)}) in full?\n\nReason (kept in the audit log):`);
-                      if (reason !== null) start(async () => setMsg(await refundOrder(o.id, reason)));
-                    }}>Refund</Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <CollectionView<OrderRow>
+        items={orders} getId={(o) => o.id} title={(o) => `Order #${o.number}`} subtitle={(o) => o.user_email ?? "—"} media={icon} badge={status}
+        noun={["order", "orders"]} storageKey="admin-billing-orders" defaultView="table" empty="No orders yet."
+        meta={(o) => <>{money(o.total, o.currency)} · {when(o.created_at)}{o.items ? ` · ${o.items}` : ""}</>}
+        searchText={(o) => `${o.number} ${o.user_email ?? ""} ${o.items ?? ""} ${o.status}`}
+        filters={[
+          { id: "all", label: "All", test: () => true },
+          { id: "paid", label: "Paid", test: (o) => o.status === "paid" },
+          { id: "refunded", label: "Refunded", test: (o) => o.status.includes("refund") },
+          { id: "renewal", label: "Renewals", test: (o) => o.kind === "renewal" },
+        ]}
+        date={(o) => o.created_at}
+        columns={[
+          { id: "order", label: "Order", sort: (o) => o.number, cell: (o) => <span className="font-medium">#{o.number}{o.kind === "renewal" && <span className="text-xs font-normal text-muted-foreground"> renewal</span>}</span> },
+          { id: "customer", label: "Customer", sort: (o) => o.user_email, cell: (o) => <span className="text-muted-foreground">{o.user_email ?? "—"}</span> },
+          { id: "items", label: "Items", cell: (o) => <span className="block max-w-xs truncate text-muted-foreground">{o.items ?? "—"}</span> },
+          { id: "status", label: "Status", sort: (o) => o.status, cell: status },
+          { id: "total", label: "Total", sort: (o) => o.total, className: "text-right tabular-nums", cell: (o) => money(o.total, o.currency) },
+          { id: "date", label: "Date", sort: (o) => o.created_at, cell: (o) => <span className="text-muted-foreground">{when(o.created_at)}</span> },
+        ]}
+        actions={[
+          { label: "Customer", icon: UserRound, single: true, run: ([o]) => router.push(`/admin/users/${o.user_id}`) },
+          { label: "Export", icon: Download, run: (rows) => downloadCsv("orders.csv", ["Order", "Customer", "Items", "Status", "Total", "Currency", "Date"],
+            rows.map((o) => [o.number, o.user_email, o.items, o.status, (o.total / 100).toFixed(2), o.currency, o.created_at])) },
+        ]}
+        previewActions={(o) => canRefund && o.refundable ? <Button size="sm" variant="outline" disabled={pending} onClick={() => refund(o)}><Undo2 /> Refund</Button> : null}
+        preview={(o) => (
+          <div className="space-y-4 text-sm">
+            <dl className="divide-y rounded-xl border px-3">
+              {[["Customer", <Link key="c" href={`/admin/users/${o.user_id}`} className="hover:underline">{o.user_email ?? "—"}</Link>], ["Items", o.items ?? "—"],
+                ["Total", money(o.total, o.currency)], ["Status", o.status.replace("_", " ")], ["Kind", o.kind === "renewal" ? "Renewal" : "Purchase"], ["Date", when(o.created_at)]].map(([k, v]) => (
+                <div key={String(k)} className="grid grid-cols-[6rem_1fr] gap-2 py-1.5"><dt className="text-muted-foreground">{k}</dt><dd className="min-w-0 break-words">{v}</dd></div>
+              ))}
+            </dl>
+            {o.receipt_url && <a href={o.receipt_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium hover:underline">Stripe receipt <ExternalLink className="size-3.5" /></a>}
+          </div>
+        )}
+      />
     </div>
   );
 }

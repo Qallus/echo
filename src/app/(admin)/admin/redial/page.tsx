@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { AdminPage, Section, StatCard } from "@/components/admin/admin-ui";
-import { LocalDate } from "@/components/local-date";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { gatewayConfig } from "@/lib/redial/gateway";
 import { redialUsage, type RedialUsage } from "@/lib/redial/usage";
 import { siteUrl } from "@/lib/notify/senders";
 import { createClient } from "@/lib/supabase/server";
-import { AssignLine, RemoveLine, RoutingSwitch, SipSetup } from "./line-forms";
+import { AssignLine, SipSetup } from "./line-forms";
+import { LinesList } from "./lines-list";
 import { sipConfig } from "@/lib/comms/sip";
 import { SetupQueue, type SetupRow } from "./setup-queue";
 import { PortQueue, type PortQueueRow } from "./port-queue";
@@ -14,7 +14,6 @@ import { PortQueue, type PortQueueRow } from "./port-queue";
 export const metadata = { title: "Redial · Admin · Redial" };
 
 type Row = { id: string; owner_id: string; owner_email: string; owner_name: string | null; label: string; number: string; has_destination: boolean; mode: string; paused: boolean; calls_30d: number; last_call_at: string | null };
-const pretty = (n: string) => n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3");
 
 // Redial lines: which member has which number, and whether screening is
 // ready. Staff see counts only, never what callers said.
@@ -61,25 +60,10 @@ export default async function RedialAdminPage() {
       </Section>
 
       <Section title="Lines">
-        {rows.length === 0 ? <p className="rounded-xl border p-6 text-center text-sm text-muted-foreground">No lines yet.</p> : (
-          <ul className="divide-y rounded-xl border bg-card text-sm">
-            {rows.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-3 p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{pretty(r.number)} <span className="font-normal text-muted-foreground">· {r.label}</span></p>
-                  <p className="text-xs text-muted-foreground">{r.owner_name ? `${r.owner_name} · ` : ""}{r.owner_email}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {r.paused ? "Paused" : r.mode === "off" ? "Not screening" : r.mode === "all" ? "Screening all" : "Screening unknown"}
-                  {!r.has_destination && " · no ring number"} · {r.calls_30d} calls
-                  {usage.get(r.owner_id) && ` · ${usage.get(r.owner_id)!.used_minutes}/${usage.get(r.owner_id)!.allowance} min${usage.get(r.owner_id)!.free ? " (free)" : ""}`}{r.last_call_at && <> · last <LocalDate iso={r.last_call_at} short /></>}
-                </span>
-                {manage ? <RoutingSwitch id={r.id} on={live.has(r.id)} ready={Boolean(gw.aiApp)} /> : live.has(r.id) && <span className="text-xs text-muted-foreground">Conference</span>}
-                {manage && <RemoveLine id={r.id} number={pretty(r.number)} />}
-              </li>
-            ))}
-          </ul>
-        )}
+        <LinesList manage={manage} aiReady={Boolean(gw.aiApp)} rows={rows.map((r) => {
+          const u = usage.get(r.owner_id);
+          return { ...r, conference: live.has(r.id), usage: u ? `${u.used_minutes}/${u.allowance} min${u.free ? " (free)" : ""}` : null };
+        })} />
       </Section>
 
       {manage && (

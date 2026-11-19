@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Bot, Check, Copy, KeyRound, Pause, Play, Plus, ShieldAlert, Trash2, X } from "lucide-react";
+import { CollectionView } from "@/components/collection/collection-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,12 @@ export function AgentsView({ agents, approvals, myPermissions, mcpUrl }: { agent
   const [pending, start] = useTransition();
   const name = new Map(agents.map((a) => [a.id, a.name]));
   const waiting = approvals.filter((x) => x.status === "pending" && new Date(x.expires_at) > new Date());
+  const run = (f: () => Promise<Msg>) => start(async () => setMsg(await f()));
+  const runEach = (rows: AgentRow[], f: (a: AgentRow) => Promise<Msg>) => start(async () => {
+    let last: Msg = {};
+    for (const a of rows) { last = await f(a); if (last.error) break; }
+    setMsg(last);
+  });
 
   return (
     <div className="space-y-6">
@@ -65,49 +72,77 @@ export function AgentsView({ agents, approvals, myPermissions, mcpUrl }: { agent
       </div>
       {adding && <AgentForm myPermissions={myPermissions} onSave={(s) => start(async () => { const r = await createAgent(s); setMsg(r); if (!r.error) setAdding(false); })} pending={pending} />}
 
-      {agents.length === 0 ? (
-        <p className="rounded-xl border p-6 text-center text-sm text-muted-foreground">No agents yet. Make one for each harness (Paperclip, Hermes, OpenClaw, Herdr) so each has its own key and limits.</p>
-      ) : (
-        <ul className="divide-y rounded-xl border bg-card text-sm">
-          {agents.map((a) => <AgentItem key={a.id} agent={a} myPermissions={myPermissions} history={approvals.filter((x) => x.agent_id === a.id)} onMsg={setMsg} />)}
-        </ul>
-      )}
+      <CollectionView<AgentRow>
+        items={agents} getId={(a) => a.id} title={(a) => a.name} noun={["agent", "agents"]} storageKey="admin-ai-agents" defaultView="list"
+        empty="No agents yet. Make one for each harness (Paperclip, Hermes, OpenClaw, Herdr) so each has its own key and limits."
+        subtitle={(a) => `${harness(a.harness)} · ${a.key_hint ?? "no key"}`}
+        media={() => <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><Bot className="size-4 text-muted-foreground" /></span>}
+        badge={(a) => <StatusBadge agent={a} />}
+        meta={(a) => <>{a.calls_24h} calls today{a.failed_24h ? ` (${a.failed_24h} failed)` : ""}{a.last_call_at ? ` · last ${when(a.last_call_at)}` : ""}</>}
+        searchText={(a) => `${a.name} ${harness(a.harness)} ${a.key_hint ?? ""} ${status(a)}`}
+        filters={[
+          { id: "all", label: "All", test: () => true },
+          { id: "active", label: "Active", test: (a) => status(a) === "Active" },
+          { id: "paused", label: "Paused", test: (a) => status(a) === "Paused" },
+          { id: "expired", label: "Expired", test: (a) => status(a) === "Expired" },
+          { id: "readonly", label: "Read only", test: (a) => a.read_only },
+          { id: "failed", label: "Failed calls today", test: (a) => a.failed_24h > 0 },
+        ]}
+        date={(a) => a.created_at}
+        columns={[
+          { id: "name", label: "Agent", sort: (a) => a.name.toLowerCase(), cell: (a) => <span className="font-medium">{a.name}</span> },
+          { id: "harness", label: "Runs on", sort: (a) => harness(a.harness), cell: (a) => harness(a.harness) },
+          { id: "status", label: "Status", sort: (a) => status(a), cell: (a) => <StatusBadge agent={a} /> },
+          { id: "access", label: "Access", sort: (a) => (a.read_only ? -1 : a.permissions.length), cell: (a) => <span className="text-muted-foreground">{access(a)}</span> },
+          { id: "calls", label: "Calls today", sort: (a) => a.calls_24h, cell: (a) => <span className="tabular-nums">{a.calls_24h}{a.failed_24h ? <span className="text-destructive"> ({a.failed_24h} failed)</span> : ""}</span> },
+          { id: "last", label: "Last call", sort: (a) => a.last_call_at, cell: (a) => <span className="text-muted-foreground">{a.last_call_at ? when(a.last_call_at) : "Never"}</span> },
+          { id: "key", label: "Key", sort: (a) => a.key_rotated_at, cell: (a) => <span className="text-muted-foreground">{a.key_hint} · {when(a.key_rotated_at)}</span> },
+        ]}
+        actions={[
+          { label: "Pause", icon: Pause, show: (rows) => rows.some((a) => a.active), run: (rows) => runEach(rows.filter((a) => a.active), (a) => setAgentActive(a.id, false)) },
+          { label: "Resume", icon: Play, show: (rows) => rows.some((a) => !a.active), run: (rows) => runEach(rows.filter((a) => !a.active), (a) => setAgentActive(a.id, true)) },
+          { label: "New key", icon: KeyRound, single: true, run: ([a]) => { if (confirm(`Make a new key for ${a.name}? The old one stops working right away.`)) run(() => rotateAgentKey(a.id)); } },
+          { label: "Remove", icon: Trash2, destructive: true, run: (rows) => {
+            if (confirm(`Remove ${rows.length === 1 ? rows[0].name : `${rows.length} agents`}? ${rows.length === 1 ? "Its key stops" : "Their keys stop"} working and it can't be undone.`)) runEach(rows, (a) => removeAgent(a.id));
+          } },
+        ]}
+        preview={(a) => <AgentPreview key={a.id} agent={a} myPermissions={myPermissions} history={approvals.filter((x) => x.agent_id === a.id)} onMsg={setMsg} />}
+      />
     </div>
   );
 }
 
-function AgentItem({ agent: a, myPermissions, history, onMsg }: { agent: AgentRow; myPermissions: string[]; history: ApprovalRow[]; onMsg: (m: Msg) => void }) {
-  const [open, setOpen] = useState(false);
+const status = (a: AgentRow) => (!a.active ? "Paused" : a.expires_at && new Date(a.expires_at) <= new Date() ? "Expired" : "Active");
+const access = (a: AgentRow) => `${a.read_only ? "Read only" : `${a.permissions.length} permissions`} · ${a.domains.length ? `${areasFor(a.domains).length} areas` : "all areas"} · ${a.caps.writes ?? 500} changes/day`;
+function StatusBadge({ agent }: { agent: AgentRow }) {
+  const s = status(agent);
+  return <Badge variant="outline" className={cn(s === "Active" ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground")}>{s}</Badge>;
+}
+
+// The side sheet for one agent: quick controls, its settings and recent approval requests.
+function AgentPreview({ agent: a, myPermissions, history, onMsg }: { agent: AgentRow; myPermissions: string[]; history: ApprovalRow[]; onMsg: (m: Msg) => void }) {
   const [pending, start] = useTransition();
-  const expired = a.expires_at && new Date(a.expires_at) <= new Date();
   const run = (f: () => Promise<Msg>) => start(async () => onMsg(await f()));
   return (
-    <li className="p-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <Bot className="size-5 shrink-0 text-muted-foreground" />
-        <button type="button" onClick={() => setOpen((v) => !v)} className="min-w-0 flex-1 text-left">
-          <span className="font-medium">{a.name}</span> <span className="text-muted-foreground">· {harness(a.harness)} · {a.key_hint}</span>
-          <span className="block text-xs text-muted-foreground">
-            {a.read_only ? "Read only" : `${a.permissions.length} permissions`} · {a.domains.length ? `${areasFor(a.domains).length} areas` : "all areas"} · {a.caps.writes ?? 500} changes/day · {a.calls_24h} calls today{a.failed_24h ? ` (${a.failed_24h} failed)` : ""}{a.last_call_at ? ` · last ${when(a.last_call_at)}` : ""}
-          </span>
-        </button>
-        <Badge variant="outline" className={cn(!a.active || expired ? "text-muted-foreground" : "text-emerald-700 dark:text-emerald-400")}>{!a.active ? "Paused" : expired ? "Expired" : "Active"}</Badge>
-        <Button size="sm" variant="ghost" disabled={pending} onClick={() => run(() => setAgentActive(a.id, !a.active))}>{a.active ? <><Pause /> Pause</> : <><Play /> Resume</>}</Button>
-        <Button size="sm" variant="ghost" disabled={pending} onClick={() => confirm(`Make a new key for ${a.name}? The old one stops working right away.`) && run(() => rotateAgentKey(a.id))}><KeyRound /> New key</Button>
-        <Button size="icon-sm" variant="ghost" aria-label={`Remove ${a.name}`} disabled={pending} onClick={() => confirm(`Remove ${a.name}? Its key stops working and it can't be undone.`) && run(() => removeAgent(a.id))}><Trash2 /></Button>
+    <div className="space-y-4 text-sm">
+      <div className="space-y-1">
+        <StatusBadge agent={a} />
+        <p className="text-muted-foreground">{access(a)}</p>
+        <p className="text-muted-foreground">{a.calls_24h} calls today{a.failed_24h ? ` (${a.failed_24h} failed)` : ""}{a.last_call_at ? ` · last ${when(a.last_call_at)}` : ""}</p>
       </div>
-      {open && (
-        <div className="mt-3 space-y-4 border-t pt-3">
-          <AgentForm initial={a} myPermissions={myPermissions} pending={pending} onSave={(s) => run(() => updateAgent(a.id, s))} />
-          {history.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Recent approval requests</p>
-              <ul className="space-y-1 text-xs">{history.slice(0, 8).map((x) => <li key={x.id} className="flex gap-2"><span className="w-20 shrink-0 text-muted-foreground">{x.status}</span><span className="truncate">{x.summary}</span></li>)}</ul>
-            </div>
-          )}
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => setAgentActive(a.id, !a.active))}>{a.active ? <><Pause /> Pause</> : <><Play /> Resume</>}</Button>
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => confirm(`Make a new key for ${a.name}? The old one stops working right away.`) && run(() => rotateAgentKey(a.id))}><KeyRound /> New key</Button>
+        <Button size="sm" variant="destructive" disabled={pending} onClick={() => confirm(`Remove ${a.name}? Its key stops working and it can't be undone.`) && run(() => removeAgent(a.id))}><Trash2 /> Remove</Button>
+      </div>
+      <AgentForm initial={a} myPermissions={myPermissions} pending={pending} onSave={(s) => run(() => updateAgent(a.id, s))} />
+      {history.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Recent approval requests</p>
+          <ul className="space-y-1 text-xs">{history.slice(0, 8).map((x) => <li key={x.id} className="flex gap-2"><span className="w-20 shrink-0 text-muted-foreground">{x.status}</span><span className="truncate">{x.summary}</span></li>)}</ul>
         </div>
       )}
-    </li>
+    </div>
   );
 }
 

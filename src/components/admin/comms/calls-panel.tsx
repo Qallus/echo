@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { Delete, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Voicemail } from "lucide-react";
+import { Copy, Delete, ExternalLink, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Voicemail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { Pick } from "@/components/ui/pick";
 import { recordingLink, updateCall } from "@/lib/admin/actions/comms-phone";
 import type { PhoneCall } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
+import { CollectionView } from "@/components/collection/collection-view";
+import { DetailList, IconTile, muted } from "@/components/collection/kit";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { startCall } from "./softphone";
 import type { PhonePerson } from "./texts-panel";
@@ -18,6 +20,9 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
 const last10 = (p: string | null | undefined) => (p ?? "").replace(/\D/g, "").slice(-10);
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const dur = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "—");
+const other = (c: PhoneCall) => (c.direction === "inbound" ? c.from_number : c.to_number);
+const isMissed = (c: PhoneCall) => c.direction === "inbound" && c.status !== "completed" && !c.voicemail;
+const outcome = (c: PhoneCall) => (c.voicemail ? "Voicemail" : isMissed(c) ? "Missed" : c.status.replace("-", " "));
 
 // Dialpad (through the browser phone) and the call log: recordings,
 // transcripts, notes, and linking a call to a contact.
@@ -25,7 +30,6 @@ export function CallsPanel({ calls, people, ready, number, readOnly }: {
   calls: PhoneCall[]; people: PhonePerson[]; ready: boolean; number: string | null; readOnly: boolean;
 }) {
   const [dial, setDial] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
   const [audio, setAudio] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
@@ -37,7 +41,14 @@ export function CallsPanel({ calls, people, ready, number, readOnly }: {
   }, [dial, people]);
 
   const play = (id: string) => start(async () => { const r = await recordingLink(id); if (r.url) setAudio((a) => ({ ...a, [id]: r.url! })); else setMsg({ error: r.error }); });
-  const other = (c: PhoneCall) => (c.direction === "inbound" ? c.from_number : c.to_number);
+  const personOf = (c: PhoneCall) => (c.contact_id && byId.get(c.contact_id)) || byPhone.get(last10(other(c))) || null;
+  const name = (c: PhoneCall) => personOf(c)?.name ?? other(c) ?? "Unknown";
+  const canCall = (c: PhoneCall) => ready && !!other(c) && !readOnly;
+  const callBack = (c: PhoneCall) => { const p = personOf(c); startCall({ number: other(c)!, name: p?.name, contactId: p?.id }); };
+  const icon = (c: PhoneCall) => {
+    const Icon = c.voicemail ? Voicemail : isMissed(c) ? PhoneMissed : c.direction === "inbound" ? PhoneIncoming : PhoneOutgoing;
+    return <IconTile icon={Icon} className={cn((isMissed(c) || c.voicemail) && "text-destructive")} />;
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -62,49 +73,69 @@ export function CallsPanel({ calls, people, ready, number, readOnly }: {
       </div>
 
       <div className="min-w-0 space-y-2">
-        {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
+        {(msg.error || msg.ok) && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.error ?? msg.ok}</p>}
         {calls.length === 0 ? <EmptyState message="No calls yet." /> : (
-          <ul className="divide-y overflow-hidden rounded-xl border bg-card">
-            {calls.map((c) => {
-              const person = (c.contact_id && byId.get(c.contact_id)) || byPhone.get(last10(other(c))) || null;
-              const missed = c.direction === "inbound" && c.status !== "completed" && !c.voicemail;
-              const Icon = c.voicemail ? Voicemail : missed ? PhoneMissed : c.direction === "inbound" ? PhoneIncoming : PhoneOutgoing;
-              const expanded = openId === c.id;
+          <CollectionView<PhoneCall>
+            items={calls} getId={(c) => c.id} title={name} noun={["call", "calls"]} storageKey="admin-calls" defaultView="list"
+            subtitle={(c) => `${when(c.created_at)} · ${outcome(c)} · ${dur(c.duration_seconds)}`}
+            media={icon} badge={(c) => (c.transcript ? <Badge variant="outline" className="text-[10px]">Transcript</Badge> : null)}
+            meta={(c) => (c.recording_path ? "Recorded" : null)}
+            searchText={(c) => `${name(c)} ${other(c) ?? ""} ${outcome(c)} ${c.notes ?? ""} ${c.transcript ?? ""}`}
+            filters={[
+              { id: "all", label: "All", test: () => true },
+              { id: "missed", label: "Missed", test: isMissed },
+              { id: "voicemail", label: "Voicemail", test: (c) => c.voicemail },
+              { id: "in", label: "Incoming", test: (c) => c.direction === "inbound" },
+              { id: "out", label: "Outgoing", test: (c) => c.direction === "outbound" },
+              { id: "recorded", label: "Recorded", test: (c) => !!c.recording_path },
+              { id: "transcript", label: "Transcript", test: (c) => !!c.transcript },
+              { id: "unlinked", label: "No contact", test: (c) => !personOf(c) },
+            ]}
+            date={(c) => c.created_at}
+            columns={[
+              { id: "when", label: "When", sort: (c) => c.created_at, cell: (c) => <span className="whitespace-nowrap text-muted-foreground">{when(c.created_at)}</span> },
+              { id: "who", label: "Who", sort: (c) => name(c).toLowerCase(), cell: (c) => <span className="font-medium">{name(c)}</span> },
+              { id: "number", label: "Number", sort: (c) => other(c), cell: (c) => muted(other(c)) },
+              { id: "direction", label: "Direction", sort: (c) => c.direction, cell: (c) => muted(c.direction === "inbound" ? "Incoming" : "Outgoing") },
+              { id: "outcome", label: "Outcome", sort: outcome, cell: (c) => <span className={cn("capitalize", (isMissed(c) || c.voicemail) && "text-destructive")}>{outcome(c)}</span> },
+              { id: "length", label: "Length", sort: (c) => c.duration_seconds ?? 0, cell: (c) => <span className="tabular-nums">{dur(c.duration_seconds)}</span> },
+              { id: "notes", label: "Notes", cell: (c) => <span className="block max-w-56 truncate text-muted-foreground">{c.notes || "—"}</span> },
+            ]}
+            actions={[
+              { label: "Call back", icon: Phone, single: true, show: (rows) => rows.length === 1 && canCall(rows[0]), run: ([c]) => callBack(c) },
+              { label: "Copy numbers", icon: Copy, run: (rows) => { void navigator.clipboard.writeText([...new Set(rows.map(other).filter(Boolean))].join(", ")); } },
+            ]}
+            previewActions={(c) => <>
+              {c.recording_path && <Button size="sm" variant="outline" disabled={pending} onClick={() => play(c.id)}><Play /> Play</Button>}
+              {canCall(c) && <Button size="sm" variant="outline" onClick={() => callBack(c)}><Phone /> Call back</Button>}
+            </>}
+            preview={(c) => {
+              const person = personOf(c);
               return (
-                <li key={c.id} className="p-3">
-                  <div className="flex items-center gap-3">
-                    <Icon className={cn("size-4 shrink-0", missed || c.voicemail ? "text-destructive" : "text-muted-foreground")} />
-                    <button type="button" onClick={() => setOpenId(expanded ? null : c.id)} className="min-w-0 flex-1 text-left">
-                      <span className="block truncate text-sm font-medium">{person?.name ?? other(c) ?? "Unknown"}</span>
-                      <span className="block text-xs text-muted-foreground">{when(c.created_at)} · {c.voicemail ? "Voicemail" : c.status.replace("-", " ")} · {dur(c.duration_seconds)}</span>
-                    </button>
-                    {c.transcript && <Badge variant="outline" className="hidden text-[10px] sm:inline-flex">Transcript</Badge>}
-                    {c.recording_path && <Button size="icon-sm" variant="ghost" aria-label="Play recording" disabled={pending} onClick={() => play(c.id)}><Play /></Button>}
-                    {ready && other(c) && !readOnly && <Button size="icon-sm" variant="ghost" aria-label="Call back" onClick={() => startCall({ number: other(c)!, name: person?.name, contactId: person?.id })}><Phone /></Button>}
-                  </div>
-                  {audio[c.id] && <audio controls autoPlay src={audio[c.id]} className="mt-2 w-full" />}
-                  {expanded && (
-                    <div className="mt-3 space-y-3 border-t pt-3 text-sm">
-                      {person ? <Link href={`/admin/contacts/${person.id}`} className="text-primary hover:underline">Open {person.name}</Link> : !readOnly && (
-                        <div className="flex flex-wrap items-center gap-2 text-sm">Link to contact
-                          <Pick label="Link to contact" className="w-fit" defaultValue="" onChange={(v) => v && start(async () => setMsg(await updateCall(c.id, { contactId: v })))}
-                            options={[{ value: "", label: "Choose…" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
-                        </div>
-                      )}
-                      {c.transcript_status === "pending" && <p className="text-muted-foreground">Transcribing…</p>}
-                      {c.transcript && <p className="max-h-72 overflow-y-auto rounded-lg border p-3 whitespace-pre-wrap">{c.transcript}</p>}
-                      {!readOnly && (
-                        <form onSubmit={(e) => { e.preventDefault(); const notes = String(new FormData(e.currentTarget).get("notes") ?? ""); start(async () => setMsg(await updateCall(c.id, { notes }))); }} className="flex gap-2">
-                          <Input name="notes" defaultValue={c.notes ?? ""} placeholder="Notes" aria-label="Call notes" />
-                          <Button type="submit" size="sm" variant="outline" disabled={pending}>Save</Button>
-                        </form>
-                      )}
+                <div className="space-y-4 text-sm">
+                  <DetailList rows={[
+                    ["Number", other(c) ?? "—"], ["Direction", c.direction === "inbound" ? "Incoming" : "Outgoing"], ["Outcome", <span key="o" className="capitalize">{outcome(c)}</span>],
+                    ["Length", dur(c.duration_seconds)], ["When", when(c.created_at)],
+                  ]} />
+                  {audio[c.id] && <audio controls autoPlay src={audio[c.id]} className="w-full" />}
+                  {person ? <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/admin/contacts/${person.id}`} />}><ExternalLink /> Open {person.name}</Button> : !readOnly && (
+                    <div className="flex flex-wrap items-center gap-2">Link to contact
+                      <Pick label="Link to contact" className="w-fit" defaultValue="" onChange={(v) => v && start(async () => setMsg(await updateCall(c.id, { contactId: v })))}
+                        options={[{ value: "", label: "Choose…" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
                     </div>
                   )}
-                </li>
+                  {c.transcript_status === "pending" && <p className="text-muted-foreground">Transcribing…</p>}
+                  {c.transcript && <p className="max-h-72 overflow-y-auto rounded-lg border p-3 whitespace-pre-wrap">{c.transcript}</p>}
+                  {!readOnly ? (
+                    <form key={c.id} onSubmit={(e) => { e.preventDefault(); const notes = String(new FormData(e.currentTarget).get("notes") ?? ""); start(async () => setMsg(await updateCall(c.id, { notes }))); }} className="flex gap-2">
+                      <Input name="notes" defaultValue={c.notes ?? ""} placeholder="Notes" aria-label="Call notes" />
+                      <Button type="submit" size="sm" variant="outline" disabled={pending}>Save</Button>
+                    </form>
+                  ) : c.notes && <p className="whitespace-pre-wrap text-muted-foreground">{c.notes}</p>}
+                </div>
               );
-            })}
-          </ul>
+            }}
+          />
         )}
       </div>
     </div>

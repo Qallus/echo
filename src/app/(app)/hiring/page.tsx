@@ -1,42 +1,19 @@
 import Link from "next/link";
 import { ArrowRight, Headset, MessagesSquare, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { HiringList } from "@/components/live-agents/hiring-list";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/data";
 import { listThreads, myEngagements } from "@/lib/live-agents/messages";
-import { engagementLabel, offerPrice } from "@/lib/live-agents/types";
 
 export const metadata = { title: "Hiring · Redial Live Agents" };
 
-const date = (d: string | null) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }) : null);
-
-// The business side of Live Agents: who you're talking to, open offers,
-// and booked work.
+// The business side of Live Agents: booked work, open offers, conversations
+// and past work, in the shared list layout.
 export default async function HiringPage() {
   await requireUser();
   const [all, threads] = await Promise.all([myEngagements(), listThreads()]);
   const mine = all.filter((e) => e.side === "business");
-  const booked = mine.filter((e) => e.status === "accepted" || e.status === "active");
-  const open = mine.filter((e) => e.status === "offered");
-  const past = mine.filter((e) => ["completed", "cancelled", "declined", "withdrawn"].includes(e.status)).slice(0, 20);
   const convos = (threads ?? []).filter((t) => t.side === "business");
-
-  const row = (e: (typeof mine)[number]) => {
-    const p = offerPrice(e);
-    return (
-      <li key={e.id}>
-        <Link href={`/messages/${e.threadId}`} className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-muted/40">
-          <div className="min-w-0 flex-1">
-            <p className="font-medium">{e.counterpart} · {engagementLabel(e.type)}</p>
-            <p className="text-sm text-muted-foreground">{[date(e.startsOn), e.schedule, `${p.businessTotal ?? p.businessRate}${e.type === "retainer" ? "/mo" : ""} incl. fee`].filter(Boolean).join(" · ")}</p>
-          </div>
-          <Badge variant={e.status === "offered" ? "secondary" : e.status === "accepted" || e.status === "active" ? "success" : "outline"}>
-            {e.status === "offered" ? (e.offeredBy === "business" ? "Waiting for them" : "Counter-offer for you") : e.status === "accepted" ? "Awaiting your payment" : e.status === "active" ? "Booked and paid" : e.status[0].toUpperCase() + e.status.slice(1)}
-          </Badge>
-        </Link>
-      </li>
-    );
-  };
 
   return (
     <div className="w-full space-y-8 py-8 px-4 sm:px-6 lg:px-8 2xl:px-10">
@@ -60,40 +37,7 @@ export default async function HiringPage() {
           <Button className="mt-4" nativeButton={false} render={<Link href="/live-agents" />}>Browse Live Agents <ArrowRight /></Button>
         </div>
       ) : (
-        <>
-          <section className="space-y-2">
-            <h2 className="font-semibold">Booked</h2>
-            {booked.length ? <ul className="divide-y rounded-2xl border">{booked.map(row)}</ul> : <p className="text-sm text-muted-foreground">Nothing booked yet.</p>}
-          </section>
-          <section className="space-y-2">
-            <h2 className="font-semibold">Open offers</h2>
-            {open.length ? <ul className="divide-y rounded-2xl border">{open.map(row)}</ul> : <p className="text-sm text-muted-foreground">No open offers.</p>}
-          </section>
-          <section className="space-y-2">
-            <h2 className="font-semibold">Conversations</h2>
-            {convos.length ? (
-              <ul className="divide-y rounded-2xl border">
-                {convos.map((t) => (
-                  <li key={t.id}>
-                    <Link href={`/messages/${t.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40">
-                      <div className="min-w-0 flex-1">
-                        <p className={t.unread ? "font-semibold" : "font-medium"}>{t.title}</p>
-                        <p className="truncate text-sm text-muted-foreground">{t.preview}</p>
-                      </div>
-                      {t.unread && <Badge variant="success">New</Badge>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="text-sm text-muted-foreground">No conversations yet.</p>}
-          </section>
-          {past.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="font-semibold">Past</h2>
-              <ul className="divide-y rounded-2xl border">{past.map(row)}</ul>
-            </section>
-          )}
-        </>
+        <HiringList engagements={mine} threads={convos} />
       )}
     </div>
   );

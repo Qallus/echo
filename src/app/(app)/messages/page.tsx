@@ -1,12 +1,5 @@
-import { MessagesSquare } from "lucide-react";
-
-// Desktop: nothing open yet.
+// The Messages home. The layout's inbox shell shows every conversation in the
+// shared list layout when none is open, so this page adds nothing.
 export default function MessagesHome() {
-  return (
-    <div className="flex h-dvh flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
-      <MessagesSquare className="size-7" />
-      <p>Pick a conversation.</p>
-      <p className="max-w-xs text-xs">Contact details stay hidden; calls, bookings and payments run through Redial.</p>
-    </div>
-  );
+  return null;
 }

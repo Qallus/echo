@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessagesSquare } from "lucide-react";
 import { AgentAvatar } from "@/components/live-agents/agent-avatar";
+import { ThreadsCollection } from "@/components/live-agents/inbox/threads-collection";
 import type { ThreadSummary } from "@/lib/live-agents/messages";
 import { cn } from "@/lib/utils";
 
@@ -12,11 +13,30 @@ const when = (iso: string) => {
   return d.toDateString() === now.toDateString() ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-// The inbox: conversations on the left, the open one on the right. On a
-// phone the list and a conversation take turns.
+// The inbox. With nothing open, every conversation in the shared list layout
+// (views, search, filters, checkboxes). With one open: conversations on the
+// left, the open one on the right; on a phone they take turns.
 export function InboxShell({ threads, children }: { threads: ThreadSummary[]; children: React.ReactNode }) {
   const path = usePathname();
   const open = path.split("/")[2] ?? null;
+  if (!open) {
+    return (
+      <div className="w-full space-y-4 px-4 py-8 sm:px-6 lg:px-8 2xl:px-10">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Messages</h1>
+          <p className="text-sm text-muted-foreground">Live Agents and the businesses they work with. Contact details stay hidden; calls, bookings and payments run through Redial.</p>
+        </div>
+        {threads.length === 0 ? (
+          <div className="space-y-2 rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <MessagesSquare className="mx-auto size-6" />
+            <p>No conversations yet.</p>
+            <p><Link href="/live-agents" className="underline underline-offset-2">Find a Live Agent</Link> to message.</p>
+          </div>
+        ) : <ThreadsCollection threads={threads} />}
+        {children}
+      </div>
+    );
+  }
   return (
     <div className="grid min-h-0 grid-cols-1 md:grid-cols-[20rem_minmax(0,1fr)]">
       <aside className={cn("border-r md:block md:h-dvh md:overflow-y-auto", open && "hidden")}>

@@ -1,20 +1,16 @@
-import Link from "next/link";
 import { Users } from "lucide-react";
-import { LocalDate } from "@/components/local-date";
+import { SharedList, type SharedRow } from "@/components/shared/shared-list";
 import { requireUser } from "@/lib/data";
-import { formatDuration } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Shared with me · Redial" };
-
-type Row = { recording_id: string; title: string; created_at: string; duration_sec: number; shared_by: string; shared_at: string };
 
 // Recordings other people shared with your email address. Read-only.
 export default async function SharedWithMePage() {
   await requireUser();
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("shared_with_me");
-  const rows = (data ?? []) as Row[];
+  const rows = (data ?? []) as SharedRow[];
 
   return (
     <div className="w-full space-y-6 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
@@ -30,20 +26,7 @@ export default async function SharedWithMePage() {
           <p className="mt-1 text-sm text-muted-foreground">When someone shares a recording with your email, it shows up here.</p>
         </div>
       )}
-      {rows.length > 0 && (
-        <ul className="divide-y rounded-xl border">
-          {rows.map((r) => (
-            <li key={r.recording_id}>
-              <Link href={`/shared/${r.recording_id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{r.title}</p>
-                  <p className="text-xs text-muted-foreground">From {r.shared_by} · <LocalDate iso={r.created_at} />{r.duration_sec ? ` · ${formatDuration(r.duration_sec)}` : ""}</p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {rows.length > 0 && <SharedList rows={rows} />}
     </div>
   );
 }

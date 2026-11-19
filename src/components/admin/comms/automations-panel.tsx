@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { Pencil, Plus, Power, PowerOff, Trash2, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CollectionView } from "@/components/collection/collection-view";
+import { DetailList, IconTile, muted } from "@/components/collection/kit";
 import { Button } from "@/components/ui/button";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
@@ -33,32 +36,72 @@ export function AutomationsPanel({ automations, templates, readOnly, cronReady }
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
   const run = (fn: () => Promise<{ ok?: string; error?: string }>) => start(async () => setMsg(await fn()));
+  const many = (rows: Automation[], fn: (a: Automation) => Promise<{ ok?: string; error?: string }>) => start(async () => {
+    let last: { ok?: string; error?: string } = {};
+    for (const a of rows) { last = await fn(a); if (last.error) break; }
+    setMsg(last);
+  });
+  const tpl = (a: Automation) => templates.find((x) => x.id === a.template_id)?.name ?? "Deleted template";
+  const onBadge = (a: Automation) => <Badge variant="outline" className={a.enabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"}>{a.enabled ? "On" : "Off"}</Badge>;
+  const remove = (rows: Automation[]) => confirm(rows.length === 1 ? `Delete "${rows[0].name}"?` : `Delete ${rows.length} automations?`) && many(rows, (a) => deleteAutomation(a.id));
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm text-muted-foreground">{cronReady ? "Automations send within about 5 minutes of their trigger (plus any delay)." : "Automations queue up but won't send until the scheduled task is set up in Coolify (see the setup notes)."}</p>
         <span className="ml-auto text-sm text-muted-foreground">{msg.error ?? msg.ok}</span>
-        {!readOnly && <Button variant="outline" disabled={!templates.length} onClick={() => setEditing("new")}><Plus /> New automation</Button>}
       </div>
       {!templates.length && <p className="text-sm text-muted-foreground">Create a template first; automations send templates.</p>}
-      {automations.length === 0 ? <EmptyState message="No automations yet. Example: when a deal moves to Proposal, send your follow-up template two days later." /> : (
-        <ul className="divide-y rounded-xl border bg-card">
-          {automations.map((a) => (
-            <li key={a.id} className="flex flex-wrap items-center gap-3 p-3">
-              <Zap className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{a.name}</p>
-                <p className="text-xs text-muted-foreground">{describe(a, templates)} · {a.runs} sent</p>
-              </div>
-              {!readOnly && <>
-                <Switch checked={a.enabled} aria-label={`${a.name} on`} disabled={pending} onCheckedChange={(on) => run(() => setAutomationEnabled(a.id, on))} />
-                <Button size="icon-sm" variant="ghost" aria-label={`Edit ${a.name}`} onClick={() => setEditing(a)}><Pencil /></Button>
-                <Button size="icon-sm" variant="ghost" aria-label={`Delete ${a.name}`} disabled={pending} onClick={() => confirm(`Delete "${a.name}"?`) && run(() => deleteAutomation(a.id))}><Trash2 /></Button>
-              </>}
-            </li>
-          ))}
-        </ul>
+      {automations.length === 0 ? (
+        <>
+          {!readOnly && <Button variant="outline" disabled={!templates.length} onClick={() => setEditing("new")}><Plus /> New automation</Button>}
+          <EmptyState message="No automations yet. Example: when a deal moves to Proposal, send your follow-up template two days later." />
+        </>
+      ) : (
+        <CollectionView<Automation>
+          items={automations} getId={(a) => a.id} title={(a) => a.name} noun={["automation", "automations"]} storageKey="admin-automations" defaultView="list"
+          subtitle={(a) => describe(a, templates)} media={() => <IconTile icon={Zap} />} badge={onBadge} meta={(a) => `${a.runs} sent`}
+          searchText={(a) => `${a.name} ${describe(a, templates)}`}
+          filters={[
+            { id: "all", label: "All", test: () => true },
+            { id: "on", label: "On", test: (a) => a.enabled },
+            { id: "off", label: "Off", test: (a) => !a.enabled },
+          ]}
+          columns={[
+            { id: "name", label: "Name", sort: (a) => a.name.toLowerCase(), cell: (a) => <span className="font-medium">{a.name}</span> },
+            { id: "when", label: "When", sort: (a) => a.trigger, cell: (a) => muted(TRIGGERS.find((x) => x.id === a.trigger)?.label ?? a.trigger) },
+            { id: "template", label: "Sends", sort: (a) => tpl(a), cell: (a) => muted(tpl(a)) },
+            { id: "to", label: "To", sort: (a) => a.recipient, cell: (a) => muted(a.recipient === "owner" ? "Deal owner" : "Contact") },
+            { id: "delay", label: "Wait", sort: (a) => a.delay_minutes, cell: (a) => muted(delayText(a.delay_minutes)) },
+            { id: "runs", label: "Sent", sort: (a) => a.runs, cell: (a) => muted(a.runs) },
+            { id: "on", label: "Status", sort: (a) => Number(a.enabled), cell: onBadge },
+          ]}
+          toolbar={!readOnly && <Button variant="outline" disabled={!templates.length} onClick={() => setEditing("new")}><Plus /> New automation</Button>}
+          actions={readOnly ? [] : [
+            { label: "Edit", icon: Pencil, single: true, run: ([a]) => setEditing(a) },
+            { label: "Turn on", icon: Power, show: (rows) => rows.some((a) => !a.enabled), run: (rows) => many(rows.filter((a) => !a.enabled), (a) => setAutomationEnabled(a.id, true)) },
+            { label: "Turn off", icon: PowerOff, show: (rows) => rows.some((a) => a.enabled), run: (rows) => many(rows.filter((a) => a.enabled), (a) => setAutomationEnabled(a.id, false)) },
+            { label: "Delete", icon: Trash2, destructive: true, run: remove },
+          ]}
+          previewActions={(a, close) => !readOnly && (
+            <>
+              <Button size="sm" variant="outline" onClick={() => { close(); setEditing(a); }}><Pencil /> Edit</Button>
+              <Button size="sm" variant="ghost" disabled={pending} onClick={() => remove([a])}><Trash2 /> Delete</Button>
+            </>
+          )}
+          preview={(a) => (
+            <div className="space-y-4">
+              <p className="rounded-xl border bg-muted/30 p-3 text-sm">{describe(a, templates)}</p>
+              <DetailList rows={[["Template", tpl(a)], ["To", a.recipient === "owner" ? "The deal owner" : "The contact"], ["Wait", delayText(a.delay_minutes)], ["Sent so far", a.runs]]} />
+              {!readOnly && (
+                <label className="flex items-center justify-between gap-3 rounded-xl border p-3 text-sm">
+                  <span className="font-medium">Automation is {a.enabled ? "on" : "off"}</span>
+                  <Switch checked={a.enabled} aria-label={`${a.name} on`} disabled={pending} onCheckedChange={(on) => run(() => setAutomationEnabled(a.id, on))} />
+                </label>
+              )}
+            </div>
+          )}
+        />
       )}
       {editing && <AutomationDialog automation={editing === "new" ? undefined : editing} templates={templates} onClose={() => setEditing(null)} />}
     </div>

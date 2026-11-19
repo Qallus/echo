@@ -1,8 +1,5 @@
 import Link from "next/link";
 import { AdminPage, Section, StatCard } from "@/components/admin/admin-ui";
-import { LocalDate } from "@/components/local-date";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { findPrice, money } from "@/lib/billing/catalog";
@@ -15,6 +12,7 @@ import { BillingSettingsForm } from "./billing-settings-form";
 import { CatalogEditor } from "./catalog-editor";
 import { OrdersTable, type OrderRow } from "./orders-table";
 import { PromoCodes } from "./promo-codes";
+import { SubscriptionsList } from "./subscriptions-list";
 import { toPromoRow } from "@/lib/billing/promo";
 import type { PromoRow } from "@/lib/billing/promo-rules";
 
@@ -107,22 +105,11 @@ export default async function AdminBillingPage() {
         </TabsContent>
 
         <TabsContent value="subscriptions" className="pt-6">
-          {s.length === 0 ? <p className="rounded-xl border p-4 text-sm text-muted-foreground">No subscriptions yet.</p> : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Plan and add-ons</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Monthly value</TableHead><TableHead>Renews</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {s.map((x) => (
-                  <TableRow key={x.id}>
-                    <TableCell><Link href={`/admin/users/${x.user_id}`} className="hover:underline">{x.user_email ?? "—"}</Link></TableCell>
-                    <TableCell className="text-muted-foreground">{x.items.map((i) => `${findPrice(i.price_key)?.product.name ?? i.price_key}${i.quantity > 1 ? ` × ${i.quantity}` : ""}`).join(", ")}</TableCell>
-                    <TableCell><Badge variant="outline" className={x.status === "past_due" ? "text-destructive" : ""}>{x.status.replace("_", " ")}{x.cancel_at_period_end ? " · ending" : ""}</Badge></TableCell>
-                    <TableCell className="text-right tabular-nums">{money(mrr([{ ...x, status: "active" }]))}</TableCell>
-                    <TableCell className="text-muted-foreground">{x.current_period_end ? <LocalDate iso={x.current_period_end} short /> : "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <SubscriptionsList subs={s.map((x) => ({
+            id: x.id, user_id: x.user_id, user_email: x.user_email, status: x.status, current_period_end: x.current_period_end, cancel_at_period_end: x.cancel_at_period_end, created_at: x.created_at,
+            plan: x.items.map((i) => `${findPrice(i.price_key)?.product.name ?? i.price_key}${i.quantity > 1 ? ` × ${i.quantity}` : ""}`).join(", "),
+            monthly: mrr([{ ...x, status: "active" }]),
+          }))} />
         </TabsContent>
 
         <TabsContent value="codes" className="pt-6">

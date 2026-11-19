@@ -1,12 +1,7 @@
 import { Briefcase, Lock } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  CopyLink, CreateWorkspaceForm, InviteForm, RemoveMemberButton, RevokeInviteButton,
-} from "@/components/team/team-forms";
-import { LocalDate } from "@/components/local-date";
-import { ProfileHoverCard } from "@/components/profile/profile-card";
-import { UserAvatar } from "@/components/profile/user-avatar";
+import { CreateWorkspaceForm, InviteForm } from "@/components/team/team-forms";
+import { TeamPeople } from "@/components/team/team-people";
 import { listInvites, listMembers, listWorkspaces, requireUser } from "@/lib/data";
 import { siteOrigin } from "@/lib/site";
 
@@ -37,7 +32,6 @@ export default async function TeamPage() {
       </div>
 
       {spaces.map(({ ws, members, invites }) => {
-        const owners = members.filter((m) => m.role === "owner").length;
         return (
           <Card key={ws.id}>
             <CardHeader>
@@ -45,49 +39,12 @@ export default async function TeamPage() {
               <CardDescription>You&apos;re {ws.role === "admin" ? "an admin" : `the ${ws.role}`} · {members.length} {members.length === 1 ? "person" : "people"}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <ul className="divide-y rounded-lg border">
-                {members.map((m) => {
-                  const self = m.id === user.id;
-                  const canRemove = self ? !(m.role === "owner" && owners === 1) : ws.role === "owner";
-                  const role = [m.jobTitle, m.company].filter(Boolean).join(" · ");
-                  return (
-                    <li key={m.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
-                      <ProfileHoverCard person={m}>
-                        <UserAvatar name={m.fullName} email={m.email} src={m.avatarUrl} size="md" />
-                      </ProfileHoverCard>
-                      <div className="min-w-0 flex-1">
-                        <ProfileHoverCard person={m}>
-                          <span className="block truncate font-medium hover:underline">{m.fullName || m.email}{self && " (you)"}</span>
-                        </ProfileHoverCard>
-                        <div className="truncate text-xs text-muted-foreground">{role || m.email}</div>
-                      </div>
-                      <Badge variant="outline" className="capitalize">{m.role}</Badge>
-                      {canRemove && <RemoveMemberButton workspaceId={ws.id} userId={m.id} self={self} />}
-                    </li>
-                  );
-                })}
-              </ul>
+              <TeamPeople workspaceId={ws.id} myRole={ws.role} userId={user.id} members={members} invites={invites} origin={origin} />
 
               {ws.role !== "member" && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium">Invite people</h3>
                   <InviteForm workspaceId={ws.id} />
-                  {invites.length > 0 && (
-                    <ul className="divide-y rounded-lg border">
-                      {invites.map((i) => (
-                        <li key={i.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate">{i.email}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Pending · <span className="capitalize">{i.role}</span> · expires <LocalDate iso={i.expiresAt} short />
-                            </div>
-                          </div>
-                          <CopyLink link={`${origin}/invite/${i.token}`} />
-                          <RevokeInviteButton id={i.id} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
               )}
             </CardContent>

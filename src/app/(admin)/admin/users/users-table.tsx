@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
-import { LayoutGrid, Rows3, Search, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Ban, ExternalLink, LogOut, ShieldCheck, UserPlus } from "lucide-react";
+import { CollectionView } from "@/components/collection/collection-view";
 import { LocalDate } from "@/components/local-date";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pick } from "@/components/ui/pick";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { inviteUser } from "@/lib/admin/actions/users";
+import { inviteUser, restoreUser, signOutUserEverywhere, suspendUser } from "@/lib/admin/actions/users";
 import { roleLabel, type StaffRole } from "@/lib/admin/permissions";
-import { cn } from "@/lib/utils";
 
 export type UserRow = {
   user_id: string; email: string; full_name: string | null; avatar_url: string | null; created_at: string; last_sign_in_at: string | null;
@@ -21,20 +20,8 @@ export type UserRow = {
 };
 
 const TYPE_LABEL = { personal: "Personal", business: "Business", team: "Team" };
-const FILTERS = ["All", "Personal", "Business", "Team", "Staff", "Paying", "Suspended", "Unconfirmed", "Inactive 30d"] as const;
-type Filter = (typeof FILTERS)[number];
-
-function matches(u: UserRow, f: Filter) {
-  switch (f) {
-    case "All": return true;
-    case "Staff": return Boolean(u.staff_role);
-    case "Paying": return u.subscription_status === "active" || u.subscription_status === "trialing";
-    case "Suspended": return u.suspended;
-    case "Unconfirmed": return !u.confirmed;
-    case "Inactive 30d": return !u.last_sign_in_at || Date.now() - Date.parse(u.last_sign_in_at) > 30 * 86400_000;
-    default: return TYPE_LABEL[u.account_type] === f;
-  }
-}
+const inactive = (u: UserRow) => !u.last_sign_in_at || Date.now() - Date.parse(u.last_sign_in_at) > 30 * 86400_000;
+const paying = (u: UserRow) => u.subscription_status === "active" || u.subscription_status === "trialing";
 
 function Badges({ u }: { u: UserRow }) {
   return (
@@ -48,96 +35,111 @@ function Badges({ u }: { u: UserRow }) {
   );
 }
 
-// Searchable, filterable user list; each user opens their Customer 360.
+// Every user in the shared list layout; each opens a preview with a link to
+// their Customer 360. Staff with users.manage can invite, suspend, restore
+// and sign people out.
 export function UsersTable({ users, canInvite }: { users: UserRow[]; canInvite: boolean }) {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("All");
-  const [view, setView] = useState<"table" | "cards">("table");
+  const router = useRouter();
   const [inviting, setInviting] = useState(false);
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
+  const manage = canInvite;
+  const name = (u: UserRow) => u.full_name || u.email;
+  const avatar = (u: UserRow) => <UserAvatar name={u.full_name} email={u.email} src={u.avatar_url} size="md" />;
 
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return users.filter((u) => matches(u, filter) && (!q || `${u.full_name ?? ""} ${u.email}`.toLowerCase().includes(q)));
-  }, [users, query, filter]);
+  // One action across many users; stops at the first error.
+  const each = (rows: UserRow[], fn: (u: UserRow) => Promise<{ ok?: string; error?: string }>, done: string) => start(async () => {
+    for (const u of rows) {
+      const r = await fn(u);
+      if (r.error) { setMsg({ error: `${name(u)}: ${r.error}` }); router.refresh(); return; }
+    }
+    setMsg({ ok: done });
+    router.refresh();
+  });
+  const suspend = (rows: UserRow[]) => {
+    const reason = prompt(`Suspend ${rows.length === 1 ? name(rows[0]) : `${rows.length} users`}? They're signed out and can't sign in until restored. Reason (kept in the audit log):`, "");
+    if (reason !== null) each(rows, (u) => suspendUser(u.user_id, reason), rows.length === 1 ? "Suspended." : `Suspended ${rows.length}.`);
+  };
+  const restore = (rows: UserRow[]) => each(rows, (u) => restoreUser(u.user_id), rows.length === 1 ? "Restored." : `Restored ${rows.length}.`);
+  const signOut = (rows: UserRow[]) => confirm(`Sign ${rows.length === 1 ? name(rows[0]) : `${rows.length} users`} out on every device?`)
+    && each(rows, (u) => signOutUserEverywhere(u.user_id), "Signed out on every device.");
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1 sm:max-w-xs">
-          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or email" className="pl-8" aria-label="Search users" />
-        </div>
-        <Pick label="Filter" className="w-fit" value={filter} onChange={(v) => setFilter(v as Filter)} options={FILTERS.map((f) => ({ value: f, label: f }))} />
-        <div className="flex rounded-lg border p-0.5">
-          <Button variant={view === "table" ? "secondary" : "ghost"} size="icon-sm" aria-label="Table view" onClick={() => setView("table")}><Rows3 /></Button>
-          <Button variant={view === "cards" ? "secondary" : "ghost"} size="icon-sm" aria-label="Card view" onClick={() => setView("cards")}><LayoutGrid /></Button>
-        </div>
-        <span className="text-sm text-muted-foreground">{shown.length} of {users.length}</span>
-        {canInvite && <Button size="sm" variant="outline" className="ml-auto" onClick={() => setInviting((v) => !v)}><UserPlus /> Invite user</Button>}
-      </div>
-
       {inviting && (
         <form className="flex flex-wrap items-center gap-2 rounded-xl border p-3"
           onSubmit={(e) => { e.preventDefault(); start(async () => { const res = await inviteUser(email); setMsg(res); if (res.ok) setEmail(""); }); }}>
           <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" className="max-w-xs" aria-label="Email to invite" />
           <Button type="submit" size="sm" disabled={pending}>{pending ? "Sending…" : "Send invitation"}</Button>
           <span className="text-xs text-muted-foreground">They get an email to set a password and join Redial.</span>
-          {msg.error && <p className="w-full text-sm text-destructive">{msg.error}</p>}
-          {msg.ok && <p className="w-full text-sm text-muted-foreground">{msg.ok}</p>}
         </form>
       )}
+      {(msg.error || msg.ok) && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.error ?? msg.ok}</p>}
 
-      {shown.length === 0 ? <p className="rounded-xl border p-6 text-center text-sm text-muted-foreground">No users match.</p> : view === "table" ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Recordings</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Last sign-in</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shown.map((u) => (
-              <TableRow key={u.user_id} className={cn(u.suspended && "opacity-60")}>
-                <TableCell>
-                  <Link href={`/admin/users/${u.user_id}`} className="flex items-center gap-2.5 hover:underline">
-                    <UserAvatar name={u.full_name} email={u.email} src={u.avatar_url} size="sm" />
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">{u.full_name || u.email}</span>
-                      {u.full_name && <span className="block truncate text-xs text-muted-foreground">{u.email}</span>}
-                    </span>
-                  </Link>
-                </TableCell>
-                <TableCell><Badges u={u} /></TableCell>
-                <TableCell className="text-right tabular-nums">{u.recordings}</TableCell>
-                <TableCell className="text-muted-foreground"><LocalDate iso={u.created_at} short /></TableCell>
-                <TableCell className="text-muted-foreground">{u.last_sign_in_at ? <LocalDate iso={u.last_sign_in_at} short /> : "Never"}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {shown.map((u) => (
-            <Link key={u.user_id} href={`/admin/users/${u.user_id}`} className={cn("space-y-3 rounded-xl border p-4 hover:bg-muted/40", u.suspended && "opacity-60")}>
-              <span className="flex items-center gap-3">
-                <UserAvatar name={u.full_name} email={u.email} src={u.avatar_url} size="md" />
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{u.full_name || u.email}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
-                </span>
-              </span>
-              <Badges u={u} />
-              <span className="block text-xs text-muted-foreground">{u.recordings} recordings · {u.workspaces} workspaces</span>
-            </Link>
-          ))}
-        </div>
-      )}
+      <CollectionView<UserRow>
+        items={users} getId={(u) => u.user_id} title={name} noun={["user", "users"]} storageKey="admin-users" defaultView="table"
+        subtitle={(u) => (u.full_name ? u.email : TYPE_LABEL[u.account_type])}
+        media={avatar}
+        badge={(u) => (u.suspended ? <Badge variant="destructive">Suspended</Badge> : u.staff_role ? <Badge>{roleLabel(u.staff_role)}</Badge> : null)}
+        meta={(u) => <>{u.recordings} recordings · {u.workspaces} workspaces · last sign-in {u.last_sign_in_at ? <LocalDate iso={u.last_sign_in_at} short /> : "never"}</>}
+        searchText={(u) => `${u.full_name ?? ""} ${u.email} ${TYPE_LABEL[u.account_type]} ${u.staff_role ?? ""} ${u.subscription_status ?? ""}`}
+        filters={[
+          { id: "all", label: "All", test: () => true },
+          { id: "personal", label: "Personal", test: (u) => u.account_type === "personal" },
+          { id: "business", label: "Business", test: (u) => u.account_type === "business" },
+          { id: "team", label: "Team", test: (u) => u.account_type === "team" },
+          { id: "staff", label: "Staff", test: (u) => Boolean(u.staff_role) },
+          { id: "paying", label: "Paying", test: paying },
+          { id: "suspended", label: "Suspended", test: (u) => u.suspended },
+          { id: "unconfirmed", label: "Unconfirmed", test: (u) => !u.confirmed },
+          { id: "inactive", label: "Inactive 30 days", test: inactive },
+        ]}
+        date={(u) => u.created_at}
+        columns={[
+          { id: "user", label: "User", sort: (u) => name(u).toLowerCase(), cell: (u) => (
+            <span className="flex items-center gap-2.5">{avatar(u)}<span className="min-w-0"><span className="block truncate font-medium">{name(u)}</span>{u.full_name && <span className="block truncate text-xs text-muted-foreground">{u.email}</span>}</span></span>
+          ) },
+          { id: "status", label: "Status", sort: (u) => `${u.suspended ? 0 : 1}${u.account_type}`, cell: (u) => <Badges u={u} /> },
+          { id: "recordings", label: "Recordings", sort: (u) => u.recordings, cell: (u) => <span className="tabular-nums">{u.recordings}</span> },
+          { id: "workspaces", label: "Workspaces", sort: (u) => u.workspaces, cell: (u) => <span className="tabular-nums">{u.workspaces}</span> },
+          { id: "joined", label: "Joined", sort: (u) => u.created_at, cell: (u) => <span className="text-muted-foreground"><LocalDate iso={u.created_at} short /></span> },
+          { id: "last", label: "Last sign-in", sort: (u) => u.last_sign_in_at, cell: (u) => <span className="text-muted-foreground">{u.last_sign_in_at ? <LocalDate iso={u.last_sign_in_at} short /> : "Never"}</span> },
+        ]}
+        toolbar={manage && <Button variant="outline" onClick={() => setInviting((v) => !v)}><UserPlus /> Invite user</Button>}
+        actions={[
+          { label: "Open", icon: ExternalLink, single: true, run: ([u]) => router.push(`/admin/users/${u.user_id}`) },
+          ...(manage ? [
+            { label: "Sign out everywhere", icon: LogOut, run: signOut },
+            { label: "Restore", icon: ShieldCheck, show: (rows: UserRow[]) => rows.some((u) => u.suspended), run: (rows: UserRow[]) => restore(rows.filter((u) => u.suspended)) },
+            { label: "Suspend", icon: Ban, destructive: true, show: (rows: UserRow[]) => rows.some((u) => !u.suspended), run: (rows: UserRow[]) => suspend(rows.filter((u) => !u.suspended)) },
+          ] : []),
+        ]}
+        previewActions={(u) => <Button size="sm" nativeButton={false} render={<Link href={`/admin/users/${u.user_id}`} />}><ExternalLink /> Customer 360</Button>}
+        preview={(u) => (
+          <div className="space-y-4 text-sm">
+            <Badges u={u} />
+            <dl className="divide-y rounded-xl border px-3">
+              {([
+                ["Email", u.email], ["Account", TYPE_LABEL[u.account_type]], ["Plan", u.subscription_status?.replace("_", " ") ?? "Free"],
+                ["Recordings", String(u.recordings)], ["Workspaces", String(u.workspaces)],
+                ["Joined", <LocalDate key="j" iso={u.created_at} />], ["Last sign-in", u.last_sign_in_at ? <LocalDate key="l" iso={u.last_sign_in_at} /> : "Never"],
+                ["Email confirmed", u.confirmed ? "Yes" : "Not yet"],
+              ] as [string, React.ReactNode][]).map(([k, v]) => (
+                <div key={k} className="grid grid-cols-[8rem_1fr] gap-2 py-1.5"><dt className="text-muted-foreground">{k}</dt><dd className="min-w-0 break-words">{v}</dd></div>
+              ))}
+            </dl>
+            {manage && (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" disabled={pending} onClick={() => signOut([u])}><LogOut /> Sign out everywhere</Button>
+                {u.suspended
+                  ? <Button size="sm" variant="outline" disabled={pending} onClick={() => restore([u])}><ShieldCheck /> Restore</Button>
+                  : <Button size="sm" variant="destructive" disabled={pending} onClick={() => suspend([u])}><Ban /> Suspend</Button>}
+              </div>
+            )}
+          </div>
+        )}
+      />
     </div>
   );
 }

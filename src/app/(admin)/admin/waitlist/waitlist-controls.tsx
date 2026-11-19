@@ -30,15 +30,16 @@ const cell = (v: unknown) => {
   return `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
 };
 
-// Downloads the rows currently shown as a CSV file.
+// Downloads these people as a CSV file.
+export function downloadCsv(rows: Entry[]) {
+  const csv = [COLUMNS.join(","), ...rows.map((r) => COLUMNS.map((c) => cell(r[c])).join(","))].join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: `app-waitlist-${new Date().toISOString().slice(0, 10)}.csv` });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Downloads everyone on the list.
 export function ExportCsv({ rows }: { rows: Entry[] }) {
-  return (
-    <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => {
-      const csv = [COLUMNS.join(","), ...rows.map((r) => COLUMNS.map((c) => cell(r[c])).join(","))].join("\n");
-      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-      const a = Object.assign(document.createElement("a"), { href: url, download: `app-waitlist-${new Date().toISOString().slice(0, 10)}.csv` });
-      a.click();
-      URL.revokeObjectURL(url);
-    }}><Download /> Export CSV</Button>
-  );
+  return <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => downloadCsv(rows)}><Download /> Export CSV</Button>;
 }

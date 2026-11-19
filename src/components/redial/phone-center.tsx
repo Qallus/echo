@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
-  Archive, ArchiveRestore, AudioLines, Ban, CalendarClock, CheckSquare, ChevronDown, Delete, Grid3x3, Mail, MailOpen, MessageSquare, Mic, MicOff, Phone,
+  Archive, ArchiveRestore, AudioLines, Ban, CalendarClock, CheckSquare, Delete, Grid3x3, Mail, MailOpen, MessageSquare, Mic, MicOff, Phone,
   PhoneIncoming, PhoneOff, PhoneOutgoing, Play, RefreshCw, ShieldAlert, Square, Star, UserCheck, UserPlus, Voicemail,
 } from "lucide-react";
+import { CollectionView } from "@/components/collection/collection-view";
 import { LocalDate } from "@/components/local-date";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pick } from "@/components/ui/pick";
@@ -48,8 +50,19 @@ const VERDICT_TONE: Record<Verdict, string> = {
   likely_scam: "bg-red-500/15 text-red-700 dark:text-red-300",
 };
 const signalText = (s: { code: string; detail: string }) => (RISK_SIGNALS as Record<string, string>)[s.code] ?? CHECK_SIGNALS[s.code] ?? s.detail;
-const FILTERS = [["all", "All"], ["in", "Inbound"], ["out", "Outbound"], ["voicemail", "Voicemail"], ["archived", "Archived"]] as const;
-type Filter = (typeof FILTERS)[number][0];
+
+const callIcon = (c: Call) => (
+  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted">
+    {outgoing(c) ? <PhoneOutgoing className="size-4" aria-label="Outgoing" /> : <PhoneIncoming className="size-4" aria-label="Incoming" />}
+  </span>
+);
+const callBadges = (c: Call) => (
+  <span className="flex flex-wrap items-center gap-1">
+    <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium", STATUS_TONE[c.status] ?? "bg-muted text-muted-foreground")}>{statusText(c)}</span>
+    {c.recording_id && <span className="rounded-full bg-violet-500/15 px-1.5 py-px text-[10px] font-medium text-violet-700 dark:text-violet-300">Recorded</span>}
+    {c.verdict && <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium", VERDICT_TONE[c.verdict])}>{VERDICT_LABEL[c.verdict]}</span>}
+  </span>
+);
 
 export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false, initialCall = null }: {
   lines: Line[]; calls: Call[]; entries: ListEntry[]; manageLines: string[]; canCrm?: boolean; initialCall?: string | null;
@@ -61,21 +74,19 @@ export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false
   const [dial, setDial] = useState("");
   const [record, setRecord] = useState(line?.record_calls !== false);
   const [keypad, setKeypad] = useState(false);
-  const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<string | null>(initialCall);
+  const current = open ? calls.find((c) => c.id === open) ?? null : null;
+  const currentLine = current ? lines.find((l) => l.id === current.line_id) : undefined;
+  const openCall = (c: Call) => { setOpen(c.id); if (unread(c)) void updateCall(c.id, { read: true }); };
+  const bulk = async (rows: Call[], patch: { read?: boolean; archived?: boolean }) => {
+    for (const c of rows) await updateCall(c.id, patch);
+    router.refresh();
+  };
   const [refreshing, startRefresh] = useTransition();
   const refresh = () => startRefresh(() => router.refresh());
   // After a call ends, the log fills in (now), then the recording and cost.
   const phone = useBrowserPhone(() => { refresh(); setTimeout(refresh, 45_000); });
 
-  const shown = useMemo(() => calls.filter((c) => {
-    if (filter === "archived") return Boolean(c.archived_at);
-    if (c.archived_at) return false;
-    if (filter === "in") return !outgoing(c);
-    if (filter === "out") return outgoing(c);
-    if (filter === "voicemail") return c.status === "message" || Boolean(c.recording_path);
-    return true;
-  }), [calls, filter]);
 
   const call = (number: string) => {
     const to = normalizeNumber(number);
@@ -131,58 +142,55 @@ export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false
         )}
       </div>
 
-      {/* Call log */}
-      <div className="min-w-0 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1 text-xs">
-            {FILTERS.map(([f, label]) => (
-              <button key={f} type="button" onClick={() => setFilter(f)} className={cn("rounded-md px-2.5 py-1 font-medium", filter === f ? "bg-card shadow-sm" : "text-muted-foreground")}>
-                {f === "in" && <PhoneIncoming className="mr-1 inline size-3" />}{f === "out" && <PhoneOutgoing className="mr-1 inline size-3" />}{label}
-              </button>
-            ))}
-          </div>
-          <span className="ml-auto text-xs text-muted-foreground">{shown.length} call{shown.length === 1 ? "" : "s"}</span>
-          <Button size="sm" variant="outline" disabled={refreshing} onClick={refresh}><RefreshCw className={cn(refreshing && "animate-spin")} /> Refresh</Button>
-        </div>
-        {shown.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-            {filter === "archived" ? "Nothing archived." : "No calls yet. Calls in and out of your Redial lines, from any phone, show up here."}
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {shown.map((c) => {
-              const isOpen = open === c.id;
-              const lineOf = lines.find((l) => l.id === c.line_id);
-              return (
-                <li key={c.id} className={cn("overflow-hidden rounded-xl border bg-card", isOpen && "ring-1 ring-foreground/20")}>
-                  <button type="button" aria-expanded={isOpen} onClick={() => { setOpen(isOpen ? null : c.id); if (!isOpen && unread(c)) void updateCall(c.id, { read: true }); }}
-                    className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/40">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted">
-                      {outgoing(c) ? <PhoneOutgoing className="size-4" aria-label="Outgoing" /> : <PhoneIncoming className="size-4" aria-label="Incoming" />}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-1.5">
-                        <span className={cn("truncate text-sm", unread(c) ? "font-semibold" : "font-medium")}>{who(c)}</span>
-                        <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium", STATUS_TONE[c.status] ?? "bg-muted text-muted-foreground")}>{statusText(c)}</span>
-                        {c.recording_id && <span className="rounded-full bg-violet-500/15 px-1.5 py-px text-[10px] font-medium text-violet-700 dark:text-violet-300">Recorded</span>}
-                        {c.verdict && <span className={cn("rounded-full px-1.5 py-px text-[10px] font-medium", VERDICT_TONE[c.verdict])}>{VERDICT_LABEL[c.verdict]}</span>}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {c.duration_seconds ? `${clock(c.duration_seconds)} · ` : ""}{lines.length > 1 && lineOf ? `${lineOf.label} · ` : ""}{c.summary || c.message || c.reason || ""}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground"><LocalDate iso={c.started_at} short /></span>
-                    <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
-                  </button>
-                  {isOpen && lineOf && (
-                    <CallBody call={c} line={lineOf} entries={entries} manage={manageLines.includes(c.line_id)} canCrm={canCrm} canDial={!phone.busy && ownLines.length > 0}
-                      onCall={(n) => call(n)} showLine={lines.length > 1} />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      {/* Call log: the shared list layout (list, table, cards, calendar), checkboxes
+          with the bottom action bar, and a click opens the call in a side panel. */}
+      <div className="min-w-0">
+        <CollectionView<Call>
+          items={calls} getId={(c) => c.id} title={who} noun={["call", "calls"]} storageKey="calls-log" defaultView="list"
+          empty="No calls yet. Calls in and out of your Redial lines, from any phone, show up here."
+          subtitle={(c) => [c.duration_seconds ? clock(c.duration_seconds) : null, lines.length > 1 ? lines.find((l) => l.id === c.line_id)?.label : null, c.summary || c.message || c.reason].filter(Boolean).join(" · ")}
+          media={callIcon} badge={callBadges}
+          meta={(c) => <LocalDate iso={c.started_at} short />}
+          searchText={(c) => [who(c), c.from_number, c.to_number, c.summary, c.message, c.reason, c.purpose, c.notes].filter(Boolean).join(" ")}
+          filters={[
+            { id: "all", label: "All", test: (c) => !c.archived_at },
+            { id: "unread", label: "Unread", test: unread },
+            { id: "in", label: "Inbound", test: (c) => !c.archived_at && !outgoing(c) },
+            { id: "out", label: "Outbound", test: (c) => !c.archived_at && outgoing(c) },
+            { id: "voicemail", label: "Voicemail", test: (c) => !c.archived_at && (c.status === "message" || Boolean(c.recording_path)) },
+            { id: "archived", label: "Archived", test: (c) => Boolean(c.archived_at) },
+          ]}
+          date={(c) => c.started_at}
+          columns={[
+            { id: "who", label: "Caller", sort: (c) => who(c).toLowerCase(), cell: (c) => <span className="flex items-center gap-2.5">{callIcon(c)}<span className={cn("truncate", unread(c) ? "font-semibold" : "font-medium")}>{who(c)}</span></span> },
+            { id: "status", label: "Status", sort: (c) => statusText(c), cell: callBadges },
+            { id: "direction", label: "Direction", sort: (c) => (outgoing(c) ? 1 : 0), cell: (c) => <span className="text-muted-foreground">{outgoing(c) ? "Outbound" : "Inbound"}</span> },
+            { id: "length", label: "Length", sort: (c) => c.duration_seconds ?? 0, cell: (c) => <span className="text-muted-foreground tabular-nums">{c.duration_seconds ? clock(c.duration_seconds) : "—"}</span> },
+            ...(lines.length > 1 ? [{ id: "line", label: "Line", sort: (c: Call) => lines.find((l) => l.id === c.line_id)?.label ?? null, cell: (c: Call) => <span className="text-muted-foreground">{lines.find((l) => l.id === c.line_id)?.label ?? "—"}</span> }] : []),
+            { id: "cost", label: "Cost", sort: (c) => c.cost_cents ?? null, cell: (c) => <span className="text-muted-foreground tabular-nums">{cost(c.cost_cents) ?? "—"}</span> },
+            { id: "when", label: "When", sort: (c) => c.started_at, cell: (c) => <span className="text-muted-foreground"><LocalDate iso={c.started_at} short /></span> },
+          ]}
+          toolbar={<Button size="sm" variant="outline" disabled={refreshing} onClick={refresh}><RefreshCw className={cn(refreshing && "animate-spin")} /> Refresh</Button>}
+          actions={[
+            { label: "Mark read", icon: MailOpen, show: (rows) => rows.some(unread), run: (rows) => bulk(rows.filter(unread), { read: true }) },
+            { label: "Mark unread", icon: Mail, show: (rows) => rows.some((c) => !outgoing(c) && !unread(c)), run: (rows) => bulk(rows.filter((c) => !outgoing(c)), { read: false }) },
+            { label: "Archive", icon: Archive, show: (rows) => rows.some((c) => !c.archived_at), run: (rows) => bulk(rows.filter((c) => !c.archived_at), { archived: true }) },
+            { label: "Unarchive", icon: ArchiveRestore, show: (rows) => rows.some((c) => c.archived_at), run: (rows) => bulk(rows.filter((c) => c.archived_at), { archived: false }) },
+          ]}
+          onOpen={openCall}
+        />
+        <ResponsivePanel id="call-detail" open={Boolean(current)} onOpenChange={(o) => !o && setOpen(null)} defaultWidth={620}
+          title={current && (
+            <div className="flex items-center gap-3">
+              {callIcon(current)}
+              <div className="min-w-0"><h2 className="truncate text-lg font-semibold">{who(current)}</h2><div className="mt-0.5">{callBadges(current)}</div></div>
+            </div>
+          )}>
+          {current && currentLine && (
+            <CallBody key={current.id} call={current} line={currentLine} entries={entries} manage={manageLines.includes(current.line_id)} canCrm={canCrm}
+              canDial={!phone.busy && ownLines.length > 0} onCall={(n) => call(n)} showLine={lines.length > 1} />
+          )}
+        </ResponsivePanel>
       </div>
     </div>
   );

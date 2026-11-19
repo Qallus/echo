@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, Plus, RefreshCw, Settings2, Trash2 } from "lucide-react";
+import { Download, Package, Plus, RefreshCw, Settings2, Trash2 } from "lucide-react";
+import { CollectionView } from "@/components/collection/collection-view";
+import { downloadCsv } from "@/components/admin/list-csv";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +12,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { addProduct, savePrice, saveProduct, syncCatalogToStripe, setUpCustomerPortal } from "@/lib/admin/actions/billing";
 import { KIND_LABEL, LINE_NAME, lineOf, money, per, type Interval, type Kind, type Price, type Product, type Tier } from "@/lib/billing/catalog";
-import { cn } from "@/lib/utils";
 
 type Msg = { ok?: string; error?: string };
 const INTERVAL_OPTIONS = [{ value: "month", label: "Monthly" }, { value: "year", label: "Annual" }, { value: "once", label: "One-time" }];
 const toCents = (dollars: string) => Math.round(Number(dollars) * 100);
 const toDollars = (cents?: number) => (cents == null ? "" : (cents / 100).toString());
+
+const icon = () => <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><Package className="size-4" /></span>;
 
 function priceLabel(p: Price) {
   if (p.tiers) return `${p.tiers.map((t) => `${money(t.unitAmount)}${t.upTo ? ` to ${t.upTo}` : "+"}`).join(", ")} per seat${per(p.interval)}`;
@@ -48,24 +51,38 @@ export function CatalogEditor({ products, stripeReady, readOnly }: { products: P
       {msg.ok && <p className="text-sm text-muted-foreground">{msg.ok}</p>}
       {adding && <AddProduct onDone={(m) => { setMsg(m); if (m.ok) setAdding(false); }} />}
 
-      {kinds.map((kind) => {
-        const list = products.filter((p) => p.kind === kind);
-        if (!list.length) return null;
-        return (
-          <section key={kind} className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">{KIND_LABEL[kind]}</h3>
-            <ul className="divide-y rounded-xl border">
-              {list.map((p) => <ProductRow key={p.id} product={p} readOnly={readOnly} />)}
-            </ul>
-          </section>
-        );
-      })}
+      <CollectionView<Product>
+        items={products} getId={(p) => p.id} title={(p) => p.name} noun={["product", "products"]} storageKey="admin-billing-catalog" defaultView="list"
+        empty="No products yet." media={icon}
+        subtitle={(p) => p.prices.filter((x) => x.active !== false).map(priceLabel).join(" · ") || "No active price"}
+        badge={(p) => <span className="flex gap-1"><Badge variant="outline">{LINE_NAME[lineOf(p)]}</Badge>{p.active === false && <Badge variant="outline">Hidden</Badge>}</span>}
+        meta={(p) => <>{KIND_LABEL[p.kind]}{p.minutes ? ` · ${p.minutes.toLocaleString()} min` : ""}</>}
+        searchText={(p) => `${p.name} ${p.id} ${p.tagline ?? ""} ${KIND_LABEL[p.kind]} ${LINE_NAME[lineOf(p)]}`}
+        filters={[
+          { id: "all", label: "All", test: () => true },
+          ...kinds.filter((k) => products.some((p) => p.kind === k)).map((k) => ({ id: k, label: KIND_LABEL[k], test: (p: Product) => p.kind === k })),
+          { id: "hidden", label: "Hidden", test: (p) => p.active === false },
+        ]}
+        columns={[
+          { id: "name", label: "Product", sort: (p) => p.name.toLowerCase(), cell: (p) => <span><span className="font-medium">{p.name}</span> <code className="text-xs text-muted-foreground">{p.id}</code></span> },
+          { id: "kind", label: "Kind", sort: (p) => KIND_LABEL[p.kind], cell: (p) => <span className="text-muted-foreground">{KIND_LABEL[p.kind]}</span> },
+          { id: "line", label: "Line", sort: (p) => LINE_NAME[lineOf(p)], cell: (p) => <Badge variant="outline">{LINE_NAME[lineOf(p)]}</Badge> },
+          { id: "prices", label: "Prices", cell: (p) => <span className="block max-w-xs truncate text-muted-foreground">{p.prices.filter((x) => x.active !== false).map(priceLabel).join(" · ") || "—"}</span> },
+          { id: "minutes", label: "Minutes", sort: (p) => p.minutes ?? 0, className: "text-right tabular-nums", cell: (p) => p.minutes ? p.minutes.toLocaleString() : "—" },
+          { id: "sale", label: "For sale", sort: (p) => (p.active === false ? 0 : 1), cell: (p) => <span className="text-muted-foreground">{p.active === false ? "Hidden" : "Yes"}</span> },
+        ]}
+        actions={[
+          { label: "Export", icon: Download, run: (rows) => downloadCsv("products.csv", ["ID", "Name", "Kind", "Line", "Prices", "Minutes", "For sale"],
+            rows.map((p) => [p.id, p.name, KIND_LABEL[p.kind], LINE_NAME[lineOf(p)], p.prices.map(priceLabel).join(" | "), p.minutes, p.active === false ? "no" : "yes"])) },
+        ]}
+        preview={(p) => <ProductEditor key={p.id} product={p} readOnly={readOnly} />}
+      />
     </div>
   );
 }
 
-function ProductRow({ product: p, readOnly }: { product: Product; readOnly: boolean }) {
-  const [open, setOpen] = useState(false);
+// The product form and its prices, shown in the list preview.
+function ProductEditor({ product: p, readOnly }: { product: Product; readOnly: boolean }) {
   const [f, setF] = useState({ name: p.name, tagline: p.tagline, features: (p.features ?? []).join("\n"), minutes: p.minutes?.toString() ?? "", echoMinutes: p.echoMinutes?.toString() ?? "", phones: p.phones?.toString() ?? "", active: p.active !== false });
   const redialPlan = p.kind === "plan" && lineOf(p) === "redial";
   const [msg, setMsg] = useState<Msg>({});
@@ -73,64 +90,49 @@ function ProductRow({ product: p, readOnly }: { product: Product; readOnly: bool
   const showMinutes = p.kind === "plan" || p.kind === "pack" || p.meter === "redial";
 
   return (
-    <li className={cn("p-3", p.active === false && "opacity-60")}>
-      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-2 text-left">
-        <span className="min-w-0 flex-1">
-          <span className="font-medium">{p.name}</span> <code className="text-xs text-muted-foreground">{p.id}</code>
-          <span className="block truncate text-xs text-muted-foreground">{p.prices.filter((x) => x.active !== false).map(priceLabel).join(" · ") || "No active price"}</span>
-        </span>
-        <Badge variant="outline">{LINE_NAME[lineOf(p)]}</Badge>
-        {p.active === false && <Badge variant="outline">Hidden</Badge>}
-        {showMinutes && p.minutes ? <Badge variant="outline">{p.minutes.toLocaleString()} min</Badge> : null}
-        <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
-      </button>
+    <div className="space-y-5">
+      <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => {
+        e.preventDefault();
+        start(async () => setMsg(await saveProduct(p.id, {
+          name: f.name, tagline: f.tagline, features: f.features.split("\n"), minutes: f.minutes === "" ? null : Number(f.minutes), active: f.active,
+          ...(redialPlan ? { echoMinutes: f.echoMinutes === "" ? null : Number(f.echoMinutes), phones: f.phones === "" ? null : Number(f.phones) } : {}),
+        })));
+      }}>
+        <fieldset disabled={readOnly} className="contents">
+          <label className="space-y-1 text-sm">Name<Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+          {showMinutes && (
+            <label className="space-y-1 text-sm">{p.meter === "redial" ? (p.kind === "pack" ? "Screening minutes in the pack" : "Screening minutes per month") : p.kind === "plan" ? `Minutes per month${p.perSeat ? " (per seat)" : ""}` : "Minutes in the pack"}
+              <Input type="number" min={0} value={f.minutes} onChange={(e) => setF({ ...f, minutes: e.target.value })} />
+            </label>
+          )}
+          {redialPlan && (
+            <label className="space-y-1 text-sm">Echo transcription minutes included{p.perSeat ? " (per line)" : ""}
+              <Input type="number" min={0} placeholder="None" value={f.echoMinutes} onChange={(e) => setF({ ...f, echoMinutes: e.target.value })} />
+            </label>
+          )}
+          {redialPlan && (
+            <label className="space-y-1 text-sm">Phones included (phone service){p.perSeat ? " (per line)" : ""}
+              <Input type="number" min={1} max={100} placeholder="Not phone service" value={f.phones} onChange={(e) => setF({ ...f, phones: e.target.value })} />
+            </label>
+          )}
+          <label className="space-y-1 text-sm sm:col-span-2">Tagline<Input value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} /></label>
+          {p.kind === "plan" && (
+            <label className="space-y-1 text-sm sm:col-span-2">Features (one per line)
+              <Textarea rows={4} value={f.features} onChange={(e) => setF({ ...f, features: e.target.value })} />
+            </label>
+          )}
+          <label className="flex items-center gap-2 text-sm"><Switch checked={f.active} onCheckedChange={(active) => setF({ ...f, active })} /> For sale</label>
+          {!readOnly && <div className="flex items-center justify-end"><Button type="submit" size="sm" disabled={pending}>Save product</Button></div>}
+        </fieldset>
+      </form>
+      {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
+      {msg.ok && <p className="text-sm text-muted-foreground">{msg.ok}</p>}
 
-      {open && (
-        <div className="mt-4 space-y-5">
-          <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => {
-            e.preventDefault();
-            start(async () => setMsg(await saveProduct(p.id, {
-              name: f.name, tagline: f.tagline, features: f.features.split("\n"), minutes: f.minutes === "" ? null : Number(f.minutes), active: f.active,
-              ...(redialPlan ? { echoMinutes: f.echoMinutes === "" ? null : Number(f.echoMinutes), phones: f.phones === "" ? null : Number(f.phones) } : {}),
-            })));
-          }}>
-            <fieldset disabled={readOnly} className="contents">
-              <label className="space-y-1 text-sm">Name<Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-              {showMinutes && (
-                <label className="space-y-1 text-sm">{p.meter === "redial" ? (p.kind === "pack" ? "Screening minutes in the pack" : "Screening minutes per month") : p.kind === "plan" ? `Minutes per month${p.perSeat ? " (per seat)" : ""}` : "Minutes in the pack"}
-                  <Input type="number" min={0} value={f.minutes} onChange={(e) => setF({ ...f, minutes: e.target.value })} />
-                </label>
-              )}
-              {redialPlan && (
-                <label className="space-y-1 text-sm">Echo transcription minutes included{p.perSeat ? " (per line)" : ""}
-                  <Input type="number" min={0} placeholder="None" value={f.echoMinutes} onChange={(e) => setF({ ...f, echoMinutes: e.target.value })} />
-                </label>
-              )}
-              {redialPlan && (
-                <label className="space-y-1 text-sm">Phones included (phone service){p.perSeat ? " (per line)" : ""}
-                  <Input type="number" min={1} max={100} placeholder="Not phone service" value={f.phones} onChange={(e) => setF({ ...f, phones: e.target.value })} />
-                </label>
-              )}
-              <label className="space-y-1 text-sm sm:col-span-2">Tagline<Input value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} /></label>
-              {p.kind === "plan" && (
-                <label className="space-y-1 text-sm sm:col-span-2">Features (one per line)
-                  <Textarea rows={4} value={f.features} onChange={(e) => setF({ ...f, features: e.target.value })} />
-                </label>
-              )}
-              <label className="flex items-center gap-2 text-sm"><Switch checked={f.active} onCheckedChange={(active) => setF({ ...f, active })} /> For sale</label>
-              {!readOnly && <div className="flex items-center justify-end"><Button type="submit" size="sm" disabled={pending}>Save product</Button></div>}
-            </fieldset>
-          </form>
-          {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
-          {msg.ok && <p className="text-sm text-muted-foreground">{msg.ok}</p>}
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Prices</p>
-            {p.prices.map((pr) => <PriceEditor key={pr.key} price={pr} readOnly={readOnly} />)}
-          </div>
-        </div>
-      )}
-    </li>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Prices</p>
+        {p.prices.map((pr) => <PriceEditor key={pr.key} price={pr} readOnly={readOnly} />)}
+      </div>
+    </div>
   );
 }
 

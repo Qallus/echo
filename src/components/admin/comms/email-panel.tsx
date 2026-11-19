@@ -1,17 +1,17 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Copy, Mail, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Copy, Mail, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { deleteAudience, deleteTemplate, resubscribe, saveTemplate } from "@/lib/admin/actions/comms";
-import { audienceLabel } from "@/lib/comms/audience";
+import { deleteTemplate, saveTemplate } from "@/lib/admin/actions/comms";
 import { STATUSES } from "@/lib/comms/blocks";
 import type { Automation, Campaign, SavedAudience, Scheduled, Send, Template, Unsubscribe } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { CollectionView } from "@/components/collection/collection-view";
 import { AutomationsPanel } from "./automations-panel";
+import { AudienceList, UnsubscribeList } from "./email/audience-lists";
 import { EmailEditor } from "./email/email-editor";
 import { History } from "./email/history";
 import { ScheduledList } from "./scheduled-list";
@@ -56,31 +56,10 @@ export function EmailPanel({ templates, sends, campaigns, audiences, unsubscribe
       {sub === "templates" && <TemplateList templates={templates} automations={automations} readOnly={readOnly} pending={pending} onEdit={setEditing}
         onDuplicate={(t) => run(() => saveTemplate(null, { name: `${t.name} (copy)`, subject: t.subject, preheader: t.preheader, category: t.category, status: "draft", mode: t.mode, schema: t.schema, html: t.html }))}
         onDelete={(t) => confirm(`Delete "${t.name}"?${automations.some((a) => a.template_id === t.id) ? " Automations that use it will stop sending." : ""}`) && run(() => deleteTemplate(t.id))} />}
-      {sub === "audiences" && (audiences.length === 0 ? <EmptyState message="No saved audiences yet. Build one on the Send tab (Audience) and save it with a name." /> : (
-        <ul className="divide-y rounded-xl border bg-card">
-          {audiences.map((a) => (
-            <li key={a.id} className="flex items-center gap-3 p-3 text-sm">
-              <Users className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1"><p className="font-medium">{a.name}</p><p className="truncate text-xs text-muted-foreground">{audienceLabel(a.definition)}</p></div>
-              {!readOnly && <Button size="icon-sm" variant="ghost" aria-label={`Delete ${a.name}`} disabled={pending} onClick={() => confirm(`Delete the audience "${a.name}"? Nobody is unsubscribed.`) && run(() => deleteAudience(a.id))}><Trash2 /></Button>}
-            </li>
-          ))}
-        </ul>
-      ))}
+      {sub === "audiences" && <AudienceList audiences={audiences} readOnly={readOnly} />}
       {sub === "automations" && <AutomationsPanel automations={automations} templates={templates} readOnly={readOnly} cronReady={cronReady} />}
       {sub === "history" && <History sends={sends} campaigns={campaigns} templates={templates} />}
-      {sub === "unsubscribes" && (unsubscribes.length === 0 ? <EmptyState message="No one has unsubscribed." /> : (
-        <ul className="divide-y rounded-xl border bg-card">
-          {unsubscribes.map((u) => (
-            <li key={u.email} className="flex items-center gap-3 p-3 text-sm">
-              <span className="min-w-0 flex-1 truncate">{u.email}</span>
-              {u.reason !== "unsubscribed" && <Badge variant="outline" className="text-destructive" title={u.reason === "bounced" ? "The address doesn't exist or rejected the email permanently" : "They marked an email as spam"}>{u.reason === "bounced" ? "Bounced" : "Marked as spam"}</Badge>}
-              <span className="text-xs text-muted-foreground">{when(u.created_at)}</span>
-              {!readOnly && <Button size="sm" variant="ghost" disabled={pending} onClick={() => confirm(u.reason === "bounced" ? `Only do this if you've confirmed ${u.email} works again. Sending to addresses that bounce hurts delivery for everyone.` : `Only do this if ${u.email} asked to receive emails again.`) && run(() => resubscribe(u.email))}>Resubscribe</Button>}
-            </li>
-          ))}
-        </ul>
-      ))}
+      {sub === "unsubscribes" && <UnsubscribeList unsubscribes={unsubscribes} readOnly={readOnly} />}
     </div>
   );
 }

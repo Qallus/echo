@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, Bot, CheckCheck, Eye, MousePointerClick } from "lucide-react";
+import { AlertTriangle, Bot, CheckCheck, Copy, Eye, Mail, MousePointerClick, Send as SendIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CollectionView } from "@/components/collection/collection-view";
+import { DetailList, IconTile } from "@/components/collection/kit";
 import type { Campaign, Send, Template } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
-import { Pick } from "./pick";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const pct = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "–");
@@ -47,17 +46,20 @@ function Stat({ label, value, sub, warn }: { label: string; value: string; sub?:
   );
 }
 
+const by = (via: string) => (via === "claude" ? <span className="flex items-center gap-1 text-xs"><Bot className="size-3" />Claude</span> : <span className="text-xs text-muted-foreground">Admin</span>);
+const statusBadge = (s: Send) => <Badge variant="outline" className={cn(s.status === "failed" && "text-destructive", s.status === "skipped" && "text-muted-foreground")}>{s.status}</Badge>;
+
 export function History({ sends, campaigns, templates }: { sends: Send[]; campaigns: Campaign[]; templates: Template[] }) {
-  const [filter, setFilter] = useState<Filter>("all");
   const names = new Map(templates.map((t) => [t.id, t.name]));
-  const shown = sends.filter((s) => matches(s, filter));
+  const tplName = (id: string | null) => (id ? names.get(id) ?? "Deleted template" : "Message");
   const out = sends.filter((s) => s.status === "sent");
   const n = (fn: (s: Send) => unknown) => out.filter(fn).length;
   const delivered = n((s) => s.delivered_at), opened = n((s) => s.opened_at), clicked = n((s) => s.clicked_at), bounced = n((s) => s.bounced_at || s.complained_at);
   const tracking = sends.some((s) => s.last_event);
+  const copy = (rows: Send[]) => { void navigator.clipboard.writeText([...new Set(rows.map((s) => s.to_email))].join(", ")); };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {out.length > 0 && (
         <section className="space-y-2">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -77,64 +79,68 @@ export function History({ sends, campaigns, templates }: { sends: Send[]; campai
       {campaigns.length > 0 && (
         <section className="space-y-2">
           <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Bulk sends</h3>
-          <div className="rounded-xl border bg-card px-2">
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>When</TableHead><TableHead>Subject</TableHead><TableHead>Audience</TableHead><TableHead className="text-right">Sent</TableHead>
-                <TableHead className="text-right">Delivered</TableHead><TableHead className="text-right">Opened</TableHead><TableHead className="text-right">Clicked</TableHead>
-                <TableHead className="text-right">Bounced</TableHead><TableHead className="text-right">Skipped</TableHead><TableHead className="text-right">Failed</TableHead><TableHead>By</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {campaigns.map((c) => {
-                  const base = c.stats.delivered || c.sent;
-                  return (
-                    <TableRow key={c.id}>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">{when(c.created_at)}</TableCell>
-                      <TableCell className="max-w-64 truncate">{c.subject}<span className="block text-xs text-muted-foreground">{c.template_id ? names.get(c.template_id) ?? "Deleted template" : "Message"}</span></TableCell>
-                      <TableCell className="max-w-56 truncate text-muted-foreground">{c.audience_label}</TableCell>
-                      <TableCell className="text-right tabular-nums">{c.sent.toLocaleString()}<span className="text-muted-foreground"> / {c.total.toLocaleString()}</span></TableCell>
-                      <TableCell className="text-right tabular-nums">{c.stats.delivered.toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums">{pct(c.stats.opened, base)}<span className="block text-xs text-muted-foreground">{c.stats.opened.toLocaleString()}</span></TableCell>
-                      <TableCell className="text-right tabular-nums">{pct(c.stats.clicked, base)}<span className="block text-xs text-muted-foreground">{c.stats.clicked.toLocaleString()}</span></TableCell>
-                      <TableCell className={cn("text-right tabular-nums", (c.stats.bounced || c.stats.complained) && "text-destructive")}>{c.stats.bounced + c.stats.complained}</TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">{c.skipped}</TableCell>
-                      <TableCell className={cn("text-right tabular-nums", c.failed && "text-destructive")}>{c.failed}</TableCell>
-                      <TableCell>{c.via === "claude" ? <span className="flex items-center gap-1 text-xs"><Bot className="size-3" />Claude</span> : <span className="text-xs text-muted-foreground">Admin</span>}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <CollectionView<Campaign>
+            items={campaigns} getId={(c) => c.id} title={(c) => c.subject} noun={["bulk send", "bulk sends"]} storageKey="admin-email-campaigns" defaultView="table"
+            subtitle={(c) => `${tplName(c.template_id)} · ${c.audience_label ?? "—"}`} media={() => <IconTile icon={SendIcon} />}
+            meta={(c) => `${c.sent.toLocaleString()} of ${c.total.toLocaleString()} sent · ${when(c.created_at)}`}
+            searchText={(c) => `${c.subject} ${c.audience_label ?? ""} ${tplName(c.template_id)}`}
+            filters={[
+              { id: "all", label: "All", test: () => true },
+              { id: "problems", label: "With problems", test: (c) => c.failed > 0 || c.stats.bounced + c.stats.complained > 0 },
+              { id: "claude", label: "By Claude", test: (c) => c.via === "claude" },
+            ]}
+            date={(c) => c.created_at}
+            columns={[
+              { id: "when", label: "When", sort: (c) => c.created_at, cell: (c) => <span className="whitespace-nowrap text-muted-foreground">{when(c.created_at)}</span> },
+              { id: "subject", label: "Subject", sort: (c) => c.subject.toLowerCase(), cell: (c) => <span className="block max-w-64 truncate">{c.subject}<span className="block text-xs text-muted-foreground">{tplName(c.template_id)}</span></span> },
+              { id: "audience", label: "Audience", sort: (c) => c.audience_label, cell: (c) => <span className="block max-w-56 truncate text-muted-foreground">{c.audience_label}</span> },
+              { id: "sent", label: "Sent", sort: (c) => c.sent, cell: (c) => <span className="tabular-nums">{c.sent.toLocaleString()}<span className="text-muted-foreground"> / {c.total.toLocaleString()}</span></span> },
+              { id: "opened", label: "Opened", sort: (c) => c.stats.opened / (c.stats.delivered || c.sent || 1), cell: (c) => <span className="tabular-nums">{pct(c.stats.opened, c.stats.delivered || c.sent)}</span> },
+              { id: "clicked", label: "Clicked", sort: (c) => c.stats.clicked / (c.stats.delivered || c.sent || 1), cell: (c) => <span className="tabular-nums">{pct(c.stats.clicked, c.stats.delivered || c.sent)}</span> },
+              { id: "bounced", label: "Bounced", sort: (c) => c.stats.bounced + c.stats.complained, cell: (c) => <span className={cn("tabular-nums", (c.stats.bounced || c.stats.complained) && "text-destructive")}>{c.stats.bounced + c.stats.complained}</span> },
+              { id: "failed", label: "Failed", sort: (c) => c.failed, cell: (c) => <span className={cn("tabular-nums", c.failed && "text-destructive")}>{c.failed}</span> },
+              { id: "by", label: "By", sort: (c) => c.via, cell: (c) => by(c.via) },
+            ]}
+            preview={(c) => {
+              const base = c.stats.delivered || c.sent;
+              return (
+                <DetailList rows={[
+                  ["Template", tplName(c.template_id)], ["Audience", c.audience_label ?? "—"], ["When", when(c.created_at)],
+                  ["Sent", `${c.sent.toLocaleString()} of ${c.total.toLocaleString()}`], ["Delivered", c.stats.delivered.toLocaleString()],
+                  ["Opened", `${pct(c.stats.opened, base)} (${c.stats.opened.toLocaleString()})`], ["Clicked", `${pct(c.stats.clicked, base)} (${c.stats.clicked.toLocaleString()})`],
+                  ["Bounced or spam", c.stats.bounced + c.stats.complained], ["Skipped", c.skipped], ["Failed", c.failed], ["By", c.via === "claude" ? "Claude" : "Admin"],
+                ]} />
+              );
+            }}
+          />
         </section>
       )}
 
       <section className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Every email</h3>
-          <Pick label="Show" className="ml-auto w-44" value={filter} onChange={setFilter} options={FILTERS} />
-        </div>
-        {shown.length === 0 ? <EmptyState message="Nothing here yet." /> : (
-          <div className="rounded-xl border bg-card px-2">
-            <Table>
-              <TableHeader><TableRow><TableHead>When</TableHead><TableHead>To</TableHead><TableHead>Subject</TableHead><TableHead>Template</TableHead><TableHead>Status</TableHead><TableHead>Tracking</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {shown.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">{when(s.created_at)}</TableCell>
-                    <TableCell>{s.to_email}</TableCell>
-                    <TableCell className="max-w-64 truncate">{s.subject}</TableCell>
-                    <TableCell className="text-muted-foreground">{s.template_id ? names.get(s.template_id) ?? "Deleted" : "Message"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn(s.status === "failed" && "text-destructive", s.status === "skipped" && "text-muted-foreground")}>{s.status}</Badge>
-                      {s.error && <span className="ml-2 text-xs text-muted-foreground">{s.error}</span>}
-                    </TableCell>
-                    <TableCell><Tracking s={s} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Every email</h3>
+        {sends.length === 0 ? <EmptyState message="Nothing here yet." /> : (
+          <CollectionView<Send>
+            items={sends} getId={(s) => s.id} title={(s) => s.subject} noun={["email", "emails"]} storageKey="admin-email-sends" defaultView="table"
+            subtitle={(s) => `${s.to_email} · ${tplName(s.template_id)}`} media={() => <IconTile icon={Mail} />} badge={statusBadge} meta={(s) => when(s.created_at)}
+            searchText={(s) => `${s.to_email} ${s.subject} ${tplName(s.template_id)} ${s.status} ${s.error ?? ""}`}
+            filters={FILTERS.map((f) => ({ id: f.value, label: f.label, test: (s: Send) => matches(s, f.value) }))}
+            date={(s) => s.created_at}
+            columns={[
+              { id: "when", label: "When", sort: (s) => s.created_at, cell: (s) => <span className="whitespace-nowrap text-muted-foreground">{when(s.created_at)}</span> },
+              { id: "to", label: "To", sort: (s) => s.to_email, cell: (s) => s.to_email },
+              { id: "subject", label: "Subject", sort: (s) => s.subject.toLowerCase(), cell: (s) => <span className="block max-w-64 truncate">{s.subject}</span> },
+              { id: "template", label: "Template", sort: (s) => tplName(s.template_id), cell: (s) => <span className="text-muted-foreground">{tplName(s.template_id)}</span> },
+              { id: "status", label: "Status", sort: (s) => s.status, cell: (s) => <>{statusBadge(s)}{s.error && <span className="ml-2 text-xs text-muted-foreground">{s.error}</span>}</> },
+              { id: "tracking", label: "Tracking", cell: (s) => <Tracking s={s} /> },
+            ]}
+            actions={[{ label: "Copy addresses", icon: Copy, run: copy }]}
+            preview={(s) => (
+              <div className="space-y-3">
+                <DetailList rows={[["To", s.to_email], ["Template", tplName(s.template_id)], ["When", when(s.created_at)], ["Status", statusBadge(s)], ["Error", s.error ?? "—"]]} />
+                <Tracking s={s} />
+              </div>
+            )}
+          />
         )}
       </section>
     </div>

@@ -3,17 +3,26 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Plus, Trash2, Workflow } from "lucide-react";
+import { ExternalLink, Plus, Trash2, Workflow } from "lucide-react";
+import { CollectionView } from "@/components/collection/collection-view";
+import { prettyNumber } from "@/components/redial/phone-center";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { createFlow, deleteFlow } from "@/lib/flows/actions";
 import type { FlowSummary } from "@/lib/flows/data";
 
-// The call tree list: create one (blank or the sample), open it, or delete one you own.
+// The call tree list in the shared list layout: create one (blank or the sample),
+// preview and open it, or delete ones you own.
 
+const lineBadges = (f: FlowSummary) => (
+  <span className="flex flex-wrap gap-1.5">
+    {f.lines.length
+      ? f.lines.map((l) => <Badge key={l.id} variant="outline">{l.label}</Badge>)
+      : <Badge variant="outline" className="text-muted-foreground">Not on a line</Badge>}
+  </span>
+);
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 export function FlowList({ flows }: { flows: FlowSummary[] }) {
@@ -25,6 +34,8 @@ export function FlowList({ flows }: { flows: FlowSummary[] }) {
   const [removing, setRemoving] = useState<FlowSummary | null>(null);
   const [pending, start] = useTransition();
 
+  const openCreate = () => { setName(""); setError(null); setCreating(true); };
+
   function create() {
     start(async () => {
       const r = await createFlow(name, from);
@@ -35,47 +46,66 @@ export function FlowList({ flows }: { flows: FlowSummary[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => { setName(""); setError(null); setCreating(true); }}><Plus /> New call tree</Button>
-      </div>
-
-      {flows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center">
-          <Workflow className="mx-auto size-8 text-muted-foreground" />
-          <p className="mt-3 font-medium">No call trees yet.</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">A call tree decides what happens when someone calls: a greeting, a phone menu, business hours, extensions, your AI assistant and voicemail.</p>
-          <Button className="mt-4" onClick={() => setCreating(true)}><Plus /> Create your first call tree</Button>
-        </div>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {flows.map((f) => (
-            <div key={f.id} className="flex flex-col rounded-2xl border bg-card p-4 transition-colors hover:bg-muted/40">
-              <div className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><Workflow className="size-4" /></span>
-                <Link href={`/call-tree/${f.id}`} className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{f.name}</p>
-                  <p className="text-xs text-muted-foreground">Edited {when(f.updatedAt)}</p>
-                </Link>
-                {f.mine && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${f.name}`} />}><MoreVertical /></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem variant="destructive" onClick={() => setRemoving(f)}><Trash2 /> Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Badge variant={f.publishedVersion ? "default" : "secondary"}>{f.publishedVersion ? `Published v${f.publishedVersion}` : "Draft"}</Badge>
-                {f.lines.length
-                  ? f.lines.map((l) => <Badge key={l.id} variant="outline">{l.label}</Badge>)
-                  : <Badge variant="outline" className="text-muted-foreground">Not on a line</Badge>}
-              </div>
-              <Button variant="outline" size="sm" className="mt-4 self-start" nativeButton={false} render={<Link href={`/call-tree/${f.id}`} />}>Open in Call Tree</Button>
+      <CollectionView<FlowSummary>
+        items={flows} getId={(f) => f.id} title={(f) => f.name} noun={["call tree", "call trees"]} storageKey="call-trees" defaultView="cards"
+        empty="No call trees yet. A call tree decides what happens when someone calls: a greeting, a phone menu, business hours, extensions, your AI assistant and voicemail. Use New call tree to make one."
+        subtitle={(f) => `Edited ${when(f.updatedAt)}`}
+        media={() => <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><Workflow className="size-4" /></span>}
+        badge={(f) => <Badge variant={f.publishedVersion ? "default" : "secondary"}>{f.publishedVersion ? `Published v${f.publishedVersion}` : "Draft"}</Badge>}
+        meta={lineBadges}
+        searchText={(f) => [f.name, f.description, ...f.lines.map((l) => `${l.label} ${l.number}`)].filter(Boolean).join(" ")}
+        filters={[
+          { id: "all", label: "All", test: () => true },
+          { id: "published", label: "Published", test: (f) => Boolean(f.publishedVersion) },
+          { id: "draft", label: "Draft", test: (f) => !f.publishedVersion },
+          { id: "on-line", label: "On a line", test: (f) => f.lines.length > 0 },
+          { id: "mine", label: "Mine", test: (f) => f.mine },
+        ]}
+        date={(f) => f.updatedAt}
+        columns={[
+          { id: "name", label: "Call tree", sort: (f) => f.name.toLowerCase(), cell: (f) => <span className="flex items-center gap-2 font-medium"><Workflow className="size-4 text-muted-foreground" />{f.name}</span> },
+          { id: "status", label: "Status", sort: (f) => f.publishedVersion ?? 0, cell: (f) => <Badge variant={f.publishedVersion ? "default" : "secondary"}>{f.publishedVersion ? `Published v${f.publishedVersion}` : "Draft"}</Badge> },
+          { id: "lines", label: "Lines", sort: (f) => f.lines.length, cell: lineBadges },
+          { id: "updated", label: "Edited", sort: (f) => f.updatedAt, cell: (f) => <span className="text-muted-foreground">{when(f.updatedAt)}</span> },
+        ]}
+        toolbar={<Button onClick={openCreate}><Plus /> New call tree</Button>}
+        actions={[
+          { label: "Open", icon: ExternalLink, single: true, run: ([f]) => router.push(`/call-tree/${f.id}`) },
+          { label: "Delete", icon: Trash2, destructive: true, show: (rows) => rows.every((f) => f.mine), run: (rows) => {
+            if (rows.length === 1) { setRemoving(rows[0]); return; }
+            if (!confirm(`Delete ${rows.length} call trees? Their versions and call history are removed for good. Lines they ran on go back to how they answered before.`)) return;
+            start(async () => {
+              for (const f of rows) { const r = await deleteFlow(f.id); if (r.error) { setError(r.error); break; } }
+              router.refresh();
+            });
+          } },
+        ]}
+        previewActions={(f) => (
+          <>
+            <Button size="sm" nativeButton={false} render={<Link href={`/call-tree/${f.id}`} />}><ExternalLink /> Open in Call Tree</Button>
+            {f.mine && <Button size="sm" variant="outline" onClick={() => setRemoving(f)}><Trash2 /> Delete</Button>}
+          </>
+        )}
+        preview={(f) => (
+          <div className="space-y-4 text-sm">
+            {f.description && <p className="whitespace-pre-wrap text-muted-foreground">{f.description}</p>}
+            <dl className="divide-y rounded-xl border px-3">
+              {([["Status", f.publishedVersion ? `Published, version ${f.publishedVersion}` : "Draft, not published yet"], ["Edited", when(f.updatedAt)], ["Owner", f.mine ? "You" : "Shared with you"]] as const).map(([k, v]) => (
+                <div key={k} className="grid grid-cols-[7rem_1fr] gap-2 py-1.5"><dt className="text-muted-foreground">{k}</dt><dd>{v}</dd></div>
+              ))}
+            </dl>
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Lines it answers</p>
+              {f.lines.length ? (
+                <ul className="divide-y rounded-xl border">
+                  {f.lines.map((l) => <li key={l.id} className="flex justify-between gap-2 px-3 py-2"><span>{l.label}</span><span className="text-muted-foreground tabular-nums">{prettyNumber(l.number)}</span></li>)}
+                </ul>
+              ) : <p className="text-muted-foreground">Not on a line yet. Pick it for a line in the line&apos;s settings.</p>}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+      />
+      {error && !creating && <p className="text-sm text-destructive">{error}</p>}
 
       <Dialog open={creating} onOpenChange={setCreating}>
         {creating && (

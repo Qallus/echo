@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CalendarDays, Check, Copy, Download, ExternalLink, List, Mail, Pencil, Plus, Trash2, UserX, X } from "lucide-react";
+import { CalendarDays, Check, Copy, Download, ExternalLink, Mail, Pencil, Plus, Trash2, UserX, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -22,61 +22,78 @@ import { downloadCsv } from "@/lib/crm/csv";
 import { ownerName, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import { ComposeDialog } from "@/components/admin/comms/compose-dialog";
-import { EmptyState, RecordCalendar, ViewSwitcher } from "@/components/admin/crm/crm-kit";
+import { EmptyState } from "@/components/admin/crm/crm-kit";
+import { CollectionView } from "@/components/collection/collection-view";
+import { IconTile, muted } from "@/components/collection/kit";
 
-const VIEWS = [{ id: "list" as const, label: "List", icon: List }, { id: "calendar" as const, label: "Calendar", icon: CalendarDays }];
+const STATUS = (e: EventRow) => EVENT_STATUSES.find((s) => s.id === e.status)!;
+const where = (e: EventRow) => `${EVENT_LOCATIONS.find((l) => l.id === e.location_kind)?.label ?? ""}${e.location ? ` · ${e.location}` : ""}`;
 
-// Events: one-day or multi-day, with a public page and registrations.
+// Events: one-day or multi-day, with a public page and registrations. Clicking
+// an event opens its registrations sheet (edit, delete, export, email).
 export function EventsPanel({ events, registrations, staff, timezone, siteUrl, readOnly, nowIso }: {
   events: EventRow[]; registrations: Registration[]; staff: StaffOption[]; timezone: string; siteUrl: string; readOnly: boolean; nowIso: string;
 }) {
-  const [view, setView] = useState<"list" | "calendar">("list");
-  const [range, setRange] = useState<"upcoming" | "past">("upcoming");
   const [editing, setEditing] = useState<EventRow | "new" | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
   const count = (id: string) => registrations.filter((r) => r.event_id === id && r.status !== "canceled").reduce((n, r) => n + r.guests, 0);
-  const shown = useMemo(() => {
-    const list = events.filter((e) => (range === "upcoming" ? e.ends_at >= nowIso : e.ends_at < nowIso));
-    return range === "upcoming" ? [...list].sort((a, b) => a.starts_at.localeCompare(b.starts_at)) : list;
-  }, [events, range, nowIso]);
+  const upcoming = (e: EventRow) => e.ends_at >= nowIso;
+  // Upcoming soonest first, then past most recent first.
+  const items = useMemo(() => {
+    const up = (e: EventRow) => e.ends_at >= nowIso;
+    return [...events].sort((a, b) => Number(up(b)) - Number(up(a)) || (up(a) ? a.starts_at.localeCompare(b.starts_at) : b.starts_at.localeCompare(a.starts_at)));
+  }, [events, nowIso]);
   const open = events.find((e) => e.id === openId) ?? null;
+  const link = (e: EventRow) => `${siteUrl}/book/events/${e.slug}`;
+  const badge = (e: EventRow) => <Badge className={cn("border-transparent", STATUS(e).tone)}>{STATUS(e).label}</Badge>;
+  const going = (e: EventRow) => `${count(e.id)}${e.capacity ? `/${e.capacity}` : ""} going`;
+  const remove = (rows: EventRow[]) => {
+    if (!confirm(rows.length === 1 ? `Delete "${rows[0].title}" and its registrations?` : `Delete ${rows.length} events and their registrations?`)) return;
+    start(async () => { let last: { ok?: string; error?: string } = {}; for (const e of rows) { last = await deleteEvent(e.id); if (last.error) break; } setMsg(last); });
+  };
+  const exportRows = (rows: EventRow[]) => {
+    const ids = new Set(rows.map((e) => e.id)), title = new Map(rows.map((e) => [e.id, e.title]));
+    downloadCsv("event-registrations.csv", ["Event,Name,Email,Phone,Company,Guests,Status,Registered",
+      ...registrations.filter((r) => ids.has(r.event_id)).map((r) => [title.get(r.event_id), r.name, r.email, r.phone ?? "", r.company ?? "", r.guests, r.status, r.created_at.slice(0, 10)].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n"));
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-lg border bg-card p-1">
-          {(["upcoming", "past"] as const).map((r) => <button key={r} type="button" onClick={() => setRange(r)} className={cn("rounded-md px-3 py-1 text-sm capitalize", range === r ? "bg-accent font-medium" : "text-muted-foreground")}>{r}</button>)}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">{msg.error ?? msg.ok}</span>
-          <ViewSwitcher views={VIEWS} value={view} onChange={setView} />
-          {!readOnly && <Button onClick={() => setEditing("new")}><Plus /> New event</Button>}
-        </div>
-      </div>
-      {view === "calendar" ? (
-        <RecordCalendar items={events.filter((e) => e.status !== "canceled")} getId={(e) => e.id} getDate={(e) => new Date(e.starts_at).toLocaleDateString("en-CA", { timeZone: timezone })}
-          getTitle={(e) => e.title} onOpen={setOpenId} footer="Events placed on their first day." />
-      ) : shown.length === 0 ? <EmptyState message={range === "upcoming" ? "No upcoming events. Create one: a workshop, open house or webinar." : "No past events."} /> : (
-        <ul className="divide-y rounded-xl border bg-card">
-          {shown.map((e) => {
-            const n = count(e.id);
-            return (
-              <li key={e.id} className="flex flex-wrap items-center gap-3 p-3">
-                <button type="button" onClick={() => setOpenId(e.id)} className="min-w-0 flex-1 text-left">
-                  <span className="flex flex-wrap items-center gap-2"><span className="truncate font-medium">{e.title}</span>
-                    <Badge className={cn("border-transparent", EVENT_STATUSES.find((s) => s.id === e.status)!.tone)}>{EVENT_STATUSES.find((s) => s.id === e.status)!.label}</Badge></span>
-                  <span className="block truncate text-xs text-muted-foreground">{eventWhen(e, timezone)} · {EVENT_LOCATIONS.find((l) => l.id === e.location_kind)?.label}{e.location ? ` · ${e.location}` : ""}</span>
-                </button>
-                <span className="text-sm tabular-nums text-muted-foreground">{n}{e.capacity ? `/${e.capacity}` : ""} going</span>
-                {e.status === "published" && <Button size="icon-sm" variant="ghost" aria-label="Copy event link" onClick={() => navigator.clipboard.writeText(`${siteUrl}/book/events/${e.slug}`)}><Copy /></Button>}
-                {!readOnly && <Button size="icon-sm" variant="ghost" aria-label={`Edit ${e.title}`} onClick={() => setEditing(e)}><Pencil /></Button>}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {(msg.ok || msg.error) && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.error ?? msg.ok}</p>}
+      <CollectionView<EventRow>
+        items={items} getId={(e) => e.id} title={(e) => e.title} noun={["event", "events"]} storageKey="admin-events" defaultView="list"
+        subtitle={(e) => `${eventWhen(e, timezone)} · ${where(e)}`} media={() => <IconTile icon={CalendarDays} />} badge={badge} meta={going}
+        searchText={(e) => `${e.title} ${e.summary ?? ""} ${e.location ?? ""} ${where(e)} ${STATUS(e).label}`}
+        filters={[
+          { id: "upcoming", label: "Upcoming", test: upcoming },
+          { id: "past", label: "Past", test: (e) => !upcoming(e) },
+          { id: "all", label: "All", test: () => true },
+          ...EVENT_STATUSES.map((s) => ({ id: s.id, label: s.label, test: (e: EventRow) => e.status === s.id })),
+        ]}
+        date={(e) => e.starts_at}
+        columns={[
+          { id: "title", label: "Event", sort: (e) => e.title.toLowerCase(), cell: (e) => <span className="font-medium">{e.title}</span> },
+          { id: "when", label: "When", sort: (e) => e.starts_at, cell: (e) => <span className="whitespace-nowrap text-muted-foreground">{eventWhen(e, timezone)}</span> },
+          { id: "where", label: "Where", sort: (e) => e.location_kind, cell: (e) => <span className="block max-w-56 truncate text-muted-foreground">{where(e)}</span> },
+          { id: "going", label: "Going", sort: (e) => count(e.id), cell: (e) => <span className="tabular-nums">{going(e)}</span> },
+          { id: "host", label: "Host", sort: (e) => (e.host_id ? ownerName(staff, e.host_id) : null), cell: (e) => muted(e.host_id ? ownerName(staff, e.host_id) : "Anyone") },
+          { id: "registration", label: "Registration", sort: (e) => Number(e.registration_open), cell: (e) => muted(e.registration_open ? "Open" : "Closed") },
+          { id: "status", label: "Status", sort: (e) => e.status, cell: badge },
+        ]}
+        actions={[
+          { label: "Copy links", icon: Copy, show: (rows) => rows.some((e) => e.status === "published"), run: (rows) => { void navigator.clipboard.writeText(rows.filter((e) => e.status === "published").map(link).join("\n")); } },
+          { label: "Export registrations", icon: Download, run: exportRows },
+          ...(readOnly ? [] : [
+            { label: "Edit", icon: Pencil, single: true, run: ([e]: EventRow[]) => setEditing(e) },
+            { label: "Delete", icon: Trash2, destructive: true, run: remove },
+          ]),
+        ]}
+        onOpen={(e) => setOpenId(e.id)}
+        empty="No events. Create one: a workshop, open house or webinar."
+        toolbar={!readOnly && <Button onClick={() => setEditing("new")}><Plus /> New event</Button>}
+      />
       {editing && <EventDialog event={editing === "new" ? undefined : editing} staff={staff} timezone={timezone} onClose={() => setEditing(null)} />}
       {open && <RegistrationsSheet event={open} registrations={registrations.filter((r) => r.event_id === open.id)} staff={staff} timezone={timezone} siteUrl={siteUrl}
         readOnly={readOnly} onEdit={() => { setEditing(open); setOpenId(null); }} onDelete={() => confirm(`Delete "${open.title}" and its registrations?`) && start(async () => { setMsg(await deleteEvent(open.id)); setOpenId(null); })}

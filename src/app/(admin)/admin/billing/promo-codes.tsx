@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Download, Pencil, Plus, Power, PowerOff, TicketPercent } from "lucide-react";
+import { CollectionView } from "@/components/collection/collection-view";
+import { downloadCsv } from "@/components/admin/list-csv";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +30,10 @@ const STATUS_STYLE: Record<PromoStatus, string> = {
   expired: "text-muted-foreground", used_up: "text-muted-foreground", off: "text-muted-foreground",
 };
 
+const used = (c: PromoRow) => `${c.used}${c.maxUses != null ? ` of ${c.maxUses.toLocaleString()}` : ""} used`;
+const badge = (c: PromoRow) => { const st = promoStatus(c); return <Badge variant="outline" className={STATUS_STYLE[st]}>{STATUS_LABEL[st]}</Badge>; };
+const icon = () => <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"><TicketPercent className="size-4" /></span>;
+
 const num = (v: string) => (v.trim() === "" ? null : Number(v));
 const str = (v: number | null, div = 1) => (v == null ? "" : String(v / div));
 
@@ -37,7 +44,22 @@ export function PromoCodes({ codes, readOnly, products }: { codes: PromoRow[]; r
   const [editing, setEditing] = useState<PromoRow | null>(null);
   const [msg, setMsg] = useState<Msg>({});
   const [pending, start] = useTransition();
+  const router = useRouter();
   const productName = (id: string) => products.find((p) => p.id === id)?.name ?? id;
+  const limits = (c: PromoRow) => [
+    c.startsAt && `Starts ${showDay(c.startsAt)}`,
+    c.expiresAt && `Expires ${showDay(c.expiresAt)}`,
+    c.minOrder != null && `Orders ${money(c.minOrder)}+`,
+    c.maxOrder != null && `Orders up to ${money(c.maxOrder)}`,
+    c.perCustomer != null && `${c.perCustomer} per customer`,
+    c.firstTimeOnly && "First-time customers",
+    c.email && `Only ${c.email}`,
+    c.products.length ? `Only ${c.products.map(productName).join(", ")}` : null,
+  ].filter(Boolean) as string[];
+  const setAll = (rows: PromoRow[], on: boolean) => start(async () => {
+    for (const c of rows.filter((x) => x.active !== on)) { const r = await setPromoCodeActive(c.id, on); if (r.error) { setMsg(r); break; } setMsg(r); }
+    router.refresh();
+  });
 
   return (
     <div className="space-y-4">
@@ -48,45 +70,51 @@ export function PromoCodes({ codes, readOnly, products }: { codes: PromoRow[]; r
       {msg.error && <p className="text-sm text-destructive">{msg.error}</p>}
       {msg.ok && <p className="text-sm text-muted-foreground">{msg.ok}</p>}
 
-      {codes.length === 0 ? <p className="rounded-xl border p-4 text-sm text-muted-foreground">No promo codes yet.</p> : (
-        <ul className="divide-y rounded-xl border text-sm">
-          {codes.map((c) => {
-            const status = promoStatus(c);
-            const limits = [
-              c.startsAt && `Starts ${showDay(c.startsAt)}`,
-              c.expiresAt && `Expires ${showDay(c.expiresAt)}`,
-              c.minOrder != null && `Orders ${money(c.minOrder)}+`,
-              c.maxOrder != null && `Orders up to ${money(c.maxOrder)}`,
-              c.perCustomer != null && `${c.perCustomer} per customer`,
-              c.firstTimeOnly && "First-time customers",
-              c.email && `Only ${c.email}`,
-              c.products.length ? `Only ${c.products.map(productName).join(", ")}` : null,
-            ].filter(Boolean) as string[];
-            return (
-              <li key={c.id} className="space-y-2 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-semibold">{c.code}</code>
-                  <span className="font-medium">{c.name}</span>
-                  <Badge variant="outline" className={STATUS_STYLE[status]}>{STATUS_LABEL[status]}</Badge>
-                  <span className="ml-auto flex items-center gap-2 text-xs">
-                    {!readOnly && <Button variant="ghost" size="icon-sm" aria-label={`Edit ${c.code}`} onClick={() => { setMsg({}); setEditing(c); }}><Pencil /></Button>}
-                    <Switch size="sm" checked={c.active} disabled={readOnly || pending} aria-label={`${c.code} on or off`}
-                      onCheckedChange={(on) => start(async () => setMsg(await setPromoCodeActive(c.id, on)))} />
-                    {c.active ? "On" : "Off"}
-                  </span>
-                </div>
-                <p className="text-muted-foreground">{discountLabel(c)}</p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{c.used}{c.maxUses != null ? ` of ${c.maxUses.toLocaleString()}` : ""} used</span>
-                  {c.orders > 0 && <span>{money(c.given)} given on {c.orders} order{c.orders === 1 ? "" : "s"}</span>}
-                  {limits.map((l) => <span key={l}>{l}</span>)}
-                </div>
-                {c.note && <p className="text-xs italic text-muted-foreground">{c.note}</p>}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <CollectionView<PromoRow>
+        items={codes} getId={(c) => c.id} title={(c) => c.code} subtitle={(c) => `${c.name} · ${discountLabel(c)}`} media={icon} badge={badge}
+        noun={["promo code", "promo codes"]} storageKey="admin-billing-promos" defaultView="list" empty="No promo codes yet."
+        meta={(c) => <>{used(c)}{c.orders > 0 ? ` · ${money(c.given)} given on ${c.orders} order${c.orders === 1 ? "" : "s"}` : ""}</>}
+        searchText={(c) => `${c.code} ${c.name} ${c.email ?? ""} ${c.note}`}
+        filters={[
+          { id: "all", label: "All", test: () => true },
+          ...(["active", "scheduled", "expired", "used_up", "off"] as PromoStatus[]).map((st) => ({ id: st, label: STATUS_LABEL[st], test: (c: PromoRow) => promoStatus(c) === st })),
+        ]}
+        date={(c) => c.startsAt ?? c.expiresAt}
+        columns={[
+          { id: "code", label: "Code", sort: (c) => c.code, cell: (c) => <code className="rounded bg-muted px-1.5 py-0.5 font-semibold">{c.code}</code> },
+          { id: "name", label: "Name", sort: (c) => c.name.toLowerCase(), cell: (c) => <span className="font-medium">{c.name}</span> },
+          { id: "discount", label: "Discount", cell: (c) => <span className="text-muted-foreground">{discountLabel(c)}</span> },
+          { id: "status", label: "Status", sort: (c) => promoStatus(c), cell: badge },
+          { id: "used", label: "Used", sort: (c) => c.used, className: "tabular-nums", cell: used },
+          { id: "given", label: "Given", sort: (c) => c.given, className: "text-right tabular-nums", cell: (c) => money(c.given) },
+          { id: "expires", label: "Expires", sort: (c) => c.expiresAt, cell: (c) => <span className="text-muted-foreground">{c.expiresAt ? showDay(c.expiresAt) : "Never"}</span> },
+        ]}
+        actions={[
+          ...(readOnly ? [] : [
+            { label: "Turn on", icon: Power, show: (rows: PromoRow[]) => rows.some((c) => !c.active), run: (rows: PromoRow[]) => setAll(rows, true) },
+            { label: "Turn off", icon: PowerOff, show: (rows: PromoRow[]) => rows.some((c) => c.active), run: (rows: PromoRow[]) => setAll(rows, false) },
+          ]),
+          { label: "Export", icon: Download, run: (rows) => downloadCsv("promo-codes.csv", ["Code", "Name", "Discount", "Status", "Used", "Max uses", "Given", "Orders", "Starts", "Expires"],
+            rows.map((c) => [c.code, c.name, discountLabel(c), STATUS_LABEL[promoStatus(c)], c.used, c.maxUses, (c.given / 100).toFixed(2), c.orders, c.startsAt, c.expiresAt])) },
+        ]}
+        previewActions={(c, close) => readOnly ? null : <Button size="sm" variant="outline" onClick={() => { close(); setMsg({}); setEditing(c); }}><Pencil /> Edit</Button>}
+        preview={(c) => (
+          <div className="space-y-4 text-sm">
+            <label className="flex items-center gap-2">
+              <Switch checked={c.active} disabled={readOnly || pending} aria-label={`${c.code} on or off`}
+                onCheckedChange={(on) => start(async () => { setMsg(await setPromoCodeActive(c.id, on)); router.refresh(); })} />
+              {c.active ? "On: customers can use it" : "Off"}
+            </label>
+            <p className="text-muted-foreground">{discountLabel(c)}</p>
+            <dl className="divide-y rounded-xl border px-3">
+              {[["Used", used(c)], ["Given", c.orders > 0 ? `${money(c.given)} on ${c.orders} order${c.orders === 1 ? "" : "s"}` : "—"], ...limits(c).map((l, i) => [i === 0 ? "Rules" : "", l])].map(([k, v], i) => (
+                <div key={i} className="grid grid-cols-[6rem_1fr] gap-2 py-1.5"><dt className="text-muted-foreground">{k}</dt><dd className="min-w-0 break-words">{v}</dd></div>
+              ))}
+            </dl>
+            {c.note && <p className="text-xs italic text-muted-foreground">{c.note}</p>}
+          </div>
+        )}
+      />
 
       <ResponsivePanel id="promo-code" open={creating} onOpenChange={setCreating} defaultWidth={640}
         title="New promo code" description="Customers type the code in their cart.">
