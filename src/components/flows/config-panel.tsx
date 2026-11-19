@@ -1,6 +1,7 @@
 "use client";
 
 import { GEMINI_VOICES, XAI_VOICES } from "@/lib/flows/voices";
+import { useDefaultVoice } from "@/lib/studio/default-voice";
 import { useState } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { BlockIcon } from "@/components/flows/block-icon";
@@ -55,6 +56,7 @@ function IssueList({ issues, onSelect }: { issues: Issue[]; onSelect?: (id: stri
 }
 
 function FlowSettings({ flow, issues, onChange, onSelect }: { flow: Flow; issues: Issue[]; onChange: (u: (f: Flow) => Flow) => void; onSelect: (id: string | null) => void }) {
+  const defaultVoice = useDefaultVoice();
   const set = (patch: Partial<Flow["settings"]>) => onChange((f) => ({ ...f, settings: { ...f.settings, ...patch } }));
   return (
     <div className="space-y-5 p-4">
@@ -73,6 +75,11 @@ function FlowSettings({ flow, issues, onChange, onSelect }: { flow: Flow; issues
             ...XAI_VOICES.map((x) => ({ value: `xai:${x.id}`, label: `${x.label} (xAI, your AI receptionist's voices)` })),
             ...GEMINI_VOICES.map((id) => ({ value: `gemini:${id}`, label: `${id} (Gemini)` })),
           ]} />
+        {defaultVoice && (defaultVoice.provider === "gemini" || defaultVoice.provider === "xai") && flow.settings.voice?.id !== defaultVoice.voice && (
+          <button type="button" className="text-xs font-medium underline underline-offset-2" onClick={() => set({ voice: { provider: defaultVoice.provider as "gemini" | "xai", id: defaultVoice.voice } })}>
+            Use your default voice ({defaultVoice.voice})
+          </button>
+        )}
         <span className="block text-xs text-muted-foreground">When you publish, every greeting, menu and short phrase (&quot;Sorry, I didn&apos;t get that&quot;, &quot;Connecting you to …&quot;, the recording notice) is made into a clip in this voice and saved in Recording Studio. Text with {"{{…}}"} is read live in the closest matching voice.</span>
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-medium">Record calls</span>

@@ -64,7 +64,7 @@ export type BuilderExtension = {
   ringSeconds: number; voicemailAudioId: string | null;
 };
 export type BuilderContext = {
-  recordings: { id: string; name: string; kind: string; url: string | null; duration: number | null }[];
+  recordings: { id: string; name: string; kind: string; url: string | null; duration: number | null; ai_voice: string | null; extension: string | null }[];
   lines: BuilderLine[];
   directory: { id: string; lineId: string; label: string; number: string }[];
   extensions: BuilderExtension[];
@@ -84,7 +84,7 @@ export async function builderContext(flowId: string): Promise<BuilderContext> {
     : [{ data: [] }, { data: [] }, { data: [] }];
   const running = new Map((onLines ?? []).map((r) => [r.line_id, r.flow as unknown as { id: string; name: string } | null]));
   return {
-    recordings: audio.filter((a) => !a.archived_at).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url, duration: a.duration_seconds })),
+    recordings: audio.filter((a) => !a.archived_at).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url, duration: a.duration_seconds, ai_voice: a.ai_voice, extension: a.extension })),
     lines: lines.map((l) => ({ id: l.id, label: l.label, number: l.number, canManage: allows(l.access, "manage_flows"), flowId: running.get(l.id)?.id ?? null, flowName: running.get(l.id)?.name ?? null })),
     directory: (dir ?? []).map((d) => ({ id: d.id, lineId: d.line_id, label: d.label, number: d.number })),
     extensions: (ext ?? []).map((e) => ({

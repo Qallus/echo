@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Archive, ArchiveRestore, CalendarDays, ChevronLeft, ChevronRight, Download, ImagePlus, LayoutGrid, List, MoreVertical, Pencil,
-  Sparkles, SquareKanban, Table as TableIcon, Trash2, Upload, X,
+  Search, Sparkles, SquareKanban, Table as TableIcon, Trash2, Upload, Workflow, X,
 } from "lucide-react";
 import { AudioPlayer } from "@/components/studio/audio-player";
 import { CoverThumb } from "@/components/studio/cover-thumb";
@@ -81,7 +81,17 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
     try { localStorage.setItem(VIEW_KEY, v); } catch { /* storage unavailable */ }
   }
 
-  const shown = useMemo(() => items.filter((a) => Boolean(a.archived_at) === archived), [items, archived]);
+  const [q, setQ] = useState("");
+  const [purpose, setPurpose] = useState<string>("all");
+  const [order, setOrder] = useState<"new" | "name" | "length">("new");
+  const inView = useMemo(() => items.filter((a) => Boolean(a.archived_at) === archived), [items, archived]);
+  const shown = useMemo(() => {
+    const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const out = inView.filter((a) => (purpose === "all" || a.kind === purpose)
+      && words.every((w) => [a.name, a.description, a.ai_voice, a.extension, kindLabel(a.kind), ...a.used_in].some((x) => x?.toLowerCase().includes(w))));
+    return order === "name" ? [...out].sort((x, y) => x.name.localeCompare(y.name))
+      : order === "length" ? [...out].sort((x, y) => (x.duration_seconds ?? 0) - (y.duration_seconds ?? 0)) : out;
+  }, [inView, q, purpose, order]);
   const picked = shown.filter((a) => selected.has(a.id));
   const allOn = shown.length > 0 && picked.length === shown.length;
   const toggle = (id: string, on: boolean) => setSelected((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; });
@@ -119,6 +129,7 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setEditing(a)}><Pencil /> Edit</DropdownMenuItem>
         <DropdownMenuItem onClick={() => void downloadFile(a)}><Download /> Download</DropdownMenuItem>
+        <DropdownMenuItem render={<a href="/call-tree" target="_blank" rel="noreferrer" />}><Workflow /> Use in a call tree</DropdownMenuItem>
         <DropdownMenuItem onClick={() => run(() => archiveStudioAudio([a.id], !a.archived_at))}>{a.archived_at ? <><ArchiveRestore /> Restore</> : <><Archive /> Archive</>}</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => setConfirm([a.id])}><Trash2 /> Delete</DropdownMenuItem>
@@ -159,6 +170,27 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-56 flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, words, voice, extension…" className="pl-8" aria-label="Search the library" />
+        </div>
+        <Pick label="Sort" className="w-40" value={order} onChange={(v) => setOrder(v as typeof order)}
+          options={[{ value: "new", label: "Newest first" }, { value: "name", label: "Name" }, { value: "length", label: "Shortest first" }]} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {[{ id: "all", label: "All" }, ...STUDIO_KINDS].map((k) => {
+          const n = k.id === "all" ? inView.length : inView.filter((a) => a.kind === k.id).length;
+          if (k.id !== "all" && !n) return null;
+          return (
+            <button key={k.id} type="button" onClick={() => setPurpose(k.id)}
+              className={cn("rounded-full border px-3 py-1 text-sm transition-colors", purpose === k.id ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>
+              {k.label} <span className="opacity-70">{n}</span>
+            </button>
+          );
+        })}
       </div>
 
       {picked.length > 0 && (

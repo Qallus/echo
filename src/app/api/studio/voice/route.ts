@@ -8,7 +8,7 @@ export const maxDuration = 120;
 
 const LABEL: Record<TtsProvider, string> = { openai: "OpenAI", xai: "xAI", gemini: "Gemini" };
 
-// POST /api/studio/voice { script, provider, voice, speed, kind? }: reads the
+// POST /api/studio/voice { script, provider, voice, speed, kind?, name?, extension? }: reads the
 // script with an AI voice and saves the result to the person's studio.
 export async function POST(req: Request) {
   const user = await getUser();
@@ -33,10 +33,16 @@ export async function POST(req: Request) {
   if ("error" in result) return Response.json({ error: result.error, detail: result.detail }, { status: 502 });
 
   const words = script.split(/\s+/);
+  const named = String(body?.name ?? "").trim().slice(0, 120);
   const saved = await saveStudioFile(supabase, user.id, {
-    bytes: result.buffer, mime: result.mime, name: `AI · ${words.slice(0, 6).join(" ")}${words.length > 6 ? "…" : ""}`,
+    bytes: result.buffer, mime: result.mime, name: named || `AI · ${words.slice(0, 6).join(" ")}${words.length > 6 ? "…" : ""}`,
     source: "ai", kind: isKind(body?.kind) ? body.kind : "other", description: script.slice(0, 1000), aiProvider: provider, aiVoice: voice,
   });
   if ("error" in saved) return Response.json(saved, { status: 500 });
+  const extension = String(body?.extension ?? "").trim().slice(0, 40);
+  if (extension) {
+    const { error } = await supabase.from("studio_audio").update({ extension }).eq("id", saved.id);
+    if (!error) saved.extension = extension;
+  }
   return Response.json({ audio: saved });
 }

@@ -67,15 +67,23 @@ export function PromptField({ label, value, onChange, optional }: { label: strin
           ) : recordings.length ? (
             <>
               <Pick label="Recording" value={value?.audioId ?? ""} onChange={(v) => onChange({ audioId: v })}
-                options={[...(!clip ? [{ value: "", label: "Choose a recording" }] : []), ...sorted.map((r) => ({ value: r.id, label: `${r.name} · ${kindLabel(r.kind)}` }))]} />
+                options={[...(!clip ? [{ value: "", label: "Choose a recording" }] : []), ...sorted.map((r) => ({ value: r.id, label: [r.name, kindLabel(r.kind), r.ai_voice, r.extension && `Ext ${r.extension}`].filter(Boolean).join(" · ") }))]} />
               {clip?.url && <AudioPlayer src={clip.url} downloadName={clip.name} compact />}
             </>
           ) : (
             <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">No recordings yet. Make one in the Recording Studio, then pick it here.</p>
           )}
-          <Link href="/studio?tab=studio" target="_blank" className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-            Open the Recording Studio <ExternalLink className="size-3" />
-          </Link>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {mode === "text" && value?.text?.trim() && !value.text.includes("{{") && (
+              <Link href={`/studio?tab=studio&kind=greeting&name=${encodeURIComponent(label)}&script=${encodeURIComponent(value.text.trim())}`} target="_blank"
+                className="inline-flex items-center gap-1 text-xs font-medium underline-offset-4 hover:underline">
+                Make a clip from these words <ExternalLink className="size-3" />
+              </Link>
+            )}
+            <Link href="/studio?tab=studio" target="_blank" className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+              Open the Recording Studio <ExternalLink className="size-3" />
+            </Link>
+          </div>
         </div>
       )}
     </Field>
