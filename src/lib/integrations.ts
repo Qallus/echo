@@ -81,14 +81,14 @@ export const SERVICES: Service[] = [
     ],
   },
   {
-    id: "google_calendar", name: "Google Calendar sync", description: "Lets people connect their Google Calendar for two-way sync. From your Google Cloud project's OAuth client (Web application). Redirect URI: https://redial.si/api/calendar/google/callback",
+    id: "google_calendar", name: "Google (Calendar, Gmail, Contacts, Drive)", description: "Lets people connect their Google account: Calendar two-way sync first, then Gmail send, Contacts and Drive. From the Redial Google Cloud project's OAuth client (Web application). Redirect URIs: https://redial.si/api/integrations/google/callback and https://redial.si/api/calendar/google/callback. Setup: docs/Integrations/GOOGLE_CLOUD_TODO.md",
     fields: [
       { key: "GOOGLE_CLIENT_ID", label: "OAuth client ID", placeholder: "….apps.googleusercontent.com", required: true },
       { key: "GOOGLE_CLIENT_SECRET", label: "OAuth client secret", secret: true, required: true },
     ],
   },
   {
-    id: "microsoft_calendar", name: "Microsoft Outlook calendar sync", description: "Lets people connect an Outlook / Microsoft 365 calendar for two-way sync. From your Microsoft Entra app registration. Redirect URI: https://redial.si/api/calendar/microsoft/callback",
+    id: "microsoft_calendar", name: "Microsoft (Outlook, OneDrive, Teams)", description: "Lets people connect a Microsoft account (personal or Microsoft 365): Outlook Calendar two-way sync first, then Outlook mail, Contacts and OneDrive. From the Redial Microsoft Entra app registration. Redirect URIs: https://redial.si/api/integrations/microsoft/callback and https://redial.si/api/calendar/microsoft/callback. Setup: docs/Integrations/MICROSOFT_API_ACCESS.md",
     fields: [
       { key: "MICROSOFT_CLIENT_ID", label: "Application (client) ID", placeholder: "00000000-0000-0000-0000-000000000000", required: true },
       { key: "MICROSOFT_CLIENT_SECRET", label: "Client secret (Value)", secret: true, required: true },
