@@ -18,6 +18,7 @@ import { registerInsightTools } from "./tools/insights";
 import { registerRedialTools } from "./tools/redial";
 import { registerBillingTools } from "./tools/billing";
 import { registerLiveAgentTools } from "./tools/live-agents";
+import { registerCallTreeTools } from "./tools/call-trees";
 import { registerAdminTools } from "./tools/admin";
 
 const INSTRUCTIONS = `Echo stores call and meeting recordings with transcripts, summaries, highlights, action items and a developer backlog.
@@ -43,7 +44,7 @@ High-risk actions, and any tool your owner marked, wait for a person: the tool r
 // permissions are empty until the session has passed two-step sign-in,
 // when that is required).
 export async function createEchoServer(ctx: McpContext) {
-  const server = new McpServer({ name: "echo", title: "Redial and Echo", version: "0.8.0" }, { instructions: ctx.agent ? INSTRUCTIONS + AGENT_INSTRUCTIONS : INSTRUCTIONS });
+  const server = new McpServer({ name: "echo", title: "Redial and Echo", version: "0.9.0" }, { instructions: ctx.agent ? INSTRUCTIONS + AGENT_INSTRUCTIONS : INSTRUCTIONS });
   registerAccountTools(server, ctx);
   registerFolderTools(server, ctx);
   registerRecordingTools(server, ctx);
@@ -61,6 +62,7 @@ export async function createEchoServer(ctx: McpContext) {
   registerRedialTools(server, ctx, perms);
   registerBillingTools(server, ctx, perms);
   registerLiveAgentTools(server, ctx, perms);
+  registerCallTreeTools(server, ctx);
   registerAdminTools(server, ctx, perms);
   registerMetaTools(server, ctx);
   registerAgentTools(server, ctx);

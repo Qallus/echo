@@ -1,6 +1,6 @@
 "use client";
 
-import { GEMINI_VOICES } from "@/lib/flows/voices";
+import { GEMINI_VOICES, XAI_VOICES } from "@/lib/flows/voices";
 import { useState } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { BlockIcon } from "@/components/flows/block-icon";
@@ -66,9 +66,14 @@ function FlowSettings({ flow, issues, onChange, onSelect }: { flow: Flow; issues
         <Input value={flow.settings.timezone} maxLength={60} onChange={(e) => set({ timezone: e.target.value })} placeholder="America/Phoenix" />
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-medium">AI voice</span>
-        <Pick label="AI voice" value={flow.settings.voice?.id ?? ""} onChange={(v) => set({ voice: v ? { provider: "gemini", id: v } : undefined })}
-          options={[{ value: "", label: "Standard phone voice" }, ...GEMINI_VOICES.map((id) => ({ value: id, label: `${id} (Gemini)` }))]} />
-        <span className="block text-xs text-muted-foreground">When you publish, every greeting and menu written as text is made into a clip in this voice and saved in Recording Studio. Text with {"{{…}}"} is read live in the closest matching voice.</span>
+        <Pick label="AI voice" value={flow.settings.voice ? `${flow.settings.voice.provider}:${flow.settings.voice.id}` : ""}
+          onChange={(v) => { const [provider, id] = v.split(":"); set({ voice: v ? { provider: provider as "gemini" | "xai", id } : undefined }); }}
+          options={[
+            { value: "", label: "Standard phone voice" },
+            ...XAI_VOICES.map((x) => ({ value: `xai:${x.id}`, label: `${x.label} (xAI, your AI receptionist's voices)` })),
+            ...GEMINI_VOICES.map((id) => ({ value: `gemini:${id}`, label: `${id} (Gemini)` })),
+          ]} />
+        <span className="block text-xs text-muted-foreground">When you publish, every greeting, menu and short phrase (&quot;Sorry, I didn&apos;t get that&quot;, &quot;Connecting you to …&quot;, the recording notice) is made into a clip in this voice and saved in Recording Studio. Text with {"{{…}}"} is read live in the closest matching voice.</span>
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-medium">Record calls</span>
         <Pick label="Record calls" value={flow.settings.recording} onChange={(v) => set({ recording: v as Flow["settings"]["recording"] })}

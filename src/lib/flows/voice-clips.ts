@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { saveStudioFile } from "@/lib/studio/save";
 import { synthesize } from "@/lib/studio/tts";
 import { BLOCKS, type Flow } from "./schema";
-import { voiceKey } from "./voices";
+import { DIRECTORY_CONNECTING, DIRECTORY_NOT_FOUND, PHRASES, voiceKey } from "./voices";
 
 // When a call tree with an AI voice is published, every prompt written as
 // text is turned into a Recording Studio clip in that voice (once; a clip is
@@ -13,7 +13,8 @@ import { voiceKey } from "./voices";
 
 type Prompt = { audioId?: string; text?: string; ai?: { audioId: string; text: string; voice: string } };
 
-export async function voiceFlow(supabase: SupabaseClient, ownerId: string, flow: Flow, flowName: string) {
+// `names`: the people Dial by name can reach on the lines it runs on.
+export async function voiceFlow(supabase: SupabaseClient, ownerId: string, flow: Flow, flowName: string, names: string[] = []) {
   const voice = flow.settings.voice;
   if (!voice) return { flow, made: 0, errors: [] as string[] };
   const key = voiceKey(voice);
@@ -36,5 +37,28 @@ export async function voiceFlow(supabase: SupabaseClient, ownerId: string, flow:
     made++;
     nodes.push({ ...node, config: { ...cfg, prompt: { ...p, ai: { audioId: saved.id, text: words, voice: key } } } });
   }
-  return { flow: { ...flow, nodes }, made, errors };
+  // The short phrases, and "Connecting you to <name>" for each person.
+  const words = new Set<string>(Object.values(PHRASES));
+  for (const node of flow.nodes.filter((n) => n.type === "directory")) {
+    const cfg = node.config as { connecting?: string; notFound?: string };
+    const notFound = (cfg.notFound || DIRECTORY_NOT_FOUND).trim();
+    if (!notFound.includes("{{")) words.add(notFound);
+    for (const name of names) words.add((cfg.connecting || DIRECTORY_CONNECTING).replace(/\{\{\s*name\s*\}\}/g, name).trim());
+  }
+  const voiced: NonNullable<Flow["settings"]["voiced"]> = {};
+  for (const text of words) {
+    if (!text || text.includes("{{") || text.length > 300) continue;
+    const had = flow.settings.voiced?.[text];
+    if (had && had.voice === key) { voiced[text] = had; continue; }
+    const tts = await synthesize(voice.provider, { script: text, voice: voice.id, speed: 1 });
+    if ("error" in tts) { errors.push(`"${text}": ${tts.error}`); continue; }
+    const saved = await saveStudioFile(supabase, ownerId, {
+      bytes: tts.buffer, mime: tts.mime, name: `${flowName} · ${text}`.slice(0, 120), source: "ai", kind: "ivr", description: text,
+      aiProvider: voice.provider, aiVoice: voice.id,
+    });
+    if ("error" in saved) { errors.push(`"${text}": ${saved.error}`); continue; }
+    made++;
+    voiced[text] = { audioId: saved.id, voice: key };
+  }
+  return { flow: { ...flow, nodes, settings: { ...flow.settings, voiced } }, made, errors };
 }

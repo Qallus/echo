@@ -8,7 +8,7 @@ import type { Line } from "@/lib/redial/types";
 import { BLOCKS, flowSchema, type Flow, type FlowNode } from "./schema";
 import { emptyVars, hoursOut, matchOption, render, splitOut, type Vars } from "./eval";
 import { callWebhook } from "./http";
-import { sayVoice, voiceKey } from "./voices";
+import { DIRECTORY_CONNECTING, DIRECTORY_NOT_FOUND, PHRASES, sayVoice, voiceKey } from "./voices";
 import { crmLookup, crmUpdate, matchName, namesOnLine, sendFlowMessage } from "./live-blocks";
 
 // Runs a call through its line's published call tree. Twilio asks what to do
@@ -201,13 +201,29 @@ const lineVoicemail = (ctx: Ctx, prompt: string) => (ctx.test ? testVoicemail() 
 // An output with nothing connected: the call tree's fallback setting.
 async function unconnected(ctx: Ctx): Promise<string> {
   const mode = ctx.flow.settings.onUnconnected;
-  if (mode === "goodbye") { await complete(ctx); return "<Say>Thanks for calling. Goodbye.</Say><Hangup/>"; }
+  if (mode === "goodbye") { await complete(ctx); return `${await speak(ctx, PHRASES.goodbye)}<Hangup/>`; }
   await complete(ctx);
   if (mode === "voicemail") return lineVoicemail(ctx, VOICEMAIL_PROMPT);
   return assistant(ctx);
 }
 
 type Prompt = { audioId?: string; text?: string; ai?: { audioId: string; text: string; voice: string } } | undefined;
+
+// <Play> one of the owner's Studio clips, or "" if it isn't available.
+async function clipTwiml(ctx: Ctx, id: string, loop = 1): Promise<string> {
+  const { data: clip } = await ctx.db.from("studio_audio").select("storage_path, owner_id").eq("id", id).maybeSingle();
+  if (!clip || clip.owner_id !== ctx.ownerId) return "";
+  const { data } = await ctx.db.storage.from(BUCKET).createSignedUrl(clip.storage_path, 3600);
+  return data?.signedUrl ? `<Play loop="${loop}">${xml(data.signedUrl)}</Play>` : "";
+}
+
+// A short phrase: its clip in the call tree's voice, or said live.
+async function speak(ctx: Ctx, words: string): Promise<string> {
+  const v = ctx.flow.settings.voice;
+  const hit = v ? ctx.flow.settings.voiced?.[words] : undefined;
+  if (v && hit && hit.voice === voiceKey(v)) { const t = await clipTwiml(ctx, hit.audioId); if (t) return t; }
+  return `<Say>${xml(words)}</Say>`;
+}
 
 // <Play> a Studio clip (only the call tree owner's) or <Say> the text.
 async function promptTwiml(ctx: Ctx, prompt: Prompt, loop = 1): Promise<string> {
@@ -271,6 +287,9 @@ async function enter(ctx: Ctx, node: FlowNode): Promise<string> {
       return `${prompt}<Redirect method="POST">${hook(run, node.id, "next", "&out=saved")}</Redirect>`;
     }
     case "ai":
+      // Read by the assistant's session (webhooks/redial/session).
+      ctx.run.vars.flow.ai_instructions = render(String(cfg.instructions ?? ""), ctx.run.vars).trim().slice(0, 2000);
+      ctx.run.vars.flow.ai_max_minutes = String(Number(cfg.maxMinutes) || 5);
       await logStep(ctx, node, "handoff");
       await complete(ctx);
       return assistant(ctx);
@@ -328,7 +347,7 @@ async function dialTargets(ctx: Ctx, node: FlowNode, index: number, extraParams 
   // Recorded like every call on the line (two channels), so it becomes an Echo
   // recording with a transcript, summary and action items.
   const record = !ctx.test && ctx.run.call_id && recordsCalls(ctx.line);
-  const notice = record && ctx.line.record_notice !== false && !ctx.run.vars.flow.noticed ? `<Say>${RECORDING_NOTICE}</Say>` : "";
+  const notice = record && ctx.line.record_notice !== false && !ctx.run.vars.flow.noticed ? await speak(ctx, RECORDING_NOTICE) : "";
   if (notice) ctx.run.vars.flow.noticed = "yes";
   return `${notice}<Dial timeout="${seconds}" callerId="${xml(ctx.line.number)}" action="${hook(ctx.run.id, node.id, "dial", `&i=${index}${extraParams}`)}"${record ? recordAttrs(ctx.line, ctx.run.call_id!) : ""}>${numbers}</Dial>`;
 }
@@ -358,7 +377,7 @@ async function resume(ctx: Ctx, node: FlowNode, ev: string, p: Record<string, st
         }
       }
       const out = ev === "noinput" ? "noInput" : "noMatch";
-      const sorry = ev === "noinput" ? "<Say>Sorry, I didn't get that.</Say>" : "<Say>Sorry, that's not one of the choices.</Say>";
+      const sorry = await speak(ctx, ev === "noinput" ? PHRASES.noInput : PHRASES.noMatch);
       if (node.next[out] === node.id) { await logStep(ctx, node, out, { digits, speech }); return `${sorry}${await enter(ctx, node)}`; }
       if (node.next[out]) return go(out, { digits, speech });
       // Nothing connected: ask again, then fall back.
@@ -377,12 +396,13 @@ async function resume(ctx: Ctx, node: FlowNode, ev: string, p: Record<string, st
         const tries = (vars.tries ??= {});
         tries[node.id] = (tries[node.id] ?? 0) + 1;
         await logStep(ctx, node, "retry", { said, retry: tries[node.id] });
-        if (said && tries[node.id] <= MAX_TRIES) return `<Say>Sorry, I didn't find ${xml(said)}.</Say>${await enter(ctx, node)}`;
+        if (said && tries[node.id] <= MAX_TRIES) return `${await speak(ctx, String(cfg.notFound || DIRECTORY_NOT_FOUND).trim())}${await enter(ctx, node)}`;
         return go("notFound", { said });
       }
       await logStep(ctx, node, "dialing", { said, name: hit.name });
       const ghost: FlowNode = { ...node, config: { targets: [hit.target], mode: "one", ringSeconds: Number(cfg.ringSeconds) || 20 } };
-      return `<Say>Connecting you to ${xml(hit.name)}.</Say>${await dialTargets(ctx, ghost, 0)}`;
+      const connecting = String(cfg.connecting || DIRECTORY_CONNECTING).replace(/\{\{\s*name\s*\}\}/g, hit.name).trim();
+      return `${await speak(ctx, connecting)}${await dialTargets(ctx, ghost, 0)}`;
     }
     case "dial": {
       const status = p.DialCallStatus ?? "failed";

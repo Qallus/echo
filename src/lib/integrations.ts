@@ -88,6 +88,13 @@ export const SERVICES: Service[] = [
     ],
   },
   {
+    id: "google_workspace", name: "Google Workspace (Redial's own)", description: "Only for Redial's own @redial.si mailboxes and files (domain-wide delegation); never used for customers. Create the service account in the Redial Google Cloud project, allow its Client ID in admin.google.com, then paste the JSON key here. Steps: docs/Integrations/GOOGLE_API_ACCESS.md §7",
+    fields: [
+      { key: "GOOGLE_WORKSPACE_ADMIN_EMAIL", label: "Workspace account it acts as", placeholder: "jw@redial.si" },
+      { key: "GOOGLE_WORKSPACE_SERVICE_ACCOUNT", label: "Service account JSON key", secret: true },
+    ],
+  },
+  {
     id: "microsoft_calendar", name: "Microsoft (Outlook, OneDrive, Teams)", description: "Lets people connect a Microsoft account (personal or Microsoft 365): Outlook Calendar two-way sync first, then Outlook mail, Contacts and OneDrive. From the Redial Microsoft Entra app registration. Redirect URIs: https://redial.si/api/integrations/microsoft/callback and https://redial.si/api/calendar/microsoft/callback. Setup: docs/Integrations/MICROSOFT_API_ACCESS.md",
     fields: [
       { key: "MICROSOFT_CLIENT_ID", label: "Application (client) ID", placeholder: "00000000-0000-0000-0000-000000000000", required: true },

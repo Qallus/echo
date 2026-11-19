@@ -348,7 +348,13 @@ function DirectoryForm({ config, onChange }: FormProps) {
   return (
     <div className="space-y-4">
       <PromptField label="What the caller hears" value={config.prompt as Prompt | undefined} onChange={(p) => onChange({ ...config, prompt: p })} optional />
-      <p className="text-xs text-muted-foreground">The caller says a name. It&apos;s matched to your extensions and Directory contacts (first name, last name or both), then that person&apos;s phone rings.</p>
+      <p className="text-xs text-muted-foreground">The caller says a name. It&apos;s matched to you, the people you share the line with, your extensions and Directory contacts (first name, last name or both), then that person&apos;s phone rings.</p>
+      <Field label="Before connecting" hint="{{name}} is the person found. Made into a clip for each person in the call tree's AI voice when you publish.">
+        <Input maxLength={300} value={String(config.connecting ?? "Connecting you to {{name}}.")} onChange={(e) => onChange({ ...config, connecting: e.target.value })} />
+      </Field>
+      <Field label="When no one matches" hint="Said before asking again. After two tries the call goes to the Not found output.">
+        <Input maxLength={300} value={String(config.notFound ?? "Sorry, I didn't catch that name.")} onChange={(e) => onChange({ ...config, notFound: e.target.value })} />
+      </Field>
       <Field label="Ring for">
         <Pick label="Ring for" value={String(config.ringSeconds ?? 20)} onChange={(v) => onChange({ ...config, ringSeconds: Number(v) })}
           options={[10, 15, 20, 25, 30, 45, 60].map((s) => ({ value: String(s), label: `${s} seconds` }))} />
@@ -357,7 +363,26 @@ function DirectoryForm({ config, onChange }: FormProps) {
   );
 }
 
+function AiForm({ config, onChange }: FormProps) {
+  return (
+    <div className="space-y-4">
+      <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+        Your AI receptionist answers here, live, with the name, voice (xAI: Ara, Eve, Leo, Rex or Sal), greeting and business details set in{" "}
+        <Link href="/calls?tab=assistant" className="font-medium text-foreground underline underline-offset-2">Calls → Assistant</Link>.
+        It can answer questions, take a message, book a callback and transfer to your Directory.
+      </p>
+      <Field label="Extra instructions for this spot" hint="Added to your assistant's usual instructions, e.g. what the caller chose in the menu.">
+        <Textarea rows={4} maxLength={4000} value={String(config.instructions ?? "")} placeholder="The caller asked for Sales. Find out what they need and offer a callback." onChange={(e) => onChange({ ...config, instructions: e.target.value })} />
+      </Field>
+      <Field label="Longest call">
+        <Pick label="Longest call" value={String(config.maxMinutes ?? 5)} onChange={(v) => onChange({ ...config, maxMinutes: Number(v) })}
+          options={[2, 5, 10, 15, 20, 30].map((m) => ({ value: String(m), label: `${m} minutes` }))} />
+      </Field>
+    </div>
+  );
+}
+
 export const FORMS: Partial<Record<BlockType, (p: FormProps) => React.ReactNode>> = {
   say: SayForm, gather: GatherForm, split: SplitForm, hours: HoursForm, connect: ConnectForm, voicemail: VoicemailForm, hangup: HangupForm,
-  crm_update: CrmUpdateForm, message: MessageForm, directory: DirectoryForm,
+  crm_update: CrmUpdateForm, message: MessageForm, directory: DirectoryForm, ai: AiForm,
 };

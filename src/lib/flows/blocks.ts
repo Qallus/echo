@@ -49,7 +49,7 @@ export const DEFAULT_CONFIG: Record<BlockType, Record<string, unknown>> = {
   crm_lookup: {},
   crm_update: { note: "", tags: [], createLead: true },
   message: { channel: "sms", to: "", body: "", enabled: true },
-  directory: { prompt: { text: "Please say the name of the person you're trying to reach." }, ringSeconds: 20 },
+  directory: { prompt: { text: "Please say the name of the person you're trying to reach." }, ringSeconds: 20, connecting: "Connecting you to {{name}}.", notFound: "Sorry, I didn't catch that name." },
 };
 
 // A fresh id for a new block of this type: say, say_2, say_3…

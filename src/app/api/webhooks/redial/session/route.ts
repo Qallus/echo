@@ -26,9 +26,17 @@ export async function POST(req: Request) {
   if (!usage || usage.remaining_seconds < MIN_SECONDS_TO_SCREEN) return Response.json({ error: "No screening minutes left." }, { status: 409 });
   const maxSeconds = Math.max(MIN_SECONDS_TO_SCREEN, Math.min(line.max_seconds, usage.remaining_seconds));
   const protect = await protectBrief(db, line.id);
+  // A call tree's AI receptionist block can add instructions and a time limit.
+  const { data: run } = await db.from("call_flow_runs").select("vars").eq("call_id", call.id).order("started_at", { ascending: false }).limit(1).maybeSingle();
+  const flowVars = ((run?.vars as { flow?: Record<string, string> } | null)?.flow) ?? {};
+  const extra = flowVars.ai_instructions?.trim();
+  const treeMax = Number(flowVars.ai_max_minutes) * 60 || 0;
+  const limit = treeMax ? Math.max(MIN_SECONDS_TO_SCREEN, Math.min(maxSeconds, treeMax)) : maxSeconds;
 
   return Response.json({
-    callId: call.id, xaiKey, model: "grok-voice-latest", voice: line.voice, maxSeconds,
-    instructions: instructions(line, first, call.from_number, canConnect, callFacts(call as { risk_signals?: Signal[] | null }), protect), tools: tools(canConnect, protect),
+    callId: call.id, xaiKey, model: "grok-voice-latest", voice: line.voice, maxSeconds: limit,
+    instructions: instructions(line, first, call.from_number, canConnect, callFacts(call as { risk_signals?: Signal[] | null }), protect)
+      + (extra ? `\n\nFrom the call tree (the menu the caller went through): ${extra}` : ""),
+    tools: tools(canConnect, protect),
   });
 }

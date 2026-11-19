@@ -119,7 +119,12 @@ export const BLOCKS = {
   },
   directory: {
     label: "Dial by name", icon: "book-user", caller: true, outs: ["connected", "noAnswer", "notFound"],
-    config: z.object({ prompt: prompt.optional(), ringSeconds: z.number().int().min(5).max(60).default(20) }),
+    config: z.object({
+      prompt: prompt.optional(), ringSeconds: z.number().int().min(5).max(60).default(20),
+      // {{name}} is the person found. Both are spoken in the call tree's voice.
+      connecting: text(300).default("Connecting you to {{name}}."),
+      notFound: text(300).default("Sorry, I didn't catch that name."),
+    }),
   },
 } as const;
 
@@ -146,7 +151,10 @@ export const flowSchema = z.object({
     // AI minutes, otherwise voicemail (decided by the runner).
     onUnconnected: z.enum(["ai_or_voicemail", "voicemail", "goodbye"]).default("ai_or_voicemail"),
     // The AI voice prompts are spoken in (src/lib/flows/voices.ts).
-    voice: z.object({ provider: z.literal("gemini"), id: z.string().regex(/^[A-Za-z]{2,30}$/) }).optional(),
+    voice: z.object({ provider: z.enum(["gemini", "xai"]), id: z.string().regex(/^[A-Za-z]{2,30}$/) }).optional(),
+    // Clips of the short phrases (and Dial by name's "Connecting you to …")
+    // in that voice, keyed by the exact words. Filled in on publish.
+    voiced: z.record(z.string().max(300), z.object({ audioId: uuid, voice: text(100) })).optional(),
   }).default({ timezone: "America/Phoenix", recording: "off", onUnconnected: "ai_or_voicemail" }),
   start: id,
   nodes: z.array(node).min(1).max(MAX_NODES),
