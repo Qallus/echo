@@ -72,7 +72,7 @@ export function ExampleCalls() {
         ))}
       </div>
       <div role="tabpanel" className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2 rounded-2xl border bg-background p-5">
+        <div className="space-y-5 rounded-2xl border bg-background p-5 sm:p-6">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">What the caller said</p>
           <Bubble who="Caller · 0:06" text={c.say1} caller />
           <Bubble who="Redial · 0:14" text={c.ask} />
@@ -96,8 +96,8 @@ export function ExampleCalls() {
 
 function Bubble({ who, text, caller }: { who: string; text: string; caller?: boolean }) {
   return (
-    <div className={cn("max-w-[90%] rounded-2xl px-3.5 py-2 text-sm", caller ? "ml-auto bg-foreground text-background" : "bg-muted")}>
-      <span className="block text-[10px] font-semibold opacity-60">{who}</span>{text}
+    <div className={cn("max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed", caller ? "ml-auto bg-foreground text-background" : "bg-muted")}>
+      <span className="mb-1 block text-[10px] font-semibold opacity-60">{who}</span>{text}
     </div>
   );
 }

@@ -50,6 +50,7 @@ export const SITE_PAGES: SearchEntry[] = [
   { cat: "live-agents", title: "How Live Agents work", desc: "Your AI answers first, then hands callers to a person", href: "/live-agents/how-it-works", words: "handoff transfer overflow after hours" },
   { cat: "live-agents", title: "Live Agent rates", desc: "Per minute, per shift or monthly, with the service fee shown", href: "/live-agents/how-it-works#pricing", words: "price cost fee hourly per minute retainer" },
   { cat: "live-agents", title: "Become a Live Agent", desc: "Answer calls from home, set your own hours and rate", href: "/become-a-live-agent", words: "job work from home earn money apply remote" },
+  { cat: "business", title: "Partners and careers", desc: "Resell Redial, become an affiliate or influencer, join the team, or the reseller program for sales teams", href: "/partners", words: "partner reseller affiliate influencer careers jobs hiring account executive sales bpo white label" },
   { cat: "live-agents", title: "Live Agents available now", desc: "People ready to take calls right now", href: "/live-agents?now=1", words: "available online today immediate" },
   { cat: "live-agents", title: "Bilingual Live Agents", desc: "Spanish and other languages", href: "/live-agents?language=Spanish", words: "spanish espanol bilingual language receptionist" },
   { cat: "live-agents", title: "Live Agent questions", desc: "Booking, payment, privacy and getting listed", href: "/faq#topic-live-agents", words: "faq help questions answers" },

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppBadges } from "@/components/marketing/app-badges";
+import { HelpFab } from "@/components/marketing/help-fab";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { SiteSearch } from "@/components/marketing/site-search";
@@ -16,7 +17,7 @@ const FOOTER: { title: string; links: [string, string][] }[] = [
   { title: "Redial", links: [["Features", "/#redial"], ["For business", "/redial/business"], ["Live call controls", "/#controls"], ["Pricing", "/pricing"], ["FAQ", "/faq"]] },
   { title: "Phone service", links: [["Home phone", "/home-phone"], ["Business phone", "/business-phone"], ["Phones that work", "/compatibility"], ["Phone plans", "/pricing#phone-service"], ["Recording Studio", "/recording-studio"]] },
   { title: "Live Agents", links: [["Search Live Agents", "/live-agents"], ["How it works", "/live-agents/how-it-works"], ["Live Agent rates", "/live-agents/how-it-works#pricing"], ["Become an agent", "/become-a-live-agent"], ["Questions & answers", "/faq#topic-live-agents"]] },
-  { title: "Company", links: [["Contact", "/contact"], ["Book a demo", "/book"], ["Developers", "/developers"], ["Sign in", "/login"], ["Create account", "/signup"]] },
+  { title: "Company", links: [["Contact", "/contact"], ["Partners and careers", "/partners"], ["Book a demo", "/book"], ["Developers", "/developers"], ["Create account", "/signup"]] },
 ];
 
 // Public site: header and footer around the landing and pricing pages.
@@ -53,6 +54,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
       </header>
 
       <main className="flex-1">{children}</main>
+      <HelpFab />
 
       <footer className="border-t">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 text-sm sm:px-6 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16">
