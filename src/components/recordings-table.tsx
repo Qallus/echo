@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore, useTransition } from "react";
 import {
   ArchiveRestore, ArrowRightLeft, Briefcase, CalendarDays, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Columns3, Download, Folder,
-  FolderMinus, LayoutGrid, List, Loader2, Lock, Monitor, Phone, Rows3, Trash2, Upload, Video, X,
+  FolderMinus, LayoutGrid, List, Loader2, Lock, Monitor, Phone, Rows3, Trash2, Upload, Video,
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -22,6 +22,8 @@ import { RECORDINGS_MIME } from "@/lib/dnd";
 import { formatDuration, spaceLabel } from "@/lib/format";
 import { SOURCES, type Folder as FolderT, type Recording, type Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ViewSwitcher } from "@/components/admin/crm/crm-kit";
+import { QuickActionBar } from "@/components/collection/quick-action-bar";
 
 const sourceIcon = { phone_call: Phone, meeting: Video, upload: Upload, desktop: Monitor };
 const typeLabel = (r: Recording) => SOURCES[r.source].label.replace(/s$/, "");
@@ -175,9 +177,7 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
   return (
     <div className="space-y-3">
       {ids.length > 0 ? (
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 rounded-lg border bg-background/95 px-2 py-1.5 text-sm shadow-sm backdrop-blur">
-          <Button variant="ghost" size="icon-sm" aria-label="Clear selection" onClick={() => setSelected(new Set())}><X /></Button>
-          <span className="mr-2 font-medium">{ids.length} selected</span>
+        <QuickActionBar count={ids.length} total={rows.length} onSelectAll={() => setSelected(new Set(rows.map((r) => r.id)))} onClear={() => setSelected(new Set())}>
 
           {!trash && (
             <>
@@ -234,7 +234,7 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
             </Button>
           )}
           {pending && <Loader2 className="ml-1 size-4 animate-spin text-muted-foreground" />}
-        </div>
+        </QuickActionBar>
       ) : (
         notice && (
           <p className={cn("text-sm", notice.error ? "text-destructive" : "text-muted-foreground")}>{notice.text}</p>
@@ -242,14 +242,7 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
       )}
 
       <div className="flex justify-end">
-        <div role="tablist" aria-label="View" className="flex items-center rounded-lg border bg-card p-0.5">
-          {VIEWS.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" role="tab" aria-selected={view === id} title={label} onClick={() => setView(id)}
-              className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium", view === id ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              <Icon className="size-3.5" /><span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
+        <ViewSwitcher views={[...VIEWS]} value={view} onChange={setView} />
       </div>
 
       {view === "table" && (

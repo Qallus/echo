@@ -241,3 +241,7 @@
    so one bad selector would drop both. */
 html[data-stats="hidden"] .stat-card { display: none !important; }
 html[data-stats="hidden"] .stat-row:not(:has(> :not(.stat-card))) { display: none !important; }
+
+/* While a quick-action bar is showing (components/collection/quick-action-bar.tsx),
+   leave room so it doesn't cover the last rows of the page. */
+body:has([data-quick-bar]) main { padding-bottom: 7rem; }

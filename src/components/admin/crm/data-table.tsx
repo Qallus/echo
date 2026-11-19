@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, ListFilter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -111,7 +112,7 @@ export function DataTable<T>({ rows, columns, getId, selected, onSelect, onOpen,
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-8"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" /></TableHead>
+                <TableHead className="w-8"><Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" /></TableHead>
                 {cols.map((c) => (
                   <TableHead key={c.id} className={c.className}>
                     {c.value ? (
@@ -130,7 +131,7 @@ export function DataTable<T>({ rows, columns, getId, selected, onSelect, onOpen,
                 const id = getId(r);
                 return (
                   <TableRow key={id} data-state={selected.has(id) ? "selected" : undefined} className="cursor-pointer" onClick={() => onOpen(r)}>
-                    <TableCell onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(id)} onChange={() => toggle(id)} aria-label="Select row" /></TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.has(id)} onCheckedChange={() => toggle(id)} aria-label="Select row" /></TableCell>
                     {cols.map((c) => <TableCell key={c.id} className={cn("max-w-64 truncate", c.className)}>{c.cell(r)}</TableCell>)}
                     {rowEnd && <TableCell onClick={(e) => e.stopPropagation()}>{rowEnd(r)}</TableCell>}
                   </TableRow>

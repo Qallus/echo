@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -200,7 +201,7 @@ function LeadsInbox({ leads, cards, canManage }: { leads: CardLead[]; cards: Car
             const card = cardOf(l.card_id);
             return (
               <li key={l.id} className="flex items-start gap-3 p-3">
-                <input type="checkbox" className="mt-1" aria-label={`Select ${l.name}`} checked={selected.has(l.id)} onChange={() => toggle(l.id)} />
+                <Checkbox className="mt-1" aria-label={`Select ${l.name}`} checked={selected.has(l.id)} onCheckedChange={() => toggle(l.id)} />
                 <div className="min-w-0 flex-1 space-y-0.5 text-sm">
                   <p className="flex flex-wrap items-center gap-2 font-medium">{l.name}{l.company && <span className="font-normal text-muted-foreground">· {l.company}</span>}<span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", st.cls)}>{st.label}</span></p>
                   <p className="flex flex-wrap gap-x-3 text-muted-foreground">

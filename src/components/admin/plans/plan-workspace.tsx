@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -50,7 +51,7 @@ export function PlanWorkspace({ plan, groups, tasks, staff, companies, readOnly 
   const open = list.find((t) => t.id === openId) ?? null;
   const ids = [...selected];
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const box = (t: PlanTask) => !readOnly && <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${t.title}`} />;
+  const box = (t: PlanTask) => !readOnly && <Checkbox checked={selected.has(t.id)} onCheckedChange={() => toggle(t.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${t.title}`} />;
   const complete = (t: PlanTask) => {
     const status = t.status === "complete" ? "not_started" : "complete";
     setList(list.map((x) => (x.id === t.id ? { ...x, status } : x)));
@@ -142,7 +143,7 @@ export function PlanWorkspace({ plan, groups, tasks, staff, companies, readOnly 
           </form>
         ) : <span />}
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1.5 text-sm text-muted-foreground"><input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} /> Hide completed</label>
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground"><Checkbox checked={hideDone} onCheckedChange={(v) => setHideDone(Boolean(v))} /> Hide completed</label>
           <ViewSwitcher views={VIEWS} value={view} onChange={(v) => { setView(v); if (!readOnly) void updatePlan(plan.id, { default_view: v }); }} />
         </div>
       </div>

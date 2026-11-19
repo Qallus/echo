@@ -2,31 +2,38 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { CalendarClock, Check, Plus } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Archive, ArchiveRestore, CalendarClock, Check, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pick } from "@/components/ui/pick";
-import { createPlan } from "@/lib/admin/actions/plans";
+import { createPlan, deletePlan, updatePlan } from "@/lib/admin/actions/plans";
+import { CollectionView } from "@/components/collection/collection-view";
 import { formatDay, ownerName, type StaffOption } from "@/lib/crm/types";
 import { PLAN_TEMPLATES } from "@/lib/plans/templates";
 import { PLAN_COLORS, colorDot, type PlanSummary } from "@/lib/plans/types";
 import { cn } from "@/lib/utils";
-import { EmptyState, SearchBox, StatRow, StatTile } from "@/components/admin/crm/crm-kit";
+import { StatRow, StatTile } from "@/components/admin/crm/crm-kit";
 
-// Every plan with its progress. New plans start from a template.
+// Every plan with its progress, in the same layout as every other list:
+// list, table, cards and calendar (by due date), checkboxes with the
+// quick-action bar, and a click opens the plan's preview.
 export function PlansIndex({ plans, companies, staff, readOnly }: { plans: PlanSummary[]; companies: { id: string; name: string }[]; staff: StaffOption[]; readOnly: boolean }) {
-  const [status, setStatus] = useState<"active" | "archived">("active");
-  const [search, setSearch] = useState("");
+  const router = useRouter();
   const [creating, setCreating] = useState(false);
-  const shown = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return plans.filter((p) => p.status === status && (!q || `${p.name} ${p.company?.name ?? ""}`.toLowerCase().includes(q)));
-  }, [plans, status, search]);
   const active = plans.filter((p) => p.status === "active");
+  const pct = (p: PlanSummary) => (p.tasks ? Math.round((p.done / p.tasks) * 100) : 0);
+  const dot = (p: PlanSummary) => <span className={cn("size-3 shrink-0 rounded-full", colorDot(p.color))} />;
+  const progress = (p: PlanSummary) => (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${pct(p)}%` }} /></div>
+      <span className="text-xs text-muted-foreground">{p.done}/{p.tasks}</span>
+    </div>
+  );
+  const run = async (fn: () => Promise<{ error?: string }>) => { const r = await fn(); if (r.error) alert(r.error); router.refresh(); };
 
   return (
     <div className="space-y-5">
@@ -36,33 +43,54 @@ export function PlansIndex({ plans, companies, staff, readOnly }: { plans: PlanS
         <StatTile label="Overdue tasks" value={active.reduce((n, p) => n + p.overdue, 0)} accent />
         <StatTile label="Completed tasks" value={active.reduce((n, p) => n + p.done, 0)} />
       </StatRow>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchBox value={search} onChange={setSearch} placeholder="Search plans…" />
-          <div className="flex gap-1 rounded-lg border bg-card p-1">
-            {(["active", "archived"] as const).map((s) => <button key={s} type="button" onClick={() => setStatus(s)} className={cn("rounded-md px-3 py-1 text-sm capitalize", status === s ? "bg-accent font-medium" : "text-muted-foreground")}>{s}</button>)}
+      <CollectionView<PlanSummary>
+        items={plans} getId={(p) => p.id} title={(p) => p.name} noun={["plan", "plans"]} storageKey="admin-plans" defaultView="cards"
+        empty="No plans yet. Start one from a template: onboarding, a project, a launch…"
+        subtitle={(p) => [p.company?.name, ownerName(staff, p.owner_id)].filter(Boolean).join(" · ") || "No client"}
+        media={dot}
+        badge={(p) => p.overdue ? <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">{p.overdue} overdue</span> : null}
+        meta={(p) => <span className="flex items-center gap-3">{progress(p)}{p.due_date && <span className="flex items-center gap-1"><CalendarClock className="size-3" />{formatDay(p.due_date)}</span>}</span>}
+        searchText={(p) => `${p.name} ${p.description ?? ""} ${p.company?.name ?? ""} ${ownerName(staff, p.owner_id) ?? ""}`}
+        filters={[
+          { id: "active", label: "Active", test: (p) => p.status === "active" },
+          { id: "overdue", label: "Overdue", test: (p) => p.status === "active" && p.overdue > 0 },
+          { id: "archived", label: "Archived", test: (p) => p.status === "archived" },
+          { id: "all", label: "All", test: () => true },
+        ]}
+        date={(p) => p.due_date ?? p.start_date}
+        columns={[
+          { id: "name", label: "Plan", sort: (p) => p.name.toLowerCase(), cell: (p) => <span className="flex items-center gap-2 font-medium">{dot(p)}{p.name}</span> },
+          { id: "client", label: "Client", sort: (p) => p.company?.name ?? null, cell: (p) => <span className="text-muted-foreground">{p.company?.name ?? "—"}</span> },
+          { id: "owner", label: "Owner", sort: (p) => ownerName(staff, p.owner_id) ?? null, cell: (p) => <span className="text-muted-foreground">{ownerName(staff, p.owner_id) ?? "—"}</span> },
+          { id: "progress", label: "Progress", sort: (p) => pct(p), cell: progress },
+          { id: "overdue", label: "Overdue", sort: (p) => p.overdue, cell: (p) => <span className={p.overdue ? "text-destructive" : "text-muted-foreground"}>{p.overdue || "—"}</span> },
+          { id: "due", label: "Due", sort: (p) => p.due_date, cell: (p) => <span className="text-muted-foreground">{p.due_date ? formatDay(p.due_date) : "—"}</span> },
+          { id: "updated", label: "Updated", sort: (p) => p.updated_at, cell: (p) => <span className="text-muted-foreground">{formatDay(p.updated_at.slice(0, 10))}</span> },
+        ]}
+        toolbar={!readOnly && <Button onClick={() => setCreating(true)}><Plus /> New plan</Button>}
+        actions={readOnly ? [] : [
+          { label: "Open", icon: ExternalLink, single: true, run: ([p]) => router.push(`/admin/plans/${p.id}`) },
+          { label: "Archive", icon: Archive, show: (rows) => rows.some((p) => p.status === "active"), run: (rows) => run(async () => { for (const p of rows) { const r = await updatePlan(p.id, { status: "archived" }); if (r.error) return r; } return {}; }) },
+          { label: "Restore", icon: ArchiveRestore, show: (rows) => rows.some((p) => p.status === "archived"), run: (rows) => run(async () => { for (const p of rows) { const r = await updatePlan(p.id, { status: "active" }); if (r.error) return r; } return {}; }) },
+          { label: "Delete", icon: Trash2, destructive: true, run: (rows) => confirm(`Delete ${rows.length === 1 ? `"${rows[0].name}"` : `${rows.length} plans`} and all their tasks? This can't be undone.`) && run(async () => { for (const p of rows) { const r = await deletePlan(p.id); if (r.error) return r; } return {}; }) },
+        ]}
+        previewActions={(p) => <Button size="sm" nativeButton={false} render={<Link href={`/admin/plans/${p.id}`} />}><ExternalLink /> Open plan</Button>}
+        preview={(p) => (
+          <div className="space-y-4 text-sm">
+            {p.description && <p className="whitespace-pre-wrap text-muted-foreground">{p.description}</p>}
+            <div className="space-y-1.5">
+              <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${pct(p)}%` }} /></div>
+              <p className="text-xs text-muted-foreground">{p.done} of {p.tasks} tasks done ({pct(p)}%){p.overdue ? `, ${p.overdue} overdue` : ""}</p>
+            </div>
+            <dl className="divide-y rounded-xl border px-3">
+              {[["Client", p.company?.name ?? "None"], ["Owner", ownerName(staff, p.owner_id) ?? "Unassigned"], ["Starts", p.start_date ? formatDay(p.start_date) : "—"],
+                ["Due", p.due_date ? formatDay(p.due_date) : "—"], ["Status", p.status === "archived" ? "Archived" : "Active"]].map(([k, v]) => (
+                <div key={k} className="grid grid-cols-[7rem_1fr] gap-2 py-1.5"><dt className="text-muted-foreground">{k}</dt><dd>{v}</dd></div>
+              ))}
+            </dl>
           </div>
-        </div>
-        {!readOnly && <Button onClick={() => setCreating(true)}><Plus /> New plan</Button>}
-      </div>
-      {shown.length === 0 ? <EmptyState message={plans.length ? "No plans here." : "No plans yet. Start one from a template: onboarding, a project, a launch…"} /> : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map((p) => {
-            const pct = p.tasks ? Math.round((p.done / p.tasks) * 100) : 0;
-            return (
-              <Link key={p.id} href={`/admin/plans/${p.id}`} className="space-y-3 rounded-xl border bg-card p-4 hover:border-primary/40">
-                <div className="flex items-center gap-2"><span className={cn("size-2.5 rounded-full", colorDot(p.color))} /><span className="min-w-0 flex-1 truncate font-medium">{p.name}</span></div>
-                <p className="truncate text-xs text-muted-foreground">{[p.company?.name, ownerName(staff, p.owner_id)].filter(Boolean).join(" · ") || "No client"}</p>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${pct}%` }} /></div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{p.done}/{p.tasks} done{p.overdue ? <span className="text-destructive"> · {p.overdue} overdue</span> : null}</span>
-                  {p.due_date && <span className="flex items-center gap-1"><CalendarClock className="size-3" />{formatDay(p.due_date)}</span>}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+        )}
+      />
       {creating && <NewPlanDialog companies={companies} staff={staff} onClose={() => setCreating(false)} />}
     </div>
   );

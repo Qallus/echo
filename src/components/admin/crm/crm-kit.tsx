@@ -31,12 +31,12 @@ export function StatTile({ label, value, hint, accent }: { label: string; value:
 
 export function ViewSwitcher<T extends string>({ views, value, onChange }: { views: { id: T; label: string; icon: LucideIcon }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-lg border bg-card p-1 [scrollbar-width:none]">
+    <div role="tablist" aria-label="View" className="flex overflow-x-auto rounded-lg border bg-muted/40 p-0.5 [scrollbar-width:none]">
       {views.map((v) => (
-        <button key={v.id} type="button" onClick={() => onChange(v.id)} aria-pressed={v.id === value}
-          className={cn("flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-            v.id === value ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground")}>
-          <v.icon className="size-4" /> {v.label}
+        <button key={v.id} type="button" role="tab" onClick={() => onChange(v.id)} aria-selected={v.id === value} title={v.label}
+          className={cn("flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground",
+            v.id === value && "bg-background text-foreground shadow-sm")}>
+          <v.icon className="size-4" /><span className="hidden lg:inline">{v.label}</span>
         </button>
       ))}
     </div>

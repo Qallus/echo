@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
   Download, File, FileImage, FileSpreadsheet, FileText, Folder as FolderIcon, FolderPlus, LayoutGrid, Link2, List, Loader2, Pencil, Tag, Trash2, Upload, X,
@@ -130,7 +131,7 @@ export function DocumentsPanel({ docs, folders, staff, companies, readOnly }: {
                 const Icon = iconFor(d.mime);
                 return (
                   <li key={d.id} className="flex items-center gap-3 p-2.5">
-                    <input type="checkbox" checked={selected.has(d.id)} onChange={() => toggle(d.id)} aria-label={`Select ${d.name}`} />
+                    <Checkbox checked={selected.has(d.id)} onCheckedChange={() => toggle(d.id)} aria-label={`Select ${d.name}`} />
                     <Icon className="size-5 shrink-0 text-muted-foreground" />
                     <button type="button" onClick={() => setOpenId(d.id)} className="min-w-0 flex-1 text-left">
                       <span className="block truncate text-sm font-medium">{d.name}</span>
@@ -148,7 +149,7 @@ export function DocumentsPanel({ docs, folders, staff, companies, readOnly }: {
                 const Icon = iconFor(d.mime);
                 return (
                   <div key={d.id} className="relative rounded-xl border bg-card p-3">
-                    <input type="checkbox" className="absolute top-2 left-2" checked={selected.has(d.id)} onChange={() => toggle(d.id)} aria-label={`Select ${d.name}`} />
+                    <Checkbox className="absolute top-2 left-2" checked={selected.has(d.id)} onCheckedChange={() => toggle(d.id)} aria-label={`Select ${d.name}`} />
                     <button type="button" onClick={() => setOpenId(d.id)} className="flex w-full flex-col items-center gap-2 pt-3 text-center">
                       <Icon className="size-10 text-muted-foreground" />
                       <span className="w-full truncate text-sm font-medium">{d.name}</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -160,10 +161,10 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
         <EmptyState message={contacts.length ? "No contacts match your filters." : "No contacts yet. Add one or import a CSV."} />
       ) : view === "list" ? (
         <div className="space-y-2">
-          <label className="flex items-center gap-2 px-1 text-xs text-muted-foreground"><input type="checkbox" checked={allSelected} onChange={toggleAll} /> Select all {shown.length}</label>
+          <label className="flex items-center gap-2 px-1 text-xs text-muted-foreground"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /> Select all {shown.length}</label>
           {shown.map((c) => (
             <div key={c.id} className="flex items-center gap-3 rounded-xl border bg-card p-3 hover:border-primary/40">
-              <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${contactName(c)}`} />
+              <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} aria-label={`Select ${contactName(c)}`} />
               <button type="button" onClick={() => setDrawer(c.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                 <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="md" />
                 <span className="min-w-0 flex-1">
@@ -184,7 +185,7 @@ export function ContactsPage({ contacts, companies, staff, readOnly, phoneImport
           {shown.map((c) => (
             <div key={c.id} className="space-y-3 rounded-xl border bg-card p-4">
               <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${contactName(c)}`} />
+                <Checkbox className="mt-1" checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} aria-label={`Select ${contactName(c)}`} />
                 <button type="button" onClick={() => setDrawer(c.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                   <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="md" />
                   <span className="min-w-0"><span className="block truncate font-medium">{contactName(c)}</span><span className="block truncate text-xs text-muted-foreground">{[c.title, c.company?.name].filter(Boolean).join(" · ") || "—"}</span></span>

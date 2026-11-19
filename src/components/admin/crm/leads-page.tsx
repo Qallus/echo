@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -85,7 +86,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
 
   const ids = [...selected];
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const box = (c: Contact) => <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${contactName(c)}`} />;
+  const box = (c: Contact) => <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${contactName(c)}`} />;
   const change = (patch: BulkChange) => run(() => bulkUpdate("crm_contacts", ids, patch));
   const picked = () => list.filter((c) => selected.has(c.id));
   const bulk: BulkAction[] = [
@@ -128,7 +129,7 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
           <SearchBox value={search} onChange={setSearch} placeholder="Search leads…" />
           <Pick label="Owner" className="w-fit" value={owner} onChange={(v) => setOwner(v)}
             options={[{ value: "", label: "All owners" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
-          <label className="flex items-center gap-1.5 text-sm text-muted-foreground"><input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} /> In pipeline & disqualified</label>
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground"><Checkbox checked={showClosed} onCheckedChange={(v) => setShowClosed(Boolean(v))} /> In pipeline & disqualified</label>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ViewSwitcher views={VIEWS} value={view} onChange={setView} />

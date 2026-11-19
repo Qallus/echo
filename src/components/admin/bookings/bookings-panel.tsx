@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { CalendarDays, Check, List, Plus, Table as TableIcon, Trash2, UserX, X } from "lucide-react";
@@ -99,7 +100,7 @@ export function BookingsPanel({ bookings, types, staff, timezone, people, readOn
         <ul className="divide-y rounded-xl border bg-card">
           {shown.map((b) => (
             <li key={b.id} className="flex items-center gap-3 p-3">
-              {!readOnly && <input type="checkbox" checked={selected.has(b.id)} onChange={() => toggle(b.id)} aria-label={`Select ${b.title}`} />}
+              {!readOnly && <Checkbox checked={selected.has(b.id)} onCheckedChange={() => toggle(b.id)} aria-label={`Select ${b.title}`} />}
               <button type="button" onClick={() => setEditing(b)} className="min-w-0 flex-1 text-left">
                 <span className="flex flex-wrap items-center gap-2"><span className="truncate text-sm font-medium">{b.title}</span><StatusBadge status={b.status} />{b.source === "website" && <Badge variant="outline" className="text-[10px]">Online</Badge>}</span>
                 <span className="block truncate text-xs text-muted-foreground">{when(b.starts_at)}{b.email ? ` · ${b.email}` : ""}{b.host_id ? ` · ${ownerName(staff, b.host_id)}` : ""}</span>

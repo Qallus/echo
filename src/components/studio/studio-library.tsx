@@ -22,6 +22,8 @@ import { imageToDataUrl } from "@/lib/studio/image";
 import { AI_PROVIDERS, STATUS_META, STUDIO_KINDS, STUDIO_STATUSES, kindLabel, voiceLabel, type StudioAudio, type StudioKind, type StudioStatus } from "@/lib/studio/types";
 import { GEMINI_VOICES } from "@/lib/flows/voices";
 import { cn } from "@/lib/utils";
+import { ViewSwitcher } from "@/components/admin/crm/crm-kit";
+import { QuickActionBar } from "@/components/collection/quick-action-bar";
 
 // The Library tab (adapted from Channel Cast's audio library): every
 // recording in five views, with upload, selection and bulk actions.
@@ -162,14 +164,7 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1" role="tablist" aria-label="View">
-          {VIEWS.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" role="tab" aria-selected={view === id} onClick={() => chooseView(id)}
-              className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium", view === id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-              <Icon className="size-4" /><span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
+        <ViewSwitcher views={[...VIEWS]} value={view} onChange={chooseView} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -193,19 +188,13 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
         })}
       </div>
 
-      {picked.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5">
-          <span className="text-sm font-medium">{picked.length} selected</span>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => picked.forEach((a) => void downloadFile(a))}><Download /> Download</Button>
-            <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => archiveStudioAudio(picked.map((a) => a.id), !archived))}>
-              {archived ? <><ArchiveRestore /> Restore</> : <><Archive /> Archive</>}
-            </Button>
-            <Button size="sm" variant="destructive" disabled={pending} onClick={() => setConfirm(picked.map((a) => a.id))}><Trash2 /> Delete</Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
-          </div>
-        </div>
-      )}
+      <QuickActionBar count={picked.length} total={shown.length} onSelectAll={() => setSelected(new Set(shown.map((a) => a.id)))} onClear={() => setSelected(new Set())}>
+        <Button size="sm" variant="outline" onClick={() => picked.forEach((a) => void downloadFile(a))}><Download /> Download</Button>
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => archiveStudioAudio(picked.map((a) => a.id), !archived))}>
+          {archived ? <><ArchiveRestore /> Restore</> : <><Archive /> Archive</>}
+        </Button>
+        <Button size="sm" variant="destructive" disabled={pending} onClick={() => setConfirm(picked.map((a) => a.id))}><Trash2 /> Delete</Button>
+      </QuickActionBar>
 
       {msg && <p role="status" className={cn("text-sm", msg.error ? "text-destructive" : "text-muted-foreground")}>{msg.text}</p>}
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { CalendarDays, Download, Flag, UserRound, ChevronLeft, ChevronRight, ExternalLink, Eye, GitBranchPlus, LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2 } from "lucide-react";
@@ -87,7 +88,7 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
   const q = list.find((d) => d.id === quick) ?? null;
   const ids = [...selected];
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const box = (d: Deal) => <input type="checkbox" checked={selected.has(d.id)} onChange={() => toggle(d.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${d.title}`} />;
+  const box = (d: Deal) => <Checkbox checked={selected.has(d.id)} onCheckedChange={() => toggle(d.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${d.title}`} />;
   const bulkRun = (fn: () => Promise<{ ok?: string; error?: string }>, clear = false) =>
     start(async () => { const res = await fn(); setMsg(res); if (!res.error && clear) setSelected(new Set()); });
   const exportCsv = () => {
@@ -133,7 +134,7 @@ export function PipelinePage({ deals, companies, contacts, staff, readOnly }: {
           <Pick label="Owner" className="w-fit" value={owner} onChange={(v) => setOwner(v)}
             options={[{ value: "", label: "All owners" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
           <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <input type="checkbox" checked={allClosed} onChange={(e) => setAllClosed(e.target.checked)} /> Older closed deals
+            <Checkbox checked={allClosed} onCheckedChange={(v) => setAllClosed(Boolean(v))} /> Older closed deals
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-2">

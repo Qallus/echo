@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import {
-  ArrowDown, ArrowDownUp, ArrowUp, ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Map as MapIcon, Search, Table2, X,
+  ArrowDown, ArrowDownUp, ArrowUp, ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Map as MapIcon, Search, Table2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { Input } from "@/components/ui/input";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { cn } from "@/lib/utils";
+import { ViewSwitcher } from "@/components/admin/crm/crm-kit";
+import { QuickActionBar } from "./quick-action-bar";
 
 // One layout for every list in the dashboards (user, admin, Agent Desk):
 // search, filter chips, sort, and five views (list, table, cards, map,
@@ -116,7 +118,7 @@ export function CollectionView<T>(p: CollectionProps<T>) {
   const v: ViewProps<T> = { ...p, rows: shown, selected, toggle, open };
 
   return (
-    <div className={cn("space-y-4", picked.length > 0 && "pb-28")}>
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -137,14 +139,7 @@ export function CollectionView<T>(p: CollectionProps<T>) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <div role="tablist" aria-label="View" className="flex rounded-lg border bg-muted/40 p-0.5">
-          {VIEWS.filter((x) => allowed.includes(x.id)).map((x) => (
-            <button key={x.id} role="tab" type="button" aria-selected={view === x.id} title={x.label} onClick={() => setView(x.id)}
-              className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground", view === x.id && "bg-background text-foreground shadow-sm")}>
-              <x.icon className="size-4" /><span className="hidden lg:inline">{x.label}</span>
-            </button>
-          ))}
-        </div>
+        <ViewSwitcher views={VIEWS.filter((x) => allowed.includes(x.id))} value={view} onChange={setView} />
         {p.toolbar}
       </div>
 
@@ -173,24 +168,16 @@ export function CollectionView<T>(p: CollectionProps<T>) {
         : view === "map" ? <MapView {...v} />
         : <CalendarView {...v} />}
 
-      {picked.length > 0 && p.actions?.length ? (
-        <div className="fixed inset-x-3 bottom-20 z-40 mx-auto max-w-5xl md:bottom-6 md:left-[calc(var(--sidebar-width,0px)+1.5rem)]">
-          <div className="flex items-center gap-2 rounded-2xl border bg-card/95 p-2 pl-3 shadow-lg backdrop-blur">
-            <span className="shrink-0 text-sm font-medium">{picked.length} selected</span>
-            {picked.length < shown.length && <Button size="sm" variant="link" className="hidden px-1 sm:inline-flex" onClick={toggleAll}>Select all {shown.length}</Button>}
-            <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-              {p.actions.filter((a) => !a.show || a.show(picked)).map((a) => (
-                <Button key={a.label} size="sm" variant={a.destructive ? "destructive" : "outline"} disabled={pending || (a.single && picked.length !== 1)}
-                  title={a.single && picked.length !== 1 ? `Select one ${one}` : undefined}
-                  onClick={() => start(async () => { await a.run(picked); if (a.destructive) setSelected(new Set()); })}>
-                  <a.icon /> {a.label}
-                </Button>
-              ))}
-            </div>
-            <Button size="icon-sm" variant="ghost" aria-label="Clear selection" onClick={() => setSelected(new Set())}><X /></Button>
-          </div>
-        </div>
+      {p.actions?.length ? (
+        <QuickActionBar count={picked.length} total={shown.length} onSelectAll={toggleAll} onClear={() => setSelected(new Set())}>
+          {p.actions.filter((a) => !a.show || a.show(picked)).map((a) => (
+            <Button key={a.label} size="sm" variant={a.destructive ? "destructive" : "outline"} disabled={pending || (a.single && picked.length !== 1)}
+              title={a.single && picked.length !== 1 ? `Select one ${one}` : undefined}
+              onClick={() => start(async () => { await a.run(picked); if (a.destructive) setSelected(new Set()); })}>
+              <a.icon /> {a.label}
+            </Button>
+          ))}
+        </QuickActionBar>
       ) : null}
 
       {p.preview && (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, X, type LucideIcon } from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
+import { QuickActionBar } from "@/components/collection/quick-action-bar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -36,12 +37,8 @@ function InputAction({ a, disabled }: { a: BulkAction & { input: NonNullable<Bul
 export function BulkBar({ count, total, actions, onSelectAll, onClear, pending }: {
   count: number; total: number; actions: BulkAction[]; onSelectAll: () => void; onClear: () => void; pending?: boolean;
 }) {
-  if (!count) return null;
   return (
-    <div className="sticky top-14 z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-card/95 p-2 pl-3 text-sm shadow-sm backdrop-blur md:top-2">
-      <span className="font-medium">{count} selected</span>
-      {count < total && <Button size="sm" variant="link" className="px-1" onClick={onSelectAll}>Select all {total}</Button>}
-      <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+    <QuickActionBar count={count} total={total} onSelectAll={onSelectAll} onClear={onClear}>
       {actions.map((a) => a.options ? (
         <DropdownMenu key={a.label}>
           <DropdownMenuTrigger render={<Button size="sm" variant="outline" disabled={pending} />}><a.icon /> {a.label} <ChevronDown className="opacity-60" /></DropdownMenuTrigger>
@@ -54,8 +51,7 @@ export function BulkBar({ count, total, actions, onSelectAll, onClear, pending }
       ) : (
         <Button key={a.label} size="sm" variant={a.destructive ? "destructive" : "outline"} disabled={pending} onClick={a.run}><a.icon /> {a.label}</Button>
       ))}
-      <Button size="icon-sm" variant="ghost" className="ml-auto" aria-label="Clear selection" onClick={onClear}><X /></Button>
-    </div>
+    </QuickActionBar>
   );
 }
 

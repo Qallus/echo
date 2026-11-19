@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { CompanyLogo } from "./company-logo";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -112,7 +113,7 @@ export function ClientsList({ clients, staff, readOnly }: { clients: ClientRow[]
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((c) => (
             <div key={c.id} className="flex items-start gap-3 rounded-xl border p-4 hover:bg-muted/40">
-              <input type="checkbox" className="mt-1" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label={`Select ${c.name}`} />
+              <Checkbox className="mt-1" checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} aria-label={`Select ${c.name}`} />
               <button type="button" onClick={() => router.push(`/admin/clients/${c.id}`)} className="min-w-0 flex-1 space-y-2 text-left">
                 <span className="flex items-center gap-2">
                   <CompanyLogo src={c.logo} size="md" />

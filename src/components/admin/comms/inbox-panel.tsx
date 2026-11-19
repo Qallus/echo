@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { convertInbox, deleteInbox, replyInbox, setInboxStatus } from "@/lib/admin/actions/comms";
 import type { InboxMessage } from "@/lib/comms/data";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { QuickActionBar } from "@/components/collection/quick-action-bar";
 import { EmptyState, SearchBox } from "@/components/admin/crm/crm-kit";
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -54,14 +56,13 @@ export function InboxPanel({ messages, readOnly, canCrm }: { messages: InboxMess
         <span className="ml-auto text-sm text-muted-foreground">{msg.error ?? msg.ok}</span>
       </div>
 
-      {selected.size > 0 && !readOnly && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-2 pl-3 text-sm">
-          <span className="font-medium">{selected.size} selected</span>
+      {!readOnly && (
+        <QuickActionBar count={selected.size} total={shown.length} onSelectAll={() => setSelected(new Set(shown.map((x) => x.id)))} onClear={() => setSelected(new Set())}>
           <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => setInboxStatus(ids, "read"), () => setSelected(new Set()))}><MailOpen /> Mark read</Button>
           <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => setInboxStatus(ids, "new"), () => setSelected(new Set()))}><Mail /> Mark unread</Button>
           <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => setInboxStatus(ids, "archived"), () => setSelected(new Set()))}><Archive /> Archive</Button>
           <Button size="sm" variant="destructive" disabled={pending} onClick={() => confirm(`Delete ${ids.length} messages?`) && run(() => deleteInbox(ids), () => setSelected(new Set()))}><Trash2 /> Delete</Button>
-        </div>
+        </QuickActionBar>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
@@ -70,8 +71,8 @@ export function InboxPanel({ messages, readOnly, canCrm }: { messages: InboxMess
             <ul className="divide-y overflow-hidden rounded-xl border bg-card">
               {shown.map((x) => (
                 <li key={x.id} className={cn("flex items-start gap-2 p-3", openId === x.id && "bg-accent/60")}>
-                  {!readOnly && <input type="checkbox" className="mt-1" checked={selected.has(x.id)} aria-label="Select message"
-                    onChange={() => setSelected((s) => { const n = new Set(s); if (n.has(x.id)) n.delete(x.id); else n.add(x.id); return n; })} />}
+                  {!readOnly && <Checkbox className="mt-1" checked={selected.has(x.id)} aria-label="Select message"
+                    onCheckedChange={() => setSelected((s) => { const n = new Set(s); if (n.has(x.id)) n.delete(x.id); else n.add(x.id); return n; })} />}
                   <button type="button" onClick={() => open(x)} className="min-w-0 flex-1 text-left">
                     <span className="flex items-center gap-1.5">
                       {x.channel === "form" ? <Globe className="size-3.5 shrink-0 text-muted-foreground" /> : <Mail className="size-3.5 shrink-0 text-muted-foreground" />}

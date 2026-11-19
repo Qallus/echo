@@ -14,6 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { bulkLiveAgents, deleteLiveAgents } from "@/lib/admin/actions/live-agents";
 import { ADMIN_STATUS, type AdminAgent } from "@/lib/live-agents/admin-types";
 import { cn } from "@/lib/utils";
+import { ViewSwitcher } from "@/components/admin/crm/crm-kit";
+import { QuickActionBar } from "@/components/collection/quick-action-bar";
 import { AgentPanel, ComposePanel, EditPanel, type ComposeMode } from "./agent-panels";
 import { CalendarView, CardsView, ListView, MapView, SORT_LABELS, TableView, type Sort, type SortKey } from "./agent-views";
 
@@ -125,7 +127,7 @@ export function AgentsManager({ agents, skills, canManage }: { agents: AdminAgen
   };
 
   return (
-    <div className={cn("space-y-4", picked.length > 0 && "pb-28")}>
+    <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
@@ -145,15 +147,7 @@ export function AgentsManager({ agents, skills, canManage }: { agents: AdminAgen
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <div role="tablist" aria-label="View" className="flex rounded-lg border bg-muted/40 p-0.5">
-          {VIEWS.map((v) => (
-            <button key={v.id} role="tab" type="button" aria-selected={view === v.id} title={v.label} onClick={() => pickView(v.id)}
-              className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground",
-                view === v.id && "bg-background text-foreground shadow-sm")}>
-              <v.icon className="size-4" /><span className="hidden lg:inline">{v.label}</span>
-            </button>
-          ))}
-        </div>
+        <ViewSwitcher views={[...VIEWS]} value={view} onChange={pickView} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -185,13 +179,7 @@ export function AgentsManager({ agents, skills, canManage }: { agents: AdminAgen
         : <CalendarView agents={shown} selected={selected} toggle={toggle} open={setOpenId} />}
 
       {/* Quick actions, fixed to the bottom while agents are selected */}
-      {picked.length > 0 && (
-        <div className="fixed inset-x-3 bottom-20 z-40 mx-auto max-w-5xl md:bottom-6 md:left-[calc(var(--sidebar-width,0px)+1.5rem)]">
-          <div className="flex items-center gap-2 rounded-2xl border bg-card/95 p-2 pl-3 shadow-lg backdrop-blur">
-            <span className="shrink-0 text-sm font-medium">{picked.length} selected</span>
-            {picked.length < shown.length && <Button size="sm" variant="link" className="hidden px-1 sm:inline-flex" onClick={toggleAll}>Select all {shown.length}</Button>}
-            <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+      <QuickActionBar count={picked.length} total={shown.length} onSelectAll={toggleAll} onClear={() => setSelected(new Set())} message={picked.length ? notice : null}>
               <Button size="sm" variant="outline" disabled={!one} title={one ? undefined : "Select one agent"} onClick={() => one && setOpenId(one.id)}><UserRound /> Contact</Button>
               {canManage && <Button size="sm" variant="outline" disabled={!one} title={one ? undefined : "Select one agent"} onClick={() => one && setEditId(one.id)}><Pencil /> Edit</Button>}
               {canManage && <Button size="sm" variant="outline" disabled={pending} onClick={() => setCompose({ ids, mode: "message" })}><Bell /> Message</Button>}
@@ -216,12 +204,7 @@ export function AgentsManager({ agents, skills, canManage }: { agents: AdminAgen
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-            </div>
-            <Button size="icon-sm" variant="ghost" aria-label="Clear selection" onClick={() => setSelected(new Set())}><X /></Button>
-          </div>
-          {notice && <p role="status" className={cn("mt-1.5 rounded-lg border bg-card px-3 py-1.5 text-sm shadow", notice.error ? "border-destructive/40 text-destructive" : "text-muted-foreground")}>{notice.text}</p>}
-        </div>
-      )}
+      </QuickActionBar>
 
       <AgentPanel agent={agents.find((a) => a.id === openId) ?? null} skillLabel={skillLabel} canManage={canManage} onClose={() => setOpenId(null)}
         onEdit={(id) => { setOpenId(null); setEditId(id); }} onCompose={(list, mode) => setCompose({ ids: list, mode })} />
