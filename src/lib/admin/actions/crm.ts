@@ -7,7 +7,7 @@ import { geocode } from "@/lib/crm/geocode";
 import { moveDealStage } from "@/lib/crm/ops";
 import { requireStaff } from "@/lib/admin/guard";
 import { STAGES } from "@/lib/crm/deals";
-import { isActivityKind, isCompanyStatus, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
+import { isActivityKind, isCompanyStatus, isContactKind, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
 import { cents, date, email, list, ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -78,7 +78,15 @@ export type ContactInput = {
   first_name: string; last_name?: string; email?: string; phone?: string; title?: string; company_id?: string;
   source?: string; notes?: string; tags?: string; owner_id?: string; role?: ContactRole; lead_status?: LeadStatus | "";
   interest?: string; website?: string; city?: string; state?: string; photo?: string;
+  // Business details (migration 20261120100000).
+  kind?: string; company_name?: string; logo?: string; phone_ext?: string; address?: string; address2?: string; zip?: string;
+  country?: string; locations?: string; source_other?: string;
+  ref_first_name?: string; ref_last_name?: string; ref_phone?: string; ref_email?: string;
 };
+
+// A database that hasn't had a contact update run yet.
+const MISSING_COLUMNS = "The database is missing the newest contact fields. Run supabase/migrations/20261120100000_crm_contact_business.sql in the Supabase SQL Editor, then try again.";
+const missingColumn = (m: string) => /schema cache|column .* does not exist/i.test(m);
 
 // A photo or logo from the form: a small uploaded image (data URL) or an
 // https link; "" removes it; undefined (field not sent) leaves it alone.
@@ -93,27 +101,52 @@ function image(v: string | undefined): string | null | undefined | false {
 
 export async function saveContact(id: string | null, input: ContactInput): Promise<Result> {
   await requireStaff("crm.manage");
-  const first = text(input.first_name, 100);
+  const kind = isContactKind(input.kind) ? input.kind : "person";
+  const business = text(input.company_name, 200);
+  if (kind !== "person" && !business) return { error: "Enter the business name." };
+  // A business with no person's name keeps its business name as the name.
+  const first = text(input.first_name, 100) ?? (kind === "business" ? business!.slice(0, 100) : null);
   if (!first) return { error: "Enter a first name." };
   const mail = email(input.email);
   if (mail === false) return { error: "That email address doesn't look right." };
-  const photo = image(input.photo);
+  const photo = kind === "business" ? (input.photo === undefined ? undefined : null) : image(input.photo);
   if (photo === false) return { error: "The photo link must start with https://, or upload an image." };
+  const logo = kind === "person" ? (input.logo === undefined ? undefined : null) : image(input.logo);
+  if (logo === false) return { error: "The logo link must start with https://, or upload an image." };
+  const ext = text(input.phone_ext, 8);
+  if (ext && !/^[0-9]{1,8}$/.test(ext)) return { error: "The extension can only be numbers." };
+  const count = text(input.locations, 6);
+  const locations = count ? Number(count) : null;
+  if (locations !== null && !(Number.isInteger(locations) && locations >= 1 && locations <= 100000)) return { error: "Locations must be a whole number from 1 up." };
+  const source = input.source === "Other" ? text(input.source_other, 100) : text(input.source, 100);
+  const refMail = email(input.ref_email);
+  if (refMail === false) return { error: "The referrer's email address doesn't look right." };
+  const referral = source === "Referral"
+    ? Object.fromEntries(Object.entries({ first_name: text(input.ref_first_name, 100), last_name: text(input.ref_last_name, 100), phone: text(input.ref_phone, 40), email: refMail }).filter(([, v]) => v))
+    : {};
   const row = {
     ...(photo === undefined ? {} : { photo }),
+    ...(logo === undefined ? {} : { logo }),
+    // Business fields only when the form sent them (other callers, like the
+    // Redial phone center, don't), so those keep working on an older database.
+    ...(input.kind === undefined ? {} : {
+      kind, company_name: business, phone_ext: ext, locations: kind === "person" ? null : locations, referral,
+      address2: text(input.address2, 100), country: text(input.country, 60),
+    }),
     first_name: first, last_name: text(input.last_name, 100), email: mail, phone: text(input.phone, 40), title: text(input.title, 120),
-    company_id: ref(input.company_id), source: text(input.source, 100), notes: text(input.notes, 10000), tags: list(input.tags),
+    company_id: ref(input.company_id), source, notes: text(input.notes, 10000), tags: list(input.tags),
     owner_id: ref(input.owner_id), role: isContactRole(input.role) ? input.role : "contact",
     lead_status: isLeadStatus(input.lead_status) ? input.lead_status : input.role === "lead" ? "new" : null,
-    interest: text(input.interest, 200), website: text(input.website, 300), city: text(input.city, 100), state: text(input.state, 100),
+    interest: text(input.interest, 200), website: text(input.website, 300),
+    address: text(input.address, 300), city: text(input.city, 100), state: text(input.state, 100), zip: text(input.zip, 20),
   };
   const supabase = await createClient();
   const { data, error } = id
     ? await supabase.from("crm_contacts").update(row).eq("id", id).select("id").single()
     : await supabase.from("crm_contacts").insert(row).select("id").single();
-  if (error) return { error: error.message };
+  if (error) return { error: missingColumn(error.message) ? MISSING_COLUMNS : error.message };
   const name = [row.first_name, row.last_name].filter(Boolean).join(" ");
-  await adminAudit(supabase, id ? "crm.contact.update" : "crm.contact.create", { type: "crm_contact", id: data.id }, { name });
+  await adminAudit(supabase, id ? "crm.contact.update" : "crm.contact.create", { type: "crm_contact", id: data.id }, { name, kind });
   if (!id && row.role === "lead") await queueAutomations(supabase, "lead_created", [{ contactId: data.id }]);
   refresh();
   return { ok: id ? "Saved." : `${name} added.`, id: data.id };

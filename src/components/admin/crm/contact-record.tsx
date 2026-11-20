@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { addToPipeline } from "@/lib/admin/actions/crm-pipeline";
 import { deleteContacts, updateContact, type ContactPatch } from "@/lib/admin/actions/crm-people";
-import { CONTACT_ROLES, CONTACT_STATUSES, LEAD_STATUSES, contactName, ownerName, type Activity, type Contact, type Deal, type StaffOption } from "@/lib/crm/types";
+import { CONTACT_KINDS, CONTACT_ROLES, CONTACT_STATUSES, LEAD_STATUSES, contactName, ownerName, type Activity, type Contact, type Deal, type StaffOption } from "@/lib/crm/types";
 import { RoleBadge } from "./contacts-page";
 import { DetailRow, Editable, Panel } from "./crm-kit";
 import { DealRows } from "./crm-ui";
@@ -38,6 +38,7 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
   const [pending, start] = useTransition();
   const save = (patch: ContactPatch) => start(async () => setMsg(await updateContact(contact.id, patch)));
   const details = Object.entries(contact.details ?? {});
+  const business = contact.company_name && contact.company_name !== contactName(contact) ? contact.company_name : null;
   const grouped = details.reduce<Record<string, [string, string][]>>((acc, kv) => { (acc[categoryOf(kv[0])] ??= []).push(kv); return acc; }, {});
   const opt = (items: readonly { id: string; label: string }[]) => items.map((i) => ({ value: i.id, label: i.label }));
   const field = (label: string, key: keyof ContactPatch & keyof Contact) => (
@@ -51,12 +52,12 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
       </Link>
 
       <div className="flex flex-wrap items-start gap-4 rounded-xl border bg-card p-4">
-        <UserAvatar name={contactName(contact)} email={contact.email ?? ""} src={contact.photo ?? null} size="lg" />
+        <UserAvatar name={contactName(contact)} email={contact.email ?? ""} src={(contact.kind === "business" ? contact.logo : contact.photo ?? contact.logo) ?? null} size="lg" />
         <div className="min-w-0 flex-1 space-y-1">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{contactName(contact)}</h1>
           <p className="text-sm text-muted-foreground">
-            {contact.title}{contact.title && contact.company ? " at " : ""}
-            {contact.company && <Link href={`/admin/clients/${contact.company.id}`} className="hover:underline">{contact.company.name}</Link>}
+            {contact.title}{contact.title && (contact.company || business) ? " at " : ""}
+            {contact.company ? <Link href={`/admin/clients/${contact.company.id}`} className="hover:underline">{contact.company.name}</Link> : business}
           </p>
           <div className="flex flex-wrap gap-1 pt-1">
             <RoleBadge role={contact.role} />
@@ -97,6 +98,7 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
             {field("Source", "source")}{field("Interest", "interest")}{field("Website", "website")}{field("City", "city")}{field("State", "state")}
             <DetailRow label="Tags">{readOnly ? contact.tags.join(", ") : <Editable value={contact.tags.join(", ")} placeholder="Add tags" onSave={(v) => save({ tags: v })} />}</DetailRow>
           </Panel>
+          <ProfilePanel contact={contact} />
           <ReachPanel contact={contact} />
           {contact.notes && <Panel title="Notes"><p className="text-sm whitespace-pre-wrap">{contact.notes}</p></Panel>}
           {details.length > 0 && (
@@ -121,6 +123,31 @@ export function ContactRecord({ contact, companies, deals, activities, staff, ec
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Business, address and referral details from the contact form (Edit to change).
+function ProfilePanel({ contact: c }: { contact: Contact }) {
+  const street = [c.address, c.address2].filter(Boolean).join(", ");
+  const place = [c.city, [c.state, c.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const address = [street, place, c.country].filter(Boolean).join("\n");
+  const r = c.referral ?? {};
+  const referrer = [r.first_name, r.last_name].filter(Boolean).join(" ");
+  const kind = CONTACT_KINDS.find((k) => k.id === c.kind);
+  if (!c.kind && !address && !c.phone_ext) return null;
+  return (
+    <Panel title="Business and address">
+      {kind && <DetailRow label="Type">{kind.label}</DetailRow>}
+      {c.company_name && <DetailRow label="Business name">{c.company_name}</DetailRow>}
+      {c.locations && <DetailRow label="Locations">{c.locations}</DetailRow>}
+      {c.phone && c.phone_ext && <DetailRow label="Phone ext.">{c.phone_ext}</DetailRow>}
+      {address && <DetailRow label="Address"><span className="whitespace-pre-line">{address}</span></DetailRow>}
+      {c.source === "Referral" && (referrer || r.phone || r.email) && (
+        <DetailRow label="Referred by">
+          <span className="whitespace-pre-line">{[referrer, r.phone, r.email].filter(Boolean).join("\n")}</span>
+        </DetailRow>
+      )}
+    </Panel>
+  );
+}
 
 // Every number, email and address from the phone, with its label, plus birthday.
 function ReachPanel({ contact: c }: { contact: Contact }) {

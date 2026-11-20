@@ -25,6 +25,21 @@ export const CONTACT_STATUSES = [
 export type ContactStatus = (typeof CONTACT_STATUSES)[number]["id"];
 export const isContactStatus = (v: unknown): v is ContactStatus => CONTACT_STATUSES.some((r) => r.id === v);
 
+// A contact is a person, a business, or both (a person and their business).
+export const CONTACT_KINDS = [
+  { id: "person", label: "Person" }, { id: "business", label: "Business" }, { id: "both", label: "Both" },
+] as const;
+export type ContactKind = (typeof CONTACT_KINDS)[number]["id"];
+export const isContactKind = (v: unknown): v is ContactKind => CONTACT_KINDS.some((k) => k.id === v);
+
+// Where a contact came from. Stored as the label in crm_contacts.source;
+// "Referral" also keeps who referred them. Anything else typed in is "Other".
+export const CONTACT_SOURCES = [
+  "Referral", "Google", "Facebook", "Instagram", "LinkedIn", "TikTok", "YouTube", "X (Twitter)", "Other social media",
+  "Website", "Print", "Direct mail", "Direct", "In person", "Event", "Cold call", "Email campaign", "Partner", "Self-generated",
+] as const;
+export type Referral = { first_name?: string; last_name?: string; phone?: string; email?: string };
+
 export const LEAD_STATUSES = [
   { id: "new", label: "New", tone: "bg-sky-500/15 text-sky-700 dark:text-sky-300", open: true },
   { id: "attempting", label: "Attempting contact", tone: "bg-amber-500/15 text-amber-700 dark:text-amber-300", open: true },
@@ -77,6 +92,9 @@ export type Contact = {
   company?: { id: string; name: string } | null;
   // From phone imports (optional until the 20261114090000 update has run).
   photo?: string | null; phones?: Labeled[]; emails?: Labeled[]; addresses?: ContactAddress[]; birthday?: string | null;
+  // Business details (optional until the 20261120100000 update has run).
+  kind?: ContactKind; company_name?: string | null; logo?: string | null; phone_ext?: string | null;
+  address2?: string | null; country?: string | null; locations?: number | null; referral?: Referral;
 };
 
 export type Labeled = { label: string; value: string };
