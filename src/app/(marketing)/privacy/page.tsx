@@ -7,7 +7,7 @@ export const metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "November 1, 2026";
+const UPDATED = "November 20, 2026";
 
 const PROVIDERS = [
   { name: "Supabase", purpose: "Database, sign-in and file storage (your audio, transcripts and account data)" },
@@ -84,6 +84,24 @@ const sections: LegalSection[] = [
             </tbody>
           </table>
         </div>
+      </>
+    ),
+  },
+  {
+    id: "google-user-data",
+    title: "Google user data",
+    body: (
+      <>
+        <p>If you connect a Google account, you choose which features to turn on, and Google shows you each permission before you agree. Depending on those features, we access:</p>
+        <ul>
+          <li><strong>Google Calendar:</strong> your calendar list and the events Redial creates or syncs, to keep bookings and appointments in step with your calendar;</li>
+          <li><strong>Gmail:</strong> permission to send email you write or approve in Redial from your own address. We don&apos;t read your inbox;</li>
+          <li><strong>Google Contacts:</strong> names and phone numbers, to show who&apos;s calling and to import contacts you pick;</li>
+          <li><strong>Google Drive, Docs and Sheets:</strong> only the files Redial creates or that you choose, such as recordings, transcripts, summaries and exports;</li>
+          <li><strong>Your Google profile:</strong> name, email and photo, to identify the connected account.</li>
+        </ul>
+        <p>Redial&apos;s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements. We use Google data only to provide the features you turn on. We don&apos;t sell it, don&apos;t use it for advertising, don&apos;t use it to train AI models, and people at Redial don&apos;t read it unless you ask us to for support, it&apos;s needed for security, or the law requires it.</p>
+        <p>Access tokens are stored encrypted. You can disconnect Google at any time in Settings → Connected accounts, or at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">myaccount.google.com/permissions</a>. When you disconnect, we delete the stored tokens; copies Redial made for you (for example a synced booking) stay until you delete them.</p>
       </>
     ),
   },
