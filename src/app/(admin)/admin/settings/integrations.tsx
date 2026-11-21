@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CheckCircle2, CircleDashed, Copy, KeyRound, PlugZap, X } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { AudioLines, CheckCircle2, CircleDashed, Cloud, Copy, CreditCard, KeyRound, LayoutGrid, MessagesSquare, PlugZap, Share2, Sparkles, Webhook, X } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,37 +90,84 @@ function ServiceCard({ service, state, readOnly }: { service: Service; state: Re
   );
 }
 
-const GROUPS: { title: string; ids: string[] }[] = [
-  { title: "Phone and email", ids: ["twilio", "resend"] },
-  { title: "Payments", ids: ["stripe"] },
-  { title: "AI providers (Redial's own keys)", ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
-  { title: "Social media", ids: ["linkedin", "meta"] },
-  { title: "Google and Microsoft accounts", ids: ["google_calendar", "google_workspace", "microsoft_calendar"] },
-  { title: "Redial voice", ids: ["redial"] },
-  { title: "Scheduled jobs", ids: ["cron"] },
+type Group = { id: string; title: string; desc: string; icon: React.ComponentType<{ className?: string }>; ids: string[] };
+
+// Categories in the rail. Gemini is an AI provider, so it sits with AI, not Google.
+const GROUPS: Group[] = [
+  { id: "communications", title: "Communications", desc: "Phone, texts and email.", icon: MessagesSquare, ids: ["twilio", "resend"] },
+  { id: "payments", title: "Payments", desc: "Checkout, subscriptions and refunds.", icon: CreditCard, ids: ["stripe"] },
+  { id: "ai", title: "AI providers", desc: "Redial's own keys for transcription, summaries and Ask Echo.", icon: Sparkles, ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
+  { id: "google", title: "Google", desc: "Connect Google for customers, and Redial's own Workspace.", icon: Cloud, ids: ["google_calendar", "google_workspace"] },
+  { id: "microsoft", title: "Microsoft", desc: "Connect Outlook, OneDrive and Teams.", icon: LayoutGrid, ids: ["microsoft_calendar"] },
+  { id: "social", title: "Social media", desc: "Posting to LinkedIn, Facebook and Instagram.", icon: Share2, ids: ["linkedin", "meta"] },
+  { id: "redial", title: "Redial", desc: "The voice gateway, the mobile app and scheduled jobs.", icon: AudioLines, ids: ["redial", "mobile", "cron"] },
+  { id: "automation", title: "Automation and other", desc: "Webhook signing and anything else.", icon: Webhook, ids: ["automation"] },
 ];
-// Any service not placed in a group above still shows, under "Other".
-const ALL_GROUPS = () => {
+// Any service not placed above still shows, under Automation and other.
+const ALL_GROUPS = (): Group[] => {
   const placed = new Set(GROUPS.flatMap((g) => g.ids));
   const rest = SERVICES.filter((s) => !placed.has(s.id)).map((s) => s.id);
-  return rest.length ? [...GROUPS, { title: "Other", ids: rest }] : GROUPS;
+  return GROUPS.map((g) => (g.id === "automation" ? { ...g, ids: [...g.ids, ...rest] } : g));
 };
 
-// Credentials for every service Echo uses. A value saved here replaces the
-// Coolify variable of the same name; clear it to fall back to Coolify.
-export function Integrations({ state, readOnly }: { state: Record<string, KeyState>; readOnly: boolean }) {
+const isSet = (s: Service, state: Record<string, KeyState>) => s.fields.filter((f) => f.required).every((f) => state[f.key]?.source);
+
+// Credentials for every service Redial uses, one category at a time. A value
+// saved here replaces the Coolify variable of the same name; clear it to fall
+// back to Coolify. While this is open, the main sidebar folds to icons so the
+// category rail has room (and opens again when you leave).
+export function Integrations({ state, readOnly, initialGroup }: { state: Record<string, KeyState>; readOnly: boolean; initialGroup?: string }) {
+  const groups = ALL_GROUPS();
+  const [active, setActive] = useState(groups.some((x) => x.id === initialGroup) ? initialGroup! : groups[0].id);
+  const group = groups.find((g) => g.id === active) ?? groups[0];
+  const { open, setOpen, isMobile } = useSidebar();
+  const folded = useRef(false);
+
+  useEffect(() => {
+    if (isMobile || !open || folded.current) return;
+    folded.current = true;
+    setOpen(false);
+  }, [isMobile, open, setOpen]);
+  useEffect(() => () => { if (folded.current) setOpen(true); }, [setOpen]);
+
+  const choose = (id: string) => {
+    setActive(id);
+    try { const u = new URL(window.location.href); u.searchParams.set("tab", "integrations"); u.searchParams.set("group", id); window.history.replaceState(null, "", u); } catch {}
+  };
+
   return (
-    <div className="space-y-8">
-      <p className="max-w-3xl text-sm text-muted-foreground">
-        Keys are encrypted before they&apos;re stored and never shown again; only owners and admins can change them, and every change is in the audit log.
-        A value saved here is used instead of the Coolify variable with the same name, within a minute and without a redeploy.
-      </p>
-      {ALL_GROUPS().map((g) => (
-        <div key={g.title} className="space-y-3">
-          <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">{g.title}</h2>
-          {g.ids.map((id) => { const s = SERVICES.find((x) => x.id === id)!; return <ServiceCard key={id} service={s} state={state} readOnly={readOnly} />; })}
+    <div className="grid gap-6 md:grid-cols-[13.5rem_minmax(0,1fr)]">
+      <nav aria-label="Integration categories" className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] md:sticky md:top-20 md:mx-0 md:flex-col md:self-start md:overflow-visible md:border-r md:px-0 md:pr-3">
+        {groups.map((g) => {
+          const services = g.ids.map((id) => SERVICES.find((x) => x.id === id)!).filter(Boolean);
+          const done = services.filter((s) => isSet(s, state)).length;
+          const on = g.id === group.id;
+          return (
+            <button key={g.id} type="button" onClick={() => choose(g.id)} aria-current={on ? "page" : undefined}
+              className={cn("flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                on ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
+              <g.icon className="size-4 shrink-0" />
+              <span className="flex-1 whitespace-nowrap">{g.title}</span>
+              <span className={cn("rounded-full px-1.5 text-[11px] tabular-nums",
+                done === services.length ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : done ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-muted text-muted-foreground")}>
+                {done}/{services.length}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="min-w-0 space-y-4">
+        <div className="space-y-1">
+          <h2 className="flex items-center gap-2 text-lg font-semibold"><group.icon className="size-5" />{group.title}</h2>
+          <p className="text-sm text-muted-foreground">{group.desc}</p>
         </div>
-      ))}
+        {group.ids.map((id) => { const s = SERVICES.find((x) => x.id === id); return s ? <ServiceCard key={id} service={s} state={state} readOnly={readOnly} /> : null; })}
+        <p className="max-w-3xl pt-2 text-xs text-muted-foreground">
+          Keys are encrypted before they&apos;re stored and never shown again; only owners and admins can change them, and every change is in the audit log.
+          A value saved here is used instead of the Coolify variable with the same name, within a minute and without a redeploy.
+        </p>
+      </div>
     </div>
   );
 }

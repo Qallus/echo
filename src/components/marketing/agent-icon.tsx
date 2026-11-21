@@ -1,20 +1,9 @@
 import type { SVGProps } from "react";
+import { Headset, type LucideProps } from "lucide-react";
 
-// A person wearing a headset (Live Agents), drawn to match lucide icons:
-// 24x24, 2px round strokes, currentColor.
-export function AgentIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-      <circle cx="12" cy="10.5" r="3" />
-      <path d="M5 11V10a7 7 0 0 1 14 0v1" />
-      <rect x="3.5" y="10" width="2.5" height="4.5" rx="1.25" />
-      <rect x="18" y="10" width="2.5" height="4.5" rx="1.25" />
-      <path d="M19.25 14.5a3 3 0 0 1-3 3H15" />
-      <path d="M6 22a6 6 0 0 1 9-5.2" />
-      <path d="M18 22a6 6 0 0 0-.6-2.6" />
-    </svg>
-  );
+// Live Agents: the lucide headset, so it matches the icons around it.
+export function AgentIcon(props: LucideProps) {
+  return <Headset aria-hidden="true" {...props} />;
 }
 
 // A team of three (Live Agents as a group): the "Users" outline icon from the

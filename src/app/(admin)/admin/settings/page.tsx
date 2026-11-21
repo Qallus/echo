@@ -17,7 +17,7 @@ type AuditRow = { id: number; actor_email: string | null; action: string; target
 
 // Admin settings: organization details, service integrations, staff security
 // and the audit log.
-export default async function AdminSettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function AdminSettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; group?: string }> }) {
   const staff = await requireStaff("audit.view");
   const supabase = await createClient();
   const [{ data, error }, { data: security }, { data: org }] = await Promise.all([
@@ -28,7 +28,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   if (error) throw new Error(error.message);
   const rows = data as AuditRow[];
   const manage = can(staff, "settings.manage");
-  const { tab } = await searchParams;
+  const { tab, group } = await searchParams;
   let keyState: Record<string, KeyState> = {};
   if (manage) {
     const keys = [...SECRET_KEYS];
@@ -49,7 +49,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
         <TabsContent value="organization" className="pt-6"><OrganizationForm initial={readOrg(org?.value)} readOnly={!manage} /></TabsContent>
-        {manage && <TabsContent value="integrations" className="pt-6"><Integrations state={keyState} readOnly={!manage} /></TabsContent>}
+        {manage && <TabsContent value="integrations" className="pt-6"><Integrations state={keyState} readOnly={!manage} initialGroup={group} /></TabsContent>}
         <TabsContent value="security" className="pt-6">
           <MfaSwitch initial={(security?.value as { requireMfa?: boolean } | null)?.requireMfa !== false} readOnly={!can(staff, "staff.manage")} />
         </TabsContent>
