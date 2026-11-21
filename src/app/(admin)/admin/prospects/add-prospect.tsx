@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Textarea } from "@/components/ui/textarea";
+import { Pick } from "@/components/ui/pick";
+import { PROVIDERS } from "@/lib/prospects/carriers";
 import { importProspects, updateProspect } from "@/lib/admin/actions/prospects";
 import { prettyPhone, prospectE164 } from "@/lib/prospects/phone";
 import type { Prospect } from "@/lib/prospects/types";
@@ -100,6 +102,15 @@ export function AddProspectPanel({ onClose, prospect }: { onClose: () => void; p
           <Field f={{ name: "zip", label: "ZIP", max: 20 }} value={p?.zip} />
         </div>
         <Field f={{ name: "country", label: "Country", placeholder: "United States", max: 60 }} value={p?.country} />
+
+        <Section title="What you know about their phones" />
+        <div className="space-y-1.5">
+          <Label htmlFor="ap-provider_override">Confirmed provider</Label>
+          <Pick id="ap-provider_override" name="provider_override" label="Confirmed provider" defaultValue={p?.provider_override ?? ""}
+            options={[{ value: "", label: "Not confirmed (use the lookup)" }, ...(Object.keys(PROVIDERS) as (keyof typeof PROVIDERS)[]).filter((k) => k !== "unknown").map((k) => ({ value: k, label: PROVIDERS[k].label }))]} />
+        </div>
+        <Field f={{ name: "provider_note", label: "Details", placeholder: "e.g. RingCentral through Cox, bill paid to Cox", max: 300 }} value={p?.provider_note} />
+        <p className="text-xs text-muted-foreground sm:col-span-2">The lookup only sees the carrier holding the number. What you confirm here wins in the Provider column, the score and the lead.</p>
 
         <Section title="Notes" />
         <Field f={{ name: "tags", label: "Tags", placeholder: "Comma separated", wide: true, max: 400 }} value={p?.tags?.join(", ")} />

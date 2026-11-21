@@ -28,13 +28,13 @@ export default async function ProspectsPage() {
     counts.set(l.carrier_name!, (counts.get(l.carrier_name!) ?? 0) + 1);
   }
   const unmapped = [...counts].map(([carrier, count]) => ({ carrier, count })).sort((a, b) => b.count - a.count);
-  const has = (p: string) => rows.filter((r) => r.lookup?.provider === p).length;
+  const has = (p: string) => rows.filter((r) => r.provider === p).length;
 
   return (
     <AdminPage title="Prospects" description="Business numbers to call on: who carries each number, how good a fit it is, and where it is in your outreach.">
       <StatRow>
         <StatTile label="Prospects" value={rows.length} hint={`${rows.filter((r) => r.lookup).length} looked up`} />
-        <StatTile label="RingCentral" value={has("ringcentral")} hint={`${rows.filter((r) => r.lookup?.provider === "ringcentral" && r.lookup.confidence === "confirmed").length} confirmed`} />
+        <StatTile label="RingCentral" value={has("ringcentral")} hint={`${rows.filter((r) => r.provider === "ringcentral" && r.confidence === "confirmed").length} confirmed`} />
         <StatTile label="Cox or Spectrum" value={has("cox") + has("spectrum")} />
         <StatTile label="On a cell phone" value={has("mobile")} accent />
       </StatRow>

@@ -23,7 +23,10 @@ export type Prospect = {
   // Contact and address details (migration 20261122110000).
   contact_first_name?: string | null; contact_last_name?: string | null; contact_title?: string | null; email?: string | null;
   phone_ext?: string | null; address2?: string | null; zip?: string | null; country?: string | null; locations?: number | null; tags?: string[];
+  provider_override?: string | null; provider_note?: string | null; // migration 20261122120000
   lookup: PhoneLookup | null;
+  // Worked out on read: what you confirmed, else what the lookup maps to.
+  provider: Provider | null; confidence: Confidence | null; providerByYou: boolean;
 };
 
 export const LINE_TYPES: Record<string, string> = {

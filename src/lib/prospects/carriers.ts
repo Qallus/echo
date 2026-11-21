@@ -25,16 +25,20 @@ const RULES: { provider: Provider; pattern: RegExp }[] = [
   { provider: "spectrum", pattern: /charter|spectrum|time warner|bright house/i },
   { provider: "lumen", pattern: /lumen|centurylink|qwest/i },
   { provider: "mobile", pattern: /t-mobile|verizon wireless|cellco|at&t (mobility|wireless)|new cingular|cingular|sprint|us cellular|u\.s\. cellular|mint mobile|google fi|metropcs|cricket|visible/i },
-  { provider: "other_voip", pattern: /nextiva|vonage|8x8|dialpad|ooma|zoom|google|onvoy|inteliquent|peerless|level 3|twilio|telnyx|intrado|bandwidth|grasshopper|line2|textnow|magicjack/i },
+  { provider: "other_voip", pattern: /nextiva|vonage|8x8|dialpad|ooma|zoom|google|twilio|telnyx|intrado|grasshopper|line2|textnow|magicjack/i },
 ];
 
 const VOIP = new Set(["fixedVoip", "nonFixedVoip", "voip"]);
 
+// Wholesale carriers that hold numbers for cloud phone systems: RingCentral
+// (including RingCentral sold by Cox, Spectrum and AT&T), Zoom, Dialpad and
+// others. Lookup only sees this carrier, never the phone system or who sends
+// the bill, so these are a "possible" RingCentral to confirm on the call.
+export const HOSTED_CARRIERS = /bandwidth|level ?3|inteliquent|onvoy|peerless|sinch|neutral tandem/i;
+
 export function mapCarrier(carrierName: string | null, lineType: string | null): { provider: Provider; confidence: Confidence } {
   const name = carrierName ?? "";
-  // Bandwidth carries many cloud phone systems (RingCentral among them), so
-  // on a VoIP line it's only a "possible" RingCentral.
-  if (/bandwidth/i.test(name) && lineType && VOIP.has(lineType)) return { provider: "ringcentral", confidence: "possible" };
+  if (HOSTED_CARRIERS.test(name) && lineType !== "mobile") return { provider: "ringcentral", confidence: "possible" };
   const rule = RULES.find((r) => r.pattern.test(name));
   if (rule) return { provider: rule.provider, confidence: "confirmed" };
   // No carrier match: fall back to the line type.
@@ -54,3 +58,20 @@ export const TALK_TRACKS: Partial<Record<Provider, string>> = {
   landline: "Replace the old landline, keep the number, and add an AI receptionist.",
   other_voip: "Everything your phone system does, plus an AI receptionist that answers, books and texts.",
 };
+
+// What the table shows: what you confirmed on the prospect wins over the lookup.
+export function effectiveProvider(lookup: { carrier_name: string | null; line_type: string | null } | null, override?: string | null):
+  { provider: Provider | null; confidence: Confidence | null; byYou: boolean } {
+  if (override && override in PROVIDERS) return { provider: override as Provider, confidence: "confirmed", byYou: true };
+  if (!lookup) return { provider: null, confidence: null, byYou: false };
+  const m = mapCarrier(lookup.carrier_name, lookup.line_type);
+  return { ...m, byYou: false };
+}
+
+// Why a lookup only says "possible".
+export function possibleWhy(carrier: string | null): string | null {
+  if (carrier && HOSTED_CARRIERS.test(carrier)) {
+    return `${carrier} holds the number for many cloud phone systems, including RingCentral sold by Cox, Spectrum and AT&T. Lookup can't see the phone system or who sends the bill, so confirm on the call and set the provider on this prospect.`;
+  }
+  return null;
+}

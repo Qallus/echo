@@ -9,6 +9,7 @@ export type ProspectImportRow = {
   business_name?: string; phone: string; website?: string; address?: string; city?: string; state?: string; category?: string;
   contact_first_name?: string; contact_last_name?: string; contact_title?: string; email?: string; phone_ext?: string;
   address2?: string; zip?: string; country?: string; locations?: string; tags?: string; notes?: string;
+  provider_override?: string; provider_note?: string;
 };
 type Key = keyof ProspectImportRow;
 
@@ -31,6 +32,8 @@ const HEADERS: Record<Key, RegExp> = {
   locations: /^(locations|number ?of ?locations|# ?locations|branches)$/,
   tags: /^(tags|labels)$/,
   notes: /^(notes|note|comments)$/,
+  provider_override: /^(provider|phone ?provider|phone ?system|current ?provider)$/,
+  provider_note: /^(provider ?notes?|phone ?notes?)$/,
 };
 
 export function mapProspectHeaders(headers: string[]): (Key | null)[] {

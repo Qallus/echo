@@ -9,6 +9,9 @@ import { uuids, type Result } from "@/lib/crm/validate";
 import { lookupsFor } from "@/lib/prospects/data";
 import type { ProspectImportRow } from "@/lib/prospects/import";
 import { prospectE164 } from "@/lib/prospects/phone";
+import { PROVIDERS } from "@/lib/prospects/carriers";
+import { prospectsToLeads } from "@/lib/prospects/to-leads";
+import { contactsToDeals } from "@/lib/crm/ops";
 import { estimate, processChunk, startRun, type Estimate, type RunProgress } from "@/lib/prospects/runner";
 import { readProspecting, type ProspectingSettings } from "@/lib/prospects/settings";
 import { scoreProspect } from "@/lib/prospects/score";
@@ -76,12 +79,22 @@ function details(r: Partial<ProspectImportRow>) {
     address2: clip(r.address2, 100), zip: clip(r.zip, 20), country: clip(r.country, 60),
     locations: Number.isInteger(count) && count >= 1 && count <= 100000 ? count : null,
     tags: [...new Set((r.tags ?? "").split(",").map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 20),
+    provider_override: providerKey(r.provider_override),
+    provider_note: clip(r.provider_note, 300),
   };
   return {
     business_name: clip(r.business_name, 200), website: clip(r.website, 300), address: clip(r.address, 300),
     city: clip(r.city, 100), state: clip(r.state, 60), category: clip(r.category, 100), notes: clip(r.notes, 5000),
     ...Object.fromEntries(Object.entries(extra).filter(([, v]) => v !== null && !(Array.isArray(v) && !v.length))),
   };
+}
+
+// "RingCentral", "ringcentral" or "Cox Business" -> the provider key.
+function providerKey(v: unknown): string | null {
+  const t = typeof v === "string" ? v.trim().toLowerCase() : "";
+  if (!t) return null;
+  const k = (Object.keys(PROVIDERS) as (keyof typeof PROVIDERS)[]).find((x) => x !== "unknown" && (x === t || PROVIDERS[x].label.toLowerCase() === t || t.includes(x.replace("_", " "))));
+  return k ?? null;
 }
 
 // Edit one prospect (the Edit panel). The phone number stays fixed.
@@ -92,7 +105,7 @@ export async function updateProspect(id: string, input: Partial<ProspectImportRo
   const supabase = await createClient();
   const d = details(input);
   // Clearing a field: send null for the newer columns that were left empty.
-  const cleared = ["contact_first_name", "contact_last_name", "contact_title", "email", "phone_ext", "address2", "zip", "country", "locations"]
+  const cleared = ["contact_first_name", "contact_last_name", "contact_title", "email", "phone_ext", "address2", "zip", "country", "locations", "provider_override", "provider_note"]
     .filter((k) => !(k in d)).reduce<Record<string, null>>((acc, k) => ({ ...acc, [k]: null }), {});
   const { data: cur } = await supabase.from("prospects").select("phone_e164, status, address, city, state").eq("id", one).maybeSingle();
   if (!cur) return { error: "Not found." };
@@ -101,7 +114,7 @@ export async function updateProspect(id: string, input: Partial<ProspectImportRo
   const score = scoreProspect({ provider: l?.provider ?? null, confidence: l?.confidence ?? null, category: d.category, city: d.city, website: d.website, status: cur.status });
   const moved = cur.address !== d.address || cur.city !== d.city || cur.state !== d.state;
   const { error } = await supabase.from("prospects").update({ ...d, ...cleared, tags: (d as { tags?: string[] }).tags ?? [], score, ...(moved ? { geocoded_at: null, latitude: null, longitude: null } : {}) }).eq("id", one);
-  if (error) return { error: /does not exist|schema cache/i.test(error.message) ? "Run supabase/migrations/20261122110000_prospects_details.sql first, then try again." : error.message };
+  if (error) return { error: /does not exist|schema cache/i.test(error.message) ? "Run the newest prospect SQL file (supabase/migrations/20261122120000_prospects_provider_override.sql) first, then try again." : error.message };
   await adminAudit(supabase, "prospects.update", { type: "prospect", id: one }, { name: d.business_name });
   if (moved) after(() => placeProspects(supabase).catch(() => {}));
   refresh();
@@ -228,4 +241,48 @@ export async function saveProspectingSettings(input: ProspectingSettings): Promi
   await adminAudit(supabase, "settings.prospecting.save", { type: "setting", id: "prospecting" }, value);
   refresh();
   return { ok: "Saved." };
+}
+
+// ---------------------------------------------------------------------------
+// Into the CRM: Convert to lead, and Add to pipeline (which converts first).
+// ---------------------------------------------------------------------------
+export async function convertProspectsToLeads(ids: string[]): Promise<Result & { contactIds?: string[] }> {
+  await requireStaff("crm.manage");
+  const list = uuids(ids);
+  if (!list.length) return { error: "Nothing selected." };
+  const supabase = await createClient();
+  const r = await prospectsToLeads(supabase, list);
+  if (r.error) return { error: r.error };
+  await adminAudit(supabase, "prospects.to_leads", undefined, { created: r.created, linked: r.linked, skipped_dnc: r.skippedDnc });
+  refresh();
+  revalidatePath("/admin/leads");
+  const parts = [r.created && `${r.created} new lead${r.created === 1 ? "" : "s"}`, r.linked && `${r.linked} already in the CRM (linked and tagged)`, r.skippedDnc && `${r.skippedDnc} skipped (Do not contact)`].filter(Boolean);
+  return { ok: `${parts.join(", ") || "Nothing to convert"}.`, contactIds: r.contactIds, id: r.contactIds[0] };
+}
+
+export async function addProspectsToPipeline(ids: string[]): Promise<Result & { dealIds?: string[] }> {
+  await requireStaff("crm.manage");
+  const list = uuids(ids);
+  if (!list.length) return { error: "Nothing selected." };
+  const supabase = await createClient();
+  const r = await prospectsToLeads(supabase, list);
+  if (r.error) return { error: r.error };
+  if (!r.contactIds.length) return { error: r.skippedDnc ? "Do not contact prospects can't go into the pipeline." : "Nothing to add." };
+  const deals = await contactsToDeals(supabase, r.contactIds);
+  if (deals.error) return { error: deals.error };
+  // Name each new deal after the business.
+  if (deals.dealIds?.length) {
+    const { data: made } = await supabase.from("crm_deals").select("id, contact_id").in("id", deals.dealIds);
+    const { data: people } = await supabase.from("crm_contacts").select("id, company_name, first_name, last_name").in("id", r.contactIds);
+    for (const d of made ?? []) {
+      const c = people?.find((x) => x.id === d.contact_id);
+      if (!c?.company_name) continue;
+      const person = [c.first_name, c.last_name].filter(Boolean).join(" ");
+      await supabase.from("crm_deals").update({ title: person && person !== c.company_name ? `${c.company_name}: ${person}` : c.company_name }).eq("id", d.id);
+    }
+  }
+  await adminAudit(supabase, "prospects.to_pipeline", undefined, { leads_created: r.created, deals: deals.created ?? 0 });
+  refresh();
+  revalidatePath("/admin/pipeline");
+  return { ok: `${deals.ok}${r.skippedDnc ? ` ${r.skippedDnc} skipped (Do not contact).` : ""}`, dealIds: deals.dealIds, id: deals.dealIds?.[0] };
 }
