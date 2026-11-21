@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useColumnWidths } from "@/components/ui/column-resize";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, MapPinOff, Star } from "lucide-react";
 import { AgentAvatar } from "@/components/live-agents/agent-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -91,13 +92,15 @@ export function ListView({ agents, selected, toggle, open }: ViewProps) {
 // ---------------------------------------------------------------------------
 // Table (sortable headers, select all)
 // ---------------------------------------------------------------------------
-function Head({ k, sort, onSort }: { k: SortKey; sort: Sort; onSort: (key: SortKey) => void }) {
+type Widths = ReturnType<typeof useColumnWidths>;
+function Head({ k, sort, onSort, w }: { k: SortKey; sort: Sort; onSort: (key: SortKey) => void; w: Widths }) {
   const Icon = sort.key !== k ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
   return (
-    <th className="px-3 py-2 font-medium" aria-sort={sort.key === k ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+    <th data-col={k} style={w.width(k)} className={cn("relative px-3 py-2 font-medium", w.sized && "truncate")} aria-sort={sort.key === k ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
       <button type="button" onClick={() => onSort(k)} className={cn("inline-flex items-center gap-1 hover:text-foreground", sort.key === k && "text-foreground")}>
         {SORT_LABELS[k]} <Icon className={cn("size-3", sort.key !== k && "opacity-40")} />
       </button>
+      {w.handle(k)}
     </th>
   );
 }
@@ -107,14 +110,15 @@ export function TableView({ agents, selected, toggle, open, sort, onSort, onTogg
 }) {
   const all = agents.length > 0 && agents.every((a) => selected.has(a.id));
   const some = !all && agents.some((a) => selected.has(a.id));
+  const w = useColumnWidths("admin-live-agents");
   return (
     <div className="overflow-x-auto rounded-xl border bg-card">
-      <table className="w-full min-w-[56rem] text-sm">
+      <table className="w-full min-w-[56rem] text-sm" style={w.tableStyle}>
         <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
           <tr>
-            <th className="w-10 px-3 py-2"><Checkbox checked={all} indeterminate={some} onCheckedChange={onToggleAll} aria-label="Select all shown" /></th>
-            {(["name", "status", "location", "rate", "rating", "jobs"] as const).map((k) => <Head key={k} k={k} sort={sort} onSort={onSort} />)}
-            <th className="px-3 py-2 font-medium">Clips</th><Head k="updated" sort={sort} onSort={onSort} /><Head k="created" sort={sort} onSort={onSort} />
+            <th className="w-10 px-3 py-2" style={w.sized ? { width: 40 } : undefined}><Checkbox checked={all} indeterminate={some} onCheckedChange={onToggleAll} aria-label="Select all shown" /></th>
+            {(["name", "status", "location", "rate", "rating", "jobs"] as const).map((k) => <Head key={k} k={k} sort={sort} onSort={onSort} w={w} />)}
+            <th data-col="clips" style={w.width("clips")} className="relative px-3 py-2 font-medium">Clips{w.handle("clips")}</th><Head k="updated" sort={sort} onSort={onSort} w={w} /><Head k="created" sort={sort} onSort={onSort} w={w} />
           </tr>
         </thead>
         <tbody className="divide-y">

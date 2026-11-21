@@ -59,10 +59,51 @@ export async function importProspects(rows: ProspectImportRow[], source: "csv" |
 }
 
 function toRow(r: ProspectImportRow, phone: string, source: "csv" | "paste" | "manual") {
-  return {
-    phone_e164: phone, source, business_name: clip(r.business_name, 200), website: clip(r.website, 300), address: clip(r.address, 300),
-    city: clip(r.city, 100), state: clip(r.state, 60), category: clip(r.category, 100), score: 0 as number,
+  return { phone_e164: phone, source, ...details(r), score: 0 as number };
+}
+
+// The editable details, cleaned. Newer columns are only included when given,
+// so imports still work on a database without migration 20261122110000.
+function details(r: Partial<ProspectImportRow>) {
+  const ext = clip(r.phone_ext, 8);
+  const count = Number(clip(r.locations, 6) ?? "");
+  const mail = clip(r.email, 200)?.toLowerCase() ?? null;
+  const extra = {
+    contact_first_name: clip(r.contact_first_name, 100), contact_last_name: clip(r.contact_last_name, 100), contact_title: clip(r.contact_title, 120),
+    email: mail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail) ? mail : null, phone_ext: ext && /^[0-9]{1,8}$/.test(ext) ? ext : null,
+    address2: clip(r.address2, 100), zip: clip(r.zip, 20), country: clip(r.country, 60),
+    locations: Number.isInteger(count) && count >= 1 && count <= 100000 ? count : null,
+    tags: [...new Set((r.tags ?? "").split(",").map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 20),
   };
+  return {
+    business_name: clip(r.business_name, 200), website: clip(r.website, 300), address: clip(r.address, 300),
+    city: clip(r.city, 100), state: clip(r.state, 60), category: clip(r.category, 100), notes: clip(r.notes, 5000),
+    ...Object.fromEntries(Object.entries(extra).filter(([, v]) => v !== null && !(Array.isArray(v) && !v.length))),
+  };
+}
+
+// Edit one prospect (the Edit panel). The phone number stays fixed.
+export async function updateProspect(id: string, input: Partial<ProspectImportRow>): Promise<Result> {
+  await requireStaff("crm.manage");
+  const [one] = uuids([id]);
+  if (!one) return { error: "Not found." };
+  const supabase = await createClient();
+  const d = details(input);
+  // Clearing a field: send null for the newer columns that were left empty.
+  const cleared = ["contact_first_name", "contact_last_name", "contact_title", "email", "phone_ext", "address2", "zip", "country", "locations"]
+    .filter((k) => !(k in d)).reduce<Record<string, null>>((acc, k) => ({ ...acc, [k]: null }), {});
+  const { data: cur } = await supabase.from("prospects").select("phone_e164, status, address, city, state").eq("id", one).maybeSingle();
+  if (!cur) return { error: "Not found." };
+  const lookups = await lookupsFor(supabase, [cur.phone_e164]);
+  const l = lookups.get(cur.phone_e164);
+  const score = scoreProspect({ provider: l?.provider ?? null, confidence: l?.confidence ?? null, category: d.category, city: d.city, website: d.website, status: cur.status });
+  const moved = cur.address !== d.address || cur.city !== d.city || cur.state !== d.state;
+  const { error } = await supabase.from("prospects").update({ ...d, ...cleared, tags: (d as { tags?: string[] }).tags ?? [], score, ...(moved ? { geocoded_at: null, latitude: null, longitude: null } : {}) }).eq("id", one);
+  if (error) return { error: /does not exist|schema cache/i.test(error.message) ? "Run supabase/migrations/20261122110000_prospects_details.sql first, then try again." : error.message };
+  await adminAudit(supabase, "prospects.update", { type: "prospect", id: one }, { name: d.business_name });
+  if (moved) after(() => placeProspects(supabase).catch(() => {}));
+  refresh();
+  return { ok: "Saved." };
 }
 
 // Status for one or many prospects. Do not contact is permanent.

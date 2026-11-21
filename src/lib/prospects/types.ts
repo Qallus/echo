@@ -20,6 +20,9 @@ export type Prospect = {
   city: string | null; state: string | null; category: string | null; source: string; status: ProspectStatus;
   score: number | null; notes: string | null; crm_contact_id: string | null; created_at: string;
   latitude?: number | null; longitude?: number | null; // migration 20261122100000
+  // Contact and address details (migration 20261122110000).
+  contact_first_name?: string | null; contact_last_name?: string | null; contact_title?: string | null; email?: string | null;
+  phone_ext?: string | null; address2?: string | null; zip?: string | null; country?: string | null; locations?: number | null; tags?: string[];
   lookup: PhoneLookup | null;
 };
 

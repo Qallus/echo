@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { Input } from "@/components/ui/input";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { cn } from "@/lib/utils";
+import { useColumnWidths } from "@/components/ui/column-resize";
 import { ViewSwitcher } from "@/components/admin/crm/crm-kit";
 import { QuickActionBar } from "./quick-action-bar";
 
@@ -242,22 +243,24 @@ function ListView<T>(p: ViewProps<T>) {
 
 function TableView<T>(p: ViewProps<T> & { sort: { id: string; dir: "asc" | "desc" } | null; onSort: (id: string) => void; allShown: boolean; toggleAll: () => void }) {
   const some = !p.allShown && p.rows.some((r) => p.selected.has(p.getId(r)));
+  const cols = useColumnWidths(p.storageKey);
   return (
     <div className="overflow-x-auto rounded-xl border bg-card">
-      <table className="w-full min-w-[40rem] text-sm">
+      <table className="w-full min-w-[40rem] text-sm" style={cols.tableStyle}>
         <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
           <tr>
-            {p.actions?.length ? <th className="w-10 px-3 py-2"><Checkbox checked={p.allShown} indeterminate={some} onCheckedChange={p.toggleAll} aria-label="Select all shown" /></th> : null}
+            {p.actions?.length ? <th className="w-10 px-3 py-2" style={cols.sized ? { width: 40 } : undefined}><Checkbox checked={p.allShown} indeterminate={some} onCheckedChange={p.toggleAll} aria-label="Select all shown" /></th> : null}
             {p.columns.map((c) => {
               const on = p.sort?.id === c.id;
               const Icon = !on ? ArrowUpDown : p.sort!.dir === "asc" ? ArrowUp : ArrowDown;
               return (
-                <th key={c.id} className={cn("px-3 py-2 font-medium", c.className)} aria-sort={on ? (p.sort!.dir === "asc" ? "ascending" : "descending") : undefined}>
+                <th key={c.id} data-col={c.id} style={cols.width(c.id)} className={cn("relative px-3 py-2 font-medium", cols.sized && "truncate", c.className)} aria-sort={on ? (p.sort!.dir === "asc" ? "ascending" : "descending") : undefined}>
                   {c.sort ? (
                     <button type="button" onClick={() => p.onSort(c.id)} className={cn("inline-flex items-center gap-1 hover:text-foreground", on && "text-foreground")}>
                       {c.label} <Icon className={cn("size-3", !on && "opacity-40")} />
                     </button>
                   ) : c.label}
+                  {cols.handle(c.id)}
                 </th>
               );
             })}
@@ -267,7 +270,7 @@ function TableView<T>(p: ViewProps<T> & { sort: { id: string; dir: "asc" | "desc
           {p.rows.map((r) => (
             <tr key={p.getId(r)} onClick={() => p.open(r)} className={cn("cursor-pointer hover:bg-muted/50", p.selected.has(p.getId(r)) && "bg-primary/5")}>
               {p.actions?.length ? <td className="px-3 py-2"><Pick p={p} row={r} /></td> : null}
-              {p.columns.map((c) => <td key={c.id} className={cn("px-3 py-2", c.className)}>{c.cell(r)}</td>)}
+              {p.columns.map((c) => <td key={c.id} className={cn("px-3 py-2", cols.sized && "overflow-hidden", c.className)}>{c.cell(r)}</td>)}
             </tr>
           ))}
         </tbody>

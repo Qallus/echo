@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useColumnWidths } from "@/components/ui/column-resize";
 import { EmptyState } from "./crm-kit";
 
 // A column: how to show it, and optionally how to sort and filter by it.
@@ -26,10 +27,13 @@ const valuesOf = (v: string | number | null | string[]) => (Array.isArray(v) ? v
 
 // The table view for CRM lists: sort by clicking a header, choose columns,
 // add filters (any filterable column, any of its values), select rows.
-export function DataTable<T>({ rows, columns, getId, selected, onSelect, onOpen, rowEnd }: {
+export function DataTable<T>({ rows, columns, getId, selected, onSelect, onOpen, rowEnd, storageKey }: {
   rows: T[]; columns: Column<T>[]; getId: (row: T) => string; selected: Set<string>; onSelect: (next: Set<string>) => void;
   onOpen: (row: T) => void; rowEnd?: (row: T) => React.ReactNode;
+  /** Remembers column widths; defaults to one key per set of columns. */
+  storageKey?: string;
 }) {
+  const widths = useColumnWidths(storageKey ?? `table:${columns.map((c) => c.id).join(",")}`);
   const [visible, setVisible] = useState(() => new Set(columns.filter((c) => !c.hidden).map((c) => c.id)));
   const [sort, setSort] = useState<Sort>(null);
   const [filters, setFilters] = useState<{ id: string; values: string[] }[]>([]);
@@ -109,21 +113,22 @@ export function DataTable<T>({ rows, columns, getId, selected, onSelect, onOpen,
 
       {shown.length === 0 ? <EmptyState message="Nothing matches these filters." /> : (
         <div className="rounded-xl border bg-card px-2">
-          <Table>
+          <Table style={widths.tableStyle}>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-8"><Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" /></TableHead>
+                <TableHead className="w-8" style={widths.sized ? { width: 40 } : undefined}><Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" /></TableHead>
                 {cols.map((c) => (
-                  <TableHead key={c.id} className={c.className}>
+                  <TableHead key={c.id} data-col={c.id} style={widths.width(c.id)} className={cn("relative", widths.sized && "truncate", c.className)}>
                     {c.value ? (
                       <button type="button" onClick={() => cycle(c.id)} className="inline-flex items-center gap-1 hover:text-foreground">
                         {c.label}
                         {sort?.id === c.id ? (sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />) : <ArrowUpDown className="size-3 opacity-40" />}
                       </button>
                     ) : c.label}
+                    {widths.handle(c.id)}
                   </TableHead>
                 ))}
-                {rowEnd && <TableHead className="w-10" />}
+                {rowEnd && <TableHead className="w-10" style={widths.sized ? { width: 48 } : undefined} />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,7 +137,7 @@ export function DataTable<T>({ rows, columns, getId, selected, onSelect, onOpen,
                 return (
                   <TableRow key={id} data-state={selected.has(id) ? "selected" : undefined} className="cursor-pointer" onClick={() => onOpen(r)}>
                     <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.has(id)} onCheckedChange={() => toggle(id)} aria-label="Select row" /></TableCell>
-                    {cols.map((c) => <TableCell key={c.id} className={cn("max-w-64 truncate", c.className)}>{c.cell(r)}</TableCell>)}
+                    {cols.map((c) => <TableCell key={c.id} className={cn("truncate", !widths.sized && "max-w-64", c.className)}>{c.cell(r)}</TableCell>)}
                     {rowEnd && <TableCell onClick={(e) => e.stopPropagation()}>{rowEnd(r)}</TableCell>}
                   </TableRow>
                 );

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Ban, Check, Contact, Download, PhoneOutgoing, Plus, Trash2, Upload, Wand2 } from "lucide-react";
+import { Ban, Check, Contact, Download, Pencil, PhoneOutgoing, Plus, Trash2, Upload, Wand2 } from "lucide-react";
 import { CollectionView } from "@/components/collection/collection-view";
 import { downloadCsv } from "@/components/admin/list-csv";
 import { LocalDate } from "@/components/local-date";
@@ -51,8 +51,8 @@ function Score({ p }: { p: Prospect }) {
 
 function exportCsv(list: Prospect[]) {
   downloadCsv(`prospects-${new Date().toISOString().slice(0, 10)}.csv`,
-    ["Business", "Phone", "Category", "City", "State", "Website", "Line type", "Carrier", "Provider", "Confidence", "Caller name", "Score", "Status", "Looked up"],
-    list.map((p) => [p.business_name, p.phone_e164, p.category, p.city, p.state, p.website, p.lookup?.line_type, p.lookup?.carrier_name,
+    ["Business", "Phone", "Ext", "Contact first name", "Contact last name", "Title", "Email", "Category", "Locations", "Address", "Suite", "City", "State", "ZIP", "Country", "Tags", "Website", "Line type", "Carrier", "Provider", "Confidence", "Caller name", "Score", "Status", "Looked up"],
+    list.map((p) => [p.business_name, p.phone_e164, p.phone_ext, p.contact_first_name, p.contact_last_name, p.contact_title, p.email, p.category, p.locations, p.address, p.address2, p.city, p.state, p.zip, p.country, (p.tags ?? []).join(", "), p.website, p.lookup?.line_type, p.lookup?.carrier_name,
       provider(p) ? PROVIDERS[provider(p)!].label : "", p.lookup?.confidence, p.lookup?.caller_name, p.score, statusLabel(p.status), p.lookup?.looked_up_at?.slice(0, 10)]));
 }
 
@@ -60,6 +60,7 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
   const router = useRouter();
   const [, start] = useTransition();
   const [panel, setPanel] = useState<"wizard" | "import" | "add" | null>(null);
+  const [editing, setEditing] = useState<Prospect | null>(null);
   const counts = {
     total: rows.length, lookedUp: rows.filter((p) => p.lookup).length, dnc: rows.filter((p) => p.status === "dnc").length,
     hot: rows.filter((p) => (p.score ?? 0) >= 60 && p.status !== "dnc").length,
@@ -77,6 +78,7 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
     {panel === "wizard" && <ProspectWizard counts={counts} manage={manage} onClose={() => setPanel(null)} onImport={() => setPanel("import")} onAdd={() => setPanel("add")} />}
     {panel === "import" && <ImportPanel onClose={() => setPanel(null)} />}
     {panel === "add" && <AddProspectPanel onClose={() => setPanel(null)} />}
+    {editing && <AddProspectPanel key={editing.id} prospect={editing} onClose={() => setEditing(null)} />}
     <CollectionView<Prospect>
       items={rows} getId={(p) => p.id} title={name} noun={["prospect", "prospects"]} storageKey="admin-prospects" defaultView="table"
       subtitle={(p) => [prettyPhone(p.phone_e164), p.category, place(p)].filter(Boolean).join(" · ")}
@@ -92,7 +94,7 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
           {manage && <Button onClick={() => setPanel("add")}><Plus /> Add prospect</Button>}
         </>
       }
-      searchText={(p) => `${p.business_name ?? ""} ${p.phone_e164} ${prettyPhone(p.phone_e164)} ${p.category ?? ""} ${p.city ?? ""} ${p.state ?? ""} ${p.lookup?.carrier_name ?? ""} ${p.lookup?.caller_name ?? ""} ${provider(p) ? PROVIDERS[provider(p)!].label : ""}`}
+      searchText={(p) => `${p.business_name ?? ""} ${p.contact_first_name ?? ""} ${p.contact_last_name ?? ""} ${p.email ?? ""} ${p.zip ?? ""} ${(p.tags ?? []).join(" ")} ${p.phone_e164} ${prettyPhone(p.phone_e164)} ${p.category ?? ""} ${p.city ?? ""} ${p.state ?? ""} ${p.lookup?.carrier_name ?? ""} ${p.lookup?.caller_name ?? ""} ${provider(p) ? PROVIDERS[provider(p)!].label : ""}`}
       filters={[
         { id: "all", label: "All", test: (p) => p.status !== "dnc" },
         { id: "rc", label: "RingCentral confirmed", test: (p) => provider(p) === "ringcentral" && p.lookup?.confidence === "confirmed" },
@@ -128,7 +130,12 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
           { label: "Delete", icon: Trash2, run: (list: Prospect[]) => run(() => deleteProspects(list.map((p) => p.id)), `Delete ${list.length} prospect${list.length === 1 ? "" : "s"}?`), destructive: true },
         ] : []),
       ]}
-      previewActions={(p) => p.crm_contact_id && <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/admin/contacts/${p.crm_contact_id}`} />}><Contact /> Open lead</Button>}
+      previewActions={(p, close) => (
+        <>
+          {manage && <Button size="sm" variant="outline" onClick={() => { close(); setEditing(p); }}><Pencil /> Edit</Button>}
+          {p.crm_contact_id && <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/admin/contacts/${p.crm_contact_id}`} />}><Contact /> Open lead</Button>}
+        </>
+      )}
       preview={(p) => <ProspectPreview p={p} manage={manage} onStatus={(s) => setStatus([p], s)} />}
       empty="No prospects yet. Use Import or Add prospect, or open the Wizard for a walk-through."
     />
@@ -143,8 +150,12 @@ function ProspectPreview({ p, manage, onStatus }: { p: Prospect; manage: boolean
   const pr = provider(p);
   const l = p.lookup;
   const rows: [string, React.ReactNode][] = [
-    ["Phone", <a key="t" href={`tel:${p.phone_e164}`} className="tabular-nums hover:underline">{prettyPhone(p.phone_e164)}</a>],
-    ["Category", p.category ?? "—"], ["Location", [p.address, place(p)].filter(Boolean).join(", ") || "—"],
+    ["Phone", <a key="t" href={`tel:${p.phone_e164}`} className="tabular-nums hover:underline">{prettyPhone(p.phone_e164)}{p.phone_ext ? ` ext. ${p.phone_ext}` : ""}</a>],
+    ["Contact", [[p.contact_first_name, p.contact_last_name].filter(Boolean).join(" "), p.contact_title].filter(Boolean).join(", ") || "—"],
+    ["Email", p.email ? <a key="e" href={`mailto:${p.email}`} className="break-all hover:underline">{p.email}</a> : "—"],
+    ["Category", p.category ?? "—"], ["Locations", p.locations ?? "—"],
+    ["Address", <span key="a" className="whitespace-pre-line">{[[p.address, p.address2].filter(Boolean).join(", "), [p.city, [p.state, p.zip].filter(Boolean).join(" ")].filter(Boolean).join(", "), p.country].filter(Boolean).join("\n") || "—"}</span>],
+    ["Tags", p.tags?.length ? p.tags.join(", ") : "—"],
     ["Website", p.website ? <a key="w" href={/^https?:/i.test(p.website) ? p.website : `https://${p.website}`} target="_blank" rel="noreferrer" className="break-all hover:underline">{p.website}</a> : "—"],
     ["Provider", <ProviderBadge key="p" p={p} />], ["Carrier", l?.carrier_name ?? "—"],
     ["Line type", l?.line_type ? LINE_TYPES[l.line_type] ?? l.line_type : "—"], ["Caller name", l?.caller_name ?? "—"],

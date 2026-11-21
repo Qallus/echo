@@ -48,7 +48,14 @@ export function Softphone() {
       const d = new TwilioDevice(token, { codecPreferences: [TwilioCall.Codec.Opus, TwilioCall.Codec.PCMU], closeProtection: true });
       d.on("registered", () => { ready = true; });
       d.on("unregistered", () => { ready = false; });
-      d.on("error", (e: { message?: string }) => setError(e.message ?? "Phone error."));
+      // The phone keeps a live connection to Twilio on every admin page. Brief
+      // drops (31005, 31009, 53000-range) reconnect by themselves, so only
+      // show them when a call is actually in progress.
+      d.on("error", (e: { code?: number; message?: string }) => {
+        const blip = e.code === 31005 || e.code === 31009 || (e.code !== undefined && e.code >= 53000 && e.code < 54000);
+        if (blip && !d.calls?.length) { console.warn("[softphone]", e.code, e.message); return; }
+        setError(e.message ?? "Phone error.");
+      });
       d.on("tokenWillExpire", async () => { const t = await getToken().catch(() => null); if (t) d.updateToken(t); });
       d.on("incoming", (c: Call) => {
         setIncoming(c);

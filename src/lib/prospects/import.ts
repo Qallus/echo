@@ -7,6 +7,8 @@ import { prospectE164 } from "./phone";
 
 export type ProspectImportRow = {
   business_name?: string; phone: string; website?: string; address?: string; city?: string; state?: string; category?: string;
+  contact_first_name?: string; contact_last_name?: string; contact_title?: string; email?: string; phone_ext?: string;
+  address2?: string; zip?: string; country?: string; locations?: string; tags?: string; notes?: string;
 };
 type Key = keyof ProspectImportRow;
 
@@ -18,6 +20,17 @@ const HEADERS: Record<Key, RegExp> = {
   city: /^(city|town)$/,
   state: /^(state|province|region)$/,
   category: /^(category|industry|type|vertical|segment|niche)$/,
+  contact_first_name: /^(first ?name|first|contact ?first ?name|owner ?first ?name)$/,
+  contact_last_name: /^(last ?name|last|surname|contact ?last ?name|owner ?last ?name)$/,
+  contact_title: /^(title|job ?title|position|role)$/,
+  email: /^(e-?mail|email ?address|work ?email|contact ?email)$/,
+  phone_ext: /^(ext|ext\.|extension|phone ?ext)$/,
+  address2: /^(suite|unit|ste|address ?2|apt|building|floor)$/,
+  zip: /^(zip|zip ?code|postal ?code|postcode)$/,
+  country: /^(country)$/,
+  locations: /^(locations|number ?of ?locations|# ?locations|branches)$/,
+  tags: /^(tags|labels)$/,
+  notes: /^(notes|note|comments)$/,
 };
 
 export function mapProspectHeaders(headers: string[]): (Key | null)[] {

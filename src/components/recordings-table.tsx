@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore, useTransition } from "react";
+import { useColumnWidths } from "@/components/ui/column-resize";
 import {
   ArchiveRestore, ArrowRightLeft, Briefcase, CalendarDays, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Columns3, Download, Folder,
   FolderMinus, LayoutGrid, List, Loader2, Lock, Monitor, Phone, Rows3, Trash2, Upload, Video,
@@ -110,6 +111,7 @@ type Props = {
 
 export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothing here yet", showSpace, trash }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const widths = useColumnWidths("recordings");
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>();
   const [pending, start] = useTransition();
 
@@ -246,18 +248,18 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
       </div>
 
       {view === "table" && (
-        <Table>
+        <Table style={widths.tableStyle}>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">
+              <TableHead className="w-10" style={widths.sized ? { width: 40 } : undefined}>
                 <Checkbox aria-label="Select all" checked={allChecked} indeterminate={ids.length > 0 && !allChecked}
                   onCheckedChange={(v) => setSelected(v ? new Set(rows.map((r) => r.id)) : new Set())} />
               </TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden w-32 md:table-cell">Type</TableHead>
-              <TableHead className="hidden w-28 md:table-cell">Status</TableHead>
-              <TableHead className="w-16 sm:w-28">Duration</TableHead>
-              <TableHead className="hidden w-48 sm:table-cell">Date created</TableHead>
+              <TableHead data-col="name" style={widths.width("name")} className="relative">Name{widths.handle("name")}</TableHead>
+              <TableHead data-col="type" style={widths.width("type")} className="relative hidden w-32 md:table-cell">Type{widths.handle("type")}</TableHead>
+              <TableHead data-col="status" style={widths.width("status")} className="relative hidden w-28 md:table-cell">Status{widths.handle("status")}</TableHead>
+              <TableHead data-col="duration" style={widths.width("duration")} className="relative w-16 sm:w-28">Duration{widths.handle("duration")}</TableHead>
+              <TableHead data-col="date" style={widths.width("date")} className="relative hidden w-48 sm:table-cell">Date created{widths.handle("date")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

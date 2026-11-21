@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Download, Save, Trash2 } from "lucide-react";
+import { useColumnWidths } from "@/components/ui/column-resize";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ResizableDialog } from "@/components/ui/resizable-dialog";
@@ -43,6 +44,7 @@ export function ReportTable({ def, rows, range, since, until, saved }: {
   const [shared, setShared] = useState(false);
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
+  const widths = useColumnWidths(`report:${def.columns.map((c) => c.key).join(",")}`);
   const totals = def.columns.map((c) => (c.format === "count" || c.format === "money" ? rows.reduce((n, r) => n + Number(r[c.key] ?? 0), 0) : null));
 
   const exportCsv = () => {
@@ -71,9 +73,9 @@ export function ReportTable({ def, rows, range, since, until, saved }: {
         <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">Nothing in this period.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border">
-          <Table>
+          <Table style={widths.tableStyle}>
             <TableHeader>
-              <TableRow>{def.columns.map((c) => <TableHead key={c.key} className={cn(NUMERIC.has(c.format) && "text-right")}>{c.label}</TableHead>)}</TableRow>
+              <TableRow>{def.columns.map((c) => <TableHead key={c.key} data-col={c.key} style={widths.width(c.key)} className={cn("relative", widths.sized && "truncate", NUMERIC.has(c.format) && "text-right")}>{c.label}{widths.handle(c.key)}</TableHead>)}</TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((r, i) => (
