@@ -6,10 +6,13 @@ export function AgentIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M6.5 9.5V8a5.5 5.5 0 0 1 11 0v1.5" />
-      <path d="M17.5 10v1a3 3 0 0 1-3 3h-1.5" />
-      <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+      <circle cx="12" cy="10.5" r="3" />
+      <path d="M5 11V10a7 7 0 0 1 14 0v1" />
+      <rect x="3.5" y="10" width="2.5" height="4.5" rx="1.25" />
+      <rect x="18" y="10" width="2.5" height="4.5" rx="1.25" />
+      <path d="M19.25 14.5a3 3 0 0 1-3 3H15" />
+      <path d="M6 22a6 6 0 0 1 9-5.2" />
+      <path d="M18 22a6 6 0 0 0-.6-2.6" />
     </svg>
   );
 }
