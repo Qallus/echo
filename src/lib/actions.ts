@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getPersonalWorkspace, getRecordingDetail, isUuid, requireUser } from "@/lib/data";
+import { getPersonalWorkspace, getRecordingDetail, getUser, isUuid, requireUser } from "@/lib/data";
+import { linksForEvent, pushDeletes, pushEventChange } from "@/lib/google/calendar-sync";
 import { namedLines, readSpeakers, type SpeakerInfo } from "@/lib/speakers";
 import { isVisual, type VisualKind } from "@/lib/visuals";
 import type { CalendarEvent } from "@/lib/types";
@@ -311,6 +312,9 @@ export async function saveCalendarEvent(input: EventInput): Promise<ActionResult
     ? await supabase.from("calendar_events").update(row).eq("id", input.id).select("id").single()
     : await supabase.from("calendar_events").insert(row).select("id").single();
   if (res.error) return { error: res.error.message };
+  // Send it to the person's Google Calendar when they've connected one.
+  const user = await getUser();
+  if (user) await pushEventChange(supabase, user.id, res.data.id);
   revalidatePath("/calendar");
   if (row.recording_id) revalidatePath(`/recordings/${row.recording_id}`);
   return { id: res.data.id };
@@ -320,8 +324,11 @@ export async function deleteCalendarEvent(id: string): Promise<ActionResult> {
   await requireUser();
   if (!isUuid(id)) return { error: "Not found." };
   const supabase = await createClient();
+  const links = await linksForEvent(supabase, id);
   const { error } = await supabase.from("calendar_events").delete().eq("id", id);
   if (error) return { error: error.message };
+  const user = await getUser();
+  if (user && links.length) await pushDeletes(supabase, user.id, links);
   revalidatePath("/calendar");
   return {};
 }
