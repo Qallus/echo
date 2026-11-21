@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { adminAudit } from "@/lib/admin/audit";
+import { geocode } from "@/lib/crm/geocode";
 import { requireStaff } from "@/lib/admin/guard";
 import { uuids, type Result } from "@/lib/crm/validate";
 import { lookupsFor } from "@/lib/prospects/data";
@@ -17,7 +19,7 @@ import { createClient } from "@/lib/supabase/server";
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) || null : null);
 const refresh = () => revalidatePath("/admin/prospects");
 
-export async function importProspects(rows: ProspectImportRow[], source: "csv" | "paste"): Promise<Result & { added?: number; duplicates?: number; invalid?: number }> {
+export async function importProspects(rows: ProspectImportRow[], source: "csv" | "paste" | "manual"): Promise<Result & { added?: number; duplicates?: number; invalid?: number }> {
   await requireStaff("crm.manage");
   if (!Array.isArray(rows) || !rows.length) return { error: "Nothing to import." };
   if (rows.length > 5000) return { error: "Import up to 5,000 numbers at a time." };
@@ -26,7 +28,7 @@ export async function importProspects(rows: ProspectImportRow[], source: "csv" |
   for (const r of rows) {
     const phone = prospectE164(String(r?.phone ?? ""));
     if (!phone) { invalid++; continue; }
-    if (!clean.has(phone)) clean.set(phone, toRow(r, phone, source === "csv" ? "csv" : "paste"));
+    if (!clean.has(phone)) clean.set(phone, toRow(r, phone, source === "csv" || source === "manual" ? source : "paste"));
   }
   const supabase = await createClient();
   const phones = [...clean.keys()];
@@ -49,12 +51,14 @@ export async function importProspects(rows: ProspectImportRow[], source: "csv" |
     if (error) return { error: error.message };
   }
   await adminAudit(supabase, "prospects.import", undefined, { added: fresh.length, duplicates: existing.size, invalid, source });
+  // Put the new ones on the map in the background.
+  if (fresh.length) after(() => placeProspects(supabase).catch(() => {}));
   refresh();
   const parts = [`${fresh.length} added`, existing.size ? `${existing.size} already on the list` : "", invalid ? `${invalid} not valid numbers` : ""].filter(Boolean);
   return { ok: `${parts.join(", ")}.`, added: fresh.length, duplicates: existing.size, invalid };
 }
 
-function toRow(r: ProspectImportRow, phone: string, source: "csv" | "paste") {
+function toRow(r: ProspectImportRow, phone: string, source: "csv" | "paste" | "manual") {
   return {
     phone_e164: phone, source, business_name: clip(r.business_name, 200), website: clip(r.website, 300), address: clip(r.address, 300),
     city: clip(r.city, 100), state: clip(r.state, 60), category: clip(r.category, 100), score: 0 as number,
@@ -104,4 +108,32 @@ export async function deleteProspects(ids: string[]): Promise<Result> {
   await adminAudit(supabase, "prospects.delete", undefined, { count: data?.length ?? 0 });
   refresh();
   return { ok: `${data?.length ?? 0} deleted.` };
+}
+
+// Place prospects on the map: one OpenStreetMap search per distinct place
+// (street address when there is one, else city and state), about a second
+// each, up to 40 places a run. Rows that can't be placed are marked tried.
+async function placeProspects(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data } = await supabase.from("prospects").select("id, address, city, state").is("workspace_id", null).is("geocoded_at", null).limit(2000);
+  const groups = new Map<string, string[]>();
+  for (const p of data ?? []) {
+    const q = [p.address, p.city, p.state].filter(Boolean).join(", ");
+    if (!p.city && !p.address) continue;
+    groups.set(q, [...(groups.get(q) ?? []), p.id]);
+  }
+  for (const [q, ids] of [...groups].slice(0, 40)) {
+    const hit = await geocode(`${q}, USA`);
+    for (let i = 0; i < ids.length; i += 300) {
+      await supabase.from("prospects").update({ latitude: hit?.lat ?? null, longitude: hit?.lng ?? null, geocoded_at: new Date().toISOString() }).in("id", ids.slice(i, i + 300));
+    }
+  }
+}
+
+// Map prospects that weren't placed yet (the button in the wizard).
+export async function mapProspects(): Promise<Result> {
+  await requireStaff("crm.manage");
+  const supabase = await createClient();
+  await placeProspects(supabase);
+  refresh();
+  return { ok: "Placed what could be found on the map." };
 }

@@ -1,9 +1,9 @@
 import { ShieldAlert } from "lucide-react";
-import { AdminPage, StatCard } from "@/components/admin/admin-ui";
+import { AdminPage } from "@/components/admin/admin-ui";
+import { StatRow, StatTile } from "@/components/admin/crm/crm-kit";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { listProspects } from "@/lib/prospects/data";
 import { createClient } from "@/lib/supabase/server";
-import { ImportProspects } from "./import-prospects";
 import { ProspectsList } from "./prospects-list";
 
 export const metadata = { title: "Prospects · Admin · Redial" };
@@ -19,15 +19,13 @@ export default async function ProspectsPage() {
   const has = (p: string) => rows.filter((r) => r.lookup?.provider === p).length;
 
   return (
-    <AdminPage title="Prospects" description="Business numbers to call on: who carries each number, how good a fit it is, and where it is in your outreach."
-      actions={manage && <ImportProspects />}>
-      <div className="stat-row grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard label="Prospects" value={rows.length} />
-        <StatCard label="Looked up" value={rows.filter((r) => r.lookup).length} />
-        <StatCard label="RingCentral" value={has("ringcentral")} hint={`${rows.filter((r) => r.lookup?.provider === "ringcentral" && r.lookup.confidence === "confirmed").length} confirmed`} />
-        <StatCard label="Cox or Spectrum" value={has("cox") + has("spectrum")} />
-        <StatCard label="On a cell phone" value={has("mobile")} />
-      </div>
+    <AdminPage title="Prospects" description="Business numbers to call on: who carries each number, how good a fit it is, and where it is in your outreach.">
+      <StatRow>
+        <StatTile label="Prospects" value={rows.length} hint={`${rows.filter((r) => r.lookup).length} looked up`} />
+        <StatTile label="RingCentral" value={has("ringcentral")} hint={`${rows.filter((r) => r.lookup?.provider === "ringcentral" && r.lookup.confidence === "confirmed").length} confirmed`} />
+        <StatTile label="Cox or Spectrum" value={has("cox") + has("spectrum")} />
+        <StatTile label="On a cell phone" value={has("mobile")} accent />
+      </StatRow>
 
       <details className="rounded-xl border p-4 text-sm text-muted-foreground">
         <summary className="flex cursor-pointer items-center gap-2 font-medium text-foreground"><ShieldAlert className="size-4" /> Rules for this list</summary>

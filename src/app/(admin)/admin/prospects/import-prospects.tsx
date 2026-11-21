@@ -12,21 +12,16 @@ import { parseProspects } from "@/lib/prospects/import";
 const LABELS: Record<string, string> = { business_name: "business name", phone: "phone", website: "website", address: "address", city: "city", state: "state", category: "category" };
 
 // Upload a CSV (only a phone column is required) or paste numbers, one per line.
-export function ImportProspects() {
+export function ImportPanel({ onClose }: { onClose: () => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [result, setResult] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
   const parsed = useMemo(() => parseProspects(text), [text]);
   const headers = useMemo(() => (parsed.mapped ? text.trim().split(/\r?\n/)[0].split(",") : []), [parsed.mapped, text]);
-  const close = () => { setOpen(false); setText(""); setResult({}); };
 
   return (
-    <>
-      <Button onClick={() => setOpen(true)}><Upload /> Import</Button>
-      {open && (
-        <ResponsivePanel open onOpenChange={(o) => !o && close()} title="Import prospects" id="prospects-import" defaultWidth={640}
+        <ResponsivePanel open onOpenChange={(o) => !o && onClose()} title="Import prospects" id="prospects-import" defaultWidth={640}
           description="A CSV with a header row (business name, phone, website, address, city, state, category; only phone is required), or numbers pasted one per line.">
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/40">
             <Upload className="size-4" /> Choose a .csv file
@@ -53,7 +48,7 @@ export function ImportProspects() {
           )}
           {(result.ok || result.error) && <p className={result.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{result.error ?? result.ok}</p>}
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={close}>{result.ok ? "Done" : "Cancel"}</Button>
+            <Button variant="ghost" onClick={onClose}>{result.ok ? "Done" : "Cancel"}</Button>
             {!result.ok && (
               <Button disabled={pending || !parsed.rows.length} onClick={() => start(async () => {
                 const r = await importProspects(parsed.rows, parsed.source);
@@ -63,7 +58,5 @@ export function ImportProspects() {
             )}
           </div>
         </ResponsivePanel>
-      )}
-    </>
   );
 }

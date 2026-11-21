@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Ban, Check, Contact, Download, PhoneOutgoing, Trash2 } from "lucide-react";
+import { Ban, Check, Contact, Download, PhoneOutgoing, Plus, Trash2, Upload, Wand2 } from "lucide-react";
 import { CollectionView } from "@/components/collection/collection-view";
 import { downloadCsv } from "@/components/admin/list-csv";
 import { LocalDate } from "@/components/local-date";
@@ -16,6 +16,9 @@ import { PROVIDERS, TALK_TRACKS, type Provider } from "@/lib/prospects/carriers"
 import { prettyPhone } from "@/lib/prospects/phone";
 import { LINE_TYPES, PROSPECT_STATUSES, type Prospect, type ProspectStatus } from "@/lib/prospects/types";
 import { cn } from "@/lib/utils";
+import { AddProspectPanel } from "./add-prospect";
+import { ImportPanel } from "./import-prospects";
+import { ProspectWizard } from "./prospect-wizard";
 
 const provider = (p: Prospect): Provider | null => p.lookup?.provider ?? null;
 const statusLabel = (s: ProspectStatus) => PROSPECT_STATUSES.find((x) => x.id === s)?.label ?? s;
@@ -56,6 +59,12 @@ function exportCsv(list: Prospect[]) {
 export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: boolean }) {
   const router = useRouter();
   const [, start] = useTransition();
+  const [panel, setPanel] = useState<"wizard" | "import" | "add" | null>(null);
+  const counts = {
+    total: rows.length, lookedUp: rows.filter((p) => p.lookup).length, dnc: rows.filter((p) => p.status === "dnc").length,
+    hot: rows.filter((p) => (p.score ?? 0) >= 60 && p.status !== "dnc").length,
+    unplaced: rows.filter((p) => p.latitude == null && (p.city || p.address)).length,
+  };
   const run = (fn: () => Promise<{ ok?: string; error?: string }>, confirmText?: string) => {
     if (confirmText && !confirm(confirmText)) return;
     start(async () => { const r = await fn(); if (r.error) alert(r.error); router.refresh(); });
@@ -64,11 +73,25 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
     status === "dnc" ? `Mark ${list.length} as Do not contact? This can't be undone.` : undefined);
 
   return (
+    <>
+    {panel === "wizard" && <ProspectWizard counts={counts} manage={manage} onClose={() => setPanel(null)} onImport={() => setPanel("import")} onAdd={() => setPanel("add")} />}
+    {panel === "import" && <ImportPanel onClose={() => setPanel(null)} />}
+    {panel === "add" && <AddProspectPanel onClose={() => setPanel(null)} />}
     <CollectionView<Prospect>
       items={rows} getId={(p) => p.id} title={name} noun={["prospect", "prospects"]} storageKey="admin-prospects" defaultView="table"
       subtitle={(p) => [prettyPhone(p.phone_e164), p.category, place(p)].filter(Boolean).join(" · ")}
       badge={(p) => <ProviderBadge p={p} />}
       meta={(p) => <>Score {p.score ?? 0} · {statusLabel(p.status)}{p.lookup?.carrier_name ? ` · ${p.lookup.carrier_name}` : ""}</>}
+      location={(p) => (p.latitude != null && p.longitude != null ? { lat: p.latitude, lng: p.longitude } : null)}
+      date={(p) => p.created_at}
+      toolbar={
+        <>
+          <Button variant="outline" onClick={() => setPanel("wizard")}><Wand2 /> Wizard</Button>
+          <Button variant="outline" onClick={() => exportCsv(rows)} disabled={!rows.length}><Download /> Export</Button>
+          {manage && <Button variant="outline" onClick={() => setPanel("import")}><Upload /> Import</Button>}
+          {manage && <Button onClick={() => setPanel("add")}><Plus /> Add prospect</Button>}
+        </>
+      }
       searchText={(p) => `${p.business_name ?? ""} ${p.phone_e164} ${prettyPhone(p.phone_e164)} ${p.category ?? ""} ${p.city ?? ""} ${p.state ?? ""} ${p.lookup?.carrier_name ?? ""} ${p.lookup?.caller_name ?? ""} ${provider(p) ? PROVIDERS[provider(p)!].label : ""}`}
       filters={[
         { id: "all", label: "All", test: (p) => p.status !== "dnc" },
@@ -107,8 +130,9 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
       ]}
       previewActions={(p) => p.crm_contact_id && <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/admin/contacts/${p.crm_contact_id}`} />}><Contact /> Open lead</Button>}
       preview={(p) => <ProspectPreview p={p} manage={manage} onStatus={(s) => setStatus([p], s)} />}
-      empty="No prospects yet. Use Import to add a CSV or paste numbers."
+      empty="No prospects yet. Use Import or Add prospect, or open the Wizard for a walk-through."
     />
+    </>
   );
 }
 

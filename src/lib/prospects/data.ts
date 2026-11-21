@@ -7,9 +7,12 @@ const COLS = "id, business_name, phone_e164, website, address, city, state, cate
 const LOOKUP_COLS = "phone_e164, valid, line_type, carrier_name, provider, confidence, caller_name, caller_type, error_code, cost_cents, looked_up_at";
 
 export async function listProspects(supabase: SupabaseClient): Promise<Prospect[]> {
-  const { data, error } = await supabase.from("prospects").select(COLS).is("workspace_id", null).order("created_at", { ascending: false }).limit(5000);
+  const query = (cols: string) => supabase.from("prospects").select(cols).is("workspace_id", null).order("created_at", { ascending: false }).limit(5000);
+  let { data, error } = await query(`${COLS}, latitude, longitude`);
+  // Map columns not added yet (migration 20261122100000): list without them.
+  if (error && /latitude|longitude/.test(error.message)) ({ data, error } = await query(COLS));
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Omit<Prospect, "lookup">[];
+  const rows = (data ?? []) as unknown as Omit<Prospect, "lookup">[];
   const lookups = await lookupsFor(supabase, rows.map((r) => r.phone_e164));
   return rows.map((r) => ({ ...r, lookup: lookups.get(r.phone_e164) ?? null }));
 }

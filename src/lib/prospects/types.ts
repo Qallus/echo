@@ -19,6 +19,7 @@ export type Prospect = {
   id: string; business_name: string | null; phone_e164: string; website: string | null; address: string | null;
   city: string | null; state: string | null; category: string | null; source: string; status: ProspectStatus;
   score: number | null; notes: string | null; crm_contact_id: string | null; created_at: string;
+  latitude?: number | null; longitude?: number | null; // migration 20261122100000
   lookup: PhoneLookup | null;
 };
 
