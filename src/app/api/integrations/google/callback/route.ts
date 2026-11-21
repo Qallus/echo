@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { siteOrigin } from "@/lib/site";
 import { getPersonalWorkspace, getUser } from "@/lib/data";
 import { syncGoogleCalendar } from "@/lib/google/calendar-sync";
 import { exchangeCode, seal, STATE_COOKIE } from "@/lib/google/oauth";
@@ -9,12 +10,14 @@ import { createClient } from "@/lib/supabase/server";
 // tokens, stores them encrypted on the person's own connection row, then
 // runs the first calendar sync.
 export async function GET(req: NextRequest) {
+  // Behind the proxy the request URL is the internal address; links use the public one.
+  const origin = await siteOrigin();
   const p = req.nextUrl.searchParams;
   let saved: { state?: string; verifier?: string; next?: string } = {};
   try { saved = JSON.parse(req.cookies.get(STATE_COOKIE)?.value ?? "{}"); } catch { /* missing or bad cookie */ }
   const next = saved.next ?? "/settings/connections";
   const done = (q: string) => {
-    const res = NextResponse.redirect(new URL(`${next}${next.includes("?") ? "&" : "?"}${q}`, req.url));
+    const res = NextResponse.redirect(new URL(`${next}${next.includes("?") ? "&" : "?"}${q}`, origin));
     res.cookies.delete({ name: STATE_COOKIE, path: "/api/integrations/google" });
     return res;
   };
@@ -23,7 +26,7 @@ export async function GET(req: NextRequest) {
   const code = p.get("code"), state = p.get("state");
   if (!code || !state || !saved.state || state !== saved.state || !saved.verifier) return done("error=google_state");
   const user = await getUser();
-  if (!user) return NextResponse.redirect(new URL("/login?next=/settings/connections", req.url));
+  if (!user) return NextResponse.redirect(new URL("/login?next=/settings/connections", origin));
 
   try {
     const t = await exchangeCode(code, saved.verifier);
