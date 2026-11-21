@@ -2,6 +2,7 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-next";
+import { siteOrigin } from "@/lib/site";
 
 // Lands here from Google OAuth and email links.
 // ?code=...            -> PKCE exchange (OAuth, magic link opened in the same browser)
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
   if (code) ok = !(await supabase.auth.exchangeCodeForSession(code)).error;
   else if (tokenHash && type) ok = !(await supabase.auth.verifyOtp({ type, token_hash: tokenHash })).error;
 
-  const dest = new URL(ok ? next : "/login?error=link", url.origin);
+  // Behind the proxy the request's own address is internal; use the public one.
+  const dest = new URL(ok ? next : "/login?error=link", await siteOrigin());
   return NextResponse.redirect(dest);
 }

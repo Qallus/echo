@@ -4,13 +4,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { googleSignInUrl } from "@/app/login/actions";
 
-// Shown only when Google is enabled in Supabase (NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true).
-export const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
-
-export function GoogleButton({ next, label = "Continue with Google" }: { next: string; label?: string }) {
+// Shown only when Google sign-in is turned on in Supabase (see googleAuthEnabled()).
+export function GoogleButton({ next, label = "Continue with Google", enabled }: { next: string; label?: string; enabled: boolean }) {
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
-  if (!googleEnabled) return null;
+  if (!enabled) return null;
 
   const go = async () => {
     setPending(true);

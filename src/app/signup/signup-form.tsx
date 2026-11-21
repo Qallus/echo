@@ -23,7 +23,7 @@ type AccountType = (typeof TYPES)[number]["value"];
 const nextFor = (type: AccountType, next: string) =>
   type === "live_agent" && next === "/setup" ? "/agent-desk/setup" : type !== "live_agent" && next === "/agent-desk/setup" ? "/setup" : next;
 
-export function SignupForm({ next, initialType = "personal" }: { next: string; initialType?: AccountType }) {
+export function SignupForm({ next, initialType = "personal", google }: { next: string; initialType?: AccountType; google: boolean }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(signUp, {});
   const [type, setType] = useState<AccountType>(initialType);
 
@@ -31,7 +31,7 @@ export function SignupForm({ next, initialType = "personal" }: { next: string; i
 
   return (
     <div className="space-y-4">
-      <GoogleButton next={next} label="Sign up with Google" />
+      <GoogleButton next={next} label="Sign up with Google" enabled={google} />
       <form action={action} className="space-y-3">
         <input type="hidden" name="next" value={nextFor(type, next)} />
         <input type="hidden" name="account_type" value={type} />

@@ -10,7 +10,7 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { resendConfirmation, sendMagicLink, signInWithPassword, type LoginState } from "./actions";
 
 // Password sign-in by default; "Email me a sign-in link" switches to a magic link.
-export function LoginForm({ next, initialError }: { next: string; initialError?: string }) {
+export function LoginForm({ next, initialError, google }: { next: string; initialError?: string; google: boolean }) {
   const [mode, setMode] = useState<"password" | "link">("password");
   const [pwState, pwAction, pwPending] = useActionState<LoginState, FormData>(signInWithPassword, { error: initialError });
   const [linkState, linkAction, linkPending] = useActionState<LoginState, FormData>(sendMagicLink, {});
@@ -21,7 +21,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
 
   return (
     <div className="space-y-4">
-      <GoogleButton next={next} />
+      <GoogleButton next={next} enabled={google} />
 
       {mode === "password" ? (
         <form action={pwAction} className="space-y-3">

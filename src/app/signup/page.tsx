@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { googleAuthEnabled } from "@/lib/auth-providers";
 import { safeNext } from "@/lib/safe-next";
 import { SignupForm } from "./signup-form";
 
@@ -16,7 +17,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       title={type === "live_agent" ? "Join Redial as a Live Agent" : "Create your Redial account"}
       footer={<>Already have an account? <Link href={`/login${sp.next && next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-foreground hover:underline">Sign in</Link></>}
     >
-      <SignupForm next={next} initialType={type} />
+      <SignupForm next={next} initialType={type} google={await googleAuthEnabled()} />
     </AuthShell>
   );
 }
