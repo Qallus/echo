@@ -3,6 +3,7 @@ import { AudioLines } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppBadges } from "@/components/marketing/app-badges";
 import { HelpFab } from "@/components/marketing/help-fab";
+import { SiteAnalytics } from "@/components/analytics/site-analytics";
 import { MarketingMobileMenu } from "@/components/marketing/mobile-menu";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { SiteSearch } from "@/components/marketing/site-search";
@@ -55,6 +56,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
 
       <main className="flex-1">{children}</main>
       <HelpFab />
+      <SiteAnalytics />
 
       <footer className="border-t">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 text-sm sm:px-6 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16">

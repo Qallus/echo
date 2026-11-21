@@ -1,4 +1,5 @@
 import { AudioLines } from "lucide-react";
+import { SiteAnalytics } from "@/components/analytics/site-analytics";
 
 // The centered card used by sign in, sign up and password pages.
 export function AuthShell({ title, subtitle, children, footer }: {
@@ -18,6 +19,7 @@ export function AuthShell({ title, subtitle, children, footer }: {
         {children}
       </div>
       {footer && <div className="text-sm text-muted-foreground">{footer}</div>}
+      <SiteAnalytics />
     </div>
   );
 }

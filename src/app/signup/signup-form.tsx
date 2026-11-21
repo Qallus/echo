@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
+import { attribution, track } from "@/components/analytics/site-analytics";
 import { Briefcase, Lock } from "lucide-react";
 import { AgentIcon } from "@/components/marketing/agent-icon";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,9 @@ const nextFor = (type: AccountType, next: string) =>
 export function SignupForm({ next, initialType = "personal", google }: { next: string; initialType?: AccountType; google: boolean }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(signUp, {});
   const [type, setType] = useState<AccountType>(initialType);
+  // Which channel brought them (saved with the account for Analytics).
+  const attr = useSyncExternalStore(() => () => {}, () => JSON.stringify(attribution() ?? {}), () => "");
+  useEffect(() => { if (state.sent) track("signup"); }, [state.sent]);
 
   if (state.sent) return <CheckEmail email={state.sent} what="a link to confirm your account" />;
 
@@ -35,6 +39,7 @@ export function SignupForm({ next, initialType = "personal", google }: { next: s
       <form action={action} className="space-y-3">
         <input type="hidden" name="next" value={nextFor(type, next)} />
         <input type="hidden" name="account_type" value={type} />
+        <input type="hidden" name="attribution" value={attr} />
         <fieldset className="grid grid-cols-3 gap-2">
           <legend className="sr-only">Account type</legend>
           {TYPES.map(({ value, icon: Icon, title, desc }) => (

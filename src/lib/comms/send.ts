@@ -8,6 +8,7 @@ import { loadOrganization, orgMergeValues } from "@/lib/settings/organization";
 import type { Audience } from "./audience";
 import { applyMerge, parseSchema, renderTemplate } from "./blocks";
 import { unsubscribeUrl } from "./unsubscribe";
+import { campaignSlug, tagLinks } from "@/lib/analytics/utm";
 
 // Sends one email per recipient as the signed-in staff member (RLS applies):
 // merge fields per person, unsubscribed addresses skipped (with the reason
@@ -36,6 +37,8 @@ export async function unsubscribedSet(supabase: SupabaseClient): Promise<Set<str
 }
 
 export async function sendToRecipients(supabase: SupabaseClient, msg: Message, recipients: Recipient[]) {
+  // Campaign tags on links to redial.si (Admin -> Analytics -> Email & SMS).
+  if (!msg.test) msg = { ...msg, html: tagLinks(msg.html, { source: "redial", medium: "email", campaign: campaignSlug(msg.subject) }) };
   const seen = new Set<string>();
   const list = recipients.filter((r) => { const e = r.email.toLowerCase(); if (seen.has(e)) return false; seen.add(e); return true; });
   const blocked = msg.test ? new Set<string>() : await unsubscribedSet(supabase);

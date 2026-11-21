@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/components/analytics/site-analytics";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { ArrowLeft, CalendarCheck, Clock, Loader2, MapPin, Phone, Video } from "lucide-react";
@@ -89,7 +90,7 @@ export function Booker({ type }: { type: PublicType }) {
           start(async () => {
             const res = await book({ slug: type.slug, startsAt: time, ...form });
             if (res.error) { setError(res.error); if (/taken/i.test(res.error)) { setTime(null); if (day) pickDay(day); } }
-            else setDoneAt(time);
+            else { setDoneAt(time); track("booking"); }
           });
         }}>
           <Button type="button" variant="ghost" size="sm" onClick={() => setTime(null)}><ArrowLeft /> Change time</Button>

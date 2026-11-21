@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/components/analytics/site-analytics";
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowRight, Bot, Building2, Check, CheckCircle2, House } from "lucide-react";
 import { AgentIcon } from "@/components/marketing/agent-icon";
@@ -156,7 +157,7 @@ export function ContactForm({ initial = "residential" }: { initial?: ContactType
     const message = [`Request: ${t.label}`, ...lines, "", f.message ?? ""].join("\n");
     start(async () => {
       const res = await submitContact({ name: f.name, email: f.email, phone: f.phone, company: f.company ?? "", topic: t.label, message, website: f.website });
-      if (res.error) setError(res.error); else setSent(true);
+      if (res.error) setError(res.error); else { setSent(true); track("contact"); }
     });
   };
 

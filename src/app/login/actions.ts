@@ -1,5 +1,6 @@
 "use server";
 
+import { isChannel } from "@/lib/analytics/channels";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-next";
@@ -61,6 +62,19 @@ export async function resendConfirmation(email: string): Promise<LoginState> {
 // answer calls for businesses; they start in the Agent Desk profile builder).
 // Team members join by invite. The type routes and labels accounts; access
 // is still decided by RLS and staff roles, never by this metadata.
+// The channel that brought a new account (from the site's cookie-free
+// tracker), kept small and checked: Admin -> Analytics credits signups to it.
+function readAttribution(raw: FormDataEntryValue | null) {
+  try {
+    const a = JSON.parse(String(raw ?? "")) as Record<string, unknown>;
+    if (!isChannel(a.channel)) return null;
+    const s = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : null);
+    return { channel: a.channel, source: s(a.source, 100), medium: s(a.medium, 60), campaign: s(a.campaign, 120), landing: s(a.landing, 300), referrer_host: s(a.referrer_host, 200) };
+  } catch {
+    return null;
+  }
+}
+
 export async function signUp(_: LoginState, form: FormData): Promise<LoginState> {
   const fullName = String(form.get("full_name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim();
@@ -69,6 +83,7 @@ export async function signUp(_: LoginState, form: FormData): Promise<LoginState>
   const accountType = rawType === "business" ? "business" : rawType === "live_agent" ? "live_agent" : "personal";
   const company = String(form.get("company_name") ?? "").trim().slice(0, 120);
   const next = safeNext(String(form.get("next") ?? "/"));
+  const attribution = readAttribution(form.get("attribution"));
 
   if (!fullName) return { error: "Enter your name." };
   if (!EMAIL.test(email)) return { error: "Enter a valid email address." };
@@ -81,7 +96,7 @@ export async function signUp(_: LoginState, form: FormData): Promise<LoginState>
     password,
     options: {
       emailRedirectTo: await callback(next),
-      data: { full_name: fullName, account_type: accountType, ...(accountType === "business" ? { company_name: company } : {}) },
+      data: { full_name: fullName, account_type: accountType, ...(accountType === "business" ? { company_name: company } : {}), ...(attribution ? { attribution } : {}) },
     },
   });
   if (error) return { error: friendly(error.message) };

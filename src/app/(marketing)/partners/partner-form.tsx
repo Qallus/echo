@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/components/analytics/site-analytics";
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowRight, Briefcase, Building2, Check, CheckCircle2, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ export function PartnerForm({ initialGroup, initialProgram }: { initialGroup: Gr
         program: program.id, name: f.name, email: f.email, phone: f.phone, company: f.company, website: f.website, location: f.location,
         message: lines.join("\n"), answers, consent, consentText: CONSENT, honeypot: f.homepage,
       });
-      if (res.error) setError(res.error); else setSent(true);
+      if (res.error) setError(res.error); else { setSent(true); track(`partners_${group.id}`.replace(/-/g, "_")); }
     });
   };
 

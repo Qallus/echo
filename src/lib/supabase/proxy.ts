@@ -4,7 +4,8 @@ import { safeNext } from "@/lib/safe-next";
 
 // /.well-known: OAuth discovery for the MCP connector (fetched without a session).
 // /live-agents: the public Live Agents browse, profiles and how-it-works pages.
-const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/.well-known", "/book", "/card", "/s", "/live-agents"];
+// /l: tracked short links in texts and campaigns.
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/.well-known", "/book", "/card", "/s", "/live-agents", "/l"];
 // Signed-in visitors skip these and go where they were headed.
 const SIGNED_OUT_ONLY = ["/login", "/signup", "/forgot-password"];
 // Marketing pages (exact paths). "/" is always the homepage, signed in or not;

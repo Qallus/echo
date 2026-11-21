@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/components/analytics/site-analytics";
 import { useState, useTransition } from "react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ export function WaitlistForm({ platform, source, onBack }: { platform: Platform;
       setError(undefined);
       start(async () => {
         const r = await joinWaitlist({ ...f, platforms, products, account_type: type, consent_sms: sms, consent_call: call, sms_frequency: frequency, update_topics: topics, source_page: source });
-        if (r.error) setError(r.error); else setDone(true);
+        if (r.error) setError(r.error); else { setDone(true); track("waitlist"); }
       });
     }}>
       <div className="grid gap-3 sm:grid-cols-2">

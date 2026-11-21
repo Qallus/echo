@@ -7,7 +7,7 @@ export const metadata = {
   alternates: { canonical: "/privacy" },
 };
 
-const UPDATED = "November 20, 2026";
+const UPDATED = "November 21, 2026";
 
 const PROVIDERS = [
   { name: "Supabase", purpose: "Database, sign-in and file storage (your audio, transcripts and account data)" },
@@ -110,6 +110,16 @@ const sections: LegalSection[] = [
     title: "Cookies",
     body: (
       <p>We use only the cookies needed to keep you signed in and secure. We don&apos;t use advertising or cross-site tracking cookies. Your browser may store small preferences locally (for example, a collapsed sidebar).</p>
+    ),
+  },
+  {
+    id: "site-analytics",
+    title: "Site analytics",
+    body: (
+      <>
+        <p>To understand which pages help and how people find us, our public website counts visits without cookies. For each visit we record the page, the site or campaign link that brought you (for example a search engine or one of our emails), the type of device, and an anonymous code that changes every day. We don&apos;t store your IP address, don&apos;t follow you across other websites, and don&apos;t share this with advertisers.</p>
+        <p>If you create an account, we keep the channel that first brought you (such as &quot;search&quot; or &quot;email&quot;) with your account. If your browser sends a Global Privacy Control or Do Not Track signal, we don&apos;t count your visits at all.</p>
+      </>
     ),
   },
   {

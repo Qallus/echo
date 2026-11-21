@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/components/analytics/site-analytics";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useTransition } from "react";
@@ -53,7 +54,7 @@ export function CartView({ checkoutReady }: { checkoutReady: boolean }) {
     if (numberLine && !pick) { setError("Pick your phone number first."); return; }
     const res = await startCheckout(cart, promo?.code, { phoneNumber: pick?.number ?? null });
     if (res.needLogin) router.push("/login?next=/cart");
-    else if (res.url) window.location.href = res.url;
+    else if (res.url) { track("checkout"); window.location.href = res.url; }
     else setError(res.error);
   });
 
