@@ -9,6 +9,8 @@ import { uuids, type Result } from "@/lib/crm/validate";
 import { lookupsFor } from "@/lib/prospects/data";
 import type { ProspectImportRow } from "@/lib/prospects/import";
 import { prospectE164 } from "@/lib/prospects/phone";
+import { estimate, processChunk, startRun, type Estimate, type RunProgress } from "@/lib/prospects/runner";
+import { readProspecting, type ProspectingSettings } from "@/lib/prospects/settings";
 import { scoreProspect } from "@/lib/prospects/score";
 import { isProspectStatus, type ProspectStatus } from "@/lib/prospects/types";
 import { createClient } from "@/lib/supabase/server";
@@ -177,4 +179,53 @@ export async function mapProspects(): Promise<Result> {
   await placeProspects(supabase);
   refresh();
   return { ok: "Placed what could be found on the map." };
+}
+
+// ---------------------------------------------------------------------------
+// Twilio lookups (prospects.run: owner and admin). Every run shows its cost
+// first and is audited when it starts and when it finishes.
+// ---------------------------------------------------------------------------
+export async function estimateLookup(ids: string[] | null, callerName: boolean): Promise<{ est?: Estimate; error?: string }> {
+  await requireStaff("prospects.run");
+  const list = ids ? uuids(ids) : null;
+  if (ids && !list?.length) return { error: "Nothing selected." };
+  return { est: await estimate(await createClient(), list, Boolean(callerName)) };
+}
+
+export async function startLookup(ids: string[] | null, callerName: boolean): Promise<{ runId?: string; error?: string; cached?: number }> {
+  await requireStaff("prospects.run");
+  const list = ids ? uuids(ids) : null;
+  if (ids && !list?.length) return { error: "Nothing selected." };
+  const supabase = await createClient();
+  const r = await startRun(supabase, list, Boolean(callerName));
+  if (r.error || !r.runId) return { error: r.error ?? "Couldn't start." };
+  await adminAudit(supabase, "prospects.lookup.start", { type: "lookup_run", id: r.runId }, {
+    numbers: r.est?.toLookUp, cached: r.est?.cached, est_cost_cents: r.est?.estCents, caller_name: Boolean(callerName),
+  });
+  refresh();
+  return { runId: r.runId, cached: r.est?.cached };
+}
+
+export async function processLookup(runId: string): Promise<{ progress?: RunProgress; error?: string }> {
+  await requireStaff("prospects.run");
+  const [id] = uuids([runId]);
+  if (!id) return { error: "Not found." };
+  const supabase = await createClient();
+  const progress = await processChunk(supabase, id);
+  if (progress.done && progress.handled) {
+    await adminAudit(supabase, "prospects.lookup.done", { type: "lookup_run", id }, { processed: progress.processed, failed: progress.failed, cost_cents: progress.costCents });
+    refresh();
+  }
+  return { progress };
+}
+
+export async function saveProspectingSettings(input: ProspectingSettings): Promise<Result> {
+  await requireStaff("settings.manage");
+  const value = readProspecting(input);
+  const supabase = await createClient();
+  const { error } = await supabase.from("platform_settings").upsert({ key: "prospecting", value });
+  if (error) return { error: error.message };
+  await adminAudit(supabase, "settings.prospecting.save", { type: "setting", id: "prospecting" }, value);
+  refresh();
+  return { ok: "Saved." };
 }

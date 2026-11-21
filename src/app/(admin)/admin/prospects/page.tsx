@@ -3,6 +3,8 @@ import { AdminPage } from "@/components/admin/admin-ui";
 import { StatRow, StatTile } from "@/components/admin/crm/crm-kit";
 import { can, requireStaff } from "@/lib/admin/guard";
 import { listProspects } from "@/lib/prospects/data";
+import { mapCarrier } from "@/lib/prospects/carriers";
+import { loadProspecting } from "@/lib/prospects/settings";
 import { createClient } from "@/lib/supabase/server";
 import { ProspectsList } from "./prospects-list";
 
@@ -14,8 +16,18 @@ export const metadata = { title: "Prospects · Admin · Redial" };
 export default async function ProspectsPage() {
   const staff = await requireStaff("crm.view");
   const supabase = await createClient();
-  const rows = await listProspects(supabase);
+  const [rows, settings, { data: odd }] = await Promise.all([
+    listProspects(supabase), loadProspecting(supabase),
+    supabase.from("phone_lookups").select("carrier_name, line_type").in("confidence", ["possible", "unknown"]).not("carrier_name", "is", null).limit(3000),
+  ]);
   const manage = can(staff, "crm.manage");
+  // Carrier names that matched no provider rule (only the line type placed them).
+  const counts = new Map<string, number>();
+  for (const l of odd ?? []) {
+    if (mapCarrier(l.carrier_name, null).provider !== "unknown") continue;
+    counts.set(l.carrier_name!, (counts.get(l.carrier_name!) ?? 0) + 1);
+  }
+  const unmapped = [...counts].map(([carrier, count]) => ({ carrier, count })).sort((a, b) => b.count - a.count);
   const has = (p: string) => rows.filter((r) => r.lookup?.provider === p).length;
 
   return (
@@ -38,7 +50,7 @@ export default async function ProspectsPage() {
         </ul>
       </details>
 
-      <ProspectsList rows={rows} manage={manage} />
+      <ProspectsList rows={rows} manage={manage} canRun={can(staff, "prospects.run")} canSettings={can(staff, "settings.manage")} settings={settings} unmapped={unmapped} />
     </AdminPage>
   );
 }

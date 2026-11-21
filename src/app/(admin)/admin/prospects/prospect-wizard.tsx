@@ -14,8 +14,8 @@ const STEPS = ["Add numbers", "Check the list", "Look up carriers", "Work the be
 
 // A guided walk through prospecting, start to finish. Each step says what to
 // do and has the button that does it.
-export function ProspectWizard({ counts, onClose, onImport, onAdd, manage }: {
-  counts: WizardCounts; onClose: () => void; onImport: () => void; onAdd: () => void; manage: boolean;
+export function ProspectWizard({ counts, onClose, onImport, onAdd, onLookup, manage, canRun }: {
+  counts: WizardCounts; onClose: () => void; onImport: () => void; onAdd: () => void; onLookup: () => void; manage: boolean; canRun: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(counts.total ? 1 : 0);
@@ -89,7 +89,10 @@ export function ProspectWizard({ counts, onClose, onImport, onAdd, manage }: {
               <li>You see the cost and confirm before anything runs. Numbers checked in the last 90 days are free (cached).</li>
               <li>Spending stops at the monthly cap ($25 to start).</li>
             </ul>
-            <p className="flex items-center gap-2 rounded-lg bg-muted/60 p-2 text-xs"><Radar className="size-4 shrink-0" /> Running lookups is being added in the next update. {counts.lookedUp ? `${counts.lookedUp} looked up so far.` : ""}</p>
+            <p className="text-xs text-muted-foreground">{counts.lookedUp} of {counts.total} looked up so far. To check a few first, select them in the table and choose Look up carriers.</p>
+            {canRun
+              ? <Button disabled={counts.total - counts.lookedUp - counts.dnc <= 0} onClick={onLookup}><Radar /> Look up the rest</Button>
+              : <p className="rounded-lg bg-muted/60 p-2 text-xs">Only owners and admins can run lookups.</p>}
           </>
         )}
         {step === 3 && (

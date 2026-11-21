@@ -3,6 +3,7 @@ import { sendBookingReminders, sendEventReminders } from "@/lib/bookings/reminde
 import { processRuleRuns, queueTimedRules } from "@/lib/automation/run";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
 import { runScheduled } from "@/lib/comms/schedule";
+import { processLookupQueue } from "@/lib/prospects/runner";
 import { fillCallCosts } from "@/lib/redial/call-log";
 import { sendWeeklySummaries } from "@/lib/redial/alerts";
 import { secret } from "@/lib/secrets";
@@ -13,7 +14,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // No user session: the shared CRON_SECRET is checked, then the service role
 // sends scheduled emails and texts that are due, queues time-based
 // automations and rules, runs everything that's due, sends booking
-// reminders, and fills in Twilio's cost for Redial calls that just ended.
+// reminders, fills in Twilio's cost for Redial calls that just ended, and
+// finishes prospect lookup runs nobody's page is driving.
 
 export const maxDuration = 300;
 
@@ -38,7 +40,9 @@ async function run(req: Request) {
   const costs = await fillCallCosts(db).catch(() => 0);
   // Sundays: fraud protection weekly summaries for trusted contacts.
   const summaries = await sendWeeklySummaries(db).catch((e) => { console.error("[weekly summary]", e); return 0; });
-  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries });
+  // Prospect lookups left running when the page was closed.
+  const lookups = await processLookupQueue(db, 60_000).catch((e) => { console.error("[prospect lookups]", e); return 0; });
+  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries, lookups });
 }
 
 export const GET = run;

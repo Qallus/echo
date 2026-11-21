@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Ban, Check, Contact, Download, Pencil, PhoneOutgoing, Plus, Trash2, Upload, Wand2 } from "lucide-react";
+import { Ban, Check, Contact, Download, Pencil, PhoneOutgoing, Plus, Radar, Settings, Trash2, Upload, Wand2 } from "lucide-react";
 import { CollectionView } from "@/components/collection/collection-view";
 import { downloadCsv } from "@/components/admin/list-csv";
 import { LocalDate } from "@/components/local-date";
@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import { AddProspectPanel } from "./add-prospect";
 import { ImportPanel } from "./import-prospects";
 import { ProspectWizard } from "./prospect-wizard";
+import { LookupPanel } from "./lookup-panel";
+import { ProspectSettingsPanel, type Unmapped } from "./prospect-settings";
+import type { ProspectingSettings } from "@/lib/prospects/settings";
 
 const provider = (p: Prospect): Provider | null => p.lookup?.provider ?? null;
 const statusLabel = (s: ProspectStatus) => PROSPECT_STATUSES.find((x) => x.id === s)?.label ?? s;
@@ -56,11 +59,16 @@ function exportCsv(list: Prospect[]) {
       provider(p) ? PROVIDERS[provider(p)!].label : "", p.lookup?.confidence, p.lookup?.caller_name, p.score, statusLabel(p.status), p.lookup?.looked_up_at?.slice(0, 10)]));
 }
 
-export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: boolean }) {
+export function ProspectsList({ rows, manage, canRun, canSettings, settings, unmapped }: {
+  rows: Prospect[]; manage: boolean; canRun: boolean; canSettings: boolean; settings: ProspectingSettings; unmapped: Unmapped[];
+}) {
   const router = useRouter();
   const [, start] = useTransition();
   const [panel, setPanel] = useState<"wizard" | "import" | "add" | null>(null);
   const [editing, setEditing] = useState<Prospect | null>(null);
+  const [lookup, setLookup] = useState<{ ids: string[] | null; label: string } | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const notLookedUp = rows.filter((p) => !p.lookup && p.status !== "dnc").length;
   const counts = {
     total: rows.length, lookedUp: rows.filter((p) => p.lookup).length, dnc: rows.filter((p) => p.status === "dnc").length,
     hot: rows.filter((p) => (p.score ?? 0) >= 60 && p.status !== "dnc").length,
@@ -75,9 +83,12 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
 
   return (
     <>
-    {panel === "wizard" && <ProspectWizard counts={counts} manage={manage} onClose={() => setPanel(null)} onImport={() => setPanel("import")} onAdd={() => setPanel("add")} />}
+    {panel === "wizard" && <ProspectWizard counts={counts} manage={manage} canRun={canRun} onClose={() => setPanel(null)} onImport={() => setPanel("import")} onAdd={() => setPanel("add")}
+      onLookup={() => { setPanel(null); setLookup({ ids: null, label: `${notLookedUp} not looked up yet` }); }} />}
     {panel === "import" && <ImportPanel onClose={() => setPanel(null)} />}
     {panel === "add" && <AddProspectPanel onClose={() => setPanel(null)} />}
+    {lookup && <LookupPanel ids={lookup.ids} label={lookup.label} onClose={() => setLookup(null)} />}
+    {showSettings && <ProspectSettingsPanel settings={settings} unmapped={unmapped} canEdit={canSettings} onClose={() => setShowSettings(false)} />}
     {editing && <AddProspectPanel key={editing.id} prospect={editing} onClose={() => setEditing(null)} />}
     <CollectionView<Prospect>
       items={rows} getId={(p) => p.id} title={name} noun={["prospect", "prospects"]} storageKey="admin-prospects" defaultView="table"
@@ -89,6 +100,9 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
       toolbar={
         <>
           <Button variant="outline" onClick={() => setPanel("wizard")}><Wand2 /> Wizard</Button>
+          {canRun && <Button variant="outline" disabled={!notLookedUp} title={notLookedUp ? undefined : "Everything has been looked up"}
+            onClick={() => setLookup({ ids: null, label: `${notLookedUp} not looked up yet` })}><Radar /> Look up{notLookedUp ? ` (${notLookedUp})` : ""}</Button>}
+          <Button variant="outline" size="icon" aria-label="Prospecting settings" title="Settings: prices, cap, unmapped carriers" onClick={() => setShowSettings(true)}><Settings /></Button>
           <Button variant="outline" onClick={() => exportCsv(rows)} disabled={!rows.length}><Download /> Export</Button>
           {manage && <Button variant="outline" onClick={() => setPanel("import")}><Upload /> Import</Button>}
           {manage && <Button onClick={() => setPanel("add")}><Plus /> Add prospect</Button>}
@@ -124,6 +138,7 @@ export function ProspectsList({ rows, manage }: { rows: Prospect[]; manage: bool
       ]}
       actions={[
         { label: "Export CSV", icon: Download, run: (list) => exportCsv(list) },
+        ...(canRun ? [{ label: "Look up carriers", icon: Radar, run: (list: Prospect[]) => setLookup({ ids: list.map((p) => p.id), label: `${list.length} selected` }) }] : []),
         ...(manage ? [
           { label: "Mark contacted", icon: PhoneOutgoing, run: (list: Prospect[]) => setStatus(list, "contacted") },
           { label: "Do not contact", icon: Ban, run: (list: Prospect[]) => setStatus(list, "dnc"), destructive: true },
