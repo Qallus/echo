@@ -231,14 +231,17 @@ grant execute on function public.short_link_open(text) to anon, authenticated;
 -- ---------------------------------------------------------------------------
 -- Admin -> Analytics in one call: totals, channels, campaigns, landing pages,
 -- referrers, pages, devices, AI, crawlers, conversions, daily traffic, and
--- the Redial product funnel. Staff with analytics.view only.
+-- the Redial product funnel. Staff with analytics.view (and the digest job).
 -- A signup's channel comes from the attribution saved with the account.
 -- ---------------------------------------------------------------------------
 create function public.admin_analytics(p_since timestamptz, p_until timestamptz) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare out jsonb;
 begin
-  if not private.staff_can('analytics.view') then raise exception 'Not allowed.' using errcode = '42501'; end if;
+  -- Staff with analytics.view, or the scheduled job (service role) for the weekly digest.
+  if not (private.staff_can('analytics.view') or coalesce((select auth.jwt()) ->> 'role', '') = 'service_role') then
+    raise exception 'Not allowed.' using errcode = '42501';
+  end if;
 
   with ev as (select * from public.site_events where created_at >= p_since and created_at < p_until),
   views as (select * from ev where kind = 'view'),

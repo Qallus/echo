@@ -163,3 +163,13 @@ export function buildWithKey(id: ModelId, apiKey: string, modelName?: string | n
 export function buildCustom(baseURL: string, apiKey: string | null, model: string) {
   return createOpenAI({ apiKey: apiKey || "not-needed", baseURL }).chat(model);
 }
+
+// Redial's own key for a provider (no customer key, no fallback), for
+// internal jobs like the AI visibility checks. Null when it isn't set.
+export async function echoModel(id: ModelId, modelName?: string): Promise<LanguageModel | null> {
+  const p = PROVIDERS[id];
+  const key = await secret(p.keyEnv);
+  if (!key) return null;
+  const extra = id === "claude" ? await secrets("ANTHROPIC_WORKSPACE_ID") : undefined;
+  return p.build(key, modelName || (await secret(p.modelEnv)) || p.defaultModel, extra);
+}

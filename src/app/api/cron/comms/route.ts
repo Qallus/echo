@@ -4,6 +4,9 @@ import { processRuleRuns, queueTimedRules } from "@/lib/automation/run";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
 import { runScheduled } from "@/lib/comms/schedule";
 import { processLookupQueue } from "@/lib/prospects/runner";
+import { visibilityCron } from "@/lib/analytics/ai-visibility";
+import { sendAnalyticsDigest } from "@/lib/analytics/digest";
+import { syncSearchConsole } from "@/lib/analytics/search-console";
 import { fillCallCosts } from "@/lib/redial/call-log";
 import { sendWeeklySummaries } from "@/lib/redial/alerts";
 import { secret } from "@/lib/secrets";
@@ -15,7 +18,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // sends scheduled emails and texts that are due, queues time-based
 // automations and rules, runs everything that's due, sends booking
 // reminders, fills in Twilio's cost for Redial calls that just ended, and
-// finishes prospect lookup runs nobody's page is driving.
+// finishes prospect lookup runs nobody's page is driving, copies Google
+// Search Console daily, runs the monthly AI visibility check and sends the
+// Monday analytics digest.
 
 export const maxDuration = 300;
 
@@ -42,7 +47,11 @@ async function run(req: Request) {
   const summaries = await sendWeeklySummaries(db).catch((e) => { console.error("[weekly summary]", e); return 0; });
   // Prospect lookups left running when the page was closed.
   const lookups = await processLookupQueue(db, 60_000).catch((e) => { console.error("[prospect lookups]", e); return 0; });
-  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries, lookups });
+  // Analytics: Search Console once a day, the monthly AI visibility check, the Monday digest.
+  const search = await syncSearchConsole(db).then((r) => r.rows ?? 0, () => 0);
+  const aiChecks = await visibilityCron(db, 45_000).catch((e) => { console.error("[ai visibility]", e); return 0; });
+  const digest = await sendAnalyticsDigest(db).catch((e) => { console.error("[analytics digest]", e); return 0; });
+  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries, lookups, search, aiChecks, digest });
 }
 
 export const GET = run;

@@ -72,6 +72,50 @@ export function registerInsightTools(server: McpServer, ctx: McpContext, perms: 
     });
   }
 
+  if (perms.includes("analytics.view")) {
+    defineTool(server, ctx, "analytics_overview", {
+      ...base, domain: "analytics", title: "Traffic, channels and funnel",
+      description: "Admin -> Analytics for a period: visitors, signups, set up, paying, revenue and spend; channels (search, AI assistants, social, email, texts, ads, referrals, direct) with visits, signups and revenue; campaigns; landing pages; referring sites; conversions; AI assistant visits and crawler visits; the Redial product funnel. Visitors are counted without cookies. Money is in cents.",
+      inputSchema: z.object({ range: rangeArg, ...dates }),
+    }, async ({ range, since, until }) => {
+      const p = await period(ctx, range, since, until);
+      const end = new Date(`${p.until}T00:00:00Z`); end.setUTCDate(end.getUTCDate() + 1);
+      const { data, error } = await ctx.supabase.rpc("admin_analytics", { p_since: `${p.since}T00:00:00Z`, p_until: end.toISOString() });
+      check(error);
+      return { data: { since: p.since, until: p.until, timezone: p.timezone, ...(data as Record<string, unknown>) } };
+    });
+
+    defineTool(server, ctx, "analytics_search_terms", {
+      ...base, domain: "analytics", title: "Google Search terms and pages",
+      description: "Google Search Console for a period: clicks, impressions, click rate and average position by search term and by page (top 50 each).",
+      inputSchema: z.object({ range: rangeArg, ...dates }),
+    }, async ({ range, since, until }) => {
+      const p = await period(ctx, range, since, until);
+      const { data, error } = await ctx.supabase.from("search_console_rows").select("query, page, clicks, impressions, position").gte("day", p.since).lte("day", p.until).limit(50000);
+      check(error);
+      const sum = (key: "query" | "page") => {
+        const m = new Map<string, { clicks: number; impressions: number; posw: number }>();
+        for (const r of data ?? []) { const g = m.get(r[key]) ?? { clicks: 0, impressions: 0, posw: 0 }; g.clicks += r.clicks; g.impressions += r.impressions; g.posw += Number(r.position ?? 0) * r.impressions; m.set(r[key], g); }
+        return [...m].map(([k, g]) => ({ [key]: k, clicks: g.clicks, impressions: g.impressions, position: g.impressions ? Math.round((g.posw / g.impressions) * 10) / 10 : null }))
+          .sort((x, y) => y.clicks - x.clicks || y.impressions - x.impressions).slice(0, 50);
+      };
+      return { data: { since: p.since, until: p.until, queries: sum("query"), pages: sum("page") } };
+    });
+
+    defineTool(server, ctx, "analytics_ai_visibility", {
+      ...base, domain: "analytics", title: "Do AI assistants recommend Redial?",
+      description: "The latest AI visibility check: for each assistant (ChatGPT, Claude, Gemini, Grok, Perplexity) and question, whether Redial was named, its place among the brands named, the competitors named and the links cited.",
+      inputSchema: z.object({}),
+    }, async () => {
+      const { data: run, error } = await ctx.supabase.from("ai_visibility_runs").select("id, created_at, status").order("created_at", { ascending: false }).limit(1).maybeSingle();
+      check(error);
+      if (!run) return { data: { run: null, note: "No check has run yet." } };
+      const { data: checks, error: e2 } = await ctx.supabase.from("ai_visibility_checks").select("model, question, mentioned, rank, competitors, cited_urls, error").eq("run_id", run.id);
+      check(e2);
+      return { targetId: run.id, data: { run, checks: checks ?? [] } };
+    });
+  }
+
   if (perms.includes("comms.view")) {
     defineTool(server, ctx, "waitlist_export", {
       ...base, domain: "waitlist", title: "Export the app waitlist",

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { uuids } from "@/lib/crm/validate";
 import { loadOrganization } from "@/lib/settings/organization";
 import { applyMerge } from "./blocks";
+import { shortenTextLinks } from "@/lib/analytics/short-links";
 import { QUIET, SMS_CAP, SMS_KINDS, STOP_LINE, isSmsKind, smsSegments, type SmsKind } from "./sms-kinds";
 import { e164, phoneNumber, twilioSms } from "./twilio";
 
@@ -104,7 +105,9 @@ export async function prepareTexts(supabase: SupabaseClient, input: SmsInput): P
   const r = await resolve(supabase, input);
   if ("error" in r) return r;
   const blocked = await optOuts(supabase);
-  return { recipients: r.recipients.filter((x) => !blocked.has(x.phone)), label: r.label, body: finalBody(input.body, r.bulk), bulk: r.bulk };
+  // Bulk texts: links to redial.si become tracked short links (Analytics -> Email & SMS).
+  const body = r.bulk ? await shortenTextLinks(supabase, finalBody(input.body, true), input.body.slice(0, 60)) : finalBody(input.body, false);
+  return { recipients: r.recipients.filter((x) => !blocked.has(x.phone)), label: r.label, body, bulk: r.bulk };
 }
 
 // The job: sends the next part of a scheduled text send until `deadline`,

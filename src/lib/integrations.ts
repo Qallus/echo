@@ -88,10 +88,11 @@ export const SERVICES: Service[] = [
     ],
   },
   {
-    id: "google_workspace", name: "Google Workspace (Redial's own)", description: "Only for Redial's own @redial.si mailboxes and files (domain-wide delegation); never used for customers. Create the service account in the Redial Google Cloud project, allow its Client ID in admin.google.com, then paste the JSON key here. Steps: docs/Integrations/GOOGLE_API_ACCESS.md §7",
+    id: "google_workspace", name: "Google Workspace (Redial's own)", description: "Only for Redial's own @redial.si mailboxes and files (domain-wide delegation); never used for customers. Create the service account in the Redial Google Cloud project, allow its Client ID in admin.google.com, then paste the JSON key here. The same key reads Google Search Console for Admin -> Analytics -> Search. Steps: docs/Integrations/GOOGLE_API_ACCESS.md §7",
     fields: [
       { key: "GOOGLE_WORKSPACE_ADMIN_EMAIL", label: "Workspace account it acts as", placeholder: "jw@redial.si" },
       { key: "GOOGLE_WORKSPACE_SERVICE_ACCOUNT", label: "Service account JSON key", secret: true },
+      { key: "SEARCH_CONSOLE_PROPERTY", label: "Search Console property (Analytics)", placeholder: "sc-domain:redial.si", help: "Add the service account's email as a user on this property in Search Console." },
     ],
   },
   {

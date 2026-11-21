@@ -1,5 +1,10 @@
 # Redial Analytics: game plan
 
+> **Status (2026-11-21): built.** All 7 phases are in place. Still needed:
+> - Run `supabase/migrations/20261123090000_analytics.sql`.
+> - Connect Search Console (section 7).
+> - Social and Business Profile numbers are entered monthly until their APIs are approved.
+
 **Goal:** one place in **Admin → Analytics** that shows:
 - where Redial's customers come from: Google search, AI assistants, social, email, texts, referrals and ads;
 - what they do next: visit, sign up, set up Redial, pay, stay;
