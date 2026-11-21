@@ -1,5 +1,5 @@
 // Super Admin staff roles and what each can do. Mirrors
-// private.role_permissions() (latest in supabase/migrations/20261113120000_live_agents_onboarding.sql);
+// private.role_permissions() (latest in supabase/migrations/20261122090000_prospects.sql);
 // the database is the real check, this decides what the UI shows.
 
 export type StaffRole = "owner" | "admin" | "support" | "finance" | "marketing" | "analyst";
@@ -10,7 +10,8 @@ export type Permission =
   | "billing.view" | "billing.manage" | "ai.view" | "ai.manage" | "notifications.view"
   | "crm.view" | "crm.manage" | "content.manage" | "settings.manage" | "audit.view"
   | "comms.view" | "comms.manage" | "social.manage" | "projects.manage"
-  | "marketplace.view" | "marketplace.manage";
+  | "marketplace.view" | "marketplace.manage"
+  | "prospects.run"; // spends money on Twilio lookups: owner and admin
 
 export const STAFF_ROLES: { role: StaffRole; label: string; detail: string }[] = [
   { role: "owner", label: "Owner", detail: "Everything, including adding and removing staff." },

@@ -71,6 +71,39 @@ export async function twilioLookup(number: string, timeoutMs = 2500): Promise<{ 
   }
 }
 
+// Lookup v2 for prospecting: line type and carrier, optionally the caller
+// name (CNAM, US only, billed separately). Returns the HTTP status too, so a
+// batch can retry on 429 and 5xx. Twilio credentials never leave the server.
+export type LookupDetail = {
+  status: number; valid: boolean | null; lineType: string | null; carrier: string | null;
+  callerName: string | null; callerType: string | null; errorCode: number | null; raw: unknown;
+};
+export async function twilioLookupDetail(number: string, opts: { callerName?: boolean; timeoutMs?: number } = {}): Promise<LookupDetail> {
+  const e = await env();
+  const empty = { valid: null, lineType: null, carrier: null, callerName: null, callerType: null, errorCode: null, raw: null };
+  if (!e.sid || !e.token) return { status: 0, ...empty };
+  const fields = ["line_type_intelligence", ...(opts.callerName ? ["caller_name"] : [])].join(",");
+  try {
+    const res = await fetch(`https://lookups.twilio.com/v2/PhoneNumbers/${encodeURIComponent(number)}?Fields=${fields}`, {
+      headers: { Authorization: auth(e) }, signal: AbortSignal.timeout(opts.timeoutMs ?? 10_000), cache: "no-store",
+    });
+    const j = (await res.json().catch(() => null)) as {
+      valid?: boolean; validation_errors?: unknown;
+      line_type_intelligence?: { type?: string | null; carrier_name?: string | null; error_code?: number | null } | null;
+      caller_name?: { caller_name?: string | null; caller_type?: string | null; error_code?: number | null } | null;
+    } | null;
+    if (!res.ok || !j) return { status: res.status, ...empty, raw: j };
+    const lti = j.line_type_intelligence, cn = j.caller_name;
+    return {
+      status: res.status, valid: j.valid ?? null, lineType: lti?.type ?? null, carrier: lti?.carrier_name ?? null,
+      callerName: cn?.caller_name ?? null, callerType: cn?.caller_type ?? null, errorCode: lti?.error_code ?? cn?.error_code ?? null,
+      raw: { valid: j.valid ?? null, line_type_intelligence: lti ?? null, caller_name: cn ?? null },
+    };
+  } catch {
+    return { status: 0, ...empty };
+  }
+}
+
 export async function fetchRecording(recordingUrl: string): Promise<Blob | null> {
   const res = await fetch(`${recordingUrl}.mp3`, { headers: { Authorization: auth(await env()) } });
   return res.ok ? res.blob() : null;
