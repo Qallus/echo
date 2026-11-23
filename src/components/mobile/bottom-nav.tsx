@@ -13,13 +13,14 @@ import { cn } from "@/lib/utils";
 
 // Sticky bottom app bar on phones. The destinations slide sideways when they
 // don't all fit; the record button stays pinned on the right.
-export function BottomNav({ workspaces }: { workspaces: Workspace[] }) {
+export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace[]; /** Has a Redial line: show Phone. */ phone?: boolean }) {
   const pathname = usePathname();
   const recorder = useRecorder();
   const scroller = useRef<HTMLDivElement>(null);
 
   const items = [
     { href: "/home", label: "Home", icon: Home },
+    ...(phone ? [{ href: "/calls?tab=phone", label: "Phone", icon: Phone }] : []),
     { href: "/ask", label: "Ask Echo", icon: Sparkles },
     ...workspaces.map((w) => ({
       href: `/library/space/${w.id}`,
@@ -33,7 +34,7 @@ export function BottomNav({ workspaces }: { workspaces: Workspace[] }) {
     { href: "/team", label: "Team", icon: Users },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
-  const isActive = (href: string) => (href === "/home" ? pathname === "/home" : pathname.startsWith(href));
+  const isActive = (href: string) => (href === "/home" ? pathname === "/home" : pathname.startsWith(href.split("?")[0]));
 
   // Keep the current page's button in view after navigating.
   useEffect(() => {

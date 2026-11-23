@@ -32,6 +32,8 @@ type Props = {
   maxWidth?: number
   className?: string
   bodyClassName?: string
+  /** Phones: open at full height (a chat or a long form), not most of the screen. */
+  fullHeight?: boolean
 }
 
 const DESKTOP = "(min-width: 48rem)"
@@ -143,10 +145,11 @@ function SidePanel({ open, onOpenChange, title, description, actions, footer, ch
 // Most of the screen first; drag up for full height, down to close.
 const SNAP_POINTS: DrawerPrimitive.Root.SnapPoint[] = [0.72, 1]
 
-function BottomPanel({ open, onOpenChange, title, description, actions, footer, children, className, bodyClassName }: Props) {
-  const [snap, setSnap] = React.useState<DrawerPrimitive.Root.SnapPoint | null>(SNAP_POINTS[0])
+function BottomPanel({ open, onOpenChange, title, description, actions, footer, children, className, bodyClassName, fullHeight }: Props) {
+  const first = fullHeight ? 1 : SNAP_POINTS[0]
+  const [snap, setSnap] = React.useState<DrawerPrimitive.Root.SnapPoint | null>(first)
   return (
-    <DrawerPrimitive.Root open={open} onOpenChange={(o) => { if (o) setSnap(SNAP_POINTS[0]); onOpenChange(o) }} snapPoints={SNAP_POINTS} snapPoint={snap} onSnapPointChange={setSnap}>
+    <DrawerPrimitive.Root open={open} onOpenChange={(o) => { if (o) setSnap(first); onOpenChange(o) }} snapPoints={SNAP_POINTS} snapPoint={snap} onSnapPointChange={setSnap}>
       <DrawerPrimitive.Portal>
         <DrawerPrimitive.Backdrop className="fixed inset-0 z-50 min-h-dvh bg-black/30 transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <DrawerPrimitive.Viewport className="fixed inset-0 z-50 flex items-end justify-center touch-none">

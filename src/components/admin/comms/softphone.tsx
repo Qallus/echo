@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Call, Device } from "@twilio/voice-sdk";
-import { Grid3x3, Mic, MicOff, Phone, PhoneIncoming, PhoneOff } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { InCallControls } from "@/components/phone/dialer";
 
 // The admin browser phone (Twilio Voice). Registers on every admin page for
 // staff who can make calls, rings for incoming calls, and places calls asked
@@ -21,8 +21,6 @@ export function startCall(detail: Detail) {
   else window.location.href = `tel:${detail.number}`;
 }
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 export function Softphone() {
   const device = useRef<Device | null>(null);
@@ -31,7 +29,6 @@ export function Softphone() {
   const [label, setLabel] = useState("");
   const [state, setState] = useState<"idle" | "connecting" | "live">("idle");
   const [muted, setMuted] = useState(false);
-  const [keypad, setKeypad] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string>();
 
@@ -70,7 +67,7 @@ export function Softphone() {
   }, []);
 
   const track = (c: Call) => {
-    setCall(c); setState("connecting"); setMuted(false); setSeconds(0); setKeypad(false);
+    setCall(c); setState("connecting"); setMuted(false); setSeconds(0);
     c.on("accept", () => setState("live"));
     const end = () => { setCall(null); setState("idle"); };
     c.on("disconnect", end); c.on("cancel", end); c.on("reject", end);
@@ -113,21 +110,9 @@ export function Softphone() {
           </div>
         </>
       ) : call ? (
-        <>
-          <p className="text-xs text-muted-foreground">{state === "live" ? `On call · ${clock(seconds)}` : "Calling…"}</p>
-          <p className="truncate text-lg font-semibold">{label}</p>
-          {keypad && (
-            <div className="grid grid-cols-3 gap-1.5">
-              {KEYS.map((k) => <Button key={k} variant="outline" size="sm" onClick={() => call.sendDigits(k)}>{k}</Button>)}
-            </div>
-          )}
-          <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" aria-label={muted ? "Unmute" : "Mute"} onClick={() => { call.mute(!muted); setMuted(!muted); }}>{muted ? <MicOff /> : <Mic />}</Button>
-            <Button variant="outline" aria-label="Keypad" className={cn(keypad && "bg-accent")} onClick={() => setKeypad(!keypad)}><Grid3x3 /></Button>
-            <Button variant="destructive" aria-label="Hang up" onClick={() => call.disconnect()}><PhoneOff /></Button>
-          </div>
-          <p className="text-[11px] text-muted-foreground">Recorded and transcribed to the timeline.</p>
-        </>
+        <InCallControls compact label={label} status={state === "live" ? "live" : "connecting"} seconds={seconds} muted={muted}
+          onMute={() => { call.mute(!muted); setMuted(!muted); }} onDigit={(d) => call.sendDigits(d)} onHangUp={() => call.disconnect()}
+          note="Recorded and transcribed to the timeline." />
       ) : null}
       {error && (
         <div className="flex items-start gap-2 text-sm text-destructive">

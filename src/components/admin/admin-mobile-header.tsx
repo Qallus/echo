@@ -19,9 +19,12 @@ export function AdminMobileHeader({ permissions }: { permissions: string[] }) {
           <AudioLines className="size-5" />
           <span className="font-semibold tracking-[0.2em]">REDIAL</span>
         </Link>
-        <StatsToggle className="ml-auto max-[359px]:hidden" />
-        <DashboardSearch mode="admin" permissions={permissions} />
-        <ModeBadge mode="admin" canAdmin compact />
+        {/* Right side, always at the far edge (the stats toggle only shows on pages with stats). */}
+        <div className="ml-auto flex items-center gap-1">
+          <StatsToggle className="max-[359px]:hidden" />
+          <DashboardSearch mode="admin" permissions={permissions} />
+          <ModeBadge mode="admin" canAdmin compact />
+        </div>
       </div>
     </header>
   );

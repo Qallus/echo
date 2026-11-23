@@ -109,7 +109,7 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly, scheduled,
         </>}
       />
 
-      <ResponsivePanel open={isOpen} onOpenChange={(o) => !o && close()} id="admin-text-thread" defaultWidth={520}
+      <ResponsivePanel open={isOpen} onOpenChange={(o) => !o && close()} id="admin-text-thread" defaultWidth={520} fullHeight bodyClassName="flex flex-col"
         title={newTo !== null
           ? <Input autoFocus value={newTo} onChange={(e) => setNewTo(e.target.value)} placeholder="Phone number, e.g. (480) 555-0142" list="text-people" className="h-8" aria-label="To" />
           : <p className="truncate font-medium">{person?.name ?? thread?.number}</p>}
@@ -134,7 +134,7 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly, scheduled,
         {(thread?.list.length ?? 0) === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">{newTo !== null ? "Type a number, then your message." : "No messages."}</p>
         ) : (
-          <div className="flex max-h-[60dvh] flex-col-reverse gap-2 overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col-reverse gap-2 overflow-y-auto md:max-h-[60dvh] md:flex-none">
             {thread!.list.map((t) => (
               <div key={t.id} className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-sm", t.direction === "outbound" ? "self-end bg-primary text-primary-foreground" : "self-start bg-muted")}>
                 <p className="break-words whitespace-pre-wrap">{t.body}</p>

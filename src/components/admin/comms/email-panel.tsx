@@ -40,9 +40,9 @@ export function EmailPanel({ templates, sends, campaigns, audiences, unsubscribe
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1 rounded-lg border bg-card p-1">
+        <div className="-mx-4 flex w-[calc(100%+2rem)] gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:rounded-lg sm:border sm:bg-card sm:p-1">
           {tabs.map((s) => (
-            <button key={s} type="button" onClick={() => setSub(s)} className={cn("rounded-md px-3 py-1.5 text-sm font-medium capitalize", sub === s ? "bg-accent" : "text-muted-foreground hover:text-foreground")}>
+            <button key={s} type="button" onClick={() => setSub(s)} className={cn("shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium capitalize sm:rounded-md sm:border-0", sub === s ? "border-foreground bg-foreground text-background sm:bg-accent sm:text-foreground" : "text-muted-foreground hover:text-foreground")}>
               {s}{s === "scheduled" && upcoming > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{upcoming}</span>}
             </button>
           ))}

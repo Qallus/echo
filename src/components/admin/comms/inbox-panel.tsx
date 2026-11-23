@@ -121,8 +121,8 @@ export function InboxPanel({ messages, readOnly, canCrm }: { messages: InboxMess
                     <Button size="icon-sm" variant="ghost" aria-label="Delete message" disabled={pending} onClick={() => confirm("Delete this message?") && run(() => deleteInbox([m.id]), () => setOpenId(null))}><Trash2 /></Button>
                   </div>
                   {m.from_email && (
-                    <div className="space-y-2">
-                      <Textarea rows={5} value={reply} onChange={(e) => setReply(e.target.value)} placeholder={`Reply to ${m.from_name?.split(" ")[0] || m.from_email}…`} aria-label="Reply" />
+                    <div className="sticky bottom-[calc(var(--bottom-nav)+0.5rem)] space-y-2 rounded-xl bg-card/95 backdrop-blur max-lg:-mx-1 max-lg:border max-lg:p-2 max-lg:shadow-lg lg:static">
+                      <Textarea rows={3} value={reply} onChange={(e) => setReply(e.target.value)} placeholder={`Reply to ${m.from_name?.split(" ")[0] || m.from_email}…`} aria-label="Reply" />
                       <Button size="sm" disabled={pending || !reply.trim()} onClick={() => run(() => replyInbox(m.id, reply), () => setReply(""))}><Reply /> {pending ? "Sending…" : "Send reply"}</Button>
                     </div>
                   )}

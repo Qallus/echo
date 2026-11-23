@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { Copy, Delete, ExternalLink, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Voicemail } from "lucide-react";
+import { Copy, ExternalLink, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Play, Voicemail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,10 @@ import { CollectionView } from "@/components/collection/collection-view";
 import { DetailList, IconTile, muted } from "@/components/collection/kit";
 import { EmptyState } from "@/components/admin/crm/crm-kit";
 import { startCall } from "./softphone";
+import { DialPad, formatDial } from "@/components/phone/dialer";
+import { usePhoneMode } from "@/components/phone/phone-mode";
 import type { PhonePerson } from "./texts-panel";
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
 const last10 = (p: string | null | undefined) => (p ?? "").replace(/\D/g, "").slice(-10);
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const dur = (s: number | null) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "—");
@@ -26,9 +27,13 @@ const outcome = (c: PhoneCall) => (c.voicemail ? "Voicemail" : isMissed(c) ? "Mi
 
 // Dialpad (through the browser phone) and the call log: recordings,
 // transcripts, notes, and linking a call to a contact.
-export function CallsPanel({ calls, people, ready, number, readOnly }: {
+export function CallsPanel({ calls, people, ready, number, readOnly, showPad = true, heading }: {
   calls: PhoneCall[]; people: PhonePerson[]; ready: boolean; number: string | null; readOnly: boolean;
+  /** False when another dial pad is already on the page (the log only). */
+  showPad?: boolean;
+  heading?: string;
 }) {
+  const mode = usePhoneMode();
   const [dial, setDial] = useState("");
   const [audio, setAudio] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
@@ -36,8 +41,8 @@ export function CallsPanel({ calls, people, ready, number, readOnly }: {
   const byPhone = useMemo(() => new Map(people.filter((p) => p.phone).map((p) => [last10(p.phone), p])), [people]);
   const byId = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
   const matches = useMemo(() => {
-    const q = dial.trim().toLowerCase();
-    return q.length < 2 ? [] : people.filter((p) => p.phone && `${p.name} ${p.phone}`.toLowerCase().includes(q)).slice(0, 5);
+    const q = dial.replace(/\D/g, "");
+    return q.length < 3 ? [] : people.filter((p) => p.phone && p.phone.replace(/\D/g, "").includes(q)).slice(0, 3);
   }, [dial, people]);
 
   const play = (id: string) => start(async () => { const r = await recordingLink(id); if (r.url) setAudio((a) => ({ ...a, [id]: r.url! })); else setMsg({ error: r.error }); });
@@ -51,28 +56,22 @@ export function CallsPanel({ calls, people, ready, number, readOnly }: {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <div className="space-y-3 rounded-xl border bg-card p-4 lg:self-start">
-        <p className="text-xs text-muted-foreground">{ready ? `Calls from ${number}. Rings here when someone calls that number.` : "Calling isn't set up yet. Add the Twilio settings in Coolify (see the setup notes)."}</p>
-        <div className="relative">
-          <Input value={dial} onChange={(e) => setDial(e.target.value)} placeholder="Number or name" className="h-10 text-lg" aria-label="Number to call" />
-          {matches.length > 0 && (
-            <ul className="absolute top-full right-0 left-0 z-20 mt-1 rounded-lg border bg-popover p-1 shadow-md">
-              {matches.map((p) => <li key={p.id}><button type="button" className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent" onClick={() => setDial(p.phone!)}>{p.name} <span className="text-xs text-muted-foreground">{p.phone}</span></button></li>)}
-            </ul>
-          )}
+    <div className={cn("grid gap-4", showPad && mode === "both" && "lg:grid-cols-[19rem_minmax(0,1fr)]")}>
+      {showPad && (
+        <div className={cn("space-y-3 md:rounded-xl md:border md:bg-card md:p-4 lg:self-start", mode === "log" && "max-md:hidden")}>
+          <p className="text-center text-xs text-muted-foreground md:text-left">{ready ? `Calls from ${number}. Rings here when someone calls that number.` : "Calling isn't set up yet. Add the Twilio settings in Coolify (see the setup notes)."}</p>
+          <DialPad value={dial} onChange={setDial} canCall={ready && !readOnly && dial.replace(/\D/g, "").length >= 3}
+            onCall={() => { const p = byPhone.get(last10(dial)); startCall({ number: dial, name: p?.name, contactId: p?.id }); }}
+            below={matches.length > 0 ? (
+              <div className="flex w-full flex-wrap justify-center gap-1.5">
+                {matches.map((p) => <button key={p.id} type="button" className="rounded-full bg-muted px-3 py-1 text-xs hover:bg-muted-foreground/20" onClick={() => setDial(p.phone!.replace(/[^\d+]/g, ""))}>{p.name} · {formatDial(p.phone!.replace(/[^\d+]/g, ""))}</button>)}
+              </div>
+            ) : null} />
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {KEYS.map((k) => <Button key={k} variant="outline" className="h-11 text-lg" onClick={() => setDial((d) => d + k)}>{k}</Button>)}
-        </div>
-        <div className="grid grid-cols-[1fr_auto] gap-2">
-          <Button className="h-11 bg-emerald-600 text-white hover:bg-emerald-700" disabled={!ready || readOnly || !dial.trim()}
-            onClick={() => { const p = byPhone.get(last10(dial)); startCall({ number: dial.trim(), name: p?.name, contactId: p?.id }); }}><Phone /> Call</Button>
-          <Button variant="outline" className="h-11" aria-label="Delete digit" onClick={() => setDial((d) => d.slice(0, -1))}><Delete /></Button>
-        </div>
-      </div>
+      )}
 
-      <div className="min-w-0 space-y-2">
+      <div className={cn("min-w-0 space-y-2", mode === "pad" && "max-md:hidden")}>
+        {heading && <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">{heading}</h2>}
         {(msg.error || msg.ok) && <p role="status" className={msg.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{msg.error ?? msg.ok}</p>}
         {calls.length === 0 ? <EmptyState message="No calls yet." /> : (
           <CollectionView<PhoneCall>

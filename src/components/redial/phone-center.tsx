@@ -4,16 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  Archive, ArchiveRestore, AudioLines, Ban, CalendarClock, CheckSquare, Delete, Grid3x3, Mail, MailOpen, MessageSquare, Mic, MicOff, Phone,
-  PhoneIncoming, PhoneOff, PhoneOutgoing, Play, RefreshCw, ShieldAlert, Square, Star, UserCheck, UserPlus, Voicemail,
+  Archive, ArchiveRestore, AudioLines, Ban, CalendarClock, CheckSquare, Mail, MailOpen, MessageSquare, Phone,
+  PhoneIncoming, PhoneOutgoing, Play, RefreshCw, ShieldAlert, Square, Star, UserCheck, UserPlus, Voicemail,
 } from "lucide-react";
 import { CollectionView } from "@/components/collection/collection-view";
 import { LocalDate } from "@/components/local-date";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Pick } from "@/components/ui/pick";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { saveContact } from "@/lib/admin/actions/crm";
 import { addListEntry, saveCallNotes, updateCall, voicemailUrl } from "@/lib/redial/actions";
@@ -22,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { CallbackDialog } from "./callbacks";
 import { CHECK_SIGNALS, RISK_SIGNALS, VERDICT_LABEL, type Verdict } from "@/lib/redial/protection-shared";
 import { useBrowserPhone } from "./use-browser-phone";
+import { DialPad, InCallControls, clock, formatDial } from "@/components/phone/dialer";
+import { usePhoneMode } from "@/components/phone/phone-mode";
 
 // The Phone: a dial pad on the left (calls from the browser on a Redial line,
 // recorded unless switched off) and every call in and out on the right. Each
@@ -30,13 +30,11 @@ import { useBrowserPhone } from "./use-browser-phone";
 // (every line the person can see).
 
 type Msg = { ok?: string; error?: string };
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
 export const prettyNumber = (n: string | null | undefined) => (n ? n.replace(/^\+1(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") : "No caller ID");
 const outgoing = (c: Call) => c.direction === "outbound";
 const otherNumber = (c: Call) => (outgoing(c) ? c.to_number ?? null : c.from_number);
 const who = (c: Call) => (outgoing(c) ? prettyNumber(c.to_number) : c.caller_name || c.caller_id_name || prettyNumber(c.from_number));
 const unread = (c: Call) => !outgoing(c) && !c.read_at && !c.archived_at && ["message", "completed", "missed", "connected"].includes(c.status);
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 const cost = (cents: number | null | undefined) => (cents == null ? null : `$${(Number(cents) / 100).toFixed(Number(cents) < 100 ? 3 : 2)}`);
 const statusText = (c: Call) => (outgoing(c) && c.status === "completed" ? "Answered" : STATUS_LABEL[c.status]);
 const STATUS_TONE: Record<string, string> = {
@@ -64,16 +62,20 @@ const callBadges = (c: Call) => (
   </span>
 );
 
-export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false, initialCall = null }: {
+export type DialPerson = { id: string; name: string; phone: string | null };
+
+export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false, initialCall = null, people = [] }: {
   lines: Line[]; calls: Call[]; entries: ListEntry[]; manageLines: string[]; canCrm?: boolean; initialCall?: string | null;
+  /** Contacts suggested while typing a number or name. */
+  people?: DialPerson[];
 }) {
+  const mode = usePhoneMode();
   const router = useRouter();
   const ownLines = lines.filter((l) => manageLines.includes(l.id));
   const [lineId, setLineId] = useState(ownLines[0]?.id ?? "");
   const line = lines.find((l) => l.id === lineId);
   const [dial, setDial] = useState("");
   const [record, setRecord] = useState(line?.record_calls !== false);
-  const [keypad, setKeypad] = useState(false);
   const [open, setOpen] = useState<string | null>(initialCall);
   const current = open ? calls.find((c) => c.id === open) ?? null : null;
   const currentLine = current ? lines.find((l) => l.id === current.line_id) : undefined;
@@ -91,52 +93,52 @@ export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false
   const call = (number: string) => {
     const to = normalizeNumber(number);
     if (!to || !line) return;
-    setDial(prettyNumber(to));
+    setDial(to);
     void phone.place({ To: to, LineId: line.id, Record: record ? "1" : "0" });
   };
 
+  // Contacts matching what's typed (name or digits), when there's a list.
+  const q = dial.replace(/\D/g, "");
+  const matches = dial.length >= 2 && people.length
+    ? people.filter((p) => p.phone && (q.length >= 3 ? p.phone.replace(/\D/g, "").includes(q) : false)).slice(0, 3)
+    : [];
+  const chip = "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs";
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <div className={cn("grid gap-4", mode === "both" && "lg:grid-cols-[19rem_minmax(0,1fr)]")}>
       {/* Dial pad */}
-      <div className="space-y-3 rounded-xl border bg-card p-4 lg:sticky lg:top-4 lg:self-start">
-        <p className="flex items-center gap-2 text-sm font-medium"><Phone className="size-4" /> Dial pad</p>
+      <div className={cn("space-y-3 md:rounded-xl md:border md:bg-card md:p-4 lg:sticky lg:top-4 lg:self-start", mode === "log" && "max-md:hidden")}>
+        <p className="hidden items-center gap-2 text-sm font-medium md:flex"><Phone className="size-4" /> Dial pad</p>
         {ownLines.length === 0 ? (
           <p className="text-xs text-muted-foreground">Only a line&apos;s owner can call out from it in the browser.</p>
         ) : phone.busy ? (
-          <div className="space-y-3 rounded-lg bg-muted/50 p-3">
-            <p className="text-xs text-muted-foreground">{phone.state === "live" ? `On call · ${clock(phone.seconds)}` : "Calling…"}</p>
-            <p className="truncate text-lg font-semibold">{dial}</p>
-            {keypad && <div className="grid grid-cols-3 gap-1.5">{KEYS.map((k) => <Button key={k} variant="outline" size="sm" onClick={() => phone.digit(k)}>{k}</Button>)}</div>}
-            <div className="grid grid-cols-3 gap-2">
-              <Button variant="outline" aria-label={phone.muted ? "Unmute" : "Mute"} onClick={phone.toggleMute}>{phone.muted ? <MicOff /> : <Mic />}</Button>
-              <Button variant="outline" aria-label="Keypad" className={cn(keypad && "bg-accent")} onClick={() => setKeypad(!keypad)}><Grid3x3 /></Button>
-              <Button variant="destructive" aria-label="Hang up" onClick={phone.hangUp}><PhoneOff /></Button>
-            </div>
+          <div className="rounded-xl md:bg-muted/40 md:p-3">
+            <InCallControls label={formatDial(dial)} status={phone.state === "live" ? "live" : "connecting"} seconds={phone.seconds} muted={phone.muted}
+              onMute={phone.toggleMute} onDigit={phone.digit} onHangUp={phone.hangUp}
+              note={line ? `From ${prettyNumber(line.number)}${record ? " · recording" : ""}` : undefined} />
           </div>
         ) : (
-          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); call(dial); }}>
-            <Input value={dial} onChange={(e) => setDial(e.target.value)} placeholder="Enter a phone number" inputMode="tel" className="h-11 text-center text-lg" aria-label="Number to call" />
-            <div className="grid grid-cols-3 gap-2">
-              {KEYS.map((k) => <Button key={k} type="button" variant="outline" className="h-11 text-lg" onClick={() => setDial((d) => d + k)}>{k}</Button>)}
-            </div>
-            {ownLines.length > 1 ? (
-              <div className="space-y-1">
-                <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">Dial out from</p>
-                <Pick label="Dial out from" value={lineId} onChange={(v) => { setLineId(v); setRecord(lines.find((l) => l.id === v)?.record_calls !== false); }}
+          <DialPad value={dial} onChange={setDial} onCall={() => call(dial)} canCall={Boolean(normalizeNumber(dial) && line)}
+            above={<>
+              {ownLines.length > 1 ? (
+                <Pick label="Dial out from" value={lineId} className="h-8 w-auto max-w-[14rem] rounded-full text-xs" onChange={(v) => { setLineId(v); setRecord(lines.find((l) => l.id === v)?.record_calls !== false); }}
                   options={ownLines.map((l) => ({ value: l.id, label: `${l.label} · ${prettyNumber(l.number)}` }))} />
+              ) : line && <span className={cn(chip, "text-muted-foreground")}><Phone className="size-3" /> {prettyNumber(line.number)}</span>}
+              <button type="button" onClick={() => setRecord(!record)} aria-pressed={record} className={cn(chip, record ? "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300" : "text-muted-foreground")}>
+                <span className={cn("size-2 rounded-full", record ? "bg-red-500" : "bg-muted-foreground/40")} /> {record ? "Recording" : "Not recording"}
+              </button>
+            </>}
+            below={matches.length > 0 ? (
+              <div className="flex w-full flex-wrap justify-center gap-1.5">
+                {matches.map((p) => (
+                  <button key={p.id} type="button" onClick={() => setDial(normalizeNumber(p.phone!) ?? p.phone!)} className="rounded-full bg-muted px-3 py-1 text-xs hover:bg-muted-foreground/20">
+                    {p.name} · {prettyNumber(normalizeNumber(p.phone!) ?? p.phone)}
+                  </button>
+                ))}
               </div>
-            ) : line && <p className="text-xs text-muted-foreground">Calls go out from {prettyNumber(line.number)}.</p>}
-            <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
-              <span className="flex items-center gap-2"><span className={cn("size-2 rounded-full", record ? "bg-red-500" : "bg-muted-foreground/40")} /> Record call</span>
-              <Switch size="sm" checked={record} onCheckedChange={setRecord} />
-            </label>
-            <div className="grid grid-cols-[1fr_auto] gap-2">
-              <Button type="submit" className="h-11 bg-emerald-600 text-white hover:bg-emerald-700" disabled={!normalizeNumber(dial)}><Phone /> Call</Button>
-              <Button type="button" variant="outline" className="h-11" aria-label="Delete digit" onClick={() => setDial((d) => d.slice(0, -1))}><Delete /></Button>
-            </div>
-            {record && line?.record_notice !== false && <p className="text-[11px] text-muted-foreground">They&apos;ll hear &ldquo;This call may be recorded.&rdquo;</p>}
-          </form>
+            ) : null} />
         )}
+        {!phone.busy && record && line?.record_notice !== false && ownLines.length > 0 && <p className="text-center text-[11px] text-muted-foreground">They&apos;ll hear &ldquo;This call may be recorded.&rdquo;</p>}
         {phone.error && (
           <p className="flex items-start gap-2 text-xs text-destructive"><span className="flex-1">{phone.error}</span><button type="button" className="underline" onClick={phone.clearError}>Dismiss</button></p>
         )}
@@ -144,7 +146,7 @@ export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false
 
       {/* Call log: the shared list layout (list, table, cards, calendar), checkboxes
           with the bottom action bar, and a click opens the call in a side panel. */}
-      <div className="min-w-0">
+      <div className={cn("min-w-0", mode === "pad" && "max-md:hidden")}>
         <CollectionView<Call>
           items={calls} getId={(c) => c.id} title={who} noun={["call", "calls"]} storageKey="calls-log" defaultView="list"
           empty="No calls yet. Calls in and out of your Redial lines, from any phone, show up here."
