@@ -261,6 +261,9 @@ CRM and operations actions (staff, `src/lib/mcp/tools/crm.ts` and `insights.ts`)
 | `prospects_lookup` | high | Twilio carrier lookups: cost preview, runs after `confirm_action` (`prospects.run`) | `prospect_ids?`, `caller_name?` |
 | `web_search` | write | Search the web with Perplexity, Google Programmable Search or Tavily (logged, about a cent, monthly cap) | `query`, `provider?`, `count?` |
 | `leads_research` | write | Businesses of a kind in an area, with website, phone and why; marks ones already on the list | `what`, `where`, `provider?` |
+| `social_accounts_list` / `social_post_list` | read | Connected LinkedIn, Facebook and Instagram accounts; posts with status and links (`social.manage`) | `status?` |
+| `social_post_create` / `social_post_schedule` | write | Draft a post, or schedule it for a time (the scheduled job publishes it) | `body`, `account_ids`, `image_url?`, `link_url?`, `scheduled_at?` |
+| `social_post_publish` | high | Publish now: preview, runs after `confirm_action` | `post_id` |
 | `prospects_to_leads` | write | Prospects → CRM leads, tagged by provider; do-not-contact refused | `prospect_ids` |
 
 **Two-step sign-in and the connector.** Supabase OAuth access tokens carry the `aal` level of the sign-in that approved them. So when two-step is required for staff (Admin → Settings → Security), the consent page sends staff to two-step first and then back. That way the connection's tokens are `aal2` and the staff tools appear.

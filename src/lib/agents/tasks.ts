@@ -50,8 +50,8 @@ export const TASK_PRESETS: { id: string; label: string; area: string; repeat: Re
     instructions: "List new inbox messages (resource_list inbox_message, status new). Save real sales inquiries as leads with inbox_convert. Don't reply to anyone. Report each message in one line: who, what they want, what you did.",
   },
   {
-    id: "posts", label: "Draft LinkedIn posts", area: "records", repeat: "weekly", title: "Draft 3 LinkedIn posts for next week",
-    instructions: "Write 3 short LinkedIn posts for Redial (AI call screening for small businesses and families, scam protection). Plain words, one idea each, end with a question. Put them in the report; don't post anything.",
+    id: "posts", label: "Draft social posts", area: "social", repeat: "weekly", title: "Draft and schedule 3 posts for next week",
+    instructions: "Write 3 short posts for Redial (AI call screening for small businesses and families, scam protection). Plain words, one idea each, end with a question, link to https://redial.si. Use social_accounts_list, then social_post_create for each, scheduled Tuesday, Wednesday and Thursday at 9:00 next week on LinkedIn and Facebook. Never publish now. Report the three texts and their times.",
   },
 ];
 

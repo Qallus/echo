@@ -8,6 +8,7 @@ import { visibilityCron } from "@/lib/analytics/ai-visibility";
 import { sendAnalyticsDigest } from "@/lib/analytics/digest";
 import { syncSearchConsole } from "@/lib/analytics/search-console";
 import { fillCallCosts } from "@/lib/redial/call-log";
+import { publishDuePosts } from "@/lib/social/publish";
 import { sendWeeklySummaries } from "@/lib/redial/alerts";
 import { secret } from "@/lib/secrets";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -20,7 +21,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // reminders, fills in Twilio's cost for Redial calls that just ended, and
 // finishes prospect lookup runs nobody's page is driving, copies Google
 // Search Console daily, runs the monthly AI visibility check and sends the
-// Monday analytics digest.
+// Monday analytics digest, and publishes scheduled social posts.
 
 export const maxDuration = 300;
 
@@ -51,7 +52,9 @@ async function run(req: Request) {
   const search = await syncSearchConsole(db).then((r) => r.rows ?? 0, () => 0);
   const aiChecks = await visibilityCron(db, 45_000).catch((e) => { console.error("[ai visibility]", e); return 0; });
   const digest = await sendAnalyticsDigest(db).catch((e) => { console.error("[analytics digest]", e); return 0; });
-  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries, lookups, search, aiChecks, digest });
+  // Social posts whose time has come (no-op before the social posting migration).
+  const social = await publishDuePosts(db).catch((e) => { console.error("[social]", e); return 0; });
+  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries, lookups, search, aiChecks, digest, social });
 }
 
 export const GET = run;

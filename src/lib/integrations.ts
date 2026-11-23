@@ -54,17 +54,20 @@ export const SERVICES: Service[] = [
   { id: "openrouter", name: "OpenRouter", description: "Many models through one key.", testable: true, fields: [{ key: "OPENROUTER_API_KEY", label: "API key", secret: true, placeholder: "sk-or-…", required: true }] },
   { id: "moonshot", name: "Moonshot (Kimi)", description: "Kimi in Ask Echo.", testable: true, fields: [{ key: "MOONSHOT_API_KEY", label: "API key", secret: true, required: true }] },
   {
-    id: "linkedin", name: "LinkedIn", description: "Social posting (coming with the Social tab, once LinkedIn approves the app).",
+    id: "linkedin", name: "LinkedIn", description: "Admin -> Social: post as your LinkedIn profile right away, and as the Redial company page once LinkedIn approves the Community Management API. From the LinkedIn developer app (products: Sign In with LinkedIn using OpenID Connect, Share on LinkedIn). Redirect URL: https://redial.si/api/integrations/linkedin/callback. Steps: Plans -> Social posting: LinkedIn.",
     fields: [
       { key: "LINKEDIN_CLIENT_ID", label: "Client ID", required: true },
       { key: "LINKEDIN_CLIENT_SECRET", label: "Client secret", secret: true, required: true },
+      { key: "LINKEDIN_COMPANY_PAGES", label: "Company page posting approved?", placeholder: "yes, once the Community Management API is approved", help: "Then click Connect LinkedIn again to add the company page." },
+      { key: "LINKEDIN_API_VERSION", label: "API version (optional)", placeholder: "202610", help: "LinkedIn's monthly API version (YYYYMM). Leave blank for the default." },
     ],
   },
   {
-    id: "meta", name: "Meta (Facebook & Instagram)", description: "Social posting (coming with the Social tab, once Meta approves the app).",
+    id: "meta", name: "Meta (Facebook & Instagram)", description: "Admin -> Social: post to the Redial Facebook Page and its linked Instagram business account. From the Meta developer app (type Business, Facebook Login for Business). Valid OAuth redirect URI: https://redial.si/api/integrations/meta/callback. Works for Pages you admin while the app is in development; App Review is needed before going live. Steps: Plans -> Social posting: Facebook and Instagram.",
     fields: [
       { key: "META_APP_ID", label: "App ID", required: true },
       { key: "META_APP_SECRET", label: "App secret", secret: true, required: true },
+      { key: "META_GRAPH_VERSION", label: "Graph API version (optional)", placeholder: "v23.0", help: "Leave blank for the default." },
     ],
   },
   {
