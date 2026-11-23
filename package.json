@@ -11,6 +11,7 @@
     "email:build": "node scripts/email-templates.mjs",
     "email:push": "node --env-file=.env.local scripts/email-templates.mjs --push",
     "mcp:smoke": "node --env-file-if-exists=.env.local scripts/mcp-smoke.mjs",
+    "mcp:agent-smoke": "node --env-file-if-exists=.env.local scripts/mcp-agent-smoke.mjs",
     "icons": "node scripts/icons.mjs",
     "lock:linux": "node scripts/lockfile-linux.mjs",
     "stripe:setup": "node scripts/stripe-setup.mjs"

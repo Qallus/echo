@@ -292,6 +292,29 @@ claude mcp add --transport http echo https://redial.si/api/mcp
 ```
 Then run `/mcp` in Claude Code and authenticate.
 
+**ChatGPT (developer mode; Plus, Pro, Business or Enterprise):**
+1. In ChatGPT on the web: Settings → Apps & Connectors (shown as Plugins in newer versions) → Advanced → turn on **Developer mode**.
+2. Add a custom MCP server. Name: `Redial`. URL: `https://redial.si/api/mcp`. Authentication: **OAuth**, with client registration left to **dynamic registration**.
+3. Accept the warning, create it, then connect. Sign in to Redial and click **Allow**.
+4. In a chat, pick Developer mode from the tools menu and turn on Redial.
+ChatGPT uses the same OAuth 2.1 + PKCE flow and dynamic registration as Claude, so no client needs to be pre-registered. If ChatGPT ever shows a token refresh problem, check that the Supabase authorization server lists `offline_access` (or the refresh equivalent) in its discovery document. OpenAI's guide: https://developers.openai.com/api/docs/guides/developer-mode.
+
+**Codex (CLI, IDE extension and app):**
+With your own sign-in (OAuth), add the server and log in:
+```
+codex mcp add redial --url https://redial.si/api/mcp
+codex mcp login redial
+```
+For an unattended Codex agent, use an agent key (Admin → AI → Agents) instead. In `~/.codex/config.toml`:
+```toml
+[mcp_servers.redial]
+url = "https://redial.si/api/mcp"
+bearer_token_env_var = "REDIAL_AGENT_KEY"
+```
+Then set `REDIAL_AGENT_KEY=rdk_…` in the environment that launches Codex (for the desktop app, the system environment, not just one terminal). Never paste the key into the file. OpenAI's reference: https://developers.openai.com/codex/mcp.
+
+**Agents (Paperclip, Hermes, OpenClaw, Claude scheduled agents, anything that sends a header):** use `Authorization: Bearer rdk_…`. See `docs/AGENTS.md`.
+
 **Phone examples once connected:**
 - "Add a backlog item: dashboard, high priority. The recordings table needs a bulk-delete option."
 - "What's open in the Echo backlog for the frontend?"

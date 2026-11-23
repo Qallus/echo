@@ -6,8 +6,8 @@ import { DevTabs } from "@/components/marketing/dev-tabs";
 import { COMPANY } from "@/lib/company";
 
 export const metadata = {
-  title: "Developers · Echo API, webhooks and Claude connector",
-  description: "Pipe Echo recordings, transcripts, summaries and action items into your own platform with the Echo REST API, webhooks and the MCP connector for Claude.",
+  title: "Developers · Redial API, webhooks and MCP for Claude, ChatGPT and Codex",
+  description: "Pipe Echo recordings, transcripts, summaries and action items into your own platform with the Echo REST API, webhooks and the MCP connector for Claude, ChatGPT, Codex and AI agents.",
   alternates: { canonical: "/developers" },
 };
 
@@ -119,7 +119,7 @@ export default function DevelopersPage() {
         <p className="text-sm font-medium text-muted-foreground">Developers</p>
         <h1 className="mt-2 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Pipe every conversation into the tools you already use</h1>
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-          Recordings, transcripts, summaries and action items from your Echo subscription, available to your platform through a REST API, real-time webhooks and an MCP connector for Claude.
+          Recordings, transcripts, summaries and action items from your Echo subscription, available to your platform through a REST API, real-time webhooks and an MCP connector for Claude, ChatGPT, Codex and your AI agents.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button size="lg" nativeButton={false} render={<Link href="/developer" />}><KeyRound /> Get an API key</Button>
@@ -128,8 +128,8 @@ export default function DevelopersPage() {
       </header>
 
       <DevTabs tabs={[
-        { id: "mcp", label: "Claude connector (MCP)", icon: <Bot />, content: (
-      <Section id="mcp" icon={Bot} title="Claude connector (MCP)" className="pt-8 pb-14" intro="Give Claude on the web, desktop and phone, and Claude Code, the same access you have in Redial. Every tool call is checked against your permissions and logged.">
+        { id: "mcp", label: "Claude, ChatGPT and Codex (MCP)", icon: <Bot />, content: (
+      <Section id="mcp" icon={Bot} title="Claude, ChatGPT and Codex (MCP)" className="pt-8 pb-14" intro="Give Claude, ChatGPT, Codex and your own AI agents the same access you have in Redial, through one MCP server. Every tool call is checked against your permissions and logged.">
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-3">
           <code className="flex-1 truncate text-sm">{MCP_URL}</code>
           <CopyButton value={MCP_URL} label="Copy URL" />
@@ -139,14 +139,34 @@ export default function DevelopersPage() {
             <h3 className="font-medium">Claude (web and phone)</h3>
             <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
               <li>Customize → Connectors → Add custom connector.</li>
-              <li>Name it Echo and paste the URL above.</li>
-              <li>Connect, sign in to Echo, and click Allow.</li>
+              <li>Name it Redial and paste the URL above.</li>
+              <li>Connect, sign in to Redial, and click Allow.</li>
             </ol>
           </div>
           <div className="space-y-2 text-sm">
             <h3 className="font-medium">Claude Code</h3>
-            <Code label="terminal" code={`claude mcp add --transport http echo ${MCP_URL}`} />
+            <Code label="terminal" code={`claude mcp add --transport http redial ${MCP_URL}`} />
           </div>
+          <div className="space-y-2 text-sm">
+            <h3 className="font-medium">ChatGPT (developer mode)</h3>
+            <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+              <li>Settings → Apps &amp; Connectors → Advanced → turn on Developer mode.</li>
+              <li>Add a custom MCP server: paste the URL above, authentication OAuth.</li>
+              <li>Connect, sign in to Redial, and click Allow.</li>
+            </ol>
+          </div>
+          <div className="space-y-2 text-sm">
+            <h3 className="font-medium">Codex</h3>
+            <Code label="terminal" code={`codex mcp add redial --url ${MCP_URL}
+codex mcp login redial`} />
+          </div>
+        </div>
+        <div className="space-y-2 text-sm">
+          <h3 className="font-medium">AI agents (Paperclip, Hermes, OpenClaw, scheduled Claude or Codex agents)</h3>
+          <p className="text-muted-foreground">Agents use their own key instead of your sign-in. Create one in Admin → AI → Agents (Redial staff), choose what it can reach and its daily limits, then send it as a header. Risky actions wait for a person to approve.</p>
+          <Code label="Codex config.toml" code={`[mcp_servers.redial]
+url = "${MCP_URL}"
+bearer_token_env_var = "REDIAL_AGENT_KEY"`} />
         </div>
         <p className="text-sm text-muted-foreground">
           Authentication is OAuth 2.1 with dynamic client registration. Discovery: <code>{SITE}/.well-known/oauth-protected-resource</code>. Tokens carry your identity, so a connected app can never see more than you can.
@@ -214,7 +234,7 @@ export default function DevelopersPage() {
       <Section id="limits" icon={Gauge} title="Limits" intro="Generous by default, and higher on Business plans. Responses include RateLimit headers so clients can slow down before they're throttled.">
         <div className="grid gap-4 sm:grid-cols-3">
           {[
-            ["Claude connector", "120 tool calls per user per minute"],
+            ["MCP (Claude, ChatGPT, Codex, agents)", "120 tool calls per user per minute"],
             ["REST API", "Per key: 60 requests/min (Pro), 600/min (Business)"],
             ["Webhooks", "Up to 10 endpoints per workspace"],
           ].map(([t, d]) => (

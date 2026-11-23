@@ -10,7 +10,11 @@ export const AGENT_AREAS = [
   { id: "recordings", label: "Recordings, transcripts and summaries", domains: ["folder", "recording", "search", "transcript", "segment", "highlight", "summary", "action", "design"] },
   { id: "email", label: "Email (templates, audiences, sends)", domains: ["email"] },
   { id: "backlog", label: "Developer backlog", domains: ["dev"] },
-  { id: "account", label: "Account and activity", domains: ["whoami", "workspace", "member", "audit"] },
+  { id: "redial", label: "Redial lines, call trees and the Recording Studio", domains: ["redial", "call_tree", "studio"] },
+  { id: "live_agents", label: "Live Agents marketplace", domains: ["live_agents"] },
+  { id: "billing", label: "Billing (catalog, prices, promo codes, refunds)", domains: ["billing"] },
+  { id: "admin", label: "Admin: users, staff, settings and integrations", domains: ["admin"] },
+  { id: "account", label: "Account, notifications and activity", domains: ["account", "whoami", "workspace", "member", "audit"] },
 ] as const;
 
 export const domainsFor = (areas: string[]) => AGENT_AREAS.filter((a) => areas.includes(a.id)).flatMap((a) => [...a.domains]);

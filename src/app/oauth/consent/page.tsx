@@ -47,7 +47,7 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
   return (
     <Shell>
       <div className="space-y-2 text-center">
-        <h1 className="text-lg font-semibold">Allow {name} to access Echo?</h1>
+        <h1 className="text-lg font-semibold">Allow {name} to access Redial?</h1>
         <p className="text-sm text-muted-foreground">
           Signed in as <span className="font-medium text-foreground">{data.user.email}</span>
         </p>
@@ -55,8 +55,9 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
 
       <div className="space-y-3 rounded-lg border bg-muted/40 p-4 text-sm">
         <p>
-          <span className="font-medium">{name}</span> will be able to read, create, change and delete your Echo
-          recordings, folders, action items and backlog, with the same access you have.
+          <span className="font-medium">{name}</span> will be able to read, create, change and delete what you can in Redial:
+          your recordings and calls, calendar and Redial lines, and, if you&apos;re Redial staff, the CRM, prospects, inbox and admin tools.
+          It never gets more access than you have, every action is logged, and risky ones (deletes, bulk sends, refunds) ask you first.
         </p>
         {scopes.length > 0 && (
           <ul className="space-y-1.5">
