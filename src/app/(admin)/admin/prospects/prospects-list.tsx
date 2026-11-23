@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Ban, Check, Contact, Download, GitBranchPlus, Pencil, PhoneOutgoing, Plus, Radar, Settings, Trash2, Upload, UserPlus, Wand2, X } from "lucide-react";
+import { Ban, Check, Contact, Download, GitBranchPlus, Pencil, PhoneOutgoing, Plus, Radar, Settings, Trash2, Upload, UserPlus, Wand2, X, MapPinned } from "lucide-react";
 import { CollectionView } from "@/components/collection/collection-view";
 import { downloadCsv } from "@/components/admin/list-csv";
 import { LocalDate } from "@/components/local-date";
@@ -18,6 +18,7 @@ import { LINE_TYPES, PROSPECT_STATUSES, type Prospect, type ProspectStatus } fro
 import { cn } from "@/lib/utils";
 import { AddProspectPanel } from "./add-prospect";
 import { ImportPanel } from "./import-prospects";
+import { FindBusinessesPanel } from "./find-businesses";
 import { ProspectWizard } from "./prospect-wizard";
 import { LookupPanel } from "./lookup-panel";
 import { ProspectSettingsPanel, type Unmapped } from "./prospect-settings";
@@ -65,7 +66,7 @@ export function ProspectsList({ rows, manage, canRun, canSettings, settings, unm
 }) {
   const router = useRouter();
   const [, start] = useTransition();
-  const [panel, setPanel] = useState<"wizard" | "import" | "add" | null>(null);
+  const [panel, setPanel] = useState<"wizard" | "import" | "add" | "places" | null>(null);
   const [editing, setEditing] = useState<Prospect | null>(null);
   const [lookup, setLookup] = useState<{ ids: string[] | null; label: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -92,9 +93,10 @@ export function ProspectsList({ rows, manage, canRun, canSettings, settings, unm
 
   return (
     <>
-    {panel === "wizard" && <ProspectWizard counts={counts} manage={manage} canRun={canRun} onClose={() => setPanel(null)} onImport={() => setPanel("import")} onAdd={() => setPanel("add")}
+    {panel === "wizard" && <ProspectWizard counts={counts} manage={manage} canRun={canRun} onClose={() => setPanel(null)} onImport={() => setPanel("import")} onAdd={() => setPanel("add")} onFind={() => setPanel("places")}
       onLookup={() => { setPanel(null); setLookup({ ids: null, label: `${notLookedUp} not looked up yet` }); }} />}
     {panel === "import" && <ImportPanel onClose={() => setPanel(null)} />}
+    {panel === "places" && <FindBusinessesPanel pageCents={settings.placesPageCents} onClose={() => setPanel(null)} />}
     {panel === "add" && <AddProspectPanel onClose={() => setPanel(null)} />}
     {lookup && <LookupPanel ids={lookup.ids} label={lookup.label} onClose={() => setLookup(null)} />}
     {showSettings && <ProspectSettingsPanel settings={settings} unmapped={unmapped} canEdit={canSettings} onClose={() => setShowSettings(false)} />}
@@ -115,6 +117,7 @@ export function ProspectsList({ rows, manage, canRun, canSettings, settings, unm
       toolbar={
         <>
           <Button variant="outline" onClick={() => setPanel("wizard")}><Wand2 /> Wizard</Button>
+          {canRun && manage && <Button variant="outline" onClick={() => setPanel("places")}><MapPinned /> Find businesses</Button>}
           {canRun && <Button variant="outline" disabled={!notLookedUp} title={notLookedUp ? undefined : "Everything has been looked up"}
             onClick={() => setLookup({ ids: null, label: `${notLookedUp} not looked up yet` })}><Radar /> Look up{notLookedUp ? ` (${notLookedUp})` : ""}</Button>}
           <Button variant="outline" size="icon" aria-label="Prospecting settings" title="Settings: prices, cap, unmapped carriers" onClick={() => setShowSettings(true)}><Settings /></Button>
@@ -188,6 +191,8 @@ function ProspectPreview({ p, manage, onStatus }: { p: Prospect; manage: boolean
     ["Contact", [[p.contact_first_name, p.contact_last_name].filter(Boolean).join(" "), p.contact_title].filter(Boolean).join(", ") || "—"],
     ["Email", p.email ? <a key="e" href={`mailto:${p.email}`} className="break-all hover:underline">{p.email}</a> : "—"],
     ["Category", p.category ?? "—"], ["Locations", p.locations ?? "—"],
+    ...(p.rating != null ? [["Google rating", `${p.rating.toFixed(1)} ★${p.review_count != null ? ` (${p.review_count} reviews)` : ""}`] as [string, React.ReactNode]] : []),
+    ...(p.source === "places" ? [["Found on", "Google Maps"] as [string, React.ReactNode]] : []),
     ["Address", <span key="a" className="whitespace-pre-line">{[[p.address, p.address2].filter(Boolean).join(", "), [p.city, [p.state, p.zip].filter(Boolean).join(" ")].filter(Boolean).join(", "), p.country].filter(Boolean).join("\n") || "—"}</span>],
     ["Tags", p.tags?.length ? p.tags.join(", ") : "—"],
     ["Website", p.website ? <a key="w" href={/^https?:/i.test(p.website) ? p.website : `https://${p.website}`} target="_blank" rel="noreferrer" className="break-all hover:underline">{p.website}</a> : "—"],

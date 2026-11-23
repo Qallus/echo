@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, MapPin, Plus, Radar, Send, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, MapPin, MapPinned, Plus, Radar, Send, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { mapProspects } from "@/lib/admin/actions/prospects";
@@ -14,8 +14,8 @@ const STEPS = ["Add numbers", "Check the list", "Look up carriers", "Work the be
 
 // A guided walk through prospecting, start to finish. Each step says what to
 // do and has the button that does it.
-export function ProspectWizard({ counts, onClose, onImport, onAdd, onLookup, manage, canRun }: {
-  counts: WizardCounts; onClose: () => void; onImport: () => void; onAdd: () => void; onLookup: () => void; manage: boolean; canRun: boolean;
+export function ProspectWizard({ counts, onClose, onImport, onAdd, onFind, onLookup, manage, canRun }: {
+  counts: WizardCounts; onClose: () => void; onImport: () => void; onAdd: () => void; onFind: () => void; onLookup: () => void; manage: boolean; canRun: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(counts.total ? 1 : 0);
@@ -53,11 +53,12 @@ export function ProspectWizard({ counts, onClose, onImport, onAdd, onLookup, man
         {step === 0 && (
           <>
             <h3 className="text-base font-semibold">1. Add business numbers</h3>
-            <p className="text-muted-foreground">Bring in the businesses you want to call on. A CSV only needs a phone column; business name, website, address, city, state and category help with scoring and the map.</p>
+            <p className="text-muted-foreground">Find businesses on Google Maps by what they do and where, or bring in your own list. A CSV only needs a phone column; business name, website, address, city, state and category help with scoring and the map.</p>
             <p className="text-muted-foreground">Business numbers only. Numbers that can&apos;t be real are skipped, and nothing is charged yet.</p>
             {manage && (
               <div className="flex flex-wrap gap-2 pt-1">
-                <Button onClick={onImport}><Upload /> Import a list</Button>
+                {canRun && <Button onClick={onFind}><MapPinned /> Find on Google Maps</Button>}
+                <Button variant={canRun ? "outline" : "default"} onClick={onImport}><Upload /> Import a list</Button>
                 <Button variant="outline" onClick={onAdd}><Plus /> Add one business</Button>
               </div>
             )}

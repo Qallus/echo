@@ -96,6 +96,10 @@ export const SERVICES: Service[] = [
     ],
   },
   {
+    id: "google_maps", name: "Google Maps (Places)", description: "Admin -> Prospects -> Find businesses: search a category and a city on Google Maps and add the businesses as prospects. In the Redial Google Cloud project: turn on \"Places API (New)\" (billing must be on), then APIs & Services -> Credentials -> Create credentials -> API key, restricted to Places API (New). Each page of up to 20 results is billed by Google.",
+    fields: [{ key: "GOOGLE_MAPS_API_KEY", label: "API key", secret: true, placeholder: "AIza…", required: true }],
+  },
+  {
     id: "microsoft_calendar", name: "Microsoft (Outlook, OneDrive, Teams)", description: "Lets people connect a Microsoft account (personal or Microsoft 365): Outlook Calendar two-way sync first, then Outlook mail, Contacts and OneDrive. From the Redial Microsoft Entra app registration. Redirect URIs: https://redial.si/api/integrations/microsoft/callback and https://redial.si/api/calendar/microsoft/callback. Setup: docs/Integrations/MICROSOFT_API_ACCESS.md",
     fields: [
       { key: "MICROSOFT_CLIENT_ID", label: "Application (client) ID", placeholder: "00000000-0000-0000-0000-000000000000", required: true },

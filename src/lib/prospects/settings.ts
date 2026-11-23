@@ -10,9 +10,10 @@ export type ProspectingSettings = {
   callerNameCents: number; // per number, Caller Name (CNAM), only when ticked
   monthlyCapCents: number; // no run may push this month's spend past this
   cacheDays: number; // a number isn't looked up again within this many days
+  placesPageCents: number; // per page of Google Places results (up to 20 businesses)
 };
 
-export const DEFAULT_PROSPECTING: ProspectingSettings = { lineTypeCents: 0.8, callerNameCents: 1, monthlyCapCents: 2500, cacheDays: 90 };
+export const DEFAULT_PROSPECTING: ProspectingSettings = { lineTypeCents: 0.8, callerNameCents: 1, monthlyCapCents: 2500, cacheDays: 90, placesPageCents: 3.5 };
 
 const num = (v: unknown, min: number, max: number, fallback: number) =>
   typeof v === "number" && Number.isFinite(v) && v >= min && v <= max ? v : fallback;
@@ -25,6 +26,7 @@ export function readProspecting(value: unknown): ProspectingSettings {
     callerNameCents: num(v.callerNameCents, 0, 100, d.callerNameCents),
     monthlyCapCents: num(v.monthlyCapCents, 0, 10_000_000, d.monthlyCapCents),
     cacheDays: Math.round(num(v.cacheDays, 1, 730, d.cacheDays)),
+    placesPageCents: num(v.placesPageCents, 0, 100, d.placesPageCents),
   };
 }
 

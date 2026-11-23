@@ -97,7 +97,7 @@ const GROUPS: Group[] = [
   { id: "communications", title: "Communications", desc: "Phone, texts and email.", icon: MessagesSquare, ids: ["twilio", "resend"] },
   { id: "payments", title: "Payments", desc: "Checkout, subscriptions and refunds.", icon: CreditCard, ids: ["stripe"] },
   { id: "ai", title: "AI providers", desc: "Redial's own keys for transcription, summaries and Ask Echo.", icon: Sparkles, ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
-  { id: "google", title: "Google", desc: "Connect Google for customers, and Redial's own Workspace.", icon: Cloud, ids: ["google_calendar", "google_workspace"] },
+  { id: "google", title: "Google", desc: "Connect Google for customers, Redial's own Workspace, and Maps for prospecting.", icon: Cloud, ids: ["google_calendar", "google_workspace", "google_maps"] },
   { id: "microsoft", title: "Microsoft", desc: "Connect Outlook, OneDrive and Teams.", icon: LayoutGrid, ids: ["microsoft_calendar"] },
   { id: "social", title: "Social media", desc: "Posting to LinkedIn, Facebook and Instagram.", icon: Share2, ids: ["linkedin", "meta"] },
   { id: "redial", title: "Redial", desc: "The voice gateway, the mobile app and scheduled jobs.", icon: AudioLines, ids: ["redial", "mobile", "cron"] },

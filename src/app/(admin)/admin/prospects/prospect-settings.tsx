@@ -11,7 +11,7 @@ import type { ProspectingSettings } from "@/lib/prospects/settings";
 
 export type Unmapped = { carrier: string; count: number };
 
-// Twilio prices, the monthly cap and the cache window, plus carrier names
+// Twilio and Google Places prices, the monthly cap and the cache window, plus carrier names
 // that didn't match a provider (add them to src/lib/prospects/carriers.ts).
 export function ProspectSettingsPanel({ settings, unmapped, canEdit, onClose }: {
   settings: ProspectingSettings; unmapped: Unmapped[]; canEdit: boolean; onClose: () => void;
@@ -19,7 +19,7 @@ export function ProspectSettingsPanel({ settings, unmapped, canEdit, onClose }: 
   const router = useRouter();
   const [v, setV] = useState({
     lineType: String(settings.lineTypeCents / 100), callerName: String(settings.callerNameCents / 100),
-    cap: String(settings.monthlyCapCents / 100), days: String(settings.cacheDays),
+    cap: String(settings.monthlyCapCents / 100), days: String(settings.cacheDays), places: String(settings.placesPageCents / 100),
   });
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
   const [pending, start] = useTransition();
@@ -35,7 +35,7 @@ export function ProspectSettingsPanel({ settings, unmapped, canEdit, onClose }: 
   );
   const save = () => {
     const n = (s: string) => Number(s.replace(/[$,\s]/g, ""));
-    const next = { lineTypeCents: n(v.lineType) * 100, callerNameCents: n(v.callerName) * 100, monthlyCapCents: Math.round(n(v.cap) * 100), cacheDays: Math.round(n(v.days)) };
+    const next = { lineTypeCents: n(v.lineType) * 100, callerNameCents: n(v.callerName) * 100, monthlyCapCents: Math.round(n(v.cap) * 100), cacheDays: Math.round(n(v.days)), placesPageCents: n(v.places) * 100 };
     if (Object.values(next).some((x) => !Number.isFinite(x) || x < 0)) { setMsg({ error: "Use numbers only." }); return; }
     start(async () => { const r = await saveProspectingSettings(next); setMsg(r); if (r.ok) router.refresh(); });
   };
@@ -53,8 +53,9 @@ export function ProspectSettingsPanel({ settings, unmapped, canEdit, onClose }: 
       <div className="grid gap-4 sm:grid-cols-2">
         {field("lineType", "Carrier and line type, per number", "Twilio Line Type Intelligence. $0.008 as of Oct 2026.")}
         {field("callerName", "Caller name, per number", "Twilio Caller Name (US). $0.01 as of Oct 2026.")}
-        {field("cap", "Monthly spending cap", "No run can push this month's lookups past this.")}
+        {field("cap", "Monthly spending cap", "Lookups and Google searches together can't pass this in a month.")}
         {field("days", "Reuse lookups for (days)", "A number checked within this many days isn't paid for again.", "")}
+        {field("places", "Google Places, per page of results", "Text Search with phone and website (up to 20 businesses a page). About $0.035; check Google's price list. Google's monthly free usage isn't counted here.")}
       </div>
       {!canEdit && <p className="text-xs text-muted-foreground">Only owners and admins can change these.</p>}
 

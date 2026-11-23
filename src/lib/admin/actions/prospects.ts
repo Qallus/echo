@@ -12,8 +12,9 @@ import { prospectE164 } from "@/lib/prospects/phone";
 import { PROVIDERS } from "@/lib/prospects/carriers";
 import { prospectsToLeads } from "@/lib/prospects/to-leads";
 import { contactsToDeals } from "@/lib/crm/ops";
-import { estimate, processChunk, startRun, type Estimate, type RunProgress } from "@/lib/prospects/runner";
-import { readProspecting, type ProspectingSettings } from "@/lib/prospects/settings";
+import { estimate, monthSpent, processChunk, startRun, type Estimate, type RunProgress } from "@/lib/prospects/runner";
+import { searchPlacesText, type PlaceResult } from "@/lib/prospects/places";
+import { loadProspecting, readProspecting, type ProspectingSettings } from "@/lib/prospects/settings";
 import { scoreProspect } from "@/lib/prospects/score";
 import { isProspectStatus, type ProspectStatus } from "@/lib/prospects/types";
 import { createClient } from "@/lib/supabase/server";
@@ -285,4 +286,91 @@ export async function addProspectsToPipeline(ids: string[]): Promise<Result & { 
   refresh();
   revalidatePath("/admin/pipeline");
   return { ok: `${deals.ok}${r.skippedDnc ? ` ${r.skippedDnc} skipped (Do not contact).` : ""}`, dealIds: deals.dealIds, id: deals.dealIds?.[0] };
+}
+
+// ---------------------------------------------------------------------------
+// Google Places: find businesses by category and city (prospects.run, since
+// each page of results costs money and counts against the monthly cap), then
+// add the chosen ones (crm.manage).
+// ---------------------------------------------------------------------------
+export type FoundPlace = PlaceResult & { onList: boolean };
+export type PlacesPage = { results?: FoundPlace[]; next?: string; error?: string; costCents?: number; spentCents?: number; capCents?: number };
+
+const SETUP = "Run supabase/migrations/20261123130000_prospects_places.sql in Supabase first.";
+
+export async function findPlaces(query: string, pageToken?: string, page = 1): Promise<PlacesPage> {
+  await requireStaff("prospects.run");
+  const q = typeof query === "string" ? query.trim().replace(/\s+/g, " ").slice(0, 200) : "";
+  if (q.length < 3) return { error: "Type what and where, like \"HVAC in Chandler, AZ\"." };
+  const n = Math.min(Math.max(Math.round(Number(page) || 1), 1), 3);
+  const supabase = await createClient();
+  const { error: missing } = await supabase.from("places_searches").select("id").limit(1);
+  if (missing) return { error: SETUP };
+  const settings = await loadProspecting(supabase);
+  const spent = await monthSpent(supabase);
+  const cost = settings.placesPageCents;
+  if (spent + cost > settings.monthlyCapCents) return { error: `That would pass this month's cap ($${(settings.monthlyCapCents / 100).toFixed(2)}). Raise it in Settings.`, spentCents: spent, capCents: settings.monthlyCapCents };
+  const found = await searchPlacesText(q, typeof pageToken === "string" && pageToken ? pageToken.slice(0, 2000) : undefined);
+  if (found.error) return { error: found.error };
+  const results = found.results ?? [];
+  await supabase.from("places_searches").insert({ query: q, page: n, results: results.length, cost_cents: cost });
+  await adminAudit(supabase, "prospects.places.search", undefined, { query: q, page: n, results: results.length, cost_cents: cost });
+  // Mark what's already on the list (same phone number or same place).
+  const phones = results.map((r) => r.phoneE164).filter((p): p is string => Boolean(p));
+  const ids = results.map((r) => r.placeId);
+  const [byPhone, byPlace] = await Promise.all([
+    phones.length ? supabase.from("prospects").select("phone_e164").is("workspace_id", null).in("phone_e164", phones) : null,
+    ids.length ? supabase.from("prospects").select("source_ref").is("workspace_id", null).eq("source", "places").in("source_ref", ids) : null,
+  ]);
+  const have = new Set([...(byPhone?.data ?? []).map((p) => p.phone_e164 as string), ...(byPlace?.data ?? []).map((p) => p.source_ref as string)]);
+  return {
+    results: results.map((r) => ({ ...r, onList: have.has(r.placeId) || (r.phoneE164 ? have.has(r.phoneE164) : false) })),
+    next: n < 3 ? found.next : undefined, costCents: cost, spentCents: spent + cost, capCents: settings.monthlyCapCents,
+  };
+}
+
+export async function addPlaces(places: PlaceResult[], tags?: string): Promise<Result & { added?: number }> {
+  await requireStaff("crm.manage");
+  if (!Array.isArray(places) || !places.length) return { error: "Pick at least one business." };
+  if (places.length > 200) return { error: "Add up to 200 at a time." };
+  const now = new Date().toISOString();
+  const clean = new Map<string, Record<string, unknown>>();
+  let noPhone = 0;
+  for (const p of places) {
+    const phone = prospectE164(String(p?.phoneE164 ?? p?.phone ?? ""));
+    if (!phone) { noPhone++; continue; }
+    if (clean.has(phone)) continue;
+    const at = typeof p.lat === "number" && typeof p.lng === "number" && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180;
+    const rating = typeof p.rating === "number" && p.rating >= 0 && p.rating <= 5 ? Math.round(p.rating * 10) / 10 : null;
+    const reviews = typeof p.reviews === "number" && p.reviews >= 0 ? Math.round(p.reviews) : null;
+    clean.set(phone, {
+      phone_e164: phone, source: "places", source_ref: clip(p.placeId, 300), score: 0,
+      ...details({ business_name: p.name, website: p.website ?? undefined, address: p.address ?? undefined, address2: p.address2 ?? undefined,
+        city: p.city ?? undefined, state: p.state ?? undefined, zip: p.zip ?? undefined, country: p.country ?? undefined, category: p.category ?? undefined, tags }),
+      ...(at ? { latitude: p.lat, longitude: p.lng, geocoded_at: now } : {}),
+      ...(rating !== null ? { rating } : {}), ...(reviews !== null ? { review_count: reviews } : {}),
+    });
+  }
+  const supabase = await createClient();
+  const phones = [...clean.keys()];
+  const existing = new Set<string>();
+  if (phones.length) {
+    const { data, error } = await supabase.from("prospects").select("phone_e164").is("workspace_id", null).in("phone_e164", phones);
+    if (error) return { error: error.message };
+    for (const p of data ?? []) existing.add(p.phone_e164 as string);
+  }
+  const fresh = phones.filter((p) => !existing.has(p)).map((p) => clean.get(p)!);
+  const lookups = await lookupsFor(supabase, fresh.map((r) => r.phone_e164 as string));
+  for (const r of fresh) {
+    const l = lookups.get(r.phone_e164 as string);
+    r.score = scoreProspect({ provider: l?.provider ?? null, confidence: l?.confidence ?? null, category: (r.category as string) ?? null, city: (r.city as string) ?? null, website: (r.website as string) ?? null, status: "new" });
+  }
+  if (fresh.length) {
+    const { error } = await supabase.from("prospects").insert(fresh);
+    if (error) return { error: /column|schema cache/i.test(error.message) ? SETUP : error.message };
+  }
+  await adminAudit(supabase, "prospects.import", undefined, { added: fresh.length, duplicates: existing.size, invalid: noPhone, source: "places" });
+  refresh();
+  const parts = [`${fresh.length} added`, existing.size ? `${existing.size} already on the list` : "", noPhone ? `${noPhone} had no phone number` : ""].filter(Boolean);
+  return { ok: `${parts.join(", ")}.`, added: fresh.length };
 }

@@ -26,7 +26,10 @@ const monthStart = () => { const d = new Date(); return new Date(Date.UTC(d.getU
 export async function monthSpent(db: SupabaseClient): Promise<number> {
   const { data } = await db.from("lookup_runs").select("actual_cost_cents, est_cost_cents, status").is("workspace_id", null).gte("created_at", monthStart());
   // Finished runs count what they cost; runs still going count their estimate.
-  return (data ?? []).reduce((sum, r) => sum + Number(r.status === "done" || r.status === "cancelled" ? r.actual_cost_cents : Math.max(r.actual_cost_cents, r.est_cost_cents)), 0);
+  const lookups = (data ?? []).reduce((sum, r) => sum + Number(r.status === "done" || r.status === "cancelled" ? r.actual_cost_cents : Math.max(r.actual_cost_cents, r.est_cost_cents)), 0);
+  // Google Places searches share the cap (table from migration 20261123130000).
+  const { data: searches } = await db.from("places_searches").select("cost_cents").is("workspace_id", null).gte("created_at", monthStart());
+  return lookups + (searches ?? []).reduce((sum, r) => sum + Number(r.cost_cents), 0);
 }
 
 // The numbers a run would cover: the chosen prospects, or every prospect not
