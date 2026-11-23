@@ -7,7 +7,7 @@ import { geocode } from "@/lib/crm/geocode";
 import { moveDealStage } from "@/lib/crm/ops";
 import { requireStaff } from "@/lib/admin/guard";
 import { STAGES } from "@/lib/crm/deals";
-import { isActivityKind, isCompanyStatus, isContactKind, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
+import { contactPlace, isActivityKind, isCompanyStatus, isContactKind, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
 import { cents, date, email, list, ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -148,6 +148,8 @@ export async function saveContact(id: string | null, input: ContactInput): Promi
   const name = [row.first_name, row.last_name].filter(Boolean).join(" ");
   await adminAudit(supabase, id ? "crm.contact.update" : "crm.contact.create", { type: "crm_contact", id: data.id }, { name, kind });
   if (!id && row.role === "lead") await queueAutomations(supabase, "lead_created", [{ contactId: data.id }]);
+  const place = contactPlace(row);
+  if (place) after(() => placeContacts(supabase, [{ id: data.id, place }]));
   refresh();
   return { ok: id ? "Saved." : `${name} added.`, id: data.id };
 }
@@ -287,4 +289,38 @@ export async function geocodeClients(): Promise<Result> {
   }
   refresh();
   return { ok: data?.length ? `Placed ${found} of ${data.length} on the map.` : "Every client with an address is already mapped." };
+}
+
+// Contacts and leads on the map: one OpenStreetMap search per distinct
+// address (about a second each). Skips addresses already placed; quietly does
+// nothing before the 20261123120000 update has run.
+async function placeContacts(supabase: Awaited<ReturnType<typeof createClient>>, rows: { id: string; place: string }[]) {
+  const { data: placed, error } = await supabase.from("crm_contacts").select("id, geocoded_address").in("id", rows.map((r) => r.id));
+  if (error) return 0;
+  const done = new Map((placed ?? []).map((r) => [r.id, r.geocoded_address]));
+  const groups = new Map<string, string[]>();
+  for (const r of rows) if (done.get(r.id) !== r.place) groups.set(r.place, [...(groups.get(r.place) ?? []), r.id]);
+  let found = 0;
+  for (const [place, ids] of groups) {
+    const hit = await geocode(`${place}, USA`);
+    if (hit) found += ids.length;
+    await supabase.from("crm_contacts").update({ latitude: hit?.lat ?? null, longitude: hit?.lng ?? null, geocoded_address: place }).in("id", ids);
+  }
+  return found;
+}
+
+// "Place on map" on Contacts and Leads: up to 30 addresses a click.
+export async function geocodeContacts(): Promise<Result> {
+  await requireStaff("crm.manage");
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("crm_contacts").select("id, address, city, state, zip").is("geocoded_address", null).or("city.not.is.null,zip.not.is.null").limit(2000);
+  if (error) return { error: "Run supabase/migrations/20261123120000_crm_contacts_map.sql in Supabase first." };
+  const rows = (data ?? []).flatMap((c) => { const place = contactPlace(c); return place ? [{ id: c.id, place }] : []; });
+  const places = [...new Set(rows.map((r) => r.place))].slice(0, 30);
+  const batch = rows.filter((r) => places.includes(r.place));
+  if (!batch.length) return { ok: "Everyone with a city or zip is already on the map." };
+  const found = await placeContacts(supabase, batch);
+  const left = rows.length - batch.length;
+  refresh();
+  return { ok: `Placed ${found} of ${batch.length} on the map.${left ? ` ${left} more: click again.` : ""}` };
 }

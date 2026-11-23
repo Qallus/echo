@@ -1,44 +1,39 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import { UserAvatar } from "@/components/profile/user-avatar";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { Ban, CalendarDays, Download, Mail, Tag, UserRound, ExternalLink, GitBranchPlus, Kanban, LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2, Upload } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Download, GitBranchPlus, Kanban, Mail, MapPin, Plus, Tag, Trash2, Upload, UserRound, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pick } from "@/components/ui/pick";
+import { CollectionView, type CollectionAction } from "@/components/collection/collection-view";
+import { muted } from "@/components/collection/kit";
 import { addToPipeline } from "@/lib/admin/actions/crm-pipeline";
 import { bulkDelete, bulkUpdate, type BulkChange } from "@/lib/admin/actions/crm-bulk";
-import { deleteContacts, setLeadStatus } from "@/lib/admin/actions/crm-people";
+import { geocodeContacts } from "@/lib/admin/actions/crm";
+import { setLeadStatus } from "@/lib/admin/actions/crm-people";
 import { contactsToCsv, downloadCsv } from "@/lib/crm/csv";
-import { LEAD_STATUSES, contactName, ownerName, type Contact, type LeadStatus, type StaffOption } from "@/lib/crm/types";
+import { LEAD_STATUSES, contactName, contactPlace, ownerName, type Contact, type LeadStatus, type StaffOption } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
-import { EmptyState, RecordCalendar, RowActions, SearchBox, StatRow, StatTile, ViewSwitcher, type RowAction } from "./crm-kit";
-import { BulkBar, emailEveryone, type BulkAction } from "./bulk-bar";
-import { DataTable, plain, type Column } from "./data-table";
+import { StatRow, StatTile } from "./crm-kit";
+import { emailEveryone } from "./bulk-bar";
 import { ComposeDialog, type Person } from "@/components/admin/comms/compose-dialog";
+import { ContactPreview, contactAvatar, contactWhere } from "./contact-preview";
 import { ImportDialog } from "./import-dialog";
 import { ContactDialog } from "./record-dialogs";
-
-type View = "board" | "list" | "table" | "cards" | "calendar";
-const VIEWS = [
-  { id: "board" as const, label: "Board", icon: Kanban },
-  { id: "list" as const, label: "List", icon: List },
-  { id: "table" as const, label: "Table", icon: TableIcon },
-  { id: "cards" as const, label: "Cards", icon: LayoutGrid },
-  { id: "calendar" as const, label: "Calendar", icon: CalendarDays },
-];
 
 export function LeadStatusBadge({ status }: { status: LeadStatus | null }) {
   const s = LEAD_STATUSES.find((x) => x.id === (status ?? "new"))!;
   return <Badge className={cn("border-transparent", s.tone)}>{s.label}</Badge>;
 }
 
-const sub = (c: Contact) => [c.company?.name, c.interest, c.source].filter(Boolean).join(" · ");
+const statusOf = (c: Contact): LeadStatus => c.lead_status ?? "new";
+const isOpen = (c: Contact) => LEAD_STATUSES.find((s) => s.id === statusOf(c))?.open ?? true;
+const sub = (c: Contact) => [c.company_name ?? c.company?.name, c.interest, c.source].filter(Boolean).join(" · ");
+type Msg = { ok?: string; error?: string };
 
-// Inquiries before they're opportunities: work them through the lead
-// lifecycle, then Add to Pipeline (Channel-Cast's leads page).
+// Inquiries before they're opportunities, on the shared list layout: drag
+// them across the board through the lead lifecycle, then Add to Pipeline.
+// Also list, table, cards, map, and a calendar by the day they came in.
 export function LeadsPage({ leads, companies, staff, readOnly }: {
   leads: Contact[]; companies: { id: string; name: string }[]; staff: StaffOption[]; readOnly: boolean;
 }) {
@@ -46,73 +41,37 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
   const [list, setList] = useState(leads);
   const [prev, setPrev] = useState(leads);
   if (leads !== prev) { setPrev(leads); setList(leads); }
-  const [view, setView] = useState<View>("board");
-  const [search, setSearch] = useState("");
-  const [owner, setOwner] = useState("");
-  const [showClosed, setShowClosed] = useState(false);
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
   const [importing, setImporting] = useState(false);
   const [composeTo, setComposeTo] = useState<Person[] | null>(null);
-  const [dragging, setDragging] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
-  const [, start] = useTransition();
+  const [msg, setMsg] = useState<Msg>({});
+  const [pending, start] = useTransition();
 
-  const statuses = LEAD_STATUSES.filter((s) => showClosed || s.open);
-  const shown = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return list.filter((c) => (!owner || c.owner_id === owner) && (showClosed || LEAD_STATUSES.find((s) => s.id === (c.lead_status ?? "new"))?.open)
-      && (!q || `${contactName(c)} ${c.email ?? ""} ${sub(c)}`.toLowerCase().includes(q)));
-  }, [list, search, owner, showClosed]);
-  const n = (...ids: LeadStatus[]) => list.filter((c) => ids.includes(c.lead_status ?? "new")).length;
-
-  const run = (fn: () => Promise<{ ok?: string; error?: string }>) => start(async () => setMsg(await fn()));
-  const setStatus = (c: Contact, status: LeadStatus) => {
-    if (readOnly || c.lead_status === status) return;
+  const n = (...ids: LeadStatus[]) => list.filter((c) => ids.includes(statusOf(c))).length;
+  const unplaced = list.filter((c) => c.latitude == null && !c.geocoded_address && contactPlace(c)).length;
+  const done = async (p: Promise<Msg>) => { const r = await p; setMsg(r); if (!r.error) router.refresh(); return r; };
+  const run = (fn: () => Promise<Msg>) => start(async () => { await done(fn()); });
+  const ids = (rows: Contact[]) => rows.map((c) => c.id);
+  const change = (rows: Contact[], patch: BulkChange) => done(bulkUpdate("crm_contacts", ids(rows), patch));
+  // Drag on the board: move the card at once, put it back if saving fails.
+  const move = (c: Contact, status: LeadStatus) => {
+    if (readOnly || statusOf(c) === status) return;
     const before = list;
     setList(list.map((x) => (x.id === c.id ? { ...x, lead_status: status } : x)));
-    start(async () => { const res = await setLeadStatus([c.id], status); setMsg(res); if (res.error) setList(before); });
+    start(async () => { const r = await setLeadStatus([c.id], status); setMsg(r); if (r.error) setList(before); });
   };
-  const open = (id: string) => router.push(`/admin/contacts/${id}`);
-  const actions = (c: Contact): RowAction[] => [
-    { label: "Work lead", icon: ExternalLink, onClick: () => open(c.id) },
-    ...(readOnly ? [] : [
-      { label: "Add to pipeline", icon: GitBranchPlus, onClick: () => run(() => addToPipeline([c.id])) },
-      { label: "Disqualify", icon: Ban, onClick: () => setStatus(c, "disqualified") },
-      { label: "Edit", icon: Pencil, onClick: () => setEditing(c) },
-      { label: "Delete", icon: Trash2, onClick: () => confirm(`Delete ${contactName(c)}?`) && run(() => deleteContacts([c.id])), destructive: true },
-    ]),
-  ];
 
-  const ids = [...selected];
-  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const box = (c: Contact) => <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} aria-label={`Select ${contactName(c)}`} />;
-  const change = (patch: BulkChange) => run(() => bulkUpdate("crm_contacts", ids, patch));
-  const picked = () => list.filter((c) => selected.has(c.id));
-  const bulk: BulkAction[] = [
+  const actions: CollectionAction<Contact>[] = [
     ...(readOnly ? [] : [
-      { label: "Add to pipeline", icon: GitBranchPlus, run: () => run(async () => { const r = await addToPipeline(ids); if (!r.error) setSelected(new Set()); return r; }) },
-      { label: "Lead status", icon: Kanban, options: LEAD_STATUSES.map((s) => ({ value: s.id, label: s.label })), onPick: (v: string) => change({ lead_status: v }) },
-      { label: "Owner", icon: UserRound, options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))], onPick: (v: string) => change({ owner_id: v || null }) },
-      { label: "Add tags", icon: Tag, input: { placeholder: "Tags, comma separated", submit: "Add tags", onSubmit: (v: string) => change({ add_tags: v }) } },
-    ]),
-    { label: "Email", icon: Mail, run: () => (readOnly ? emailEveryone(picked().map((c) => c.email)) : setComposeTo(picked().map((c) => ({ id: c.id, name: contactName(c), email: c.email })))) },
-    { label: "Export", icon: Download, run: () => downloadCsv("leads.csv", contactsToCsv(picked())) },
+      { label: "Add to pipeline", icon: GitBranchPlus, run: (rows: Contact[]) => done(addToPipeline(ids(rows))) },
+      { label: "Lead status", icon: Kanban, options: LEAD_STATUSES.map((s) => ({ value: s.id, label: s.label })), pick: (rows: Contact[], v: string) => change(rows, { lead_status: v }) },
+      { label: "Owner", icon: UserRound, options: [{ value: "", label: "Unassigned" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))], pick: (rows: Contact[], v: string) => change(rows, { owner_id: v || null }) },
+      { label: "Add tags", icon: Tag, input: { placeholder: "Tags, comma separated", submit: "Add tags", onSubmit: (rows: Contact[], v: string) => change(rows, { add_tags: v }) } },
+    ] satisfies CollectionAction<Contact>[]),
+    { label: "Email", icon: Mail, run: (rows) => (readOnly ? emailEveryone(rows.map((c) => c.email)) : setComposeTo(rows.map((c) => ({ id: c.id, name: contactName(c), email: c.email })))) },
+    { label: "Export", icon: Download, run: (rows) => downloadCsv("leads.csv", contactsToCsv(rows)) },
     ...(readOnly ? [] : [{ label: "Delete", icon: Trash2, destructive: true,
-      run: () => confirm(`Delete ${ids.length} leads? Their activity is deleted too.`) && run(async () => { const r = await bulkDelete("crm_contacts", ids); if (!r.error) setSelected(new Set()); return r; }) }]),
-  ];
-  const columns: Column<Contact>[] = [
-    { id: "name", label: "Lead", cell: (c) => <span className="flex items-center gap-2"><UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="sm" /><span className="font-medium">{contactName(c)}</span></span>, value: contactName },
-    { id: "status", label: "Status", cell: (c) => <LeadStatusBadge status={c.lead_status} />, value: (c) => LEAD_STATUSES.find((s) => s.id === (c.lead_status ?? "new"))!.label, filter: true },
-    { id: "company", label: "Company", cell: (c) => plain(c.company?.name), value: (c) => c.company?.name ?? null, filter: true },
-    { id: "interest", label: "Interest", cell: (c) => plain(c.interest), value: (c) => c.interest, filter: true },
-    { id: "source", label: "Source", cell: (c) => plain(c.source), value: (c) => c.source, filter: true },
-    { id: "email", label: "Email", cell: (c) => plain(c.email), value: (c) => c.email, hidden: true },
-    { id: "phone", label: "Phone", cell: (c) => plain(c.phone), value: (c) => c.phone, hidden: true },
-    { id: "tags", label: "Tags", cell: (c) => c.tags.join(", ") || "—", value: (c) => c.tags, filter: true, hidden: true },
-    { id: "city", label: "City", cell: (c) => plain(c.city), value: (c) => c.city, filter: true, hidden: true },
-    { id: "owner", label: "Owner", cell: (c) => plain(ownerName(staff, c.owner_id)), value: (c) => ownerName(staff, c.owner_id), filter: true },
-    { id: "created", label: "Came in", cell: (c) => new Date(c.created_at).toLocaleDateString(), value: (c) => c.created_at },
+      run: (rows: Contact[]) => confirm(`Delete ${rows.length === 1 ? contactName(rows[0]) : `${rows.length} leads`}? Their activity is deleted too.`) && done(bulkDelete("crm_contacts", ids(rows))) }]),
   ];
 
   return (
@@ -124,88 +83,58 @@ export function LeadsPage({ leads, companies, staff, readOnly }: {
         <StatTile label="In pipeline" value={n("in_pipeline")} />
       </StatRow>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchBox value={search} onChange={setSearch} placeholder="Search leads…" />
-          <Pick label="Owner" className="w-fit" value={owner} onChange={(v) => setOwner(v)}
-            options={[{ value: "", label: "All owners" }, ...staff.map((s) => ({ value: s.user_id, label: s.name }))]} />
-          <label className="flex items-center gap-1.5 text-sm text-muted-foreground"><Checkbox checked={showClosed} onCheckedChange={(v) => setShowClosed(Boolean(v))} /> In pipeline & disqualified</label>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ViewSwitcher views={VIEWS} value={view} onChange={setView} />
-          {!readOnly && <Button variant="outline" onClick={() => setImporting(true)}><Upload /> Import</Button>}
-          {!readOnly && <Button onClick={() => setEditing("new")}><Plus /> Add lead</Button>}
-        </div>
-      </div>
-      <BulkBar count={selected.size} total={shown.length} pending={false} onClear={() => setSelected(new Set())} onSelectAll={() => setSelected(new Set(shown.map((c) => c.id)))} actions={bulk} />
-      {(msg.ok || msg.error) && <p className={cn("text-sm", msg.error ? "text-destructive" : "text-muted-foreground")}>{msg.error ?? msg.ok}</p>}
-
-      {shown.length === 0 && view !== "board" ? (
-        <EmptyState message={list.length ? "No leads match your filters." : "No leads yet. Add one or import a CSV."} />
-      ) : view === "board" ? (
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
-          {statuses.map((s) => {
-            const col = shown.filter((c) => (c.lead_status ?? "new") === s.id);
-            return (
-              <section key={s.id} className="flex w-64 shrink-0 flex-col rounded-xl border bg-card p-2"
-                onDragOver={(e) => { if (dragging && !readOnly) e.preventDefault(); }}
-                onDrop={(e) => { e.preventDefault(); const c = list.find((x) => x.id === dragging); if (c) setStatus(c, s.id); setDragging(null); }}>
-                <div className="mb-2 flex items-center justify-between px-1"><LeadStatusBadge status={s.id} /><span className="text-xs text-muted-foreground">{col.length}</span></div>
-                <div className="flex min-h-20 flex-1 flex-col gap-2">
-                  {col.map((c) => (
-                    <article key={c.id} draggable={!readOnly} onDragStart={() => setDragging(c.id)} onDragEnd={() => setDragging(null)}
-                      className={cn("rounded-md border bg-background p-2.5", !readOnly && "cursor-grab", dragging === c.id && "opacity-50")}>
-                      <div className="flex items-start gap-2">
-                        <span className="pt-0.5">{box(c)}</span>
-                        <button type="button" onClick={() => open(c.id)} className="min-w-0 flex-1 text-left">
-                          <p className="truncate text-sm font-medium">{contactName(c)}</p>
-                          <p className="truncate text-[11px] text-muted-foreground">{sub(c) || c.email || "—"}</p>
-                        </button>
-                        <RowActions actions={actions(c)} />
-                      </div>
-                      <p className="mt-1 truncate text-[10px] text-muted-foreground">{ownerName(staff, c.owner_id) ?? "Unassigned"}</p>
-                    </article>
-                  ))}
-                  {col.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground/60">Empty</p>}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      ) : view === "list" ? (
-        <div className="space-y-2">
-          {shown.map((c) => (
-            <div key={c.id} className="flex items-center gap-3 rounded-xl border bg-card p-3 hover:border-primary/40">
-              {box(c)}
-              <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="md" />
-              <button type="button" onClick={() => open(c.id)} className="min-w-0 flex-1 text-left">
-                <span className="flex items-center gap-2"><span className="truncate text-sm font-medium">{contactName(c)}</span><LeadStatusBadge status={c.lead_status} /></span>
-                <span className="block truncate text-xs text-muted-foreground">{sub(c) || c.email || "—"}</span>
-              </button>
-              <span className="hidden text-xs text-muted-foreground sm:block">{ownerName(staff, c.owner_id) ?? "Unassigned"}</span>
-              <RowActions actions={actions(c)} />
-            </div>
-          ))}
-        </div>
-      ) : view === "table" ? (
-        <DataTable rows={shown} columns={columns} getId={(c) => c.id} selected={selected} onSelect={setSelected} onOpen={(c) => open(c.id)} rowEnd={(c) => <RowActions actions={actions(c)} />} />
-      ) : view === "cards" ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map((c) => (
-            <div key={c.id} className="space-y-2 rounded-xl border bg-card p-4">
-              <div className="flex items-start gap-2">
-                <span className="pt-1">{box(c)}</span>
-                <UserAvatar name={contactName(c)} email={c.email ?? ""} src={c.photo ?? null} size="sm" />
-                <button type="button" onClick={() => open(c.id)} className="min-w-0 flex-1 text-left"><p className="truncate font-medium">{contactName(c)}</p><p className="truncate text-xs text-muted-foreground">{sub(c) || c.email || "—"}</p></button>
-                <RowActions actions={actions(c)} />
-              </div>
-              <LeadStatusBadge status={c.lead_status} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <RecordCalendar items={shown} getId={(c) => c.id} getDate={(c) => c.created_at} getTitle={contactName} onOpen={open} footer="Leads placed by the day they came in." />
+      {(msg.ok || msg.error) && (
+        <p className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 text-sm", msg.error ? "border-destructive/30 bg-destructive/10 text-destructive" : "bg-muted/40")}>
+          <span className="flex-1">{msg.error ?? msg.ok}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setMsg({})} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        </p>
       )}
+
+      <CollectionView<Contact>
+        items={list} getId={(c) => c.id} title={contactName} noun={["lead", "leads"]} storageKey="admin-leads" defaultView="board"
+        media={(c) => contactAvatar(c, "sm")}
+        subtitle={(c) => sub(c) || c.email || "—"}
+        badge={(c) => <LeadStatusBadge status={c.lead_status} />}
+        meta={(c) => ownerName(staff, c.owner_id) ?? "Unassigned"}
+        searchText={(c) => `${contactName(c)} ${c.email ?? ""} ${c.phone ?? ""} ${sub(c)} ${c.city ?? ""} ${c.state ?? ""} ${c.zip ?? ""} ${c.tags.join(" ")} ${ownerName(staff, c.owner_id) ?? ""}`}
+        filters={[
+          { id: "open", label: "Open", test: isOpen },
+          ...LEAD_STATUSES.map((s) => ({ id: s.id, label: s.label, test: (c: Contact) => statusOf(c) === s.id })),
+          { id: "all", label: "All", test: () => true },
+        ]}
+        columns={[
+          { id: "name", label: "Lead", cell: (c) => <span className="flex items-center gap-2">{contactAvatar(c, "sm")}<span className="font-medium">{contactName(c)}</span></span>, sort: contactName },
+          { id: "status", label: "Status", cell: (c) => <LeadStatusBadge status={c.lead_status} />, sort: (c) => LEAD_STATUSES.findIndex((s) => s.id === statusOf(c)) },
+          { id: "business", label: "Business", cell: (c) => muted(c.company_name ?? c.company?.name), sort: (c) => c.company_name ?? c.company?.name ?? null },
+          { id: "interest", label: "Interest", cell: (c) => muted(c.interest), sort: (c) => c.interest },
+          { id: "source", label: "Source", cell: (c) => muted(c.source), sort: (c) => c.source },
+          { id: "place", label: "City", cell: (c) => muted(contactWhere(c) || null), sort: (c) => contactWhere(c) || null },
+          { id: "owner", label: "Owner", cell: (c) => muted(ownerName(staff, c.owner_id)), sort: (c) => ownerName(staff, c.owner_id) },
+          { id: "created", label: "Came in", cell: (c) => new Date(c.created_at).toLocaleDateString(), sort: (c) => c.created_at },
+        ]}
+        board={{
+          lanes: LEAD_STATUSES.map((s) => ({ id: s.id, label: <LeadStatusBadge status={s.id} /> })),
+          lane: statusOf,
+          onMove: readOnly ? undefined : (c, lane) => move(c, lane as LeadStatus),
+        }}
+        location={(c) => (c.latitude != null && c.longitude != null ? { lat: c.latitude, lng: c.longitude } : null)}
+        date={(c) => c.created_at}
+        actions={actions}
+        preview={(c, close) => (
+          <ContactPreview c={c} staff={staff} badge={<LeadStatusBadge status={c.lead_status} />} openLabel="Work lead" pending={pending}
+            onPipeline={readOnly ? undefined : () => run(() => addToPipeline([c.id]))}
+            onEdit={readOnly ? undefined : () => { close(); setEditing(c); }} />
+        )}
+        toolbar={
+          <>
+            {!readOnly && unplaced > 0 && <Button variant="outline" disabled={pending} title="Find each address on the map (about a second each)" onClick={() => run(geocodeContacts)}><MapPin /> Place on map ({unplaced})</Button>}
+            <Button variant="outline" onClick={() => downloadCsv("leads.csv", contactsToCsv(list))} disabled={!list.length}><Download /> Export</Button>
+            {!readOnly && <Button variant="outline" onClick={() => setImporting(true)}><Upload /> Import</Button>}
+            {!readOnly && <Button onClick={() => setEditing("new")}><Plus /> Add lead</Button>}
+          </>
+        }
+        empty="No leads yet. Add one or import a CSV."
+      />
 
       {editing && <ContactDialog open onOpenChange={(o) => !o && setEditing(null)} contact={editing === "new" ? undefined : editing} role="lead" companies={companies} staff={staff} stay={editing !== "new"} />}
       {importing && <ImportDialog onClose={() => setImporting(false)} role="lead" />}

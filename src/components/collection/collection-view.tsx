@@ -3,12 +3,13 @@
 import dynamic from "next/dynamic";
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import {
-  ArrowDown, ArrowDownUp, ArrowUp, ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Map as MapIcon, Search, Table2,
+  ArrowDown, ArrowDownUp, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Kanban, LayoutGrid, List, Map as MapIcon, Search, Table2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { cn } from "@/lib/utils";
@@ -17,8 +18,8 @@ import { ViewSwitcher } from "@/components/admin/crm/crm-kit";
 import { QuickActionBar } from "./quick-action-bar";
 
 // One layout for every list in the dashboards (user, admin, Agent Desk):
-// search, filter chips, sort, and five views (list, table, cards, map,
-// calendar). Every row has a checkbox; ticking rows brings up the quick-action
+// search, filter chips, sort, and up to six views (board, list, table, cards,
+// map, calendar). Every row has a checkbox; ticking rows brings up the quick-action
 // bar at the bottom of the screen. Clicking a row opens its preview in a side
 // sheet (bottom sheet on phones). Map and calendar appear when the page gives
 // a location or a date for its items. Built from Admin → Live Agents.
@@ -34,14 +35,20 @@ export type CollectionColumn<T> = {
 };
 export type CollectionFilter<T> = { id: string; label: string; test: (row: T) => boolean };
 export type CollectionAction<T> = {
-  label: string; icon: LucideIcon; run: (rows: T[]) => unknown; destructive?: boolean;
+  label: string; icon: LucideIcon; run?: (rows: T[]) => unknown; destructive?: boolean;
   /** Only when exactly one row is ticked (Edit, Contact…). */
   single?: boolean; show?: (rows: T[]) => boolean;
+  /** A menu of values instead of a button (status, owner…): pick(rows, value). */
+  options?: { value: string; label: string }[]; pick?: (rows: T[], value: string) => unknown;
+  /** A short text box instead of a button (tags): submit(rows, text). */
+  input?: { placeholder: string; submit: string; onSubmit: (rows: T[], value: string) => unknown };
 };
+/** Board view: one lane per status; cards can be dragged between lanes. */
+export type CollectionBoard<T> = { lanes: { id: string; label: React.ReactNode }[]; lane: (row: T) => string; onMove?: (row: T, lane: string) => void };
 
-type View = "list" | "table" | "cards" | "map" | "calendar";
+type View = "board" | "list" | "table" | "cards" | "map" | "calendar";
 const VIEWS: { id: View; label: string; icon: LucideIcon }[] = [
-  { id: "list", label: "List", icon: List }, { id: "table", label: "Table", icon: Table2 }, { id: "cards", label: "Cards", icon: LayoutGrid },
+  { id: "board", label: "Board", icon: Kanban }, { id: "list", label: "List", icon: List }, { id: "table", label: "Table", icon: Table2 }, { id: "cards", label: "Cards", icon: LayoutGrid },
   { id: "map", label: "Map", icon: MapIcon }, { id: "calendar", label: "Calendar", icon: CalendarDays },
 ];
 
@@ -62,6 +69,8 @@ export type CollectionProps<T> = {
   location?: (row: T) => { lat: number; lng: number } | null;
   /** Turns on the calendar view (ISO date or datetime). */
   date?: (row: T) => string | null;
+  /** Turns on the board view. */
+  board?: CollectionBoard<T>;
   actions?: CollectionAction<T>[];
   /** What the side sheet shows when a row is clicked. */
   preview?: (row: T, close: () => void) => React.ReactNode;
@@ -85,7 +94,7 @@ function useView(key: string, fallback: View, allowed: View[]) {
 }
 
 export function CollectionView<T>(p: CollectionProps<T>) {
-  const allowed = VIEWS.filter((v) => (v.id !== "map" || p.location) && (v.id !== "calendar" || p.date)).map((v) => v.id);
+  const allowed = VIEWS.filter((v) => (v.id !== "map" || p.location) && (v.id !== "calendar" || p.date) && (v.id !== "board" || p.board)).map((v) => v.id);
   const [view, setView] = useView(p.storageKey, p.defaultView ?? "table", allowed);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState(p.filters?.[0]?.id ?? "");
@@ -161,9 +170,10 @@ export function CollectionView<T>(p: CollectionProps<T>) {
         </label>
       ) : null}
 
-      {shown.length === 0 ? (
+      {shown.length === 0 && view !== "board" ? (
         <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{q ? `No ${many} match that search.` : p.empty ?? `No ${many} yet.`}</p>
-      ) : view === "list" ? <ListView {...v} />
+      ) : view === "board" ? <BoardView {...v} />
+        : view === "list" ? <ListView {...v} />
         : view === "table" ? <TableView {...v} sort={sort} onSort={onSort} allShown={allShown} toggleAll={toggleAll} />
         : view === "cards" ? <CardsView {...v} />
         : view === "map" ? <MapView {...v} />
@@ -171,10 +181,19 @@ export function CollectionView<T>(p: CollectionProps<T>) {
 
       {p.actions?.length ? (
         <QuickActionBar count={picked.length} total={shown.length} onSelectAll={toggleAll} onClear={() => setSelected(new Set())}>
-          {p.actions.filter((a) => !a.show || a.show(picked)).map((a) => (
+          {p.actions.filter((a) => !a.show || a.show(picked)).map((a) => a.options ? (
+            <DropdownMenu key={a.label}>
+              <DropdownMenuTrigger render={<Button size="sm" variant="outline" disabled={pending} />}><a.icon /> {a.label} <ChevronDown className="opacity-60" /></DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-72 w-52">
+                {a.options.map((o) => <DropdownMenuItem key={o.value} onClick={() => start(async () => { await a.pick?.(picked, o.value); })}>{o.label}</DropdownMenuItem>)}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : a.input ? (
+            <InputAction key={a.label} label={a.label} icon={a.icon} input={a.input} disabled={pending} onSubmit={(text) => start(async () => { await a.input!.onSubmit(picked, text); })} />
+          ) : (
             <Button key={a.label} size="sm" variant={a.destructive ? "destructive" : "outline"} disabled={pending || (a.single && picked.length !== 1)}
               title={a.single && picked.length !== 1 ? `Select one ${one}` : undefined}
-              onClick={() => start(async () => { await a.run(picked); if (a.destructive) setSelected(new Set()); })}>
+              onClick={() => start(async () => { await a.run?.(picked); if (a.destructive) setSelected(new Set()); })}>
               <a.icon /> {a.label}
             </Button>
           ))}
@@ -200,6 +219,24 @@ export function CollectionView<T>(p: CollectionProps<T>) {
   );
 }
 
+function InputAction({ label, icon: Icon, input, disabled, onSubmit }: {
+  label: string; icon: LucideIcon; input: { placeholder: string; submit: string }; disabled?: boolean; onSubmit: (text: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger render={<Button size="sm" variant="outline" disabled={disabled} />}><Icon /> {label}</PopoverTrigger>
+      <PopoverContent align="start" className="w-64">
+        <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); if (!value.trim()) return; onSubmit(value); setValue(""); setOpen(false); }}>
+          <Input autoFocus value={value} onChange={(e) => setValue(e.target.value)} placeholder={input.placeholder} aria-label={label} />
+          <Button type="submit" size="sm" className="w-full" disabled={!value.trim()}>{input.submit}</Button>
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // The views
 // ---------------------------------------------------------------------------
@@ -218,6 +255,44 @@ function Pick<T>({ p, row, className }: { p: ViewProps<T>; row: T; className?: s
 const rowProps = <T,>(p: ViewProps<T>, row: T) => ({
   role: "button" as const, tabIndex: 0, onClick: () => p.open(row), onKeyDown: (e: React.KeyboardEvent) => e.key === "Enter" && p.open(row),
 });
+
+function BoardView<T>(p: ViewProps<T>) {
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const b = p.board!;
+  const move = b.onMove;
+  return (
+    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
+      {b.lanes.map((lane) => {
+        const rows = p.rows.filter((r) => b.lane(r) === lane.id);
+        return (
+          <section key={lane.id} className={cn("flex w-72 shrink-0 flex-col rounded-xl border bg-muted/30 p-2", over === lane.id && "ring-2 ring-primary/50")}
+            onDragOver={(e) => { if (dragging && move) { e.preventDefault(); setOver(lane.id); } }} onDragLeave={() => setOver(null)}
+            onDrop={(e) => { e.preventDefault(); const r = p.rows.find((x) => p.getId(x) === dragging); if (r && move && b.lane(r) !== lane.id) move(r, lane.id); setDragging(null); setOver(null); }}>
+            <div className="mb-2 flex items-center justify-between px-1">{lane.label}<span className="text-xs text-muted-foreground">{rows.length}</span></div>
+            <div className="flex min-h-20 flex-1 flex-col gap-2">
+              {rows.map((r) => (
+                <article key={p.getId(r)} {...rowProps(p, r)} draggable={Boolean(move)} onDragStart={() => setDragging(p.getId(r))} onDragEnd={() => { setDragging(null); setOver(null); }}
+                  className={cn("rounded-lg border bg-card p-2.5 text-left hover:border-primary/40", move ? "cursor-grab" : "cursor-pointer", dragging === p.getId(r) && "opacity-50", p.selected.has(p.getId(r)) && "ring-2 ring-primary")}>
+                  <div className="flex items-start gap-2">
+                    <Pick p={p} row={r} className="pt-0.5" />
+                    {p.media?.(r)}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{p.title(r)}</p>
+                      {p.subtitle && <p className="truncate text-[11px] text-muted-foreground">{p.subtitle(r)}</p>}
+                    </div>
+                  </div>
+                  {p.meta && <div className="mt-1.5 truncate text-[11px] text-muted-foreground">{p.meta(r)}</div>}
+                </article>
+              ))}
+              {rows.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground/60">Empty</p>}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
 
 function ListView<T>(p: ViewProps<T>) {
   return (

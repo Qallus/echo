@@ -95,7 +95,13 @@ export type Contact = {
   // Business details (optional until the 20261120100000 update has run).
   kind?: ContactKind; company_name?: string | null; logo?: string | null; phone_ext?: string | null;
   address2?: string | null; country?: string | null; locations?: number | null; referral?: Referral;
+  // Map position (optional until the 20261123120000 update has run).
+  latitude?: number | null; longitude?: number | null; geocoded_address?: string | null;
 };
+
+// The address a contact is placed on the map by (street, city, state, zip).
+export const contactPlace = (c: Pick<Contact, "address" | "city" | "state" | "zip">) =>
+  c.city || c.zip ? [c.address, c.city, c.state, c.zip].filter(Boolean).join(", ") : null;
 
 export type Labeled = { label: string; value: string };
 export type ContactAddress = { label: string; street: string; city: string; state: string; zip: string; country: string };
