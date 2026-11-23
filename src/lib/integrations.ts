@@ -100,6 +100,17 @@ export const SERVICES: Service[] = [
     fields: [{ key: "GOOGLE_MAPS_API_KEY", label: "API key", secret: true, placeholder: "AIza…", required: true }],
   },
   {
+    id: "google_search", name: "Google Programmable Search", description: "Raw Google results for AI agents' web_search tool. Create a search engine at programmablesearchengine.google.com (Search the entire web) and copy its ID; in the Redial Google Cloud project enable the Custom Search API and create an API key restricted to it. 100 searches a day are free, then about $5 per 1,000.",
+    fields: [
+      { key: "GOOGLE_SEARCH_API_KEY", label: "API key", secret: true, placeholder: "AIza…", required: true },
+      { key: "GOOGLE_SEARCH_ENGINE_ID", label: "Search engine ID (cx)", placeholder: "0123456789abcdef0", required: true },
+    ],
+  },
+  {
+    id: "tavily", name: "Tavily", description: "Web search built for AI agents: clean results and a short answer. Sign up at app.tavily.com and copy the API key.",
+    fields: [{ key: "TAVILY_API_KEY", label: "API key", secret: true, placeholder: "tvly-…", required: true }],
+  },
+  {
     id: "microsoft_calendar", name: "Microsoft (Outlook, OneDrive, Teams)", description: "Lets people connect a Microsoft account (personal or Microsoft 365): Outlook Calendar two-way sync first, then Outlook mail, Contacts and OneDrive. From the Redial Microsoft Entra app registration. Redirect URIs: https://redial.si/api/integrations/microsoft/callback and https://redial.si/api/calendar/microsoft/callback. Setup: docs/Integrations/MICROSOFT_API_ACCESS.md",
     fields: [
       { key: "MICROSOFT_CLIENT_ID", label: "Application (client) ID", placeholder: "00000000-0000-0000-0000-000000000000", required: true },

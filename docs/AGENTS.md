@@ -35,7 +35,7 @@ The checks are in `src/lib/mcp/agent-gate.ts`.
 | Setting | Effect |
 |---|---|
 | Permissions | Which admin data it can read and change (the database enforces these) |
-| Areas | Limit it to tool areas: records (CRM, bookings, plans, documents and calendar, with their actions), prospects, comms (inbox and texts), insights (reports, analytics and the waitlist), recordings, email, backlog, redial (lines, call trees, Recording Studio), live_agents, billing, admin (users, staff, settings, integrations), account (profile, notifications, activity). None picked means all. Finding tools and confirming actions always work |
+| Areas | Limit it to tool areas: records (CRM, bookings, plans, documents and calendar, with their actions), prospects, research (web search and lead research), comms (inbox and texts), insights (reports, analytics and the waitlist), recordings, email, backlog, redial (lines, call trees, Recording Studio), live_agents, billing, admin (users, staff, settings, integrations), account (profile, notifications, activity). None picked means all. Finding tools and confirming actions always work |
 | Read only | Only read tools |
 | Changes per 24 hours | Cap on write and high-risk calls |
 | High-risk actions per 24 hours | Cap on high-risk calls |

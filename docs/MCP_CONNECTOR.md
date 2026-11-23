@@ -259,6 +259,8 @@ CRM and operations actions (staff, `src/lib/mcp/tools/crm.ts` and `insights.ts`)
 | `prospects_find_places` | write | Google Maps search, 20 a page (billed per page, counts against the monthly cap) | `query`, `page_token?`, `page?` |
 | `prospects_add_places` | write | Add businesses from `prospects_find_places` | `places`, `tags?` |
 | `prospects_lookup` | high | Twilio carrier lookups: cost preview, runs after `confirm_action` (`prospects.run`) | `prospect_ids?`, `caller_name?` |
+| `web_search` | write | Search the web with Perplexity, Google Programmable Search or Tavily (logged, about a cent, monthly cap) | `query`, `provider?`, `count?` |
+| `leads_research` | write | Businesses of a kind in an area, with website, phone and why; marks ones already on the list | `what`, `where`, `provider?` |
 | `prospects_to_leads` | write | Prospects → CRM leads, tagged by provider; do-not-contact refused | `prospect_ids` |
 
 **Two-step sign-in and the connector.** Supabase OAuth access tokens carry the `aal` level of the sign-in that approved them. So when two-step is required for staff (Admin → Settings → Security), the consent page sends staff to two-step first and then back. That way the connection's tokens are `aal2` and the staff tools appear.

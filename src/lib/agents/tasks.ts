@@ -30,8 +30,12 @@ export const TASK_PRESETS: { id: string; label: string; area: string; repeat: Re
     instructions: "Use prospects_find_places to search \"HVAC in Chandler, AZ\" (one page is enough). Add the open businesses that have a phone and aren't on the list with prospects_add_places, tag them \"agent-found\". Report how many you added and the 3 most promising (website, rating) with why.",
   },
   {
+    id: "web", label: "Web lead research", area: "research", repeat: "weekly", title: "Find 15 plumbing companies in Gilbert, AZ on the web",
+    instructions: "Use leads_research with what \"plumbing companies\" and where \"Gilbert, AZ\". Add the ones with a phone that aren't on the list using prospects_add (tag them \"web-research\"). Report how many you added, and the 3 best fits with why.",
+  },
+  {
     id: "research", label: "Research top prospects", area: "prospects", repeat: "once", title: "Research the top 10 prospects",
-    instructions: "List prospects with prospects_list (sort by score, not looked up first). For the top 10, check their website and reviews and write 2-3 lines each: what they do, how they answer calls today, the best opening line for a Redial call. Report it as a short list.",
+    instructions: "List prospects with prospects_list (sort by score, not looked up first). For the top 10, check their website and reviews (web_search) and write 2-3 lines each: what they do, how they answer calls today, the best opening line for a Redial call. Report it as a short list.",
   },
   {
     id: "lookup", label: "Carrier lookups", area: "prospects", repeat: "weekly", title: "Look up carriers for new prospects",

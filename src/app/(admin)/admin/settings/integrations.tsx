@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { AudioLines, CheckCircle2, CircleDashed, Cloud, Copy, CreditCard, KeyRound, LayoutGrid, MessagesSquare, PlugZap, Share2, Sparkles, Webhook, X } from "lucide-react";
+import { AudioLines, CheckCircle2, CircleDashed, Cloud, Copy, CreditCard, Globe, KeyRound, LayoutGrid, MessagesSquare, PlugZap, Share2, Sparkles, Webhook, X } from "lucide-react";
+import { WebSearchPanel } from "./web-search-panel";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,7 @@ const GROUPS: Group[] = [
   { id: "payments", title: "Payments", desc: "Checkout, subscriptions and refunds.", icon: CreditCard, ids: ["stripe"] },
   { id: "ai", title: "AI providers", desc: "Redial's own keys for transcription, summaries and Ask Echo.", icon: Sparkles, ids: ["openai", "anthropic", "xai", "gemini", "openrouter", "moonshot"] },
   { id: "google", title: "Google", desc: "Connect Google for customers, Redial's own Workspace, and Maps for prospecting.", icon: Cloud, ids: ["google_calendar", "google_workspace", "google_maps"] },
+  { id: "search", title: "Web search", desc: "Searching the web for AI agents and lead research: Perplexity (through the OpenRouter key), Google Programmable Search and Tavily.", icon: Globe, ids: ["openrouter", "google_search", "tavily"] },
   { id: "microsoft", title: "Microsoft", desc: "Connect Outlook, OneDrive and Teams.", icon: LayoutGrid, ids: ["microsoft_calendar"] },
   { id: "social", title: "Social media", desc: "Posting to LinkedIn, Facebook and Instagram.", icon: Share2, ids: ["linkedin", "meta"] },
   { id: "redial", title: "Redial", desc: "The voice gateway, the mobile app and scheduled jobs.", icon: AudioLines, ids: ["redial", "mobile", "cron"] },
@@ -163,6 +165,7 @@ export function Integrations({ state, readOnly, initialGroup }: { state: Record<
           <p className="text-sm text-muted-foreground">{group.desc}</p>
         </div>
         {group.ids.map((id) => { const s = SERVICES.find((x) => x.id === id); return s ? <ServiceCard key={id} service={s} state={state} readOnly={readOnly} /> : null; })}
+        {group.id === "search" && <WebSearchPanel readOnly={readOnly} />}
         <p className="max-w-3xl pt-2 text-xs text-muted-foreground">
           Keys are encrypted before they&apos;re stored and never shown again; only owners and admins can change them, and every change is in the audit log.
           A value saved here is used instead of the Coolify variable with the same name, within a minute and without a redeploy.
