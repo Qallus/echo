@@ -103,7 +103,7 @@ export const SERVICES: Service[] = [
     fields: [{ key: "GOOGLE_MAPS_API_KEY", label: "API key", secret: true, placeholder: "AIza…", required: true }],
   },
   {
-    id: "google_search", name: "Google Programmable Search", description: "Raw Google results for AI agents' web_search tool. Create a search engine at programmablesearchengine.google.com (Search the entire web) and copy its ID; in the Redial Google Cloud project enable the Custom Search API and create an API key restricted to it. 100 searches a day are free, then about $5 per 1,000.",
+    id: "google_search", name: "Google Programmable Search", description: "Google results for AI agents' web_search tool. Create a search engine at programmablesearchengine.google.com and copy its ID (new engines search only the sites you list, up to 50: business directories like Yelp, BBB and Angi work well); in the Redial Google Cloud project enable the Custom Search API and create an API key restricted to it. 100 searches a day are free, then about $5 per 1,000.",
     fields: [
       { key: "GOOGLE_SEARCH_API_KEY", label: "API key", secret: true, placeholder: "AIza…", required: true },
       { key: "GOOGLE_SEARCH_ENGINE_ID", label: "Search engine ID (cx)", placeholder: "0123456789abcdef0", required: true },
