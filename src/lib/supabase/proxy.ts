@@ -10,7 +10,7 @@ const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth", "/.well-
 const SIGNED_OUT_ONLY = ["/login", "/signup", "/forgot-password"];
 // Marketing pages (exact paths). "/" is always the homepage, signed in or not;
 // the dashboard is /home.
-const MARKETING = ["/", "/pricing", "/compatibility", "/redial/business", "/home-phone", "/business-phone", "/recording-studio", "/become-a-live-agent", "/faq", "/cart", "/terms", "/privacy", "/developers", "/suspended", "/contact", "/support", "/unsubscribe", "/protect", "/numbers", "/partners"];
+const MARKETING = ["/", "/pricing", "/compatibility", "/redial/business", "/home-phone", "/business-phone", "/recording-studio", "/become-a-live-agent", "/faq", "/cart", "/terms", "/privacy", "/developers", "/suspended", "/contact", "/support", "/unsubscribe", "/protect", "/numbers", "/partners", "/phones"];
 
 // Refreshes the auth session cookie on every request and sends signed-out
 // visitors to /login. API routes check auth themselves and return 401.

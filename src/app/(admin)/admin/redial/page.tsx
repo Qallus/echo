@@ -47,7 +47,8 @@ export default async function RedialAdminPage() {
         </p>
       )}
 
-      <Section title="Desk phones (SIP)" description="Desk, cordless and Wi-Fi phones sign in to one Twilio SIP domain; each phone gets its own login from the member's Phones page.">
+      <Section title="Desk phones (SIP)" description="Desk, cordless and Wi-Fi phones sign in to one Twilio SIP domain; each phone gets its own login from the member's Phones page."
+        actions={<Link href="/admin/redial/hardware" className="text-sm font-medium underline underline-offset-4">Hardware lineup and suppliers</Link>}>
         {can(staff, "settings.manage") ? <SipSetup domain={sip.domain} /> : <p className="text-sm text-muted-foreground">{sip.domain ?? "Not set up yet."}</p>}
       </Section>
 

@@ -28,7 +28,7 @@ export const NAV_PRODUCTS: NavProduct[] = [
     links: [
       { href: "/home-phone", title: "Home phone", desc: "Replace your landline", icon: House },
       { href: "/business-phone", title: "Business phone", desc: "Desk phones, extensions, transfers", icon: Building2 },
-      { href: "/business-phone#phones", title: "Phones that work", desc: "Grandstream, Yealink, Poly and more", icon: PhoneCall },
+      { href: "/phones", title: "Shop phones", desc: "Adapters, cordless and desk phones", icon: PhoneCall },
       { href: "/pricing#phone-service", title: "Phone plans", desc: "Home Phone and Business Phone", icon: Tag },
       { href: "/recording-studio", title: "Recording Studio", desc: "Greetings, phone menus, AI voices", icon: AudioWaveform },
     ],

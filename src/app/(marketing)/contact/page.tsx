@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { COMPANY } from "@/lib/company";
 import { ContactForm } from "./contact-form";
 import { CONTACT_TYPES, type ContactType } from "./types";
+import { HARDWARE } from "@/lib/redial/hardware";
 
 export const metadata = {
   title: "Contact · Redial",
@@ -14,8 +15,13 @@ export const metadata = {
 
 const maps = encodeURIComponent(COMPANY.address);
 
-export default async function ContactPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
-  const { type } = await searchParams;
+export default async function ContactPage({ searchParams }: { searchParams: Promise<{ type?: string; device?: string }> }) {
+  const { type, device } = await searchParams;
+  // From Shop phones: "Request this phone" fills in the message.
+  const phone = HARDWARE.find((h) => h.id === device && h.status !== "staff_only");
+  const prefill = phone ? `I'd like the ${phone.brand} ${phone.model} (${phone.type}) for Redial.
+How many: 
+Ship to (city, state): ` : undefined;
   const initial = CONTACT_TYPES.includes(type as ContactType) ? (type as ContactType) : "residential";
 
   return (
@@ -38,7 +44,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
       </section>
 
       <div className="mx-auto grid w-full max-w-6xl items-start gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-        <ContactForm initial={initial} />
+        <ContactForm initial={initial} prefill={prefill} />
 
         <aside className="space-y-4 lg:sticky lg:top-24">
           <section className="rounded-2xl border p-5">

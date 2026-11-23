@@ -38,6 +38,7 @@ export const SITE_PAGES: SearchEntry[] = [
   // Business
   { cat: "business", title: "Redial for business", desc: "Leads, transfers and a shared line for your team", href: "/redial/business", words: "company team small business receptionist" },
   { cat: "business", title: "Business phone", desc: "Desk phones, extensions, transfers and phone menus", href: "/business-phone", words: "office pbx extension ivr phone system" },
+  { cat: "residential", title: "Shop phones", desc: "Phone adapters, cordless and desk phones that set themselves up", href: "/phones", words: "buy order hardware handset adapter ata cordless desk phone grandstream yealink fairphone" },
   { cat: "business", title: "Desk phones", desc: "Grandstream, Yealink, Poly and more, set up automatically", href: "/business-phone#phones", words: "handset hardware desk phone provisioning" },
   { cat: "business", title: "Phone plans", desc: "Home Phone and Business Phone plans", href: "/pricing#phone-service", words: "price cost lines minutes" },
   { cat: "business", title: "Business pricing", desc: "Business and Team plans, bolt-ons and minute packs", href: "/pricing#plans", words: "price cost team seats bolt-on" },

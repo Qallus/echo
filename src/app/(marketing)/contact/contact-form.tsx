@@ -138,7 +138,7 @@ function TypeFields({ type }: { type: ContactType }) {
   );
 }
 
-export function ContactForm({ initial = "residential" }: { initial?: ContactType }) {
+export function ContactForm({ initial = "residential", prefill }: { initial?: ContactType; prefill?: string }) {
   const [type, setType] = useState<ContactType>(initial);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string>();
@@ -210,7 +210,7 @@ export function ContactForm({ initial = "residential" }: { initial?: ContactType
           </div>
           <TypeFields type={type} />
           <Field id="c-msg" label="Message" required>
-            <Textarea id="c-msg" name="message" required rows={5} maxLength={8000}
+            <Textarea id="c-msg" name="message" required rows={5} maxLength={8000} defaultValue={prefill}
               placeholder={type === "ai-agents" ? "What happens on a typical call, and what should happen next?" : type === "business" ? "Anything we should know: your hours, how calls reach you today, what's not working…" : "How can we help?"} />
           </Field>
           {/* Left empty by people; bots fill it in. */}

@@ -16,7 +16,7 @@ import { getUser } from "@/lib/data";
 // Footer columns: four of five links each, so the rows line up.
 const FOOTER: { title: string; links: [string, string][] }[] = [
   { title: "Redial", links: [["Features", "/#redial"], ["For business", "/redial/business"], ["Live call controls", "/#controls"], ["Pricing", "/pricing"], ["FAQ", "/faq"]] },
-  { title: "Phone service", links: [["Home phone", "/home-phone"], ["Business phone", "/business-phone"], ["Phones that work", "/compatibility"], ["Phone plans", "/pricing#phone-service"], ["Recording Studio", "/recording-studio"]] },
+  { title: "Phone service", links: [["Home phone", "/home-phone"], ["Business phone", "/business-phone"], ["Shop phones", "/phones"], ["Phones that work", "/compatibility"], ["Phone plans", "/pricing#phone-service"], ["Recording Studio", "/recording-studio"]] },
   { title: "Live Agents", links: [["Search Live Agents", "/live-agents"], ["How it works", "/live-agents/how-it-works"], ["Live Agent rates", "/live-agents/how-it-works#pricing"], ["Become an agent", "/become-a-live-agent"], ["Questions & answers", "/faq#topic-live-agents"]] },
   { title: "Company", links: [["Contact", "/contact"], ["Partners and careers", "/partners"], ["Book a demo", "/book"], ["Developers", "/developers"], ["Create account", "/signup"]] },
 ];
