@@ -252,6 +252,14 @@ CRM and operations actions (staff, `src/lib/mcp/tools/crm.ts` and `insights.ts`)
 | `reports_run` | read | An Admin → Reports report, or a saved one | `kind` or `saved_report_id`, `range` |
 | `analytics_series` | read | Admin → Analytics numbers over time | `metrics`, `range` |
 | `waitlist_export` | read | Waitlist counts, plus 50 people per page as CSV | `status?`, `offset` |
+| `inbox_reply` | write | Email a reply to one inbox message's sender and mark it read (`comms.manage`) | `message_id`, `body` |
+| `inbox_convert` | write | Save an inbox sender as a contact or lead, or open a deal (`comms.manage` + `crm.manage`) | `message_id`, `as` |
+| `prospects_list` | read | Admin → Prospects with provider, score, status and Google rating | `provider?`, `status?`, `min_score?`, `looked_up?`, `search?` |
+| `prospects_add` | write | Add up to 500 businesses (phone required; duplicates skipped) | `rows` |
+| `prospects_find_places` | write | Google Maps search, 20 a page (billed per page, counts against the monthly cap) | `query`, `page_token?`, `page?` |
+| `prospects_add_places` | write | Add businesses from `prospects_find_places` | `places`, `tags?` |
+| `prospects_lookup` | high | Twilio carrier lookups: cost preview, runs after `confirm_action` (`prospects.run`) | `prospect_ids?`, `caller_name?` |
+| `prospects_to_leads` | write | Prospects → CRM leads, tagged by provider; do-not-contact refused | `prospect_ids` |
 
 **Two-step sign-in and the connector.** Supabase OAuth access tokens carry the `aal` level of the sign-in that approved them. So when two-step is required for staff (Admin → Settings → Security), the consent page sends staff to two-step first and then back. That way the connection's tokens are `aal2` and the staff tools appear.
 

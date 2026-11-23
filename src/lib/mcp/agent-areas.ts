@@ -4,6 +4,8 @@
 // with the admin page.
 export const AGENT_AREAS = [
   { id: "records", label: "CRM, bookings, plans, documents and calendar", domains: ["resource", "crm", "bookings", "plans", "documents"] },
+  { id: "prospects", label: "Prospects (find businesses, carrier lookups, to leads)", domains: ["prospects"] },
+  { id: "comms", label: "Inbox and texts (reply, save to CRM, send a text)", domains: ["comms"] },
   { id: "insights", label: "Reports, analytics and the app waitlist", domains: ["reports", "analytics", "waitlist"] },
   { id: "recordings", label: "Recordings, transcripts and summaries", domains: ["folder", "recording", "search", "transcript", "segment", "highlight", "summary", "action", "design"] },
   { id: "email", label: "Email (templates, audiences, sends)", domains: ["email"] },
