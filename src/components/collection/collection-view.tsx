@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import {
-  ArrowDown, ArrowDownUp, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Kanban, LayoutGrid, List, Map as MapIcon, Search, Table2,
+  ArrowDown, ArrowDownUp, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, ChevronRight, Kanban, LayoutGrid, List, Map as MapIcon, Search, Table2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioG
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
+import { PeriodCalendar } from "@/components/calendar/period-calendar";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { cn } from "@/lib/utils";
 import { useColumnWidths } from "@/components/ui/column-resize";
@@ -422,55 +423,23 @@ const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 
 function CalendarView<T>(p: ViewProps<T>) {
   const dated = p.rows.map((r) => ({ r, d: p.date?.(r) })).filter((x): x is { r: T; d: string } => Boolean(x.d)).map(({ r, d }) => ({ r, at: new Date(d) }));
-  const latest = dated.length ? new Date(Math.max(...dated.map((x) => x.at.getTime()))) : new Date();
-  const [month, setMonth] = useState(() => new Date(latest.getFullYear(), latest.getMonth(), 1));
-  const first = new Date(month.getFullYear(), month.getMonth(), 1 - month.getDay());
-  const days = Array.from({ length: 42 }, (_, i) => new Date(first.getFullYear(), first.getMonth(), first.getDate() + i));
   const byDay = new Map<string, T[]>();
-  for (const { r, at } of dated) { const k = dayKey(at); byDay.set(k, [...(byDay.get(k) ?? []), r]); }
-  const today = dayKey(new Date());
-  const inMonth = dated.filter(({ at }) => at.getMonth() === month.getMonth() && at.getFullYear() === month.getFullYear()).sort((a, b) => a.at.getTime() - b.at.getTime());
-  const go = (n: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1));
-  const chip = (r: T) => (
-    <div key={p.getId(r)} {...rowProps(p, r)} className="flex cursor-pointer items-center gap-1 truncate rounded-md bg-muted px-1.5 py-0.5 text-[11px] hover:bg-muted/70">
-      <Pick p={p} row={r} /> <span className="truncate">{p.title(r)}</span>
-    </div>
-  );
+  for (const { r, at } of [...dated].sort((a, b) => a.at.getTime() - b.at.getTime())) { const k = dayKey(at); byDay.set(k, [...(byDay.get(k) ?? []), r]); }
+  const latest = dated.length ? new Date(Math.max(...dated.map((x) => x.at.getTime()))) : new Date();
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Button size="icon-sm" variant="outline" aria-label="Previous month" onClick={() => go(-1)}><ChevronLeft /></Button>
-        <Button size="sm" variant="outline" onClick={() => setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}>Today</Button>
-        <Button size="icon-sm" variant="outline" aria-label="Next month" onClick={() => go(1)}><ChevronRight /></Button>
-        <h3 className="ml-1 font-semibold">{month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</h3>
-      </div>
-      <div className="hidden overflow-hidden rounded-xl border sm:block">
-        <div className="grid grid-cols-7 border-b bg-muted/40 text-xs text-muted-foreground">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="px-2 py-1.5">{d}</div>)}</div>
-        <div className="grid grid-cols-7">
-          {days.map((d) => {
-            const k = dayKey(d);
-            const items = byDay.get(k) ?? [];
-            return (
-              <div key={k} className={cn("min-h-24 space-y-1 border-r border-b p-1.5 [&:nth-child(7n)]:border-r-0", d.getMonth() !== month.getMonth() && "bg-muted/20 text-muted-foreground")}>
-                <span className={cn("inline-flex size-6 items-center justify-center rounded-full text-xs", k === today && "bg-primary text-primary-foreground")}>{d.getDate()}</span>
-                {items.slice(0, 3).map(chip)}
-                {items.length > 3 && <p className="px-1 text-[11px] text-muted-foreground">+{items.length - 3} more</p>}
-              </div>
-            );
-          })}
+    <PeriodCalendar<T> initial={latest} getId={p.getId} itemsOn={(d) => byDay.get(dayKey(d)) ?? []}
+      chip={(r) => (
+        <div {...rowProps(p, r)} className="flex cursor-pointer items-center gap-1 truncate rounded-md bg-muted px-1.5 py-0.5 text-[11px] hover:bg-muted/70">
+          <Pick p={p} row={r} /> <span className="truncate">{p.title(r)}</span>
         </div>
-      </div>
-      {/* Phones: the month as an agenda. */}
-      <div className="space-y-2 sm:hidden">
-        {inMonth.length === 0 && <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Nothing this month.</p>}
-        {inMonth.map(({ r, at }) => (
-          <div key={p.getId(r)} {...rowProps(p, r)} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-3">
-            <Pick p={p} row={r} />
-            <div className="w-12 shrink-0 text-center"><p className="text-xs text-muted-foreground">{at.toLocaleDateString("en-US", { weekday: "short" })}</p><p className="text-lg font-semibold">{at.getDate()}</p></div>
-            <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{p.title(r)}</p>{p.subtitle && <p className="truncate text-xs text-muted-foreground">{p.subtitle(r)}</p>}</div>
-          </div>
-        ))}
-      </div>
-    </div>
+      )}
+      row={(r) => (
+        <div {...rowProps(p, r)} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-3">
+          <Pick p={p} row={r} />
+          {p.media?.(r)}
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{p.title(r)}</p>{p.subtitle && <p className="truncate text-xs text-muted-foreground">{p.subtitle(r)}</p>}</div>
+          {p.badge && <span className="shrink-0">{p.badge(r)}</span>}
+        </div>
+      )} />
   );
 }

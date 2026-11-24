@@ -7,7 +7,8 @@ import { AgentAvatar } from "@/components/live-agents/agent-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ADMIN_STATUS, initials, type AdminAgent } from "@/lib/live-agents/admin-types";
-import { money, tzLabel, WEEKDAYS } from "@/lib/live-agents/types";
+import { money, tzLabel } from "@/lib/live-agents/types";
+import { PeriodCalendar } from "@/components/calendar/period-calendar";
 import { cn } from "@/lib/utils";
 
 // The five ways to look at Live Agents in the admin. Every view shows the
@@ -224,41 +225,32 @@ const clock = (t: string) => {
   return m ? `${hr}:${String(m).padStart(2, "0")} ${suffix}` : `${hr} ${suffix}`;
 };
 
+// Weekly hours laid on the calendar: each day lists who works that weekday.
 export function CalendarView({ agents, selected, toggle, open }: ViewProps) {
-  const today = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
+  const KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
   const off = agents.filter((a) => !Object.keys(a.availability ?? {}).length);
-  return (
-    <div className="space-y-3">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-        {WEEKDAYS.map(({ key, short }) => {
-          const on = agents.filter((a) => a.availability?.[key]).sort((x, y) => x.availability[key][0].localeCompare(y.availability[key][0]));
-          return (
-            <section key={key} className={cn("flex min-h-40 flex-col rounded-xl border bg-card", key === today && "ring-2 ring-primary/50")}>
-              <header className="flex items-center justify-between border-b px-3 py-2 text-sm">
-                <span className="font-semibold">{short}{key === today && <span className="ml-1.5 text-xs font-normal text-primary">Today</span>}</span>
-                <span className="text-xs text-muted-foreground">{on.length}</span>
-              </header>
-              <div className="flex-1 space-y-1 p-1.5">
-                {on.length === 0 && <p className="p-2 text-xs text-muted-foreground">No one scheduled.</p>}
-                {on.map((a) => (
-                  <div key={a.id} role="button" tabIndex={0} onClick={() => open(a.id)} onKeyDown={(e) => e.key === "Enter" && open(a.id)}
-                    className={cn("flex cursor-pointer items-center gap-2 rounded-lg p-1.5 hover:bg-muted/60", selected.has(a.id) && "bg-primary/5")}
-                    title={tzLabel(a.timeZone)}>
-                    <Pick a={a} selected={selected} toggle={toggle} />
-                    <Face a={a} />
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium">{a.name}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">{clock(a.availability[key][0])}–{clock(a.availability[key][1])}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          );
-        })}
+  const on = (d: Date) => {
+    const key = KEYS[d.getDay()];
+    return agents.filter((a) => a.availability?.[key]).sort((x, y) => x.availability[key][0].localeCompare(y.availability[key][0]));
+  };
+  const entry = (a: AdminAgent, d: Date, big: boolean) => {
+    const key = KEYS[d.getDay()];
+    return (
+      <div role="button" tabIndex={0} onClick={() => open(a.id)} onKeyDown={(e) => e.key === "Enter" && open(a.id)} title={tzLabel(a.timeZone)}
+        className={cn("flex cursor-pointer items-center gap-2 rounded-lg hover:bg-muted/60", big ? "border bg-card p-3" : "p-1", selected.has(a.id) && "bg-primary/5")}>
+        <Pick a={a} selected={selected} toggle={toggle} />
+        <Face a={a} />
+        <div className="min-w-0">
+          <p className={cn("truncate font-medium", big ? "text-sm" : "text-xs")}>{a.name}</p>
+          <p className="truncate text-[11px] text-muted-foreground">{clock(a.availability[key][0])}–{clock(a.availability[key][1])}</p>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">Hours are in each agent&apos;s own time zone (hover a name to see it). A green dot means they&apos;re taking calls right now.
-        {off.length > 0 && ` ${off.length} ${off.length === 1 ? "agent hasn't" : "agents haven't"} set hours yet.`}</p>
-    </div>
+    );
+  };
+  return (
+    <PeriodCalendar initialPeriod="week" getId={(a) => a.id} itemsOn={on} empty="No one is scheduled this day."
+      chip={(a, d) => entry(a, d, false)} row={(a, d) => entry(a, d, true)}
+      note={<p className="text-xs text-muted-foreground">Hours repeat every week and are in each agent&apos;s own time zone (hover a name to see it). A green dot means they&apos;re taking calls right now.
+        {off.length > 0 && ` ${off.length} ${off.length === 1 ? "agent hasn't" : "agents haven't"} set hours yet.`}</p>} />
   );
 }

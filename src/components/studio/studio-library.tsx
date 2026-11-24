@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
-  Archive, ArchiveRestore, CalendarDays, ChevronLeft, ChevronRight, Download, ImagePlus, LayoutGrid, List, MoreVertical, Pencil,
+  Archive, ArchiveRestore, CalendarDays, Download, ImagePlus, LayoutGrid, List, MoreVertical, Pencil,
   Search, Sparkles, SquareKanban, Table as TableIcon, Trash2, Upload, Workflow, X,
 } from "lucide-react";
 import { AudioPlayer } from "@/components/studio/audio-player";
@@ -15,6 +15,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
+import { PeriodCalendar } from "@/components/calendar/period-calendar";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -322,38 +323,25 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
 
 // A month grid with each recording on the day it was made.
 function CalendarView({ items, onPick }: { items: StudioAudio[]; onPick: (a: StudioAudio) => void }) {
-  const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
-  const first = month.getDay();
-  const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const cells = Array.from({ length: Math.ceil((first + days) / 7) * 7 }, (_, i) => i - first + 1);
   const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   const byDay = new Map<string, StudioAudio[]>();
   items.forEach((a) => { const k = key(new Date(a.created_at)); byDay.set(k, [...(byDay.get(k) ?? []), a]); });
-  const today = key(new Date());
   return (
-    <div className="rounded-2xl border">
-      <div className="flex items-center justify-between border-b px-4 py-2.5">
-        <Button variant="ghost" size="icon-sm" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft /></Button>
-        <p className="font-semibold">{month.toLocaleString("en-US", { month: "long", year: "numeric" })}</p>
-        <Button variant="ghost" size="icon-sm" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight /></Button>
-      </div>
-      <div className="grid grid-cols-7 border-b text-center text-xs text-muted-foreground">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <span key={d} className="py-1.5">{d}</span>)}</div>
-      <div className="grid grid-cols-7">
-        {cells.map((n, i) => {
-          const date = new Date(month.getFullYear(), month.getMonth(), n);
-          const list = n >= 1 && n <= days ? byDay.get(key(date)) ?? [] : [];
-          return (
-            <div key={i} className={cn("min-h-24 space-y-1 border-r border-b p-1.5 text-xs [&:nth-child(7n)]:border-r-0", (n < 1 || n > days) && "bg-muted/30")}>
-              {n >= 1 && n <= days && <span className={cn("inline-flex size-6 items-center justify-center rounded-full", key(date) === today && "bg-primary text-primary-foreground")}>{n}</span>}
-              {list.slice(0, 3).map((a) => (
-                <button key={a.id} type="button" onClick={() => onPick(a)} className="block w-full truncate rounded bg-muted px-1.5 py-0.5 text-left hover:bg-muted/70" title={[a.name, voiceLabel(a)].filter(Boolean).join(" · ")}>{a.name}{a.ai_voice ? <span className="text-muted-foreground"> · {a.ai_voice}</span> : null}</button>
-              ))}
-              {list.length > 3 && <span className="block px-1 text-muted-foreground">+{list.length - 3} more</span>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <PeriodCalendar<StudioAudio> getId={(a) => a.id} itemsOn={(d) => byDay.get(key(d)) ?? []}
+      chip={(a) => (
+        <button type="button" onClick={() => onPick(a)} className="block w-full truncate rounded bg-muted px-1.5 py-0.5 text-left text-xs hover:bg-muted/70" title={[a.name, voiceLabel(a)].filter(Boolean).join(" · ")}>
+          {a.name}{a.ai_voice ? <span className="text-muted-foreground"> · {a.ai_voice}</span> : null}
+        </button>
+      )}
+      row={(a) => (
+        <button type="button" onClick={() => onPick(a)} className="flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left hover:bg-muted/40">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{a.name}</p>
+            <p className="truncate text-xs text-muted-foreground">{[kindLabel(a.kind), voiceLabel(a), a.extension && `Ext ${a.extension}`, new Date(a.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })].filter(Boolean).join(" · ")}</p>
+          </div>
+          <StatusBadge status={a.status} />
+        </button>
+      )} />
   );
 }
 

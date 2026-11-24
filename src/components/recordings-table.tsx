@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore, useTransition } from "react";
 import { useColumnWidths } from "@/components/ui/column-resize";
 import {
-  ArchiveRestore, ArrowRightLeft, Briefcase, CalendarDays, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Columns3, Download, Folder,
+  ArchiveRestore, ArrowRightLeft, Briefcase, CalendarDays, CircleAlert, CircleCheck, Columns3, Download, Folder,
   FolderMinus, LayoutGrid, List, Loader2, Lock, Monitor, Phone, Rows3, Trash2, Upload, Video,
 } from "lucide-react";
 import {
@@ -22,6 +22,7 @@ import { exportRecordings, fileRecordings, moveRecordings, trashRecordings, type
 import { RECORDINGS_MIME } from "@/lib/dnd";
 import { formatDuration, spaceLabel } from "@/lib/format";
 import { SOURCES, type Folder as FolderT, type Recording, type Workspace } from "@/lib/types";
+import { PeriodCalendar } from "@/components/calendar/period-calendar";
 import { cn } from "@/lib/utils";
 import { ViewSwitcher } from "@/components/admin/crm/crm-kit";
 import { QuickActionBar } from "@/components/collection/quick-action-bar";
@@ -51,41 +52,13 @@ function useStoredView(): [View, (v: View) => void] {
   return [view, (v) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode */ } viewListeners.forEach((cb) => cb()); }];
 }
 
-// Month calendar of recordings by the day they were made.
-function MonthGrid({ rows, renderItem }: { rows: Recording[]; renderItem: (r: Recording) => React.ReactNode }) {
-  const [month, setMonth] = useState(() => { const d = new Date(rows[0]?.createdAt ?? Date.now()); return new Date(d.getFullYear(), d.getMonth(), 1); });
-  const first = new Date(month.getFullYear(), month.getMonth(), 1 - month.getDay());
-  const days = Array.from({ length: 42 }, (_, i) => new Date(first.getFullYear(), first.getMonth(), first.getDate() + i));
+// Calendar of recordings by the day they were made: Day, Week, Month, Year.
+function MonthGrid({ rows, renderItem, renderRow }: { rows: Recording[]; renderItem: (r: Recording) => React.ReactNode; renderRow: (r: Recording) => React.ReactNode }) {
   const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   const byDay = new Map<string, Recording[]>();
   for (const r of rows) { const k = key(new Date(r.createdAt)); byDay.set(k, [...(byDay.get(k) ?? []), r]); }
-  const today = key(new Date());
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="font-medium">{month.toLocaleDateString([], { month: "long", year: "numeric" })}</p>
-        <div className="flex gap-1">
-          <Button variant="outline" size="icon-sm" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft /></Button>
-          <Button variant="outline" size="sm" onClick={() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Today</Button>
-          <Button variant="outline" size="icon-sm" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight /></Button>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <div className="grid min-w-[42rem] grid-cols-7 overflow-hidden rounded-xl border text-xs">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="border-b bg-muted/50 px-2 py-1.5 font-medium text-muted-foreground">{d}</div>)}
-          {days.map((d, i) => {
-            const list = byDay.get(key(d)) ?? [];
-            return (
-              <div key={key(d)} className={cn("min-h-24 border-b p-1", i % 7 && "border-l", d.getMonth() !== month.getMonth() && "bg-muted/30 text-muted-foreground")}>
-                <span className={cn("mb-1 inline-grid size-6 place-items-center rounded-full", key(d) === today && "bg-primary text-primary-foreground")}>{d.getDate()}</span>
-                <div className="space-y-0.5">{list.slice(0, 4).map(renderItem)}{list.length > 4 && <p className="px-1 text-[11px] text-muted-foreground">+{list.length - 4} more</p>}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
+  return <PeriodCalendar<Recording> initial={rows[0] ? new Date(rows[0].createdAt) : undefined} getId={(r) => r.id}
+    itemsOn={(d) => byDay.get(key(d)) ?? []} chip={renderItem} row={renderRow} />;
 }
 
 export function StatusTag({ status }: { status: Recording["status"] }) {
@@ -334,7 +307,7 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
         </div>
       )}
 
-      {view === "calendar" && <MonthGrid rows={rows} renderItem={(r) => (
+      {view === "calendar" && <MonthGrid rows={rows} renderRow={(r) => card(r, true)} renderItem={(r) => (
         <div key={r.id} className={cn("flex items-center gap-1 rounded px-1 py-0.5 text-[11px] hover:bg-muted", selected.has(r.id) && "bg-accent")}>
           {pick(r, true)}
           <Link href={`/recordings/${r.id}`} className="min-w-0 flex-1 truncate">{r.title}</Link>
