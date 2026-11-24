@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,13 +31,13 @@ import { QuickActionBar } from "@/components/collection/quick-action-bar";
 
 type View = "cards" | "list" | "table" | "kanban" | "calendar";
 const VIEWS: { id: View; label: string; icon: typeof List }[] = [
-  { id: "cards", label: "Cards", icon: LayoutGrid },
   { id: "list", label: "List", icon: List },
   { id: "table", label: "Table", icon: TableIcon },
+  { id: "cards", label: "Cards", icon: LayoutGrid },
   { id: "kanban", label: "Kanban", icon: SquareKanban },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
 ];
-const VIEW_KEY = "studio.view";
+const VIEW_KEY = "studio.view.v2"; // v2: List is the new default
 
 const mb = (b: number) => `${(b / 1024 / 1024).toFixed(1)} MB`;
 const ext = (a: StudioAudio) => (a.mime.includes("wav") ? "WAV" : a.mime.includes("mpeg") || a.mime.includes("mp3") ? "MP3" : (a.mime.split("/")[1] ?? "audio").toUpperCase());
@@ -61,7 +62,7 @@ function StatusBadge({ status }: { status: StudioStatus }) {
 }
 
 export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onChanged: () => void }) {
-  const [view, setView] = useState<View>("cards");
+  const [view, setView] = useState<View>("list");
   const [archived, setArchived] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<StudioAudio | null>(null);
@@ -84,16 +85,18 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
   }
 
   const [q, setQ] = useState("");
-  const [purpose, setPurpose] = useState<string>("all");
+  // Empty = everything. Several picks in a group match any of them.
+  const [purposes, setPurposes] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
   const [order, setOrder] = useState<"new" | "name" | "length">("new");
   const inView = useMemo(() => items.filter((a) => Boolean(a.archived_at) === archived), [items, archived]);
   const shown = useMemo(() => {
     const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    const out = inView.filter((a) => (purpose === "all" || a.kind === purpose)
+    const out = inView.filter((a) => (!purposes.length || purposes.includes(a.kind)) && (!statuses.length || statuses.includes(a.status))
       && words.every((w) => [a.name, a.description, a.ai_voice, a.extension, kindLabel(a.kind), ...a.used_in].some((x) => x?.toLowerCase().includes(w))));
     return order === "name" ? [...out].sort((x, y) => x.name.localeCompare(y.name))
       : order === "length" ? [...out].sort((x, y) => (x.duration_seconds ?? 0) - (y.duration_seconds ?? 0)) : out;
-  }, [inView, q, purpose, order]);
+  }, [inView, q, purposes, statuses, order]);
   const picked = shown.filter((a) => selected.has(a.id));
   const allOn = shown.length > 0 && picked.length === shown.length;
   const toggle = (id: string, on: boolean) => setSelected((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; });
@@ -150,12 +153,12 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="slide-row flex flex-wrap items-center justify-between gap-3">
+        <div className="flex shrink-0 items-center gap-3 md:flex-wrap">
           <label className="flex items-center gap-2 text-sm"><Checkbox checked={allOn} onCheckedChange={(v) => setSelected(v ? new Set(shown.map((a) => a.id)) : new Set())} aria-label="Select all" /> All</label>
           <input ref={uploadRef} type="file" accept="audio/*" multiple hidden onChange={(e) => void upload(e.target.files)} />
           <Button onClick={() => uploadRef.current?.click()} disabled={uploading}><Upload /> {uploading ? "Uploading…" : "Upload audio"}</Button>
-          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 text-sm">
+          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 text-sm max-md:hidden">
             {[false, true].map((on) => (
               <button key={String(on)} type="button" onClick={() => { setArchived(on); setSelected(new Set()); }}
                 className={cn("rounded-md px-2.5 py-1 font-medium", archived === on ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
@@ -168,20 +171,36 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
+        <div className="relative w-full md:w-auto md:min-w-56 md:flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, words, voice, extension…" className="pl-8" aria-label="Search the library" />
         </div>
-        <Pick label="Sort" className="w-40" value={order} onChange={(v) => setOrder(v as typeof order)}
+        <Pick label="Sort" className="w-full md:w-40" value={order} onChange={(v) => setOrder(v as typeof order)}
           options={[{ value: "new", label: "Newest first" }, { value: "name", label: "Name" }, { value: "length", label: "Shortest first" }]} />
       </div>
-      <div className="flex flex-wrap gap-2">
+      {/* Phones: Active/Archived, purpose and status in one searchable multi-select. */}
+      <MultiCombobox className="md:hidden" label="Filter the library" placeholder="Type to filter…"
+        value={[archived ? "show:archived" : "show:active", ...purposes.map((k) => `kind:${k}`), ...statuses.map((st) => `status:${st}`)]}
+        onChange={(vs) => {
+          const nowArchived = vs.includes("show:archived") && (!vs.includes("show:active") || vs.at(-1) === "show:archived");
+          if (nowArchived !== archived) { setArchived(nowArchived); setSelected(new Set()); }
+          setPurposes(vs.filter((v) => v.startsWith("kind:")).map((v) => v.slice(5)));
+          setStatuses(vs.filter((v) => v.startsWith("status:")).map((v) => v.slice(7)));
+        }}
+        options={[
+          { value: "show:active", label: "Active", group: "Show", count: items.filter((a) => !a.archived_at).length },
+          { value: "show:archived", label: "Archived", group: "Show", count: items.filter((a) => a.archived_at).length },
+          ...STUDIO_KINDS.map((k) => ({ value: `kind:${k.id}`, label: k.label, group: "For", count: inView.filter((a) => a.kind === k.id).length })).filter((o) => o.count || purposes.includes(o.value.slice(5))),
+          ...STUDIO_STATUSES.map((st) => ({ value: `status:${st}`, label: STATUS_META[st].label, group: "Status", count: inView.filter((a) => a.status === st).length })),
+        ]} />
+      <div className="flex flex-wrap gap-2 max-md:hidden">
         {[{ id: "all", label: "All" }, ...STUDIO_KINDS].map((k) => {
           const n = k.id === "all" ? inView.length : inView.filter((a) => a.kind === k.id).length;
           if (k.id !== "all" && !n) return null;
+          const on = k.id === "all" ? !purposes.length : purposes.includes(k.id);
           return (
-            <button key={k.id} type="button" onClick={() => setPurpose(k.id)}
-              className={cn("rounded-full border px-3 py-1 text-sm transition-colors", purpose === k.id ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>
+            <button key={k.id} type="button" onClick={() => setPurposes(k.id === "all" ? [] : [k.id])}
+              className={cn("rounded-full border px-3 py-1 text-sm transition-colors", on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>
               {k.label} <span className="opacity-70">{n}</span>
             </button>
           );
