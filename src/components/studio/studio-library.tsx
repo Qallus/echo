@@ -176,19 +176,25 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, words, voice, extension…" className="pl-8" aria-label="Search the library" />
         </div>
-        <Pick label="Sort" className="w-full md:w-40" value={order} onChange={(v) => setOrder(v as typeof order)}
+        <Pick label="Sort" className="w-40 max-md:hidden" value={order} onChange={(v) => setOrder(v as typeof order)}
           options={[{ value: "new", label: "Newest first" }, { value: "name", label: "Name" }, { value: "length", label: "Shortest first" }]} />
       </div>
-      {/* Phones: Active/Archived, purpose and status in one searchable multi-select. */}
+      {/* Phones: sort, Active/Archived, purpose and status in one searchable multi-select. */}
       <MultiCombobox className="md:hidden" label="Filter the library" placeholder="Type to filter…"
-        value={[archived ? "show:archived" : "show:active", ...purposes.map((k) => `kind:${k}`), ...statuses.map((st) => `status:${st}`)]}
+        value={[archived ? "show:archived" : "show:active", ...(order === "new" ? [] : [`sort:${order}`]), ...purposes.map((k) => `kind:${k}`), ...statuses.map((st) => `status:${st}`)]}
         onChange={(vs) => {
           const nowArchived = vs.includes("show:archived") && (!vs.includes("show:active") || vs.at(-1) === "show:archived");
           if (nowArchived !== archived) { setArchived(nowArchived); setSelected(new Set()); }
           setPurposes(vs.filter((v) => v.startsWith("kind:")).map((v) => v.slice(5)));
           setStatuses(vs.filter((v) => v.startsWith("status:")).map((v) => v.slice(7)));
+          // Sort is one choice: the newest pick wins; none means newest first.
+          const sorts = vs.filter((v) => v.startsWith("sort:"));
+          setOrder((sorts.find((v) => v !== `sort:${order}`) ?? sorts[0] ?? "sort:new").slice(5) as typeof order);
         }}
         options={[
+          { value: "sort:new", label: "Newest first", group: "Sort" },
+          { value: "sort:name", label: "Name (A–Z)", group: "Sort" },
+          { value: "sort:length", label: "Shortest first", group: "Sort" },
           { value: "show:active", label: "Active", group: "Show", count: items.filter((a) => !a.archived_at).length },
           { value: "show:archived", label: "Archived", group: "Show", count: items.filter((a) => a.archived_at).length },
           ...STUDIO_KINDS.map((k) => ({ value: `kind:${k.id}`, label: k.label, group: "For", count: inView.filter((a) => a.kind === k.id).length })).filter((o) => o.count || purposes.includes(o.value.slice(5))),
@@ -224,9 +230,9 @@ export function StudioLibrary({ items, onChanged }: { items: StudioAudio[]; onCh
           {!archived && <p className="mt-1 text-sm text-muted-foreground">Upload a file, or open the Studio tab to record your voice or make one with an AI voice.</p>}
         </div>
       ) : view === "cards" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((a) => (
-            <div key={a.id} className={cn("space-y-3 rounded-2xl border bg-card p-4", selected.has(a.id) && "border-primary ring-1 ring-primary")}>
+            <div key={a.id} className={cn("min-w-0 space-y-3 rounded-2xl border bg-card p-3 sm:p-4", selected.has(a.id) && "border-primary ring-1 ring-primary")}>
               <div className="flex items-start gap-3">
                 <span className="pt-2.5">{check(a)}</span>
                 <div className="min-w-0 flex-1">
