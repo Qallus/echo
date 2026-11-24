@@ -59,7 +59,10 @@ export function RecorderPanel({ inPip = false }: { inPip?: boolean }) {
 
   return (
     <div className={cn("flex flex-col bg-background text-foreground",
-      inPip ? "h-svh" : "fixed right-4 bottom-[calc(var(--bottom-nav)+1rem)] z-40 h-[30rem] max-h-[calc(100svh-var(--bottom-nav)-5rem)] w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border shadow-xl")}>
+      inPip ? "h-svh" : "fixed right-4 bottom-[calc(var(--bottom-nav)+1rem)] z-40 h-[30rem] max-h-[calc(100svh-var(--bottom-nav)-5rem)] w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border shadow-xl",
+      // A red edge while live, amber while paused, so it reads as recording at a glance.
+      !inPip && r.status === "recording" && "border-red-500/70 ring-2 ring-red-500/25",
+      !inPip && r.status === "paused" && "border-amber-500/70 ring-2 ring-amber-500/25")}>
       {/* Header: where this recording will be saved */}
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <AudioLines className="size-4" />
@@ -75,6 +78,19 @@ export function RecorderPanel({ inPip = false }: { inPip?: boolean }) {
         )}
         {!inPip && <Button variant="ghost" size="icon-sm" aria-label="Minimize" onClick={() => setMinimized(true)}><Minus /></Button>}
       </div>
+
+      {/* Live bar: says plainly that this is recording (or paused), with the time. */}
+      {recording && (
+        <div className={cn("flex items-center gap-2 px-3 py-1.5 text-xs font-semibold tracking-wide uppercase",
+          r.status === "paused" ? "bg-amber-500/15 text-amber-800 dark:text-amber-300" : "bg-red-500/10 text-red-600 dark:text-red-400")}>
+          <span className="relative flex size-2.5">
+            {r.status === "recording" && <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />}
+            <span className={cn("relative inline-flex size-2.5 rounded-full", r.status === "paused" ? "bg-amber-500" : "bg-red-500")} />
+          </span>
+          {r.status === "paused" ? "Paused" : "Live recording"}
+          <span className="ml-auto tabular-nums">{formatClock(r.elapsed)}</span>
+        </div>
+      )}
 
       <div className="relative flex min-h-0 flex-1 flex-col gap-3 p-3">
         <div>

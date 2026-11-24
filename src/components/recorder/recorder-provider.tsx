@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { RecordingSource, Workspace } from "@/lib/types";
 import { extensionFor, pickMimeType, readRms, startCapture, type Capture, type CaptureMode } from "@/lib/recorder/media";
 import { saveRecording } from "@/lib/recorder/save";
+import { formatClock } from "@/lib/format";
 import { requestTranscription } from "@/components/recording/transcribe";
 import { RecorderPanel } from "./recorder-panel";
 import { StartDialog } from "./start-dialog";
@@ -117,15 +118,25 @@ export function RecorderProvider({ workspaces, userId, children }: { workspaces:
     if (status !== "recording" || !analyser) return;
     const buf = new Float32Array(analyser.fftSize);
     let lastHeard = Date.now();
-    const title = document.title;
     const t = setInterval(() => {
       if (readRms(analyser, buf) > SILENCE_RMS) lastHeard = Date.now();
-      const quiet = Date.now() - lastHeard > SILENCE_MS;
-      setSilent(quiet);
-      document.title = quiet ? "No sound · Echo is recording" : title;
+      setSilent(Date.now() - lastHeard > SILENCE_MS);
     }, 500);
-    return () => { clearInterval(t); setSilent(false); document.title = title; };
+    return () => { clearInterval(t); setSilent(false); };
   }, [status, analyser]);
+
+  // The browser tab says a recording is live (with the time), so it shows
+  // from other tabs; it warns when there's no sound, and goes back after.
+  const baseTitle = useRef<string | null>(null);
+  useEffect(() => {
+    if (status !== "recording" && status !== "paused") {
+      if (baseTitle.current !== null) { document.title = baseTitle.current; baseTitle.current = null; }
+      return;
+    }
+    if (baseTitle.current === null) baseTitle.current = document.title;
+    document.title = status === "recording" && silent ? "No sound · Echo is recording"
+      : `${status === "paused" ? "❚❚ Paused" : "● Recording"} ${formatClock(elapsed)} · ${baseTitle.current}`;
+  }, [status, elapsed, silent]);
 
   // Don't lose a recording to an accidental tab close.
   useEffect(() => {
