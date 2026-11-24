@@ -56,7 +56,7 @@ export function CallsPanel({ calls, people, ready, number, readOnly, showPad = t
   };
 
   return (
-    <div className={cn("grid gap-4", showPad && mode === "both" && "lg:grid-cols-[19rem_minmax(0,1fr)]")}>
+    <div className={cn("grid gap-4", showPad && "lg:grid-cols-[19rem_minmax(0,1fr)]")}>
       {showPad && (
         <div className={cn("space-y-3 md:rounded-xl md:border md:bg-card md:p-4 lg:self-start", mode === "log" && "max-md:hidden")}>
           <p className="text-center text-xs text-muted-foreground md:text-left">{ready ? `Calls from ${number}. Rings here when someone calls that number.` : "Calling isn't set up yet. Add the Twilio settings in Coolify (see the setup notes)."}</p>

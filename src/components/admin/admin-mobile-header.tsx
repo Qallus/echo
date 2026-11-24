@@ -7,6 +7,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { ModeBadge } from "@/components/shell/shell";
 import { StatsToggle } from "@/components/shell/stats-toggle";
 import { DashboardSearch } from "@/components/shell/dashboard-search";
+import { ThemeToggle } from "@/components/theme";
 
 // Sticky top bar on phones; the menu opens the admin sidebar as a drawer.
 export function AdminMobileHeader({ permissions }: { permissions: string[] }) {
@@ -21,8 +22,9 @@ export function AdminMobileHeader({ permissions }: { permissions: string[] }) {
         </Link>
         {/* Right side, always at the far edge (the stats toggle only shows on pages with stats). */}
         <div className="ml-auto flex items-center gap-1">
-          <StatsToggle className="max-[359px]:hidden" />
+          <StatsToggle className="max-[399px]:hidden" />
           <DashboardSearch mode="admin" permissions={permissions} />
+          <ThemeToggle />
           <ModeBadge mode="admin" canAdmin compact />
         </div>
       </div>

@@ -105,7 +105,7 @@ export function PhoneCenter({ lines, calls, entries, manageLines, canCrm = false
   const chip = "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs";
 
   return (
-    <div className={cn("grid gap-4", mode === "both" && "lg:grid-cols-[19rem_minmax(0,1fr)]")}>
+    <div className="grid gap-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
       {/* Dial pad */}
       <div className={cn("space-y-3 md:rounded-xl md:border md:bg-card md:p-4 lg:sticky lg:top-4 lg:self-start", mode === "log" && "max-md:hidden")}>
         <p className="hidden items-center gap-2 text-sm font-medium md:flex"><Phone className="size-4" /> Dial pad</p>

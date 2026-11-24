@@ -10,6 +10,7 @@ import type { Me } from "@/components/app-sidebar";
 import { ModeBadge } from "@/components/shell/shell";
 import { StatsToggle } from "@/components/shell/stats-toggle";
 import { DashboardSearch, type DashboardSearchProps } from "@/components/shell/dashboard-search";
+import { ThemeToggle } from "@/components/theme";
 
 // Sticky top bar on phones: the menu button opens the full sidebar as a drawer.
 export function MobileHeader({ me, canAdmin = false, search }: { me: Me; canAdmin?: boolean; search: Omit<DashboardSearchProps, "mode"> }) {
@@ -23,9 +24,10 @@ export function MobileHeader({ me, canAdmin = false, search }: { me: Me; canAdmi
           <span className="font-semibold tracking-[0.2em]">REDIAL</span>
         </Link>
         <div className="ml-auto flex items-center gap-1">
-          <StatsToggle />
-          {canAdmin && <ModeBadge mode="user" canAdmin compact />}
+          <StatsToggle className="max-[419px]:hidden" />
           <DashboardSearch {...search} mode="user" />
+          <ThemeToggle />
+          {canAdmin && <ModeBadge mode="user" canAdmin compact />}
           <NotificationBell userId={me.id} initialUnread={me.unread} />
           <Link href="/settings" aria-label="Account settings" className="flex size-9 items-center justify-center">
             <UserAvatar name={me.name} email={me.email} src={me.avatarUrl} size="sm" />
