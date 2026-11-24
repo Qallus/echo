@@ -6,6 +6,7 @@ import { Bot, Loader2, Plus, Trash2, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MultiCombobox, type ComboOption } from "@/components/ui/multi-combobox";
 import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -62,8 +63,32 @@ export function Filters({ workspaces }: { workspaces: Workspace[] }) {
     if (value) next.set(key, value); else next.delete(key);
     router.push(`${pathname}${next.size ? `?${next}` : ""}`);
   };
+  // Phones: one searchable multi-select, grouped by Status, Area, Priority and
+  // Workspace. Several picks in a group are joined with commas in the URL.
+  const keys = ["status", "area", "priority", ...(workspaces.length > 1 ? ["workspace"] : [])];
+  const chosen = keys.flatMap((k) => (params.get(k) ?? "").split(",").filter(Boolean).map((v) => `${k}:${v}`));
+  const options: ComboOption[] = [
+    { value: "status:all", label: "All statuses", group: "Status" },
+    ...STATUSES.map((s) => ({ value: `status:${s}`, label: STATUS_LABEL[s], group: "Status" })),
+    ...AREAS.map((a) => ({ value: `area:${a}`, label: AREA_LABEL[a], group: "Area" })),
+    ...PRIORITIES.map((p) => ({ value: `priority:${p}`, label: label(p), group: "Priority" })),
+    ...(workspaces.length > 1 ? workspaces.map((w) => ({ value: `workspace:${w.id}`, label: w.isPersonal ? "Personal" : w.name, group: "Workspace" })) : []),
+  ];
+  const setAll = (values: string[]) => {
+    const next = new URLSearchParams(params);
+    for (const k of keys) {
+      const vs = values.filter((v) => v.startsWith(`${k}:`)).map((v) => v.slice(k.length + 1));
+      // "All statuses" and a specific status don't mix: the newest pick wins.
+      const last = values.at(-1);
+      const clean = k === "status" && vs.includes("all") && vs.length > 1 ? (last === "status:all" ? ["all"] : vs.filter((v) => v !== "all")) : vs;
+      if (clean.length) next.set(k, clean.join(",")); else next.delete(k);
+    }
+    router.push(`${pathname}${next.size ? `?${next}` : ""}`);
+  };
   return (
-    <div className="flex flex-wrap gap-2">
+    <>
+    <MultiCombobox className="md:hidden" label="Filter the backlog" placeholder="Open items · type to filter…" options={options} value={chosen} onChange={setAll} />
+    <div className="flex flex-wrap gap-2 max-md:hidden">
       <Pick className={pick} label="Status" value={params.get("status") ?? ""} onChange={(v) => set("status", v)}
         options={[{ value: "", label: "Open items" }, { value: "all", label: "All statuses" }, ...STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))]} />
       <Pick className={pick} label="Area" value={params.get("area") ?? ""} onChange={(v) => set("area", v)}
@@ -75,6 +100,7 @@ export function Filters({ workspaces }: { workspaces: Workspace[] }) {
           options={[{ value: "", label: "All workspaces" }, ...workspaces.map((w) => ({ value: w.id, label: w.isPersonal ? "Personal" : w.name }))]} />
       )}
     </div>
+    </>
   );
 }
 

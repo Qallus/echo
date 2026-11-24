@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <MobileHeader me={me} canAdmin={superAdmin} search={search} />
         <TopBar me={me} mode="user" canAdmin={superAdmin} search={search} />
         {/* Phones: leave room for the fixed bottom bar (--bottom-nav in globals.css). */}
-        <main className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
+        <main data-dash className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
         <BottomNav workspaces={workspaces} phone={callsUnread !== null} />
       </SidebarInset>
     </SidebarProvider>

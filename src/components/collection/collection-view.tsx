@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { cn } from "@/lib/utils";
 import { useColumnWidths } from "@/components/ui/column-resize";
@@ -97,7 +98,9 @@ export function CollectionView<T>(p: CollectionProps<T>) {
   const allowed = VIEWS.filter((v) => (v.id !== "map" || p.location) && (v.id !== "calendar" || p.date) && (v.id !== "board" || p.board)).map((v) => v.id);
   const [view, setView] = useView(p.storageKey, p.defaultView ?? "table", allowed);
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState(p.filters?.[0]?.id ?? "");
+  // Chosen filters (empty = the first filter, usually All). Chips pick one;
+  // the phone multi-select (long filter lists) picks several, any of which matches.
+  const [chosen, setChosen] = useState<string[]>([]);
   const sortable = p.columns.filter((c) => c.sort);
   const [sort, setSort] = useState<{ id: string; dir: "asc" | "desc" } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -107,8 +110,8 @@ export function CollectionView<T>(p: CollectionProps<T>) {
 
   const shown = useMemo(() => {
     const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    const f = p.filters?.find((x) => x.id === filter);
-    const out = p.items.filter((r) => (!f || f.test(r)) && (!words.length || words.every((w) => p.searchText(r).toLowerCase().includes(w))));
+    const fs = chosen.length ? (p.filters ?? []).filter((x) => chosen.includes(x.id)) : (p.filters ?? []).slice(0, 1);
+    const out = p.items.filter((r) => (!fs.length || fs.some((f) => f.test(r))) && (!words.length || words.every((w) => p.searchText(r).toLowerCase().includes(w))));
     const col = sort ? p.columns.find((c) => c.id === sort.id) : undefined;
     if (!sort || !col?.sort) return out;
     return [...out].sort((x, y) => {
@@ -116,7 +119,7 @@ export function CollectionView<T>(p: CollectionProps<T>) {
       const cmp = a == null && b == null ? 0 : a == null ? 1 : b == null ? -1 : typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b));
       return sort.dir === "asc" ? cmp : -cmp;
     });
-  }, [p, q, filter, sort]);
+  }, [p, q, chosen, sort]);
 
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const allShown = shown.length > 0 && shown.every((r) => selected.has(p.getId(r)));
@@ -157,14 +160,24 @@ export function CollectionView<T>(p: CollectionProps<T>) {
       </div>
 
       {p.filters && p.filters.length > 1 && (
-        <div className="slide-row flex flex-wrap gap-2">
-          {p.filters.map((f) => (
-            <button key={f.id} type="button" onClick={() => setFilter(f.id)}
-              className={cn("rounded-full border px-3 py-1 text-sm transition-colors", filter === f.id ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>
-              {f.label} <span className="opacity-70">{p.items.filter(f.test).length}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          {p.filters.length > 6 && (
+            <MultiCombobox className="md:hidden" label={`Filter ${many}`} placeholder={`${p.filters[0].label} ${many}: type to filter…`}
+              options={p.filters.slice(1).map((f) => ({ value: f.id, label: f.label, count: p.items.filter(f.test).length }))}
+              value={chosen} onChange={setChosen} />
+          )}
+          <div className={cn("slide-row flex flex-wrap gap-2", p.filters.length > 6 && "max-md:hidden")}>
+            {p.filters.map((f, i) => {
+              const on = chosen.length ? chosen.includes(f.id) : i === 0;
+              return (
+                <button key={f.id} type="button" aria-pressed={on} onClick={() => setChosen(i === 0 ? [] : [f.id])}
+                  className={cn("rounded-full border px-3 py-1 text-sm whitespace-nowrap transition-colors", on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>
+                  {f.label} <span className="opacity-70">{p.items.filter(f.test).length}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {view !== "table" && shown.length > 0 && p.actions?.length ? (
@@ -362,7 +375,7 @@ function CardsView<T>(p: ViewProps<T>) {
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 min-[1800px]:grid-cols-5">
       {p.rows.map((r) => (
         <article key={p.getId(r)} {...rowProps(p, r)}
-          className={cn("relative flex cursor-pointer flex-col gap-3 rounded-2xl border bg-card p-4 transition-shadow hover:shadow-md", p.selected.has(p.getId(r)) && "ring-2 ring-primary")}>
+          className={cn("relative flex cursor-pointer flex-col gap-2 rounded-xl border bg-card p-3 transition-shadow hover:shadow-md sm:gap-3 sm:rounded-2xl sm:p-4", p.selected.has(p.getId(r)) && "ring-2 ring-primary")}>
           <div className="flex items-start gap-3">
             <Pick p={p} row={r} className="pt-1" />
             {p.media?.(r)}
@@ -370,9 +383,9 @@ function CardsView<T>(p: ViewProps<T>) {
               <p className="truncate font-semibold">{p.title(r)}</p>
               {p.subtitle && <p className="line-clamp-2 text-xs text-muted-foreground">{p.subtitle(r)}</p>}
             </div>
-            {p.badge?.(r)}
+            {p.badge && <span className="shrink-0">{p.badge(r)}</span>}
           </div>
-          {p.meta && <div className="mt-auto border-t pt-3 text-xs text-muted-foreground">{p.meta(r)}</div>}
+          {p.meta && <div className="mt-auto border-t pt-2 text-xs text-muted-foreground sm:pt-3">{p.meta(r)}</div>}
         </article>
       ))}
     </div>

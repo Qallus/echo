@@ -17,12 +17,17 @@ export default async function BacklogPage({ searchParams }: { searchParams: Prom
   const spaces = Object.fromEntries(workspaces.map((w) => [w.id, w.isPersonal ? "Personal" : w.name]));
 
   let q = supabase.from("dev_requests").select("id, workspace_id, title, kind, area, priority, status, source, created_at, dev_request_comments(count)");
-  if (sp.status === "all") { /* every status */ }
-  else if ((STATUSES as readonly string[]).includes(sp.status ?? "")) q = q.eq("status", sp.status!);
-  else q = q.in("status", [...OPEN_STATUSES]);
-  if ((AREAS as readonly string[]).includes(sp.area ?? "")) q = q.eq("area", sp.area!);
-  if ((PRIORITIES as readonly string[]).includes(sp.priority ?? "")) q = q.eq("priority", sp.priority!);
-  if (sp.workspace && isUuid(sp.workspace)) q = q.eq("workspace_id", sp.workspace);
+  // Each filter may hold several values, comma separated (the phone multi-select).
+  const list = (v: string | undefined, ok: (x: string) => boolean) => (v ?? "").split(",").filter(ok);
+  const statuses = list(sp.status, (x) => (STATUSES as readonly string[]).includes(x));
+  const areas = list(sp.area, (x) => (AREAS as readonly string[]).includes(x));
+  const priorities = list(sp.priority, (x) => (PRIORITIES as readonly string[]).includes(x));
+  const spacesPicked = list(sp.workspace, isUuid);
+  if (sp.status?.split(",").includes("all")) { /* every status */ }
+  else q = q.in("status", statuses.length ? statuses : [...OPEN_STATUSES]);
+  if (areas.length) q = q.in("area", areas);
+  if (priorities.length) q = q.in("priority", priorities);
+  if (spacesPicked.length) q = q.in("workspace_id", spacesPicked);
   const { data, error } = await q.order("created_at", { ascending: false }).limit(200);
   if (error) throw new Error(error.message);
 
