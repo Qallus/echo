@@ -52,6 +52,7 @@ export async function createEchoServer(ctx: McpContext) {
   // Name and icon that ChatGPT, Claude and other apps show for the connection.
   const server = new McpServer({
     name: "redial", title: "Redial", version: "1.0.0", websiteUrl: "https://redial.si",
+    description: "Redial: AI call screening and phone lines, Echo recordings, the CRM and prospects, inbox and texts, agent tasks, web search and social posts.",
     icons: [
       // Small files (under 10 KB) for app directories and connector pickers.
       { src: "https://redial.si/icons/redial-app-256.png", mimeType: "image/png", sizes: ["256x256"] },
