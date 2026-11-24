@@ -101,11 +101,11 @@ export function TextsPanel({ texts, people, optOuts, ready, readOnly, scheduled,
         onOpen={open}
         empty="No texts yet."
         toolbar={<>
+          {!readOnly && <Button onClick={() => { setNewTo(""); setOpenNumber(null); setDraft(""); setMsg({}); }}><Plus /> New</Button>}
           <Button variant="outline" onClick={() => setPanel("scheduled")}>
             <CalendarClock /> Scheduled{upcoming > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{upcoming}</span>}
           </Button>
           {!readOnly && <Button variant="outline" onClick={() => setPanel("bulk")}><Megaphone /> Text the waitlist</Button>}
-          {!readOnly && <Button onClick={() => { setNewTo(""); setOpenNumber(null); setDraft(""); setMsg({}); }}><Plus /> New</Button>}
         </>}
       />
 

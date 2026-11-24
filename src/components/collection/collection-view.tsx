@@ -133,13 +133,13 @@ export function CollectionView<T>(p: CollectionProps<T>) {
 
   return (
     <div className="space-y-4">
-      {/* Phones: search on its own line, the buttons slide sideways below it. */}
-      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
-        <div className="relative md:min-w-56 md:flex-1">
+      {/* Phones: search and Sort on one line; the views and the page's buttons
+          slide sideways on the next. Desktop: all on one line. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-0 flex-1 md:min-w-56">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${many}`} className="pl-8" aria-label={`Search ${many}`} />
         </div>
-        <div className="slide-row flex min-w-0 flex-wrap items-center gap-2">
         {sortable.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}><ArrowDownUp /> {sort ? sortable.find((c) => c.id === sort.id)?.label : "Sort"}</DropdownMenuTrigger>
@@ -155,19 +155,21 @@ export function CollectionView<T>(p: CollectionProps<T>) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <ViewSwitcher views={VIEWS.filter((x) => allowed.includes(x.id))} value={view} onChange={setView} />
-        {p.toolbar}
+        <div className="slide-row flex min-w-0 flex-wrap items-center gap-2 max-md:w-full">
+          <ViewSwitcher views={VIEWS.filter((x) => allowed.includes(x.id))} value={view} onChange={setView} />
+          {p.toolbar}
         </div>
       </div>
 
       {p.filters && p.filters.length > 1 && (
         <>
-          {p.filters.length > 6 && (
+          {/* Phones: one searchable multi-select instead of chips. */}
+          {(
             <MultiCombobox className="md:hidden" label={`Filter ${many}`} placeholder={`${p.filters[0].label} ${many}: type to filter…`}
               options={p.filters.slice(1).map((f) => ({ value: f.id, label: f.label, count: p.items.filter(f.test).length }))}
               value={chosen} onChange={setChosen} />
           )}
-          <div className={cn("slide-row flex flex-wrap gap-2", p.filters.length > 6 && "max-md:hidden")}>
+          <div className="flex flex-wrap gap-2 max-md:hidden">
             {p.filters.map((f, i) => {
               const on = chosen.length ? chosen.includes(f.id) : i === 0;
               return (
