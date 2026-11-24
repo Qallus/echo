@@ -16,16 +16,17 @@ const when = (iso: string) => {
 // The inbox. With nothing open, every conversation in the shared list layout
 // (views, search, filters, checkboxes). With one open: conversations on the
 // left, the open one on the right; on a phone they take turns.
-export function InboxShell({ threads, children }: { threads: ThreadSummary[]; children: React.ReactNode }) {
+export function InboxShell({ threads, tabs, children }: { threads: ThreadSummary[]; /** Section tabs above the list. */ tabs?: React.ReactNode; children: React.ReactNode }) {
   const path = usePathname();
   const open = path.split("/")[2] ?? null;
   if (!open) {
     return (
       <div className="w-full space-y-4 px-4 py-8 sm:px-6 lg:px-8 2xl:px-10">
-        <div>
+        <div className="max-md:sr-only">
           <h1 className="text-2xl font-semibold tracking-tight">Messages</h1>
           <p className="text-sm text-muted-foreground">Live Agents and the businesses they work with. Contact details stay hidden; calls, bookings and payments run through Redial.</p>
         </div>
+        {tabs}
         {threads.length === 0 ? (
           <div className="space-y-2 rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
             <MessagesSquare className="mx-auto size-6" />

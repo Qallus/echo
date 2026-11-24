@@ -1,91 +1,110 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useTransition } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useState, useSyncExternalStore, useTransition } from "react";
+import { Briefcase, ChevronDown, ChevronRight, Folder, FolderPlus, LayoutGrid, Lock, Mic, Phone, Plus, Upload, Users } from "lucide-react";
 import {
-  AudioWaveform, Briefcase, CalendarDays, PhoneIncoming, Compass, Files, Folder, FolderPlus, Headphones, Headset, Home, Inbox,
-  LayoutTemplate, ListTodo, Lock, MessagesSquare, Mic, Monitor, Phone, Plug, Plus, Search, Sparkles, Trash2, Upload, Users, Video, Workflow,
-} from "lucide-react";
-import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail, SidebarSeparator, useSidebar,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel,
+  SidebarHeader, SidebarMenu, SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem,
+  SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator, useSidebar,
 } from "@/components/ui/sidebar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { createFolder, fileRecordings, moveRecordings, type BulkResult } from "@/lib/actions";
 import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
+import { isActive, NAV_BOTTOM, NAV_GROUPS, NAV_TOP, showItem, type NavGroup, type NavItem } from "@/lib/nav";
 import { useRecorder } from "@/components/recorder/recorder-provider";
 import { SidebarAccount, SidebarBrand } from "@/components/shell/shell";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const main = [
-  { href: "/search", label: "Search", icon: Search },
-  { href: "/home", label: "Home", icon: Home },
-  { href: "/ask", label: "Ask Echo", icon: Sparkles },
-  { href: "/shared", label: "Shared with me", icon: Users },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/templates", label: "Templates", icon: LayoutTemplate },
-  { href: "/explore", label: "Explore", icon: Compass },
-];
-const build = [
-  { href: "/backlog", label: "Backlog", icon: ListTodo },
-  { href: "/developer", label: "Developer", icon: Plug },
-];
+// Open/closed state of sidebar groups and folder lists, remembered in this browser.
+const OPEN_KEY = "redial.nav.open";
+function readOpen(): Record<string, boolean> {
+  try { return JSON.parse(localStorage.getItem(OPEN_KEY) ?? "{}") as Record<string, boolean>; } catch { return {}; }
+}
+function useOpenState() {
+  const raw = useSyncExternalStore(
+    (fn) => { window.addEventListener(OPEN_KEY, fn); return () => window.removeEventListener(OPEN_KEY, fn); },
+    () => { try { return localStorage.getItem(OPEN_KEY) ?? "{}"; } catch { return "{}"; } },
+    () => "{}",
+  );
+  const state = JSON.parse(raw) as Record<string, boolean>;
+  const set = (id: string, open: boolean) => {
+    try { localStorage.setItem(OPEN_KEY, JSON.stringify({ ...readOpen(), [id]: open })); } catch {}
+    window.dispatchEvent(new Event(OPEN_KEY));
+  };
+  return [state, set] as const;
+}
 
 type DropHandlers = Pick<React.HTMLAttributes<HTMLElement>, "onDragOver" | "onDragLeave" | "onDrop">;
-type NavProps = { href: string; label: string; icon: typeof Home; n?: number; exact?: boolean; drop?: DropHandlers; highlight?: boolean };
 
 // Module-level so its identity is stable across renders (drag-over re-renders the sidebar).
-function NavItem({ href, label, icon: Icon, n, exact, drop, highlight }: NavProps) {
+function NavLink({ item, n, drop, highlight, children }: { item: NavItem; n?: number; drop?: DropHandlers; highlight?: boolean; children?: React.ReactNode }) {
   const pathname = usePathname();
-  const active = href === "/" ? pathname === "/" || pathname === "/home" : exact ? pathname === href : pathname.startsWith(href);
+  const search = useSearchParams();
+  const { icon: Icon } = item;
+  const active = isActive(item.href, pathname, search, item.exact, item.defaultTab);
   return (
     <SidebarMenuItem {...drop} className={cn(highlight && "rounded-md bg-sidebar-accent ring-2 ring-sidebar-ring")}>
-      <SidebarMenuButton isActive={active} tooltip={label} render={<Link href={href} />}>
+      <SidebarMenuButton isActive={active} tooltip={item.soon ? `${item.label} (coming soon)` : item.label} render={<Link href={item.href} />}>
         <Icon />
-        <span>{label}</span>
+        <span>{item.label}</span>
       </SidebarMenuButton>
-      {n !== undefined && <SidebarMenuBadge>{n}</SidebarMenuBadge>}
+      {item.soon ? (
+        <SidebarMenuBadge className="text-[10px] font-normal text-muted-foreground">Soon</SidebarMenuBadge>
+      ) : n ? <SidebarMenuBadge>{n}</SidebarMenuBadge> : null}
+      {children}
     </SidebarMenuItem>
+  );
+}
+
+function Group({ group, open, onToggle, children }: { group: NavGroup; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+  const { isMobile, state } = useSidebar();
+  const iconOnly = state === "collapsed" && !isMobile;
+  return (
+    <SidebarGroup className="py-1">
+      {group.label && (
+        <SidebarGroupLabel render={<button type="button" onClick={onToggle} aria-expanded={open} />}
+          className="w-full cursor-pointer justify-between uppercase tracking-wide hover:text-sidebar-foreground">
+          {group.label}
+          <ChevronDown className={cn("transition-transform", !open && "-rotate-90")} />
+        </SidebarGroupLabel>
+      )}
+      {(open || iconOnly) && <SidebarMenu>{children}</SidebarMenu>}
+    </SidebarGroup>
   );
 }
 
 export type Me = { id: string; name: string | null; email: string; avatarUrl: string | null; unread: number };
 type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null; phoneLine?: boolean; liveAgent?: boolean };
 
-export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null, phoneLine = false, liveAgent = false }: Props) {
-  const { email } = me;
+export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null, liveAgent = false }: Props) {
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
+  const pathname = usePathname();
   const { isMobile, state } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
+  const [openState, setOpen] = useOpenState();
+  const who = { line: callsUnread !== null, liveAgent };
+  const badge: Record<string, number | undefined> = { dialpad: callsUnread || undefined, notifications: me.unread || undefined };
 
-  const active = recordings.filter((r) => !r.deletedAt);
-  const bySource = (s: Recording["source"]) => active.filter((r) => r.source === s).length;
-  const sources = [
-    { href: "/library/source/calls", label: "Phone calls", icon: Phone, n: bySource("phone_call") },
-    { href: "/library/source/meetings", label: "Meetings", icon: Video, n: bySource("meeting") },
-    { href: "/library/source/uploads", label: "Uploads", icon: Upload, n: bySource("upload") },
-    { href: "/library/source/desktop", label: "Desktop", icon: Monitor, n: bySource("desktop") },
-  ];
-
-  // Drag recordings from a list onto a workspace section or a folder.
+  // Drag recordings from a list onto a workspace or a folder.
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>();
-  const dropProps = (key: string, act: (ids: string[]) => Promise<BulkResult>, label: string) => ({
-    onDragOver: (e: React.DragEvent) => {
+  const dropProps = (key: string, act: (ids: string[]) => Promise<BulkResult>, label: string): DropHandlers => ({
+    onDragOver: (e) => {
       if (!isRecordingDrag(e)) return;
       e.preventDefault();
       e.stopPropagation();
       e.dataTransfer.dropEffect = "move";
       if (dropTarget !== key) setDropTarget(key);
     },
-    onDragLeave: (e: React.DragEvent) => {
+    onDragLeave: (e) => {
       if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(null);
     },
-    onDrop: (e: React.DragEvent) => {
+    onDrop: (e) => {
       e.preventDefault();
       e.stopPropagation();
       setDropTarget(null);
@@ -99,35 +118,84 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
       });
     },
   });
-  const dropRing = (key: string) => dropTarget === key && "rounded-md bg-sidebar-accent ring-2 ring-sidebar-ring";
 
   const newFolder = (ws: Workspace) => {
     const name = window.prompt(`New folder in ${ws.isPersonal ? "Personal" : ws.name}`);
     if (name?.trim()) startTransition(() => createFolder(name, ws.id));
   };
 
+  const businesses = workspaces.filter((w) => !w.isPersonal);
+  const wsLabel = (ws: Workspace) => (ws.isPersonal ? "Personal files" : businesses.length > 1 ? `Business · ${ws.name}` : "Business files");
+
+  // One item per workspace, with its folders folding out underneath.
+  const fileItems = workspaces.map((ws) => {
+    const live = recordings.filter((r) => r.workspaceId === ws.id && !r.deletedAt);
+    const mine = folders.filter((f) => f.workspaceId === ws.id);
+    const key = `ws:${ws.id}`;
+    const inside = mine.some((f) => pathname === `/library/folder/${f.id}`);
+    const open = openState[key] ?? inside;
+    const item: NavItem = { key, href: `/library/space/${ws.id}`, label: wsLabel(ws), icon: ws.isPersonal ? Lock : Briefcase };
+    return (
+      <NavLink key={key} item={item} drop={dropProps(ws.id, (ids) => moveRecordings(ids, ws.id), ws.isPersonal ? "Personal" : ws.name)} highlight={dropTarget === ws.id}>
+        <SidebarMenuAction className="right-7" title="New folder" onClick={() => newFolder(ws)} disabled={pending}><FolderPlus /></SidebarMenuAction>
+        <SidebarMenuAction title={open ? "Hide folders" : "Show folders"} aria-expanded={open} onClick={() => setOpen(key, !open)}>
+          <ChevronRight className={cn("transition-transform", open && "rotate-90")} />
+        </SidebarMenuAction>
+        {open && (
+          <SidebarMenuSub>
+            {mine.length === 0 && <li className="px-2 py-1 text-xs text-muted-foreground">No folders yet</li>}
+            {mine.map((f) => (
+              <SidebarMenuSubItem key={f.id} {...dropProps(f.id, (ids) => fileRecordings(ids, f.id), f.name)}
+                className={cn(dropTarget === f.id && "rounded-md bg-sidebar-accent ring-2 ring-sidebar-ring")}>
+                <SidebarMenuSubButton isActive={pathname === `/library/folder/${f.id}`} render={<Link href={`/library/folder/${f.id}`} />}>
+                  <Folder /><span>{f.name}</span>
+                </SidebarMenuSubButton>
+                <span className="pointer-events-none absolute top-1 right-1 text-xs text-muted-foreground tabular-nums">{live.filter((r) => r.folderId === f.id).length || ""}</span>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        )}
+      </NavLink>
+    );
+  });
+
+  const renderGroup = (g: NavGroup) => {
+    const items = g.items.filter((i) => showItem(i, who));
+    const links = items.map((i) => <NavLink key={i.key} item={i} n={badge[i.key]} />);
+    return (
+      <Group key={g.id} group={g} open={openState[g.id] ?? true} onToggle={() => setOpen(g.id, !(openState[g.id] ?? true))}>
+        {/* File Manager: Recording Studio, then the workspaces, then Templates. */}
+        {g.files ? [links[0], ...fileItems, ...links.slice(1)] : links}
+      </Group>
+    );
+  };
+
+  const recordButton = (
+    <DropdownMenu>
+      {collapsed ? (
+        <DropdownMenuTrigger render={<Button size="icon" className="mx-auto" aria-label="New recording" title="New recording" />}>
+          <Plus />
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger render={<Button className="w-full" />}>
+          <span className="size-2 rounded-full bg-red-500" /> New recording <Plus className="ml-auto" />
+        </DropdownMenuTrigger>
+      )}
+      <DropdownMenuContent className="w-60" align="start">
+        <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("meeting")}><Mic /> Record a meeting</DropdownMenuItem>
+        <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("phone_call")}><Phone /> Record a call</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => recorder.openUpload()}><Upload /> Upload audio</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const contactsAt = NAV_GROUPS.findIndex((g) => g.id === "contacts");
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3">
         <SidebarBrand />
-        <SidebarAccount me={{ ...me, email }} mode="user" canAdmin={superAdmin} />
-
-        <DropdownMenu>
-          {collapsed ? (
-            <DropdownMenuTrigger render={<Button variant="outline" size="icon" className="mx-auto" aria-label="New recording" title="New recording" />}>
-              <Plus />
-            </DropdownMenuTrigger>
-          ) : (
-            <DropdownMenuTrigger render={<Button variant="outline" className="w-full" />}>
-              <Plus /> New recording
-            </DropdownMenuTrigger>
-          )}
-          <DropdownMenuContent className="w-60" align="start">
-            <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("meeting")}><Mic /> Record a meeting</DropdownMenuItem>
-            <DropdownMenuItem disabled={recorder.status !== "idle"} onClick={() => recorder.openStart("phone_call")}><Phone /> Record a call</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => recorder.openUpload()}><Upload /> Upload audio</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <SidebarAccount me={me} mode="user" canAdmin={superAdmin} />
       </SidebarHeader>
 
       <SidebarContent>
@@ -136,57 +204,18 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
             {notice.text}
           </p>
         )}
-        <SidebarGroup>
+        <SidebarGroup className="py-1">
           <SidebarMenu>
-            {main.map((i) => <NavItem key={i.href} {...i} />)}
-            {phoneLine && <NavItem href="/phone" label="Phone" icon={Phone} exact />}
-            {callsUnread !== null
-              ? <NavItem href="/calls" label="Calls" icon={PhoneIncoming} n={callsUnread || undefined} />
-              : <NavItem href="/setup" label="Set up Redial" icon={PhoneIncoming} />}
-            <NavItem href="/studio" label="Recording Studio" icon={AudioWaveform} />
-            <NavItem href="/call-tree" label="Call Tree" icon={Workflow} />
-            <NavItem href="/live-agents" label="Live Agents" icon={Headset} exact />
-            <NavItem href="/hiring" label="Hiring" icon={Briefcase} />
-            <NavItem href="/messages" label="Messages" icon={MessagesSquare} />
-            {liveAgent && <NavItem href="/agent-desk" label="Agent Desk" icon={Headphones} />}
+            {NAV_TOP.map((i) => <NavLink key={i.key} item={i} />)}
+            <NavLink item={{ key: "features", href: "/explore", label: "All features", icon: LayoutGrid, exact: true }} />
           </SidebarMenu>
         </SidebarGroup>
-        {workspaces.map((ws) => {
-          const mine = recordings.filter((r) => r.workspaceId === ws.id);
-          const live = mine.filter((r) => !r.deletedAt);
-          const base = `/library/space/${ws.id}`;
-          return (
-            <div key={ws.id}>
-              <SidebarSeparator />
-              <SidebarGroup {...dropProps(ws.id, (ids) => moveRecordings(ids, ws.id), ws.isPersonal ? "Personal" : ws.name)}
-                className={cn("transition-colors", dropRing(ws.id))}>
-                <SidebarGroupLabel className="gap-1.5">
-                  {ws.isPersonal ? <Lock className="size-3" /> : <Briefcase className="size-3" />}
-                  <span className="truncate">{ws.isPersonal ? "Personal" : `Business · ${ws.name}`}</span>
-                </SidebarGroupLabel>
-                <SidebarGroupAction title="New folder" onClick={() => newFolder(ws)} disabled={pending}><FolderPlus /></SidebarGroupAction>
-                <SidebarMenu>
-                  <NavItem href={base} exact label="All files" icon={Files} n={live.length} />
-                  <NavItem href={`${base}/unfiled`} label="Unfiled" icon={Inbox} n={live.filter((r) => !r.folderId).length} />
-                  {folders.filter((f) => f.workspaceId === ws.id).map((f) => (
-                    <NavItem key={f.id} href={`/library/folder/${f.id}`} label={f.name} icon={Folder}
-                      n={live.filter((r) => r.folderId === f.id).length}
-                      drop={dropProps(f.id, (ids) => fileRecordings(ids, f.id), f.name)} highlight={dropTarget === f.id} />
-                  ))}
-                  <NavItem href={`${base}/trash`} label="Trash" icon={Trash2} n={mine.length - live.length} />
-                </SidebarMenu>
-              </SidebarGroup>
-            </div>
-          );
-        })}
+        {NAV_GROUPS.slice(0, contactsAt + 1).map(renderGroup)}
+        <div className="px-2 py-2">{recordButton}</div>
+        {NAV_GROUPS.slice(contactsAt + 1).map(renderGroup)}
         <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarGroupLabel>Build</SidebarGroupLabel>
-          <SidebarMenu>{build.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Sources</SidebarGroupLabel>
-          <SidebarMenu>{sources.map((i) => <NavItem key={i.href} {...i} />)}</SidebarMenu>
+        <SidebarGroup className="py-1">
+          <SidebarMenu>{NAV_BOTTOM.map((i) => <NavLink key={i.key} item={i} />)}</SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
 

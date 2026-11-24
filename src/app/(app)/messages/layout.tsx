@@ -1,3 +1,4 @@
+import { AgentTabs } from "@/components/live-agents/agent-tabs";
 import { InboxShell } from "@/components/live-agents/inbox/inbox-shell";
 import { requireUser } from "@/lib/data";
 import { listThreads } from "@/lib/live-agents/messages";
@@ -10,5 +11,5 @@ export default async function MessagesLayout({ children }: { children: React.Rea
   if (threads === null) {
     return <p className="m-6 rounded-xl border border-dashed p-6 text-sm text-muted-foreground">Messaging is being set up. Check back shortly.</p>;
   }
-  return <InboxShell threads={threads}>{children}</InboxShell>;
+  return <InboxShell threads={threads} tabs={<AgentTabs />}>{children}</InboxShell>;
 }

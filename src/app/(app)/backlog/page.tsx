@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Suspense } from "react";
+import { LinkTabs } from "@/components/shell/link-tabs";
+import { DEVELOPER_TABS } from "@/lib/nav";
 import { LocalDate } from "@/components/local-date";
 import { isUuid, listWorkspaces } from "@/lib/data";
 import { AREA_LABEL, AREAS, label, OPEN_STATUSES, PRIORITIES, SOURCE_LABEL, STATUSES, type Status } from "@/lib/backlog";
@@ -38,8 +41,9 @@ export default async function BacklogPage({ searchParams }: { searchParams: Prom
   };
 
   return (
-    <div className="w-full space-y-6 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
-      <div className="space-y-1">
+    <div className="w-full space-y-6 py-6 px-4 sm:px-6 lg:px-8 2xl:px-10">
+      <Suspense><LinkTabs label="Build" tabs={DEVELOPER_TABS} /></Suspense>
+      <div className="space-y-1 max-md:sr-only">
         <h1 className="text-3xl font-semibold tracking-tight">Backlog</h1>
         <p className="text-sm text-muted-foreground">Build items from you, Claude on your phone, and Claude Code.</p>
       </div>

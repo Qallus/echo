@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import {
-  AudioWaveform, Briefcase, Compass, Home, LayoutTemplate, ListTodo, Lock, Mic, Phone, Plus, Search, Settings, Sparkles, Upload, Users,
-} from "lucide-react";
+import { AudioWaveform, Briefcase, Headset, LayoutGrid, Lock, Mic, Phone, Plus, Upload } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRecorder } from "@/components/recorder/recorder-provider";
+import { navItem } from "@/lib/nav";
 import type { Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -18,25 +17,33 @@ export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace
   const recorder = useRecorder();
   const scroller = useRef<HTMLDivElement>(null);
 
+  // Same destinations as the sidebar (lib/nav.ts), core ones first.
+  const pick = (key: string, label?: string) => {
+    const i = navItem(key)!;
+    return { href: i.href, label: label ?? i.label, icon: i.icon };
+  };
   const items = [
-    { href: "/home", label: "Home", icon: Home },
-    ...(phone ? [{ href: "/calls?tab=phone", label: "Phone", icon: Phone }] : []),
+    pick("home"),
+    ...(phone ? [pick("dialpad")] : []),
     { href: "/studio", label: "Record", icon: AudioWaveform },
-    { href: "/ask", label: "Ask Echo", icon: Sparkles },
+    pick("ask"),
+    pick("sms"),
+    pick("contacts"),
+    pick("calendar"),
     ...workspaces.map((w) => ({
       href: `/library/space/${w.id}`,
       // One Business workspace reads "Business"; with several, their names tell them apart.
       label: w.isPersonal ? "Personal" : workspaces.filter((x) => !x.isPersonal).length > 1 ? w.name : "Business",
       icon: w.isPersonal ? Lock : Briefcase,
     })),
-    { href: "/search", label: "Search", icon: Search },
-    { href: "/templates", label: "Templates", icon: LayoutTemplate },
-    { href: "/explore", label: "Explore", icon: Compass },
-    { href: "/backlog", label: "Backlog", icon: ListTodo },
-    { href: "/team", label: "Team", icon: Users },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/agents", label: "Agents", icon: Headset },
+    { href: "/explore", label: "Features", icon: LayoutGrid },
+    pick("settings"),
   ];
-  const isActive = (href: string) => (href === "/home" ? pathname === "/home" : pathname.startsWith(href.split("?")[0]));
+  const isActive = (href: string) => {
+    const path = href.split("?")[0];
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   // Keep the current page's button in view after navigating.
   useEffect(() => {

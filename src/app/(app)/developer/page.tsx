@@ -2,6 +2,9 @@ import Link from "next/link";
 import { CircleAlert, CircleCheck, Plug, Smartphone, SquareTerminal } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Suspense } from "react";
+import { LinkTabs } from "@/components/shell/link-tabs";
+import { DEVELOPER_TABS } from "@/lib/nav";
 import { CopyButton } from "@/components/copy-button";
 import { LocalDate } from "@/components/local-date";
 import { requireUser } from "@/lib/data";
@@ -30,7 +33,8 @@ export default async function DeveloperPage() {
     (clientId && apps.find((g) => g.client.id === clientId)?.client.name) || (clientId ? "Connected app" : "Direct");
 
   return (
-    <div className="w-full space-y-8 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
+    <div className="w-full space-y-8 py-6 px-4 sm:px-6 lg:px-8 2xl:px-10">
+      <Suspense><LinkTabs label="Build" tabs={DEVELOPER_TABS} /></Suspense>
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Developer</h1>
         <p className="text-sm text-muted-foreground">
