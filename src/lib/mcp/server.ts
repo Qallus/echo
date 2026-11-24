@@ -53,8 +53,9 @@ export async function createEchoServer(ctx: McpContext) {
   const server = new McpServer({
     name: "redial", title: "Redial", version: "1.0.0", websiteUrl: "https://redial.si",
     icons: [
-      { src: "https://redial.si/icons/icon-512.png", mimeType: "image/png", sizes: ["512x512"] },
-      { src: "https://redial.si/icons/icon-192.png", mimeType: "image/png", sizes: ["192x192"] },
+      // Small files (under 10 KB) for app directories and connector pickers.
+      { src: "https://redial.si/icons/redial-app-256.png", mimeType: "image/png", sizes: ["256x256"] },
+      { src: "https://redial.si/icons/redial-app-128.png", mimeType: "image/png", sizes: ["128x128"] },
       { src: "https://redial.si/icon.svg", mimeType: "image/svg+xml", sizes: ["any"] },
     ],
   }, { instructions: ctx.agent ? INSTRUCTIONS + AGENT_INSTRUCTIONS : INSTRUCTIONS });
