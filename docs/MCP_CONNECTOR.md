@@ -302,7 +302,7 @@ Then run `/mcp` in Claude Code and authenticate.
 2. Add a custom MCP server. Name: `Redial`. URL: `https://redial.si/api/mcp`. Authentication: **OAuth**, with client registration left to **dynamic registration**.
 3. Accept the warning, create it, then connect. Sign in to Redial and click **Allow**.
 4. In a chat, pick Developer mode from the tools menu and turn on Redial.
-ChatGPT uses the same OAuth 2.1 + PKCE flow and dynamic registration as Claude, so no client needs to be pre-registered. If ChatGPT ever shows a token refresh problem, check that the Supabase authorization server lists `offline_access` (or the refresh equivalent) in its discovery document. OpenAI's guide: https://developers.openai.com/api/docs/guides/developer-mode.
+ChatGPT uses the same OAuth 2.1 + PKCE flow and dynamic registration as Claude, so no client needs to be pre-registered. If ChatGPT says "Missing OAuth callback data" after you click Allow (the code is issued but ChatGPT never asks for the token), delete the half-made connector, sign in to redial.si first in the same browser, allow pop-ups for chatgpt.com, and add it again without switching tabs. That fixed it on Nov 23, 2026. Icon for ChatGPT's upload field (under 10 KB): https://redial.si/icons/redial-app-256.png. If ChatGPT ever shows a token refresh problem, check that the Supabase authorization server lists `offline_access` (or the refresh equivalent) in its discovery document. OpenAI's guide: https://developers.openai.com/api/docs/guides/developer-mode.
 
 **Codex (CLI, IDE extension and app):**
 With your own sign-in (OAuth), add the server and log in:
