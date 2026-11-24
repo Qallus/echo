@@ -8,7 +8,7 @@ export function GET(req: Request) {
       resource: mcpResource(req),
       authorization_servers: [authorizationServer()],
       bearer_methods_supported: ["header"],
-      resource_name: "Echo",
+      resource_name: "Redial",
     },
     { headers: { ...CORS_HEADERS, "Cache-Control": "public, max-age=3600" } },
   );

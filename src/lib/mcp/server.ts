@@ -49,7 +49,15 @@ High-risk actions, and any tool your owner marked, wait for a person: the tool r
 // permissions are empty until the session has passed two-step sign-in,
 // when that is required).
 export async function createEchoServer(ctx: McpContext) {
-  const server = new McpServer({ name: "echo", title: "Redial and Echo", version: "0.9.0" }, { instructions: ctx.agent ? INSTRUCTIONS + AGENT_INSTRUCTIONS : INSTRUCTIONS });
+  // Name and icon that ChatGPT, Claude and other apps show for the connection.
+  const server = new McpServer({
+    name: "redial", title: "Redial", version: "1.0.0", websiteUrl: "https://redial.si",
+    icons: [
+      { src: "https://redial.si/icons/icon-512.png", mimeType: "image/png", sizes: ["512x512"] },
+      { src: "https://redial.si/icons/icon-192.png", mimeType: "image/png", sizes: ["192x192"] },
+      { src: "https://redial.si/icon.svg", mimeType: "image/svg+xml", sizes: ["any"] },
+    ],
+  }, { instructions: ctx.agent ? INSTRUCTIONS + AGENT_INSTRUCTIONS : INSTRUCTIONS });
   registerAccountTools(server, ctx);
   registerFolderTools(server, ctx);
   registerRecordingTools(server, ctx);
