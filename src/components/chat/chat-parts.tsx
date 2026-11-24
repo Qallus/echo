@@ -3,12 +3,13 @@
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MODELS } from "@/lib/ai/models";
 import type { ChatMessage, ModelStatus } from "@/hooks/use-echo-chat";
+import { useDictation } from "@/hooks/use-dictation";
 import { cn } from "@/lib/utils";
 
 export function ModelSelect({ value, onChange, models }: { value: string; onChange: (m: string) => void; models: ModelStatus[] }) {
@@ -62,25 +63,41 @@ export function Composer({
   model: string; onModelChange: (m: string) => void; models: ModelStatus[]; rows?: number;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  // Speak instead of type: what you say is added after anything already typed.
+  const before = useRef("");
+  const voice = useDictation((heard) => { if (ref.current) ref.current.value = `${before.current}${heard}`; });
+  const talk = () => {
+    if (!voice.listening) { const v = ref.current?.value ?? ""; before.current = v && !v.endsWith(" ") ? `${v} ` : v; }
+    voice.toggle();
+  };
   const submit = () => {
     const v = ref.current?.value ?? "";
     if (!v.trim()) return;
+    voice.stop();
     onSend(v);
     if (ref.current) ref.current.value = "";
   };
   return (
     <div className="space-y-2 rounded-xl border bg-background p-2">
       <Textarea
-        ref={ref} rows={rows} placeholder={placeholder} className="resize-none border-0 shadow-none focus-visible:ring-0"
+        ref={ref} rows={rows} placeholder={voice.listening ? "Listening…" : placeholder} className="resize-none border-0 shadow-none focus-visible:ring-0"
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
       />
       <div className="flex items-center justify-between">
         <ModelSelect value={model} onChange={onModelChange} models={models} />
+        <span className="flex items-center gap-1.5">
+        {voice.supported && !streaming && (
+          <Button size="icon-sm" variant="ghost" aria-label={voice.listening ? "Stop listening" : "Speak your question"} aria-pressed={voice.listening} onClick={talk}
+            className={cn("rounded-full", voice.listening && "bg-red-500/15 text-red-600 dark:text-red-400")}>
+            <Mic className={cn(voice.listening && "animate-pulse")} />
+          </Button>
+        )}
         {streaming ? (
           <Button size="icon-sm" variant="secondary" className="rounded-full" onClick={onStop} aria-label="Stop"><Square /></Button>
         ) : (
           <Button size="icon-sm" className="rounded-full" onClick={submit} aria-label="Send"><ArrowUp /></Button>
         )}
+        </span>
       </div>
     </div>
   );
