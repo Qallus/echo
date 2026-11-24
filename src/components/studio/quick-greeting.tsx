@@ -6,6 +6,7 @@ import { Check, ExternalLink, Sparkles, Star } from "lucide-react";
 import { AudioPlayer } from "@/components/studio/audio-player";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pick } from "@/components/ui/pick";
 import { Textarea } from "@/components/ui/textarea";
 import { setDefaultVoice, useDefaultVoice } from "@/lib/studio/default-voice";
 import { MAX_SCRIPT, STUDIO_KINDS, type StudioAudio, type StudioKind } from "@/lib/studio/types";
@@ -36,7 +37,7 @@ function Step({ n, title, done, children }: { n: number; title: string; done: bo
         <span className={cn("flex size-6 items-center justify-center rounded-full text-xs", done ? "bg-primary text-primary-foreground" : "bg-muted")}>{done ? <Check className="size-3.5" /> : n}</span>
         {title}
       </h3>
-      <div className="pl-8">{children}</div>
+      <div className="sm:pl-8">{children}</div>
     </section>
   );
 }
@@ -91,19 +92,15 @@ export function QuickGreeting({ prefill, onSaved }: { prefill?: GreetingPrefill;
   }
 
   return (
-    <div className="space-y-6 rounded-2xl border bg-card p-5 sm:p-6">
+    <div className="space-y-6 rounded-2xl border bg-card p-4 sm:p-6">
       <div>
         <h2 className="text-lg font-semibold">New greeting with an AI voice</h2>
         <p className="text-sm text-muted-foreground">Four quick steps. It&apos;s saved to your library, ready to pick in Call Tree.</p>
       </div>
 
       <Step n={1} title="What's it for?" done={Boolean(kind)}>
-        <div className="flex flex-wrap gap-2">
-          {STUDIO_KINDS.filter((k) => k.id !== "other").map((k) => (
-            <button key={k.id} type="button" onClick={() => chooseKind(k.id)}
-              className={cn("rounded-full border px-3 py-1.5 text-sm transition-colors", kind === k.id ? "border-foreground bg-foreground text-background" : "hover:bg-muted")}>{k.label}</button>
-          ))}
-        </div>
+        <Pick label="What it's for" value={kind} onChange={(v) => chooseKind(v as StudioKind)} className="sm:max-w-xs"
+          options={STUDIO_KINDS.filter((k) => k.id !== "other").map((k) => ({ value: k.id, label: k.label }))} />
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="space-y-1.5"><span className="text-xs text-muted-foreground">Name (optional)</span>
             <Input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} placeholder={`${kindLabel}, e.g. Main line greeting`} /></label>
@@ -120,15 +117,10 @@ export function QuickGreeting({ prefill, onSaved }: { prefill?: GreetingPrefill;
       <Step n={3} title="Pick a voice" done={Boolean(voice)}>
         {providers.length === 0 ? <p className="text-sm text-muted-foreground">Loading voices…</p> : (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1 sm:w-fit">
-              {providers.map((p) => (
-                <button key={p.id} type="button" disabled={!p.configured} title={p.configured ? undefined : "Not set up yet (Admin → Settings → Integrations)"}
-                  onClick={() => setPick({ provider: p.id, voice: p.voices[0]?.id ?? "" })}
-                  className={cn("rounded-md px-3 py-1 text-sm", voice?.provider === p.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground", !p.configured && "cursor-not-allowed opacity-40")}>
-                  {p.label}{p.id === "xai" ? " (your AI receptionist)" : ""}
-                </button>
-              ))}
-            </div>
+            <Pick label="Voice engine" value={voice?.provider ?? ""} className="sm:max-w-xs"
+              onChange={(id) => { const p = providers.find((x) => x.id === id); if (p) setPick({ provider: p.id, voice: p.voices[0]?.id ?? "" }); }}
+              options={providers.map((p) => ({ value: p.id, disabled: !p.configured,
+                label: `${p.label}${p.id === "xai" ? " (your AI receptionist)" : ""}${p.configured ? "" : " (not set up)"}` }))} />
             <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
               {(engine?.voices ?? []).map((v) => (
                 <button key={v.id} type="button" onClick={() => setPick({ provider: engine!.id, voice: v.id })}
@@ -150,7 +142,7 @@ export function QuickGreeting({ prefill, onSaved }: { prefill?: GreetingPrefill;
 
       <Step n={4} title="Make it and save" done={Boolean(made)}>
         <div className="space-y-3">
-          <Button onClick={make} disabled={busy || !voice || !script.trim()}><Sparkles /> {busy ? "Making it…" : `Make ${kindLabel.toLowerCase()}`}</Button>
+          <Button size="lg" className="w-full" onClick={make} disabled={busy || !voice || !script.trim()}><Sparkles /> {busy ? "Making it…" : `Make ${kindLabel.toLowerCase()}`}</Button>
           {made?.url && <AudioPlayer src={made.url} downloadName={`${made.name}.wav`} />}
           {msg && <p role="status" className={cn("text-sm", msg.error ? "text-destructive" : "text-muted-foreground")}>{msg.text}</p>}
           {made && (
