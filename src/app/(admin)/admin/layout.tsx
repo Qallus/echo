@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <AdminMobileHeader permissions={staff.permissions} />
         <TopBar me={me} mode="admin" canAdmin search={{ permissions: staff.permissions }} />
         {/* Phones: leave room for the fixed bottom bar. */}
-        <main className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
+        <main data-admin-main className="flex-1 pb-[var(--bottom-nav)] md:pb-0">{children}</main>
         <AdminBottomNav permissions={staff.permissions} />
         {can(staff, "comms.manage") && <Softphone />}
       </SidebarInset>

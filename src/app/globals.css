@@ -242,6 +242,42 @@
 html[data-stats="hidden"] .stat-card { display: none !important; }
 html[data-stats="hidden"] .stat-row:not(:has(> :not(.stat-card))) { display: none !important; }
 
+/* Admin on phones: rows that would wrap onto a second line slide sideways
+   instead (to save space). Applies to anything marked .slide-row, to tab
+   lists, to stat card rows, and to any wrapping row made only of buttons and
+   links. One level of :has() only (see the note above). */
+@media (max-width: 767.98px) {
+  [data-admin-main] .slide-row,
+  [data-admin-main] [data-slot="tabs"][data-orientation="horizontal"] [data-slot="tabs-list"],
+  [data-admin-main] .flex-wrap:not(:has(> :not(button, a))) {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  [data-admin-main] .slide-row::-webkit-scrollbar,
+  [data-admin-main] [data-slot="tabs-list"]::-webkit-scrollbar,
+  [data-admin-main] .flex-wrap::-webkit-scrollbar { display: none; }
+  [data-admin-main] .slide-row > *,
+  [data-admin-main] [data-slot="tabs"][data-orientation="horizontal"] [data-slot="tabs-list"] > *,
+  [data-admin-main] .flex-wrap:not(:has(> :not(button, a))) > * { flex-shrink: 0; scroll-snap-align: start; }
+  [data-admin-main] [data-slot="tabs"][data-orientation="horizontal"] [data-slot="tabs-list"] { justify-content: flex-start; }
+
+  [data-admin-main] .stat-row {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  [data-admin-main] .stat-row::-webkit-scrollbar { display: none; }
+  [data-admin-main] .stat-row > * { flex: 0 0 auto; width: 44%; min-width: 9.5rem; scroll-snap-align: start; }
+}
+
 /* While a quick-action bar is showing (components/collection/quick-action-bar.tsx),
    leave room so it doesn't cover the last rows of the page. */
 body:has([data-quick-bar]) main { padding-bottom: 7rem; }

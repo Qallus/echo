@@ -19,7 +19,7 @@ export default async function Workspace({ searchParams }: { searchParams: Promis
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-1">
+        <div className="space-y-1 max-md:sr-only">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Workspace</h1>
           <p className="text-sm text-muted-foreground">Shared notes, processes and proposals for the team. Private pages are only visible to you.</p>
         </div>

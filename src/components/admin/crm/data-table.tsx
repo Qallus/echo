@@ -67,7 +67,7 @@ export function DataTable<T>({ rows, columns, getId, selected, onSelect, onOpen,
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="slide-row flex flex-wrap items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}><ListFilter /> Add filter</DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">

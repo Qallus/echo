@@ -57,7 +57,7 @@ export function ReportTable({ def, rows, range, since, until, saved }: {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="slide-row flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={exportCsv} disabled={!rows.length}><Download /> Export CSV</Button>
         <Button variant="outline" size="sm" onClick={() => { setMsg({}); setOpen(true); }}><Save /> Save report</Button>
         {saved.map((s) => (

@@ -6,13 +6,15 @@ export function AdminPage({ title, description, actions, children, className }: 
   title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode; className?: string;
 }) {
   return (
-    <div className={cn("w-full space-y-8 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 2xl:px-10", className)}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-1">
+    <div className={cn("w-full space-y-5 py-4 sm:py-8 px-4 sm:px-6 lg:px-8 2xl:px-10 md:space-y-8", className)}>
+      {/* Phones: no title or description (the top bar names the area); the
+          heading stays for screen readers and the actions slide sideways. */}
+      <div className={cn("flex flex-wrap items-end justify-between gap-3", !actions && "max-md:sr-only")}>
+        <div className="space-y-1 max-md:sr-only">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
-        {actions}
+        {actions && <div className="slide-row flex min-w-0 items-center gap-2 max-md:w-full">{actions}</div>}
       </div>
       {children}
     </div>
@@ -37,7 +39,7 @@ export function Section({ title, description, actions, children }: { title: stri
           <h2 className="text-lg font-semibold">{title}</h2>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
-        {actions}
+        {actions && <div className="slide-row flex min-w-0 max-w-full items-center gap-2">{actions}</div>}
       </div>
       {children}
     </section>
