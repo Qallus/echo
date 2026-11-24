@@ -157,7 +157,10 @@ function BottomPanel({ open, onOpenChange, title, description, actions, footer, 
             className={cn(
               "relative flex max-h-[calc(100dvh-0.5rem)] min-h-0 w-full flex-col rounded-t-2xl border-t bg-popover text-sm text-popover-foreground shadow-2xl outline-none touch-none",
               "[padding-bottom:max(0px,calc(var(--drawer-snap-point-offset)+var(--drawer-swipe-movement-y)))] [transform:translateY(calc(var(--drawer-snap-point-offset)+var(--drawer-swipe-movement-y)))]",
-              "transition-transform duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-swiping:select-none data-starting-style:[transform:translateY(100%)] data-ending-style:[transform:translateY(100%)] data-starting-style:[padding-bottom:0] data-ending-style:[padding-bottom:0]",
+              "transition-[transform,height] duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-swiping:select-none data-starting-style:[transform:translateY(100%)] data-ending-style:[transform:translateY(100%)] data-starting-style:[padding-bottom:0] data-ending-style:[padding-bottom:0]",
+              // Snap points only move the sheet; a short sheet needs a real
+              // height to fill the screen when it's made full height.
+              snap === 1 && "h-[calc(100dvh-0.5rem)]",
               className,
             )}
           >
