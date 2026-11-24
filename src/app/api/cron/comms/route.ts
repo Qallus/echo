@@ -1,4 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
+import { after } from "next/server";
+import { resumeStuckTranscriptions, runTranscription } from "@/lib/transcription/run";
 import { sendBookingReminders, sendEventReminders } from "@/lib/bookings/reminders";
 import { processRuleRuns, queueTimedRules } from "@/lib/automation/run";
 import { processDueRuns, queueTimed } from "@/lib/comms/automations";
@@ -36,6 +38,10 @@ async function authorized(req: Request) {
 async function run(req: Request) {
   if (!(await authorized(req))) return Response.json({ error: "Not allowed." }, { status: 403 });
   const db = createAdminClient();
+  // Transcriptions a restart cut off carry on in the background (the
+  // recording's owner is notified when they finish, by the database trigger).
+  const resumed = await resumeStuckTranscriptions(db).catch((e) => { console.error("[transcribe resume]", e); return [] as string[]; });
+  for (const id of resumed) after(() => runTranscription(db, id));
   // Scheduled sends first, with most of the time budget (big text sends carry on next run).
   const scheduled = await runScheduled(db, 180_000);
   const queued = (await queueTimed(db)) + (await queueTimedRules(db));
@@ -54,7 +60,7 @@ async function run(req: Request) {
   const digest = await sendAnalyticsDigest(db).catch((e) => { console.error("[analytics digest]", e); return 0; });
   // Social posts whose time has come (no-op before the social posting migration).
   const social = await publishDuePosts(db).catch((e) => { console.error("[social]", e); return 0; });
-  return Response.json({ ok: true, scheduled, queued, sent, rules, reminders, costs, summaries, lookups, search, aiChecks, digest, social });
+  return Response.json({ ok: true, transcriptions: resumed.length, scheduled, queued, sent, rules, reminders, costs, summaries, lookups, search, aiChecks, digest, social });
 }
 
 export const GET = run;

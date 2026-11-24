@@ -25,7 +25,8 @@ export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace
     { href: "/ask", label: "Ask Echo", icon: Sparkles },
     ...workspaces.map((w) => ({
       href: `/library/space/${w.id}`,
-      label: w.isPersonal ? "Personal" : w.name,
+      // One Business workspace reads "Business"; with several, their names tell them apart.
+      label: w.isPersonal ? "Personal" : workspaces.filter((x) => !x.isPersonal).length > 1 ? w.name : "Business",
       icon: w.isPersonal ? Lock : Briefcase,
     })),
     { href: "/search", label: "Search", icon: Search },

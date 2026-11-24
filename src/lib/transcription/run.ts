@@ -12,7 +12,7 @@ export async function getTranscriptionSetting(supabase: SupabaseClient): Promise
   return parseSetting(data?.value);
 }
 
-const STALE_MS = 15 * 60 * 1000; // a job "processing" longer than this is treated as dead
+const STALE_MS = 10 * 60 * 1000; // a job "processing" longer than this is treated as dead
 
 // Marks the recording as transcribing. "running" means a job is already in progress.
 export async function startTranscription(supabase: SupabaseClient, recordingId: string): Promise<{ error?: string; running?: boolean }> {
@@ -104,4 +104,25 @@ async function transcribe(supabase: SupabaseClient, audio: Blob, fileName: strin
     }
   }
   throw new Error("Transcription failed.");
+}
+
+// Picks up transcriptions a server restart (a deploy) cut off, so a recording
+// never sits on "Transcribing…": the scheduled job calls this every few
+// minutes with the service-role client. A job counts as cut off once it has
+// shown "processing" for STALE_MS; anything older than a day is left alone.
+// Note: the ai_usage row can't be written from here (it needs the signed-in
+// user), so a resumed job's cost isn't logged there.
+export async function resumeStuckTranscriptions(db: SupabaseClient, max = 2): Promise<string[]> {
+  const now = Date.now();
+  const { data } = await db.from("recordings").select("id")
+    .eq("status", "processing").is("deleted_at", null).not("storage_path", "is", null)
+    .lt("updated_at", new Date(now - STALE_MS).toISOString()).gt("updated_at", new Date(now - 24 * 3600_000).toISOString())
+    .order("updated_at", { ascending: true }).limit(max);
+  const ids: string[] = [];
+  for (const { id } of data ?? []) {
+    // Touch it first so a second run of the job doesn't pick it up too.
+    const { error } = await db.from("recordings").update({ status: "processing", processing_error: null }).eq("id", id).eq("status", "processing");
+    if (!error) ids.push(id);
+  }
+  return ids;
 }
