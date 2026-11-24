@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
-  Briefcase, Compass, Home, LayoutTemplate, ListTodo, Lock, Mic, Phone, Plus, Search, Settings, Sparkles, Upload, Users,
+  AudioWaveform, Briefcase, Compass, Home, LayoutTemplate, ListTodo, Lock, Mic, Phone, Plus, Search, Settings, Sparkles, Upload, Users,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRecorder } from "@/components/recorder/recorder-provider";
@@ -21,6 +21,7 @@ export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace
   const items = [
     { href: "/home", label: "Home", icon: Home },
     ...(phone ? [{ href: "/calls?tab=phone", label: "Phone", icon: Phone }] : []),
+    { href: "/studio", label: "Record", icon: AudioWaveform },
     { href: "/ask", label: "Ask Echo", icon: Sparkles },
     ...workspaces.map((w) => ({
       href: `/library/space/${w.id}`,
