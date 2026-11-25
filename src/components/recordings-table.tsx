@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore, useTransition } from "react";
 import { useColumnWidths } from "@/components/ui/column-resize";
 import {
-  ArchiveRestore, ArrowRightLeft, Briefcase, CalendarDays, CircleAlert, CircleCheck, Columns3, Download, Folder,
+  Archive, ArchiveRestore, ArrowRightLeft, Briefcase, CalendarDays, CircleAlert, CircleCheck, Columns3, Download, Folder,
   FolderMinus, LayoutGrid, List, Loader2, Lock, Monitor, Phone, Rows3, Trash2, Upload, Video,
 } from "lucide-react";
 import {
@@ -18,7 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LocalDate } from "@/components/local-date";
-import { exportRecordings, fileRecordings, moveRecordings, trashRecordings, type BulkResult } from "@/lib/actions";
+import { archiveRecordings, exportRecordings, fileRecordings, moveRecordings, purgeRecordings, trashRecordings, type BulkResult } from "@/lib/actions";
+import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { RECORDINGS_MIME } from "@/lib/dnd";
 import { formatDuration, spaceLabel } from "@/lib/format";
 import { SOURCES, type Folder as FolderT, type Recording, type Workspace } from "@/lib/types";
@@ -78,12 +79,21 @@ type Props = {
   emptyText?: string;
   /** Rows can come from several workspaces: show each row's Business/Personal badge. */
   showSpace?: boolean;
-  /** Trash view: offer Restore instead of Move to Trash. */
+  /** Trash view: offer Restore and Delete forever instead of Move to Trash. */
   trash?: boolean;
+  /** Archive view: offer Unarchive instead of Archive. */
+  archive?: boolean;
 };
 
-export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothing here yet", showSpace, trash }: Props) {
+export function RecordingsTable({ rows: allRows, workspaces, folders, emptyText = "Nothing here yet", showSpace, trash, archive }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // "Made from": phone calls, meetings, uploads, desktop (none picked = all).
+  const [made, setMade] = useState<string[]>([]);
+  const rows = made.length ? allRows.filter((r) => made.includes(r.source)) : allRows;
+  const madeOptions = (Object.keys(SOURCES) as Recording["source"][])
+    .map((k) => ({ value: k, label: SOURCES[k].label, count: allRows.filter((r) => r.source === k).length }))
+    .filter((o) => o.count > 0);
+  const [confirmPurge, setConfirmPurge] = useState(false);
   const widths = useColumnWidths("recordings");
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>();
   const [pending, start] = useTransition();
@@ -146,7 +156,7 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
     );
   };
 
-  if (!rows.length)
+  if (!allRows.length)
     return <div className="py-24 text-center text-sm text-muted-foreground">{emptyText}</div>;
 
   return (
@@ -154,7 +164,7 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
       {ids.length > 0 ? (
         <QuickActionBar count={ids.length} total={rows.length} onSelectAll={() => setSelected(new Set(rows.map((r) => r.id)))} onClear={() => setSelected(new Set())}>
 
-          {!trash && (
+          {!trash && !archive && (
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger render={<Button variant="outline" size="sm" disabled={pending} />}>
@@ -200,13 +210,35 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
 
           <Button variant="outline" size="sm" disabled={pending} onClick={download}><Download /> Export</Button>
           {trash ? (
-            <Button variant="outline" size="sm" disabled={pending} onClick={() => run("Restored", () => trashRecordings(ids, false))}>
-              <ArchiveRestore /> Restore
-            </Button>
+            <>
+              <Button variant="outline" size="sm" disabled={pending} onClick={() => run("Restored", () => trashRecordings(ids, false))}>
+                <ArchiveRestore /> Restore
+              </Button>
+              {confirmPurge ? (
+                <Button variant="destructive" size="sm" disabled={pending} onClick={() => { setConfirmPurge(false); run("Deleted forever", () => purgeRecordings(ids)); }}>
+                  <Trash2 /> Delete {ids.length} forever? This can&apos;t be undone
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" className="text-destructive" disabled={pending} onClick={() => setConfirmPurge(true)}>
+                  <Trash2 /> Delete forever
+                </Button>
+              )}
+            </>
           ) : (
-            <Button variant="outline" size="sm" disabled={pending} onClick={() => run("Moved to Trash", () => trashRecordings(ids, true))}>
-              <Trash2 /> Move to Trash
-            </Button>
+            <>
+              {archive ? (
+                <Button variant="outline" size="sm" disabled={pending} onClick={() => run("Unarchived", () => archiveRecordings(ids, false))}>
+                  <ArchiveRestore /> Unarchive
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled={pending} onClick={() => run("Archived", () => archiveRecordings(ids, true))}>
+                  <Archive /> Archive
+                </Button>
+              )}
+              <Button variant="outline" size="sm" disabled={pending} onClick={() => run("Moved to Trash", () => trashRecordings(ids, true))}>
+                <Trash2 /> Move to Trash
+              </Button>
+            </>
           )}
           {pending && <Loader2 className="ml-1 size-4 animate-spin text-muted-foreground" />}
         </QuickActionBar>
@@ -216,9 +248,13 @@ export function RecordingsTable({ rows, workspaces, folders, emptyText = "Nothin
         )
       )}
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {madeOptions.length > 1 && (
+          <MultiCombobox label="Made from" placeholder="Made from: all" options={madeOptions} value={made} onChange={setMade} className="min-w-0 flex-1 sm:max-w-sm" />
+        )}
         <ViewSwitcher views={[...VIEWS]} value={view} onChange={setView} />
       </div>
+      {rows.length === 0 && <p className="py-12 text-center text-sm text-muted-foreground">Nothing made from that here.</p>}
 
       {view === "table" && (
         <Table style={widths.tableStyle}>

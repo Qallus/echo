@@ -1,4 +1,5 @@
 import "server-only";
+import { columnReady } from "@/lib/schema-ready";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -70,7 +71,7 @@ export const getPersonalWorkspace = cache(async (): Promise<Workspace> => {
 
 type RecordingRow = {
   id: string; workspace_id: string; created_by: string | null; title: string; source: Recording["source"];
-  status: Recording["status"]; duration_sec: number; created_at: string; folder_id: string | null; deleted_at: string | null;
+  status: Recording["status"]; duration_sec: number; created_at: string; folder_id: string | null; deleted_at: string | null; archived_at?: string | null;
 };
 export const EVENT_COLS = "id, workspace_id, recording_id, kind, title, starts_at, ends_at, all_day, location, notes, attendees, created_by";
 type EventRow = { id: string; workspace_id: string; recording_id: string | null; kind: CalendarEvent["kind"]; title: string; starts_at: string; ends_at: string;
@@ -92,18 +93,20 @@ export async function listCalendarEvents(from: string, to: string): Promise<Cale
 const RECORDING_COLS = "id, workspace_id, created_by, title, source, status, duration_sec, created_at, folder_id, deleted_at";
 const toRecording = (r: RecordingRow): Recording => ({
   id: r.id, workspaceId: r.workspace_id, createdBy: r.created_by, title: r.title, source: r.source, status: r.status,
-  durationSec: r.duration_sec, createdAt: r.created_at, folderId: r.folder_id, deletedAt: r.deleted_at,
+  durationSec: r.duration_sec, createdAt: r.created_at, folderId: r.folder_id, deletedAt: r.deleted_at, archivedAt: r.archived_at ?? null,
 });
 
 // Every recording in every workspace the user belongs to (RLS limits the rows),
 // trash included (sidebar counts need both).
 export const listRecordings = cache(async (): Promise<Recording[]> => {
   const supabase = await createClient();
+  // archived_at arrives with the archive migration; until then nothing is archived.
+  const cols = (await columnReady("recordings", "archived_at")) ? `${RECORDING_COLS}, archived_at` : RECORDING_COLS;
   const { data, error } = await supabase
-    .from("recordings").select(RECORDING_COLS)
+    .from("recordings").select(cols)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data as RecordingRow[]).map(toRecording);
+  return (data as unknown as RecordingRow[]).map(toRecording);
 });
 
 export const listFolders = cache(async (): Promise<Folder[]> => {

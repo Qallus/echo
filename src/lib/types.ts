@@ -44,6 +44,8 @@ export type Recording = {
   createdAt: string; // ISO
   folderId: string | null;
   deletedAt: string | null;
+  /** Archived: out of All files, still searchable and restorable. */
+  archivedAt?: string | null;
 };
 
 export type Folder = { id: string; workspaceId: string; name: string };

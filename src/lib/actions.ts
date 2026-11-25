@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { columnReady } from "@/lib/schema-ready";
 import { getPersonalWorkspace, getRecordingDetail, getUser, isUuid, requireUser } from "@/lib/data";
 import { linksForEvent, pushDeletes, pushEventChange } from "@/lib/google/calendar-sync";
 import { namedLines, readSpeakers, type SpeakerInfo } from "@/lib/speakers";
@@ -163,6 +164,35 @@ export async function trashRecordings(ids: string[], trash: boolean): Promise<Bu
   const res = await eachRecording(ids, { deleted_at: trash ? new Date().toISOString() : null });
   revalidatePath("/", "layout");
   return res;
+}
+
+// Archive: out of All files and Unfiled, still searchable and restorable.
+export async function archiveRecordings(ids: string[], archived: boolean): Promise<BulkResult> {
+  await requireUser();
+  if (!(await columnReady("recordings", "archived_at"))) return { done: 0, errors: ["Archive needs a database update first (the recording archive SQL)."] };
+  const res = await eachRecording(ids, { archived_at: archived ? new Date().toISOString() : null });
+  revalidatePath("/", "layout");
+  return res;
+}
+
+// Delete forever, from Trash only: the recording, its transcript, summary and
+// audio. The database allows it for the creator or a workspace owner/admin.
+export async function purgeRecordings(ids: string[]): Promise<BulkResult> {
+  await requireUser();
+  const supabase = await createClient();
+  const results = await Promise.all(cleanIds(ids).map(async (id): Promise<string | null> => {
+    const { data: rec } = await supabase.from("recordings").select("id, deleted_at, storage_path").eq("id", id).maybeSingle();
+    if (!rec) return "Recording not found or you don't have access.";
+    if (!rec.deleted_at) return "Move it to Trash first.";
+    const { error, count } = await supabase.from("recordings").delete({ count: "exact" }).eq("id", id);
+    if (error) return error.message;
+    if (!count) return "Only the person who made a recording, or a workspace owner/admin, can delete it forever.";
+    if (rec.storage_path) await supabase.storage.from("recordings").remove([rec.storage_path]);
+    return null;
+  }));
+  revalidatePath("/", "layout");
+  const errors = new Set(results.filter((e): e is string => e !== null));
+  return { done: results.filter((e) => e === null).length, errors: [...errors] };
 }
 
 // One plain-text file: summary, key points, action items and transcript per recording.
