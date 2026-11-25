@@ -30,7 +30,7 @@ export function siteUrl(path: string) {
 }
 
 export async function sendEmail(to: string, subject: string, html: string, text: string,
-  opts: { headers?: Record<string, string>; replyTo?: string; idempotencyKey?: string } = {}): Promise<SendResult> {
+  opts: { headers?: Record<string, string>; replyTo?: string; idempotencyKey?: string; fromName?: string } = {}): Promise<SendResult> {
   const s = await secrets("RESEND_API_KEY", "EMAIL_FROM", "RESEND_REPLY_TO");
   const key = s.RESEND_API_KEY;
   const from = s.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL;
@@ -41,7 +41,8 @@ export async function sendEmail(to: string, subject: string, html: string, text:
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}) },
       body: JSON.stringify({
-        from: from.includes("<") ? from : `Redial <${from}>`, to: [to], subject, html, text,
+        from: opts.fromName ? `${opts.fromName.replace(/[<>"\r\n]/g, "").slice(0, 60)} via Redial <${from.match(/<([^>]+)>/)?.[1] ?? from}>`
+          : from.includes("<") ? from : `Redial <${from}>`, to: [to], subject, html, text,
         ...(opts.headers ? { headers: opts.headers } : {}),
         // Replies go to the team inbox.
         ...(replyTo ? { reply_to: replyTo } : {}),

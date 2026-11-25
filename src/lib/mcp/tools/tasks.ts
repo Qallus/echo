@@ -7,7 +7,7 @@ import { loadOrganization } from "@/lib/settings/organization";
 import type { McpContext } from "../auth";
 import { ToolError, defineTool } from "../audit";
 import { check, id } from "./shared";
-import { staffFilter } from "@/lib/schema-ready";
+import { columnReady, staffFilter } from "@/lib/schema-ready";
 
 // Agent tasks (Admin -> AI -> Agents -> Tasks) and events_poll. Agents and
 // owners/admins (staff.manage) take the next due task, do it with the other
@@ -109,10 +109,11 @@ export function registerTaskTools(server: McpServer, ctx: McpContext, perms: str
       return error ? { error: error.message } : data ?? [];
     };
     const staffOnly = await staffFilter("crm_contacts", ctx.supabase);
+    const lineTexts = await columnReady("phone_messages", "line_id", ctx.supabase);
     const [leads, inbox, texts, setups, orders] = await Promise.all([
       q(has("crm.view"), () => staffOnly(ctx.supabase.from("crm_contacts").select("id, first_name, last_name, company_name, email, phone, source, interest, created_at").eq("role", "lead").gt("created_at", since).order("created_at").limit(limit))),
       q(has("comms.view"), () => ctx.supabase.from("inbox_messages").select("id, channel, from_name, from_email, subject, topic, status, created_at").gt("created_at", since).order("created_at").limit(limit)),
-      q(has("comms.view"), () => ctx.supabase.from("phone_messages").select("id, from_number, body, contact_id, created_at").eq("direction", "inbound").gt("created_at", since).order("created_at").limit(limit)),
+      q(has("comms.view"), () => { const t = ctx.supabase.from("phone_messages").select("id, from_number, body, contact_id, created_at").eq("direction", "inbound").gt("created_at", since).order("created_at").limit(limit); return lineTexts ? t.is("line_id", null) : t; }),
       q(has("users.view"), () => ctx.supabase.from("redial_setups").select("user_id, status, step, updated_at").eq("status", "submitted").gt("updated_at", since).order("updated_at").limit(limit)),
       q(has("billing.view"), () => ctx.supabase.from("orders").select("id, status, total, currency, created_at").eq("status", "paid").gt("created_at", since).order("created_at").limit(limit)),
     ]);

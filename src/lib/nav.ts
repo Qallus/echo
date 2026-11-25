@@ -35,8 +35,8 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "communication", label: "Communication", items: [
       { key: "dialpad", href: "/calls?tab=phone", label: "Dialpad", icon: Phone, needsLine: true, defaultTab: true },
       { key: "setup", href: "/setup", label: "Set up Redial", icon: Phone, noLine: true },
-      { key: "sms", href: "/sms", label: "SMS", icon: MessageSquareText, soon: true },
-      { key: "email", href: "/email", label: "Emails", icon: Mail, soon: true },
+      { key: "sms", href: "/sms", label: "SMS", icon: MessageSquareText, crm: true },
+      { key: "email", href: "/email", label: "Emails", icon: Mail, crm: true },
       { key: "notifications", href: "/notifications", label: "Notifications", icon: Bell },
       { key: "call-tree", href: "/call-tree", label: "Call Tree", icon: Workflow },
       { key: "library", href: "/studio?tab=library", label: "Library", icon: AudioWaveform, defaultTab: true },

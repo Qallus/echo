@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Audience } from "./audience";
 import type { EmailSchema, TemplateMode, TemplateStatus } from "./blocks";
+import { columnReady } from "@/lib/schema-ready";
 
 // Communications reads for the admin. RLS (comms.view / notifications.view)
 // decides what comes back.
@@ -89,8 +90,10 @@ export type Automation = { id: string; name: string; trigger: string; stage: str
 
 export async function listTexts(): Promise<Text[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("phone_messages").select("id, direction, from_number, to_number, body, status, error, media, contact_id, read_at, created_at")
+  const q = supabase.from("phone_messages").select("id, direction, from_number, to_number, body, status, error, media, contact_id, read_at, created_at")
     .order("created_at", { ascending: false }).limit(1500);
+  // Texts on customers' Redial lines belong to those customers.
+  const { data } = await ((await columnReady("phone_messages", "line_id", supabase)) ? q.is("line_id", null) : q);
   return (data ?? []) as Text[];
 }
 

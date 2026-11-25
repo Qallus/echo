@@ -1,5 +1,6 @@
 import { contactForNumber, e164, twiml, verifyTwilio, xml } from "@/lib/comms/twilio";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { columnReady } from "@/lib/schema-ready";
 
 // Incoming text to Echo's number (Twilio "A message comes in" webhook).
 // Signed by Twilio; then saved with the service role, matched to a CRM
@@ -29,13 +30,25 @@ export async function POST(req: Request) {
     if (keyword === "YES") reply = await trustedYes(db, from);
   }
 
-  const contact = await contactForNumber(db, from);
+  const to = e164(p.To) ?? p.To ?? "";
+  // A customer's Redial line? Then the text is theirs, not Redial staff's.
+  const line = (await columnReady("phone_messages", "line_id", db))
+    ? (await db.from("redial_lines").select("id, owner_id").eq("number", to).maybeSingle()).data
+    : null;
+  const contact = line ? null : await contactForNumber(db, from);
   const media = Array.from({ length: Math.min(Number(p.NumMedia ?? 0) || 0, 10) }, (_, i) => ({ url: p[`MediaUrl${i}`], type: p[`MediaContentType${i}`] }));
-  const { error } = await db.from("phone_messages").upsert({
-    direction: "inbound", from_number: from, to_number: e164(p.To) ?? p.To ?? "", body, status: "received", twilio_sid: p.MessageSid,
-    media, contact_id: contact?.id ?? null, sent_by: null,
-  }, { onConflict: "twilio_sid", ignoreDuplicates: true });
+  const { data: saved, error } = await db.from("phone_messages").upsert({
+    direction: "inbound", from_number: from, to_number: to, body, status: "received", twilio_sid: p.MessageSid,
+    media, contact_id: contact?.id ?? null, sent_by: null, ...(line ? { line_id: line.id } : {}),
+  }, { onConflict: "twilio_sid", ignoreDuplicates: true }).select("id");
   if (error) return new Response(error.message, { status: 500 });
+
+  if (line && saved?.length && !STOP.has(keyword)) {
+    await db.from("notifications").insert({
+      user_id: line.owner_id, type: "text_received", title: `New text from ${from}`.slice(0, 200),
+      body: (body || "(attachment)").slice(0, 300), url: "/sms", data: { line_id: line.id, from },
+    });
+  }
 
   if (contact) {
     await db.from("crm_activities").insert({
