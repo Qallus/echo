@@ -25,7 +25,7 @@ export function toProducts(products: ProductRow[], prices: PriceRow[]): Product[
     .slice().sort((a, b) => a.sort - b.sort)
     .map((p) => ({
       id: p.id, kind: p.kind, name: p.name, tagline: p.tagline, features: p.features?.length ? p.features : undefined,
-      perSeat: p.per_seat || undefined, minutes: p.minutes, meter: p.meter === "redial" ? "redial" : undefined, active: p.active,
+      perSeat: p.per_seat || undefined, minutes: p.minutes, meter: p.meter === "redial" || p.meter === "sms" ? p.meter : undefined, active: p.active,
       line: p.product_line === "redial" ? "redial" : "echo", echoMinutes: p.echo_minutes ?? null, phones: p.phones ?? null,
       prices: prices.filter((x) => x.product_id === p.id).map((x) => ({
         key: x.key, interval: x.interval, unitAmount: x.unit_amount ?? undefined, tiers: x.tiers ?? undefined, active: x.active,

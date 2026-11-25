@@ -4,6 +4,7 @@ import { twilioSms } from "@/lib/comms/twilio";
 import { sendEmail, siteUrl, toE164 } from "@/lib/notify/senders";
 import { render, type Vars } from "./eval";
 import { columnReady } from "@/lib/schema-ready";
+import { segmentsOf } from "@/lib/sms/pricing";
 
 // The Call Tree blocks that reach outside the call: CRM lookup and update,
 // text and email, and dial by name. They run in the call runner with the
@@ -74,7 +75,7 @@ const titleCase = (s: string) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpp
 
 // Text or email someone from the call tree. "{{call.from}}" texts the caller.
 // Texts come from the line's own number; numbers that replied STOP are skipped.
-export async function sendFlowMessage(db: Db, line: { number: string }, vars: Vars, cfg: { channel: "sms" | "email"; to: string; body: string; subject?: string; enabled?: boolean }, callId: string | null) {
+export async function sendFlowMessage(db: Db, line: { number: string; id?: string }, vars: Vars, cfg: { channel: "sms" | "email"; to: string; body: string; subject?: string; enabled?: boolean }, callId: string | null) {
   if (cfg.enabled === false) return { ok: true, skipped: "switched off" };
   const body = render(cfg.body, vars).trim();
   const to = render(cfg.to, vars).trim();
@@ -84,10 +85,19 @@ export async function sendFlowMessage(db: Db, line: { number: string }, vars: Va
     if (!number) return { ok: false, error: "Not a phone number." };
     const { data: stop } = await db.from("phone_opt_outs").select("number").eq("number", number).maybeSingle();
     if (stop) return { ok: false, error: "They replied STOP." };
-    const res = await twilioSms(number, body.slice(0, 1600), line.number);
+    const text = body.slice(0, 1600);
+    const segments = segmentsOf(text);
+    // Counted against the line owner's texts (after the SMS billing migration).
+    const billed = await columnReady("phone_messages", "segments", db);
+    if (billed && line.id) {
+      const { data: usage } = await db.rpc("sms_line_usage", { p_line: line.id });
+      if (usage && (usage as { remaining: number }).remaining < segments) return { ok: false, error: "Out of texts: buy a text pack." };
+    }
+    const res = await twilioSms(number, text, line.number);
     await db.from("phone_messages").insert({
-      direction: "outbound", from_number: line.number, to_number: number, body: body.slice(0, 1600), status: res.ok ? res.status ?? "queued" : "failed",
+      direction: "outbound", from_number: line.number, to_number: number, body: text, status: res.ok ? res.status ?? "queued" : "failed",
       error: res.error?.slice(0, 500) ?? null, twilio_sid: res.sid ?? null, contact_id: String(vars.flow.contact_id ?? "") || null,
+      ...(billed && line.id ? { line_id: line.id, segments } : {}),
     }).then(({ error }) => { if (error) console.error("[call tree] sms log", error.message); });
     return res.ok ? { ok: true } : { ok: false, error: res.error };
   }

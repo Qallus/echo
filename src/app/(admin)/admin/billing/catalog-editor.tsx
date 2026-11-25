@@ -87,7 +87,7 @@ function ProductEditor({ product: p, readOnly }: { product: Product; readOnly: b
   const redialPlan = p.kind === "plan" && lineOf(p) === "redial";
   const [msg, setMsg] = useState<Msg>({});
   const [pending, start] = useTransition();
-  const showMinutes = p.kind === "plan" || p.kind === "pack" || p.meter === "redial";
+  const showMinutes = p.kind === "plan" || p.kind === "pack" || p.meter === "redial" || p.meter === "sms";
 
   return (
     <div className="space-y-5">
@@ -101,7 +101,7 @@ function ProductEditor({ product: p, readOnly }: { product: Product; readOnly: b
         <fieldset disabled={readOnly} className="contents">
           <label className="space-y-1 text-sm">Name<Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
           {showMinutes && (
-            <label className="space-y-1 text-sm">{p.meter === "redial" ? (p.kind === "pack" ? "Screening minutes in the pack" : "Screening minutes per month") : p.kind === "plan" ? `Minutes per month${p.perSeat ? " (per seat)" : ""}` : "Minutes in the pack"}
+            <label className="space-y-1 text-sm">{p.meter === "sms" ? (p.kind === "pack" ? "Texts in the pack" : "Texts per month") : p.meter === "redial" ? (p.kind === "pack" ? "Screening minutes in the pack" : "Screening minutes per month") : p.kind === "plan" ? `Minutes per month${p.perSeat ? " (per seat)" : ""}` : "Minutes in the pack"}
               <Input type="number" min={0} value={f.minutes} onChange={(e) => setF({ ...f, minutes: e.target.value })} />
             </label>
           )}

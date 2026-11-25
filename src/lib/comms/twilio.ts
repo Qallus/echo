@@ -40,6 +40,26 @@ export async function twilioSms(to: string, body: string, from?: string): Promis
   }
 }
 
+// Twilio's current US SMS prices (Pricing API), in cents per segment: the
+// average outbound price for local numbers across carriers, and inbound.
+export async function twilioSmsPrices(): Promise<{ outbound: number; inbound: number; carriers: number } | { error: string }> {
+  const e = await env();
+  if (!e.sid || !e.token) return { error: "Twilio isn't set up (Admin → Settings → Integrations → Twilio)." };
+  try {
+    const res = await fetch("https://pricing.twilio.com/v1/Messaging/Countries/US", { headers: { Authorization: auth(e) } });
+    if (!res.ok) return { error: `Twilio pricing ${res.status}` };
+    type P = { number_type: string; current_price: string };
+    const json = (await res.json()) as { outbound_sms_prices?: { carrier: string; prices: P[] }[]; inbound_sms_prices?: P[] };
+    const out = (json.outbound_sms_prices ?? []).flatMap((c) => c.prices.filter((p) => p.number_type === "local").map((p) => Number(p.current_price)))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    const inbound = (json.inbound_sms_prices ?? []).find((p) => p.number_type === "local");
+    if (!out.length) return { error: "Twilio didn't return US prices." };
+    return { outbound: (out.reduce((a, b) => a + b, 0) / out.length) * 100, inbound: Number(inbound?.current_price ?? 0) * 100, carriers: out.length };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't reach Twilio." };
+  }
+}
+
 // A form POST (or DELETE) to Twilio's REST API with the account's credentials.
 export async function twilioRequest(path: string, params: Record<string, string> = {}, method: "POST" | "DELETE" | "GET" = "POST"): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
   const e = await env();

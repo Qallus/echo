@@ -13,6 +13,8 @@ import { CatalogEditor } from "./catalog-editor";
 import { OrdersTable, type OrderRow } from "./orders-table";
 import { PromoCodes } from "./promo-codes";
 import { SubscriptionsList } from "./subscriptions-list";
+import { SmsBillingPanel, type SmsMonth } from "./sms-billing";
+import { getSmsBilling } from "@/lib/sms/server";
 import { toPromoRow } from "@/lib/billing/promo";
 import type { PromoRow } from "@/lib/billing/promo-rules";
 
@@ -47,12 +49,14 @@ export default async function AdminBillingPage() {
   const manage = can(staff, "billing.manage");
   const supabase = await createClient();
   await loadCatalog();
-  const [catalog, orders, subs, settings, codes] = await Promise.all([
+  const [catalog, orders, subs, settings, codes, smsBilling, smsMonth] = await Promise.all([
     loadFullCatalog(supabase),
     supabase.rpc("admin_orders", { max_rows: 300 }),
     supabase.rpc("admin_subscriptions"),
     getBillingSettings(supabase),
     promoCodes(supabase),
+    getSmsBilling(supabase),
+    supabase.rpc("admin_sms_month").then((r) => (r.error ? null : (r.data as SmsMonth))),
   ]);
   const o = (orders.data ?? []) as OrderRow[];
   const s = (subs.data ?? []) as SubRow[];
@@ -72,6 +76,7 @@ export default async function AdminBillingPage() {
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
           <TabsTrigger value="codes">Promo codes</TabsTrigger>
+          <TabsTrigger value="sms">SMS billing</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -114,6 +119,10 @@ export default async function AdminBillingPage() {
 
         <TabsContent value="codes" className="pt-6">
           {connected ? <PromoCodes codes={codes} readOnly={!manage} products={catalog.map((p) => ({ id: p.id, name: p.name, kind: p.kind }))} /> : <p className="rounded-xl border p-4 text-sm text-muted-foreground">Promotion codes live in Stripe. Add your Stripe secret key in Settings → Integrations to create them here.</p>}
+        </TabsContent>
+
+        <TabsContent value="sms" className="pt-6">
+          <SmsBillingPanel initial={smsBilling} products={catalog.filter((p) => p.meter === "sms")} month={smsMonth} readOnly={!manage} />
         </TabsContent>
 
         <TabsContent value="settings" className="pt-6">

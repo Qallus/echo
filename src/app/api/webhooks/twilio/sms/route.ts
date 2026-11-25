@@ -40,6 +40,7 @@ export async function POST(req: Request) {
   const { data: saved, error } = await db.from("phone_messages").upsert({
     direction: "inbound", from_number: from, to_number: to, body, status: "received", twilio_sid: p.MessageSid,
     media, contact_id: contact?.id ?? null, sent_by: null, ...(line ? { line_id: line.id } : {}),
+    ...(line && (await columnReady("phone_messages", "segments", db)) ? { segments: Math.min(Math.max(Number(p.NumSegments) || 1, 1), 20) } : {}),
   }, { onConflict: "twilio_sid", ignoreDuplicates: true }).select("id");
   if (error) return new Response(error.message, { status: 500 });
 

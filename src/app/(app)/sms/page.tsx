@@ -2,7 +2,10 @@ import Link from "next/link";
 import { ArrowRight, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ComingSoon } from "@/components/shell/coming-soon";
-import { LineTexts, type LineText, type TextPerson } from "@/components/redial/line-texts";
+import { LineTexts, type LineText, type ScheduledText, type TextPack, type TextPerson } from "@/components/redial/line-texts";
+import { loadCatalog } from "@/lib/billing/catalog-server";
+import { money, products } from "@/lib/billing/catalog";
+import { lineSmsUsage } from "@/lib/sms/server";
 import { requireUser } from "@/lib/data";
 import { listContacts } from "@/lib/crm/data";
 import { workspaceCrmReady } from "@/lib/crm/scope";
@@ -45,6 +48,19 @@ export default async function SmsPage() {
     const { data: out } = others.length ? await supabase.rpc("line_opt_outs", { p_line: l.id, p_numbers: others.slice(0, 200) }) : { data: [] };
     for (const n of (out ?? []) as string[]) stopped.add(n);
   }
+  // Texts left (counted for each line's owner; your own line first), packs to buy, and scheduled texts.
+  const own = lines.find((l) => l.access.owner) ?? lines[0];
+  const [usage, sched] = await Promise.all([
+    lineSmsUsage(supabase, own.id),
+    supabase.from("line_scheduled_texts").select("id, line_id, to_numbers, body, send_at, status, sent, failed, error")
+      .in("line_id", lines.map((l) => l.id)).order("send_at", { ascending: false }).limit(100),
+    loadCatalog(),
+  ]);
+  const packs: TextPack[] = products().filter((p) => p.meter === "sms" && p.active !== false).flatMap((p) => {
+    const price = p.prices.find((x) => x.active !== false && x.unitAmount != null);
+    if (!price || !p.minutes) return [];
+    return [{ key: price.key, name: p.name, price: money(price.unitAmount!), texts: p.minutes, monthly: p.kind !== "pack", perText: `${(price.unitAmount! / p.minutes).toFixed(2)}¢` }];
+  });
   const people: TextPerson[] = contacts.filter((c) => c.phone)
     .map((c) => ({ id: c.id, name: [c.first_name, c.last_name].filter(Boolean).join(" ") || c.phone!, phone: c.phone! }));
 
@@ -54,7 +70,9 @@ export default async function SmsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">SMS</h1>
         <p className="text-sm text-muted-foreground">Texts on your Redial number{lines.length > 1 ? "s" : ""}. People who reply STOP aren&apos;t texted until they reply START.</p>
       </div>
-      <LineTexts lines={lines.map((l) => ({ id: l.id, number: l.number, label: l.label }))} texts={texts} people={people} optOuts={[...stopped]} />
+      <LineTexts lines={lines.map((l) => ({ id: l.id, number: l.number, label: l.label }))} texts={texts} people={people} optOuts={[...stopped]}
+        balance={usage ? { used: usage.used, allowance: usage.allowance, remaining: usage.remaining } : null} packs={packs}
+        scheduled={(sched.data ?? []) as ScheduledText[]} />
     </div>
   );
 }

@@ -38,7 +38,7 @@ export const FEATURES: Feature[] = [
     what: "The step-by-step setup: pick or keep your number, choose where calls go, screening and your AI assistant.",
     personal: "A private number with spam screening in about 10 minutes.", business: "A business line with an AI receptionist, hours and a call tree." },
   { group: "Communication", title: "SMS", href: "/sms", icon: MessageSquareText, crm: true, keywords: "text message",
-    what: "Two-way texts from your Redial number, with every conversation in one place.",
+    what: "Two-way texts from your Redial number, scheduled texts, and a texts-left balance. Buy text packs (pay as you go) or a monthly text plan.",
     personal: "Text from your private number instead of your cell.", business: "Text customers reminders and replies from the business number." },
   { group: "Communication", title: "Emails", href: "/email", icon: Mail, crm: true,
     what: "Send emails to your contacts with saved templates and a sent log.",

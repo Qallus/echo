@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { CheckCheck, Copy, MessageSquare, Paperclip, Phone, Plus, Send } from "lucide-react";
+import { CalendarClock, CheckCheck, Copy, MessageSquare, Paperclip, Phone, Plus, Send, ShoppingCart, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
@@ -12,7 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { CollectionView } from "@/components/collection/collection-view";
 import { IconTile, muted } from "@/components/collection/kit";
 import { prettyNumber } from "@/components/redial/phone-center";
-import { markLineThreadRead, sendLineText } from "@/lib/redial/text-actions";
+import { cancelScheduledText, markLineThreadRead, scheduleLineText, sendLineText } from "@/lib/redial/text-actions";
+import { ScheduleDialog } from "@/components/admin/comms/schedule-dialog";
+import { addToCart } from "@/lib/billing/cart";
+import { segmentsOf } from "@/lib/sms/pricing";
 import { cn } from "@/lib/utils";
 
 // SMS from your Redial line(s): conversations in the shared list layout, a
@@ -25,11 +29,20 @@ export type LineText = {
 export type TextLine = { id: string; number: string; label: string };
 export type TextPerson = { id: string; name: string; phone: string };
 type Thread = { key: string; lineId: string; number: string; list: LineText[]; person: TextPerson | null; unread: number };
+export type TextBalance = { used: number; allowance: number; remaining: number } | null;
+export type TextPack = { key: string; name: string; price: string; texts: number; monthly: boolean; perText: string };
+export type ScheduledText = { id: string; line_id: string; to_numbers: string[]; body: string; send_at: string; status: string; sent: number; failed: number; error: string | null };
 
 const last10 = (n: string | null | undefined) => (n ?? "").replace(/\D/g, "").slice(-10);
 const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
-export function LineTexts({ lines, texts, people, optOuts }: { lines: TextLine[]; texts: LineText[]; people: TextPerson[]; optOuts: string[] }) {
+export function LineTexts({ lines, texts, people, optOuts, balance, packs, scheduled }: {
+  lines: TextLine[]; texts: LineText[]; people: TextPerson[]; optOuts: string[]; balance: TextBalance; packs: TextPack[]; scheduled: ScheduledText[];
+}) {
+  const router = useRouter();
+  const [panel, setPanel] = useState<"buy" | "later" | "scheduled" | null>(null);
+  const upcoming = scheduled.filter((x) => x.status === "scheduled");
+  const buy = (key: string) => { addToCart(key, 1); router.push("/cart"); };
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [newTo, setNewTo] = useState<string[] | null>(null);
   const [lineId, setLineId] = useState(lines[0]?.id ?? "");
@@ -77,6 +90,7 @@ export function LineTexts({ lines, texts, people, optOuts }: { lines: TextLine[]
   const send = () => start(async () => {
     const res = await sendLineText({ lineId: from, to: recipients, body: draft });
     setMsg(res);
+    if (res.outOfTexts) setPanel("buy");
     if (res.sent) {
       setDraft("");
       if (newTo?.length === 1 && !res.error) { setOpenKey(`${from}|${newTo[0]}`); setNewTo(null); }
@@ -84,8 +98,21 @@ export function LineTexts({ lines, texts, people, optOuts }: { lines: TextLine[]
     }
   });
 
+  const segs = segmentsOf(draft);
+  const low = balance && balance.allowance > 0 && balance.remaining / balance.allowance < 0.1;
   return (
     <div className="space-y-3">
+      {balance && (
+        <div className={cn("flex flex-wrap items-center gap-3 rounded-xl border p-3 text-sm", low && "border-amber-500/60 bg-amber-500/5")}>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{balance.remaining.toLocaleString()} texts left <span className="font-normal text-muted-foreground">· {balance.used.toLocaleString()} of {balance.allowance.toLocaleString()} used this month</span></p>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className={cn("h-full rounded-full", low ? "bg-amber-500" : "bg-primary")} style={{ width: `${Math.min(100, (balance.used / Math.max(balance.allowance, 1)) * 100)}%` }} />
+            </div>
+          </div>
+          {packs.length > 0 && <Button variant="outline" size="sm" onClick={() => setPanel("buy")}><ShoppingCart /> Buy texts</Button>}
+        </div>
+      )}
       <CollectionView<Thread>
         items={threads} getId={(t) => t.key} title={(t) => t.person?.name ?? prettyNumber(t.number)} noun={["conversation", "conversations"]} storageKey="sms" defaultView="list"
         subtitle={(t) => <span className={cn(t.unread > 0 && "font-medium text-foreground")}>{t.list[0]?.body || "(attachment)"}</span>}
@@ -115,7 +142,12 @@ export function LineTexts({ lines, texts, people, optOuts }: { lines: TextLine[]
         ]}
         onOpen={open}
         empty="No texts yet. Texts to your Redial number show up here."
-        toolbar={<Button onClick={() => { setNewTo([]); setOpenKey(null); setDraft(""); setMsg({}); }}><Plus /> New</Button>}
+        toolbar={<>
+          <Button onClick={() => { setNewTo([]); setOpenKey(null); setDraft(""); setMsg({}); }}><Plus /> New</Button>
+          <Button variant="outline" onClick={() => setPanel("scheduled")}>
+            <CalendarClock /> Scheduled{upcoming.length > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{upcoming.length}</span>}
+          </Button>
+        </>}
       />
 
       <ResponsivePanel open={thread !== null || newTo !== null} onOpenChange={(o) => !o && close()} id="sms-thread" defaultWidth={520} fullHeight={newTo === null} bodyClassName="flex flex-col"
@@ -131,7 +163,8 @@ export function LineTexts({ lines, texts, people, optOuts }: { lines: TextLine[]
               {blocked.map(prettyNumber).join(", ")} replied STOP. They need to text START first.</Badge>}
             <Textarea rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Text message" maxLength={1600} aria-label="Message"
               onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && canSend) send(); }} />
-            <p className="flex justify-between gap-2 text-[11px] text-muted-foreground"><span>{msg.error ?? msg.ok ?? "Ctrl+Enter to send"}</span><span className="shrink-0">{draft.length}/1600</span></p>
+            <p className="flex justify-between gap-2 text-[11px] text-muted-foreground"><span>{msg.error ?? msg.ok ?? "Ctrl+Enter to send"}</span><span className="shrink-0">{draft.length}/1600 · {segs} text{segs > 1 ? "s" : ""}{recipients.length > 1 ? ` × ${recipients.length}` : ""}</span></p>
+            <Button size="lg" variant="outline" className="w-full" disabled={!canSend} onClick={() => setPanel("later")}>Schedule your SMS <CalendarClock /></Button>
             <Button size="lg" className="w-full" disabled={!canSend} onClick={send}><Send /> {pending ? "Sending…" : recipients.length > 1 ? `Send to ${recipients.length}` : "Send"}</Button>
           </div>
         }>
@@ -158,6 +191,51 @@ export function LineTexts({ lines, texts, people, optOuts }: { lines: TextLine[]
               </div>
             ))}
           </div>
+        )}
+      </ResponsivePanel>
+
+      {panel === "later" && recipients.length > 0 && (
+        <ScheduleDialog title={`Text ${recipients.length > 1 ? `${recipients.length} people` : person?.name ?? prettyNumber(recipients[0])} later`} cronReady
+          summary={<p className="rounded-2xl bg-muted p-3 whitespace-pre-wrap break-words">{draft}</p>}
+          onSchedule={(sendAt) => scheduleLineText({ lineId: from, to: recipients, body: draft, sendAt })}
+          onClose={(done) => { setPanel(null); if (done) { setDraft(""); setMsg({ ok: "Scheduled. See Scheduled." }); router.refresh(); } }} />
+      )}
+
+      <ResponsivePanel open={panel === "buy"} onOpenChange={(o) => !o && setPanel(null)} id="sms-buy" defaultWidth={460}
+        title="Buy texts" description="Packs are pay as you go and last 12 months. Monthly plans add texts every month. Incoming texts always arrive.">
+        <div className="space-y-2">
+          {packs.map((p) => (
+            <div key={p.key} className="flex items-center gap-3 rounded-xl border p-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{p.name}</p>
+                <p className="text-xs text-muted-foreground">{p.monthly ? "Every month" : "Good for 12 months"} · {p.perText} a text</p>
+              </div>
+              <Button onClick={() => buy(p.key)}>{p.price}{p.monthly ? "/mo" : ""}</Button>
+            </div>
+          ))}
+        </div>
+      </ResponsivePanel>
+
+      <ResponsivePanel open={panel === "scheduled"} onOpenChange={(o) => !o && setPanel(null)} id="sms-scheduled" defaultWidth={520}
+        title="Scheduled texts" description="Upcoming texts can be canceled until they go out.">
+        {scheduled.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Nothing scheduled. Use Schedule your SMS when writing a text.</p> : (
+          <ul className="space-y-2">
+            {scheduled.map((x) => (
+              <li key={x.id} className="space-y-1 rounded-xl border p-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{new Date(x.send_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</span>
+                  <Badge variant="outline" className="capitalize">{x.status.replace("_", " ")}</Badge>
+                  {x.status === "scheduled" && (
+                    <Button size="icon-sm" variant="ghost" className="ml-auto" aria-label="Cancel" title="Cancel"
+                      onClick={() => start(async () => { setMsg(await cancelScheduledText(x.id)); router.refresh(); })}><X /></Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">To {x.to_numbers.map((n) => byPhone.get(last10(n))?.name ?? prettyNumber(n)).join(", ")}{lines.length > 1 ? ` · from ${lineName(x.line_id)}` : ""}</p>
+                <p className="whitespace-pre-wrap break-words">{x.body}</p>
+                {x.error && <p className="text-xs text-destructive">{x.error}</p>}
+              </li>
+            ))}
+          </ul>
         )}
       </ResponsivePanel>
     </div>

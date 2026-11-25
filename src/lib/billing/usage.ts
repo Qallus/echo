@@ -37,7 +37,7 @@ export async function minutesUsage(supabase: SupabaseClient, userId: string): Pr
   }
   const packMinutes = (packs.data ?? []).reduce((n, i) => {
     const hit = i.price_key ? findPrice(i.price_key) : null;
-    return n + (hit?.product.kind === "pack" && hit.product.meter !== "redial" ? (hit.product.minutes ?? 0) * (i.quantity ?? 1) : 0);
+    return n + (hit?.product.kind === "pack" && !hit.product.meter ? (hit.product.minutes ?? 0) * (i.quantity ?? 1) : 0);
   }, 0);
   const base = plan || settings.freeMinutes;
   return { used, plan: base, packs: packMinutes, allowance: base + packMinutes, planName };

@@ -8,7 +8,7 @@
 export type Interval = "month" | "year";
 export type Kind = "plan" | "bolt_on" | "pack" | "service";
 // What a product's minutes count: Echo transcription, or Redial AI screening.
-export type Meter = "transcription" | "redial";
+export type Meter = "transcription" | "redial" | "sms";
 // Which product it belongs to. Someone can hold one plan in each line.
 export type Line = "echo" | "redial";
 

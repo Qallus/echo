@@ -10,6 +10,7 @@ import { visibilityCron } from "@/lib/analytics/ai-visibility";
 import { sendAnalyticsDigest } from "@/lib/analytics/digest";
 import { syncSearchConsole } from "@/lib/analytics/search-console";
 import { fillCallCosts } from "@/lib/redial/call-log";
+import { fillTextCosts, runLineScheduled } from "@/lib/sms/runner";
 import { publishDuePosts } from "@/lib/social/publish";
 import { sendWeeklySummaries } from "@/lib/redial/alerts";
 import { secret } from "@/lib/secrets";
@@ -44,6 +45,9 @@ async function run(req: Request) {
   for (const id of resumed) after(() => runTranscription(db, id));
   // Scheduled sends first, with most of the time budget (big text sends carry on next run).
   const scheduled = await runScheduled(db, 180_000);
+  // Customers' scheduled texts from their own lines, and Twilio's price for recent texts.
+  const lineTexts = await runLineScheduled(db, 45_000).catch((e) => { console.error("[line texts]", e); return 0; });
+  const textCosts = await fillTextCosts(db).catch(() => 0);
   const queued = (await queueTimed(db)) + (await queueTimedRules(db));
   const sent = await processDueRuns(db);
   const rules = await processRuleRuns(db);
@@ -60,7 +64,7 @@ async function run(req: Request) {
   const digest = await sendAnalyticsDigest(db).catch((e) => { console.error("[analytics digest]", e); return 0; });
   // Social posts whose time has come (no-op before the social posting migration).
   const social = await publishDuePosts(db).catch((e) => { console.error("[social]", e); return 0; });
-  return Response.json({ ok: true, transcriptions: resumed.length, scheduled, queued, sent, rules, reminders, costs, summaries, lookups, search, aiChecks, digest, social });
+  return Response.json({ ok: true, transcriptions: resumed.length, scheduled, lineTexts, textCosts, queued, sent, rules, reminders, costs, summaries, lookups, search, aiChecks, digest, social });
 }
 
 export const GET = run;
