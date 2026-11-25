@@ -8,6 +8,7 @@ import { contactsToDeals } from "@/lib/crm/ops";
 import { text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { siteUrl } from "@/lib/notify/senders";
+import { staffFilter } from "@/lib/schema-ready";
 
 // Inbox actions shared by Admin -> Communications and the connector. The
 // caller checks comms.manage (and crm.manage to convert); RLS checks again.
@@ -20,14 +21,14 @@ export async function convertInboxMessage(supabase: SupabaseClient, id: string, 
   if (!m) return { error: "Not found." };
   let contactId: string | null = m.contact_id;
   if (!contactId && m.from_email) {
-    const { data: existing } = await supabase.from("crm_contacts").select("id").eq("email", m.from_email.toLowerCase()).limit(1).maybeSingle();
+    const { data: existing } = await (await staffFilter("crm_contacts", supabase))(supabase.from("crm_contacts").select("id").eq("email", m.from_email.toLowerCase()).limit(1)).maybeSingle();
     contactId = existing?.id ?? null;
   }
   if (!contactId) {
     const [first, ...rest] = (m.from_name || m.from_email?.split("@")[0] || "Unknown").trim().split(/\s+/);
     let companyId: string | null = null;
     if (m.company) {
-      const { data: c } = await supabase.from("crm_companies").select("id").eq("name", m.company).limit(1).maybeSingle();
+      const { data: c } = await (await staffFilter("crm_companies", supabase))(supabase.from("crm_companies").select("id").eq("name", m.company).limit(1)).maybeSingle();
       companyId = c?.id ?? (await supabase.from("crm_companies").insert({ name: m.company }).select("id").single()).data?.id ?? null;
     }
     const { data: created, error } = await supabase.from("crm_contacts").insert({

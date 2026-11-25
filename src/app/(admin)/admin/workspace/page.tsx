@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Lock, Search } from "lucide-react";
 import { NewPageMenu } from "@/components/admin/workspace/workspace-nav";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff } from "@/lib/crm/data";
 import { ownerName } from "@/lib/crm/types";
 import { listWorkspaceDocs } from "@/lib/workspace/data";

@@ -79,9 +79,9 @@ function Group({ group, open, onToggle, children }: { group: NavGroup; open: boo
 }
 
 export type Me = { id: string; name: string | null; email: string; avatarUrl: string | null; unread: number };
-type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null; phoneLine?: boolean; liveAgent?: boolean };
+type Props = { me: Me; workspaces: Workspace[]; recordings: Recording[]; folders: FolderT[]; superAdmin: boolean; callsUnread?: number | null; phoneLine?: boolean; liveAgent?: boolean; crmReady?: boolean };
 
-export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null, liveAgent = false }: Props) {
+export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, callsUnread = null, liveAgent = false, crmReady = false }: Props) {
   const [pending, startTransition] = useTransition();
   const recorder = useRecorder();
   const pathname = usePathname();
@@ -163,7 +163,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
 
   const renderGroup = (g: NavGroup) => {
     const items = g.items.filter((i) => showItem(i, who));
-    const links = items.map((i) => <NavLink key={i.key} item={i} n={badge[i.key]} />);
+    const links = items.map((i) => <NavLink key={i.key} item={i.crm && !crmReady ? { ...i, soon: true } : i} n={badge[i.key]} />);
     return (
       <Group key={g.id} group={g} open={openState[g.id] ?? true} onToggle={() => setOpen(g.id, !(openState[g.id] ?? true))}>
         {/* File Manager: Recording Studio, then the workspaces, then Templates. */}
@@ -233,7 +233,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
         <Button variant="outline" className="w-full" nativeButton={false} render={<Link href="/team" />}><Users /> Invite teammates</Button>
       </SidebarFooter>
       <SidebarRail />
-      <FeatureMenu open={features} onOpenChange={setFeatures} line={who.line} liveAgent={liveAgent} />
+      <FeatureMenu open={features} onOpenChange={setFeatures} line={who.line} liveAgent={liveAgent} crmReady={crmReady} />
     </Sidebar>
   );
 }

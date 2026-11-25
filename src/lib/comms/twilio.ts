@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteUrl, toE164 } from "@/lib/notify/senders";
 import { secrets } from "@/lib/secrets";
+import { columnReady } from "@/lib/schema-ready";
 
 // Twilio for the admin phone (Echo's notification number): REST helpers,
 // webhook signature checks and browser call tokens. No SDK on the server.
@@ -168,7 +169,9 @@ const last10 = (p: string | null | undefined) => (p ?? "").replace(/\D/g, "").sl
 export async function contactForNumber(supabase: SupabaseClient, number: string): Promise<{ id: string; company_id: string | null } | null> {
   const digits = last10(number);
   if (digits.length < 7) return null;
-  const { data } = await supabase.from("crm_contacts").select("id, company_id, phone").not("phone", "is", null).ilike("phone", `%${digits.slice(-4)}%`).limit(200);
+  const q = supabase.from("crm_contacts").select("id, company_id, phone").not("phone", "is", null).ilike("phone", `%${digits.slice(-4)}%`).limit(200);
+  // Redial's own contacts only, never a customer workspace's.
+  const { data } = await ((await columnReady("crm_contacts", "workspace_id", supabase)) ? q.is("workspace_id", null) : q);
   return (data ?? []).find((c) => last10(c.phone) === digits) ?? null;
 }
 

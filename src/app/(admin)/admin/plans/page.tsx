@@ -1,6 +1,7 @@
 import { AdminPage } from "@/components/admin/admin-ui";
 import { PlansIndex } from "@/components/admin/plans/plans-index";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff, listCompanies } from "@/lib/crm/data";
 import { listPlans } from "@/lib/plans/data";
 

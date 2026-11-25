@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { secrets } from "@/lib/secrets";
 import { isTrackingEvent, trackEvent, type ResendEvent } from "@/lib/comms/track";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { staffFilter } from "@/lib/schema-ready";
 
 // Resend webhook. Inbound email (event "email.received") -> the admin Inbox;
 // delivery events (delivered, opened, clicked, bounced, complained, …) ->
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
 
   const from = addr(event.data.from ?? "");
   const supabase = createAdminClient();
-  const { data: contact } = from.email ? await supabase.from("crm_contacts").select("id").eq("email", from.email).limit(1).maybeSingle() : { data: null };
+  const { data: contact } = from.email ? await (await staffFilter("crm_contacts", supabase))(supabase.from("crm_contacts").select("id").eq("email", from.email).limit(1)).maybeSingle() : { data: null };
   const { error } = await supabase.from("inbox_messages").upsert({
     channel: "email", provider_id: emailId, from_name: from.name, from_email: from.email || null, to_email: event.data.to?.[0]?.toLowerCase() ?? null,
     subject: (event.data.subject ?? "").slice(0, 300), body: text.slice(0, 100000), contact_id: contact?.id ?? null,

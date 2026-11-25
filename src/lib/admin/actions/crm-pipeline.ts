@@ -1,7 +1,7 @@
 "use server";
 
 import { adminAudit } from "@/lib/admin/audit";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff, crmScope } from "@/lib/crm/scope";
 import { isNextStepType, isStage, newId, type CustomField, type ExtraStep } from "@/lib/crm/deals";
 import { parseStageConfig, type StageConfig } from "@/lib/crm/guidance";
 import { contactsToDeals } from "@/lib/crm/ops";
@@ -85,7 +85,10 @@ export async function saveStageConfig(config: StageConfig): Promise<Result> {
   await requireStaff("crm.manage");
   const value = parseStageConfig(config);
   const supabase = await createClient();
-  const { error } = await supabase.from("platform_settings").upsert({ key: "crm_stages", value });
+  const scope = await crmScope();
+  const { error } = scope.staff
+    ? await supabase.from("platform_settings").upsert({ key: "crm_stages", value })
+    : await supabase.from("workspace_crm_settings").upsert({ workspace_id: scope.workspaceId, stages: value, updated_at: new Date().toISOString() });
   if (error) return { error: error.message };
   await adminAudit(supabase, "crm.stages.save", { type: "setting", id: "crm_stages" }, { stages: Object.keys(value) });
   refresh();

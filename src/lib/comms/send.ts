@@ -9,6 +9,7 @@ import type { Audience } from "./audience";
 import { applyMerge, parseSchema, renderTemplate } from "./blocks";
 import { unsubscribeUrl } from "./unsubscribe";
 import { campaignSlug, tagLinks } from "@/lib/analytics/utm";
+import { columnReady } from "@/lib/schema-ready";
 
 // Sends one email per recipient as the signed-in staff member (RLS applies):
 // merge fields per person, unsubscribed addresses skipped (with the reason
@@ -147,8 +148,11 @@ export const AUDIENCE_CAP = 5000;
 // readable message when the staff member can't read that source.
 export async function audienceRecipients(supabase: SupabaseClient, a: Audience, cap = AUDIENCE_CAP + 1): Promise<Recipient[]> {
   if (a.source === "contacts") {
+    // Redial's own contacts only, never a customer workspace's.
+    const staffOnly = await columnReady("crm_contacts", "workspace_id", supabase);
     const [rows, names] = await Promise.all([all<ContactRow>((from, to) => {
       let q = supabase.from("crm_contacts").select(CONTACT_COLS).not("email", "is", null).order("created_at").range(from, to);
+      if (staffOnly) q = q.is("workspace_id", null);
       q = a.statuses?.length ? q.in("status", a.statuses) : q.neq("status", "archived");
       if (a.roles?.length) q = q.in("role", a.roles);
       if (a.leadStatuses?.length) q = q.in("lead_status", a.leadStatuses);

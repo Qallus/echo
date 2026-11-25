@@ -1,6 +1,7 @@
 import { AdminPage } from "@/components/admin/admin-ui";
 import { LeadsPage } from "@/components/admin/crm/leads-page";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff, listCompanies, listContacts } from "@/lib/crm/data";
 
 export const metadata = { title: "Leads · Admin · Redial" };

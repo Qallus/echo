@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateCrm as revalidatePath } from "@/lib/crm/scope";
 import { adminAudit } from "@/lib/admin/audit";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { date, list, ref, text, uuids, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createPlanFromTemplate, type NewPlan } from "@/lib/plans/create";

@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateCrm as revalidatePath } from "@/lib/crm/scope";
 import { after } from "next/server";
 import { adminAudit } from "@/lib/admin/audit";
 import { geocode } from "@/lib/crm/geocode";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff, scopeStamp } from "@/lib/crm/scope";
 import { uuids, type Result } from "@/lib/crm/validate";
 import { lookupsFor } from "@/lib/prospects/data";
 import type { ProspectImportRow } from "@/lib/prospects/import";
@@ -106,7 +106,8 @@ export async function deleteProspects(ids: string[]): Promise<Result> {
 // (street address when there is one, else city and state), about a second
 // each, up to 40 places a run. Rows that can't be placed are marked tried.
 async function placeProspects(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data } = await supabase.from("prospects").select("id, address, city, state").is("workspace_id", null).is("geocoded_at", null).limit(2000);
+  const ws = (await scopeStamp()).workspace_id ?? null; // this workspace's list, or staff's (null)
+  const { data } = await supabase.from("prospects").select("id, address, city, state").filter("workspace_id", ws ? "eq" : "is", ws ?? "null").is("geocoded_at", null).limit(2000);
   const groups = new Map<string, string[]>();
   for (const p of data ?? []) {
     const q = [p.address, p.city, p.state].filter(Boolean).join(", ");

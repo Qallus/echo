@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { hasLiveAgentProfile } from "@/lib/live-agents/agent-data";
 import { callsBadge } from "@/lib/redial/data";
 import { FEATURE_GROUPS, visibleFeatures } from "@/lib/features";
+import { workspaceCrmReady } from "@/lib/crm/scope";
 
 export const metadata = { title: "Explore · Redial" };
 
 // Every feature, what it does, and how you'd use it at home and at work.
 // Same list as the All features slide-out and Ask Echo (lib/features.ts).
 export default async function ExplorePage() {
-  const [calls, liveAgent] = await Promise.all([callsBadge(), hasLiveAgentProfile()]);
-  const list = visibleFeatures({ line: calls !== null, liveAgent });
+  const [calls, liveAgent, crmReady] = await Promise.all([callsBadge(), hasLiveAgentProfile(), workspaceCrmReady()]);
+  const list = visibleFeatures({ line: calls !== null, liveAgent, crmReady });
   return (
     <div className="w-full space-y-8 px-4 py-6 sm:px-6 lg:px-8 2xl:px-10">
       <div className="flex flex-wrap items-end justify-between gap-3">

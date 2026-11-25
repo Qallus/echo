@@ -10,6 +10,7 @@ import { prospectE164 } from "./phone";
 import { monthSpent } from "./runner";
 import { scoreProspect } from "./score";
 import { loadProspecting } from "./settings";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // Adding prospects (a list, or businesses found on Google Maps), shared by the
 // Admin -> Prospects actions and the connector tools. The caller checks the
@@ -19,6 +20,7 @@ import { loadProspecting } from "./settings";
 export const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) || null : null);
 
 export async function insertProspects(supabase: SupabaseClient, rows: ProspectImportRow[], source: "csv" | "paste" | "manual"): Promise<Result & { added?: number; duplicates?: number; invalid?: number }> {
+  const ws = (await scopeStamp()).workspace_id ?? null; // this workspace's list, or staff's (null)
   if (!Array.isArray(rows) || !rows.length) return { error: "Nothing to import." };
   if (rows.length > 5000) return { error: "Import up to 5,000 numbers at a time." };
   let invalid = 0;
@@ -32,7 +34,7 @@ export async function insertProspects(supabase: SupabaseClient, rows: ProspectIm
   // Skip numbers already on the list.
   const existing = new Set<string>();
   for (let i = 0; i < phones.length; i += 300) {
-    const { data, error } = await supabase.from("prospects").select("phone_e164").is("workspace_id", null).in("phone_e164", phones.slice(i, i + 300));
+    const { data, error } = await supabase.from("prospects").select("phone_e164").filter("workspace_id", ws ? "eq" : "is", ws ?? "null").in("phone_e164", phones.slice(i, i + 300));
     if (error) return { error: error.message };
     for (const p of data ?? []) existing.add(p.phone_e164);
   }
@@ -44,7 +46,7 @@ export async function insertProspects(supabase: SupabaseClient, rows: ProspectIm
     r.score = scoreProspect({ provider: l?.provider ?? null, confidence: l?.confidence ?? null, category: r.category, city: r.city, website: r.website, status: "new" });
   }
   for (let i = 0; i < fresh.length; i += 500) {
-    const { error } = await supabase.from("prospects").insert(fresh.slice(i, i + 500));
+    const { error } = await supabase.from("prospects").insert(fresh.slice(i, i + 500).map((r) => ({ ...r, ...(ws ? { workspace_id: ws } : {}) })));
     if (error) return { error: error.message };
   }
   await adminAudit(supabase, "prospects.import", undefined, { added: fresh.length, duplicates: existing.size, invalid, source });
@@ -96,6 +98,7 @@ export type PlacesPage = { results?: FoundPlace[]; next?: string; error?: string
 const SETUP = "Run supabase/migrations/20261123130000_prospects_places.sql in Supabase first.";
 
 export async function findPlacesFor(supabase: SupabaseClient, query: string, pageToken?: string, page = 1): Promise<PlacesPage> {
+  const ws = (await scopeStamp()).workspace_id ?? null; // this workspace's list, or staff's (null)
   const q = typeof query === "string" ? query.trim().replace(/\s+/g, " ").slice(0, 200) : "";
   if (q.length < 3) return { error: "Type what and where, like \"HVAC in Chandler, AZ\"." };
   const n = Math.min(Math.max(Math.round(Number(page) || 1), 1), 3);
@@ -114,8 +117,8 @@ export async function findPlacesFor(supabase: SupabaseClient, query: string, pag
   const phones = results.map((r) => r.phoneE164).filter((p): p is string => Boolean(p));
   const ids = results.map((r) => r.placeId);
   const [byPhone, byPlace] = await Promise.all([
-    phones.length ? supabase.from("prospects").select("phone_e164").is("workspace_id", null).in("phone_e164", phones) : null,
-    ids.length ? supabase.from("prospects").select("source_ref").is("workspace_id", null).eq("source", "places").in("source_ref", ids) : null,
+    phones.length ? supabase.from("prospects").select("phone_e164").filter("workspace_id", ws ? "eq" : "is", ws ?? "null").in("phone_e164", phones) : null,
+    ids.length ? supabase.from("prospects").select("source_ref").filter("workspace_id", ws ? "eq" : "is", ws ?? "null").eq("source", "places").in("source_ref", ids) : null,
   ]);
   const have = new Set([...(byPhone?.data ?? []).map((p) => p.phone_e164 as string), ...(byPlace?.data ?? []).map((p) => p.source_ref as string)]);
   return {
@@ -125,6 +128,7 @@ export async function findPlacesFor(supabase: SupabaseClient, query: string, pag
 }
 
 export async function insertPlaces(supabase: SupabaseClient, places: PlaceResult[], tags?: string): Promise<Result & { added?: number }> {
+  const ws = (await scopeStamp()).workspace_id ?? null; // this workspace's list, or staff's (null)
   if (!Array.isArray(places) || !places.length) return { error: "Pick at least one business." };
   if (places.length > 200) return { error: "Add up to 200 at a time." };
   const now = new Date().toISOString();
@@ -148,7 +152,7 @@ export async function insertPlaces(supabase: SupabaseClient, places: PlaceResult
   const phones = [...clean.keys()];
   const existing = new Set<string>();
   if (phones.length) {
-    const { data, error } = await supabase.from("prospects").select("phone_e164").is("workspace_id", null).in("phone_e164", phones);
+    const { data, error } = await supabase.from("prospects").select("phone_e164").filter("workspace_id", ws ? "eq" : "is", ws ?? "null").in("phone_e164", phones);
     if (error) return { error: error.message };
     for (const p of data ?? []) existing.add(p.phone_e164 as string);
   }
@@ -159,7 +163,7 @@ export async function insertPlaces(supabase: SupabaseClient, places: PlaceResult
     r.score = scoreProspect({ provider: l?.provider ?? null, confidence: l?.confidence ?? null, category: (r.category as string) ?? null, city: (r.city as string) ?? null, website: (r.website as string) ?? null, status: "new" });
   }
   if (fresh.length) {
-    const { error } = await supabase.from("prospects").insert(fresh);
+    const { error } = await supabase.from("prospects").insert(fresh.map((r) => ({ ...r, ...(ws ? { workspace_id: ws } : {}) })));
     if (error) return { error: /column|schema cache/i.test(error.message) ? SETUP : error.message };
   }
   await adminAudit(supabase, "prospects.import", undefined, { added: fresh.length, duplicates: existing.size, invalid: noPhone, source: "places" });

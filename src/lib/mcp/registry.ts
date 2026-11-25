@@ -7,6 +7,7 @@ import { toE164 } from "@/lib/notify/senders";
 import { textToDoc } from "@/lib/workspace/text";
 import type { McpContext } from "./auth";
 import { ToolError } from "./audit";
+import { staffFilter } from "@/lib/schema-ready";
 
 // The automation MCP's resources: each table is declared once here, and the
 // generic resource_* tools (tools/resources.ts) list, read, create, update and
@@ -72,7 +73,7 @@ function e164(value: unknown, field: string): string {
 // The CRM contact with this email, when one isn't given.
 async function contactByEmail(ctx: McpContext, row: Row) {
   if (row.contact_id || typeof row.email !== "string" || !row.email) return row;
-  const { data } = await ctx.supabase.from("crm_contacts").select("id").eq("email", row.email.toLowerCase()).limit(1).maybeSingle();
+  const { data } = await (await staffFilter("crm_contacts", ctx.supabase))(ctx.supabase.from("crm_contacts").select("id").eq("email", row.email.toLowerCase()).limit(1)).maybeSingle();
   return data ? { ...row, contact_id: data.id } : row;
 }
 

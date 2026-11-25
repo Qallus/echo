@@ -28,5 +28,5 @@ export function cents(v: unknown): number | null {
 export const uuids = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && isUuid(x)).slice(0, 500) : []);
 
 export function refresh() {
-  for (const p of ["/admin/clients", "/admin/contacts", "/admin/leads", "/admin/pipeline"]) revalidatePath(p, "layout");
+  for (const p of ["/admin/clients", "/admin/contacts", "/admin/leads", "/admin/pipeline", "/clients", "/contacts", "/leads", "/pipeline"]) revalidatePath(p, "layout");
 }

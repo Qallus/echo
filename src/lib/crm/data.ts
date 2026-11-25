@@ -1,6 +1,8 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { listMembers } from "@/lib/data";
+import { crmScope, scopeFor } from "./scope";
 import { parseStageConfig, type StageConfig } from "./guidance";
 import type { Activity, Company, Contact, Deal, DealHistory, StaffOption } from "./types";
 
@@ -10,7 +12,13 @@ import type { Activity, Company, Contact, Deal, DealHistory, StaffOption } from 
 const COMPANY_REF = "company:crm_companies(id, name)";
 const CONTACT_REF = "contact:crm_contacts(id, first_name, last_name)";
 
+// Who records can be assigned to: Redial staff, or the workspace's members.
 export const crmStaff = cache(async (): Promise<StaffOption[]> => {
+  const scope = await crmScope();
+  if (!scope.staff) {
+    const members = await listMembers(scope.workspaceId).catch(() => []);
+    return members.map((m) => ({ user_id: m.id, name: m.fullName ?? m.email, email: m.email }));
+  }
   const supabase = await createClient();
   const { data } = await supabase.rpc("crm_staff");
   return (data ?? []) as StaffOption[];
@@ -18,20 +26,20 @@ export const crmStaff = cache(async (): Promise<StaffOption[]> => {
 
 export async function listCompanies(): Promise<Company[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("crm_companies").select("*").order("name").limit(2000);
+  const { data, error } = await (await scopeFor("crm_companies"))(supabase.from("crm_companies").select("*").order("name").limit(2000));
   if (error) throw new Error(error.message);
   return data as Company[];
 }
 
 export async function getCompany(id: string): Promise<Company | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("crm_companies").select("*").eq("id", id).maybeSingle();
+  const { data } = await (await scopeFor("crm_companies"))(supabase.from("crm_companies").select("*").eq("id", id)).maybeSingle();
   return data as Company | null;
 }
 
 export async function listContacts(filter?: { companyId?: string; leads?: boolean }): Promise<Contact[]> {
   const supabase = await createClient();
-  let q = supabase.from("crm_contacts").select(`*, ${COMPANY_REF}`).order("first_name").limit(5000);
+  let q = (await scopeFor("crm_contacts"))(supabase.from("crm_contacts").select(`*, ${COMPANY_REF}`).order("first_name").limit(5000));
   if (filter?.companyId) q = q.eq("company_id", filter.companyId);
   if (filter?.leads) q = q.not("lead_status", "is", null);
   const { data, error } = await q;
@@ -41,13 +49,13 @@ export async function listContacts(filter?: { companyId?: string; leads?: boolea
 
 export async function getContact(id: string): Promise<Contact | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("crm_contacts").select(`*, ${COMPANY_REF}`).eq("id", id).maybeSingle();
+  const { data } = await (await scopeFor("crm_contacts"))(supabase.from("crm_contacts").select(`*, ${COMPANY_REF}`).eq("id", id)).maybeSingle();
   return data as Contact | null;
 }
 
 export async function listDeals(filter?: { companyId?: string; contactId?: string }): Promise<Deal[]> {
   const supabase = await createClient();
-  let q = supabase.from("crm_deals").select(`*, ${COMPANY_REF}, ${CONTACT_REF}`).order("updated_at", { ascending: false }).limit(2000);
+  let q = (await scopeFor("crm_deals"))(supabase.from("crm_deals").select(`*, ${COMPANY_REF}, ${CONTACT_REF}`).order("updated_at", { ascending: false }).limit(2000));
   if (filter?.companyId) q = q.eq("company_id", filter.companyId);
   if (filter?.contactId) q = q.eq("contact_id", filter.contactId);
   const { data, error } = await q;
@@ -57,7 +65,7 @@ export async function listDeals(filter?: { companyId?: string; contactId?: strin
 
 export async function getDeal(id: string): Promise<Deal | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("crm_deals").select(`*, ${COMPANY_REF}, ${CONTACT_REF}`).eq("id", id).maybeSingle();
+  const { data } = await (await scopeFor("crm_deals"))(supabase.from("crm_deals").select(`*, ${COMPANY_REF}, ${CONTACT_REF}`).eq("id", id)).maybeSingle();
   return data as Deal | null;
 }
 
@@ -71,8 +79,8 @@ export async function listActivities(target: { companyId?: string; contactIds?: 
   ].filter(Boolean);
   if (!parts.length) return [];
   const supabase = await createClient();
-  const { data, error } = await supabase.from("crm_activities").select("*").or(parts.join(","))
-    .order("occurred_at", { ascending: false }).limit(300);
+  const { data, error } = await (await scopeFor("crm_activities"))(supabase.from("crm_activities").select("*").or(parts.join(","))
+    .order("occurred_at", { ascending: false }).limit(300));
   if (error) throw new Error(error.message);
   return data as Activity[];
 }
@@ -80,14 +88,19 @@ export async function listActivities(target: { companyId?: string; contactIds?: 
 // Open tasks, soonest due first, for the pipeline page.
 export async function openTasks(): Promise<Activity[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("crm_activities").select("*").eq("kind", "task").is("done_at", null)
-    .order("due_at", { ascending: true, nullsFirst: false }).limit(50);
+  const { data } = await (await scopeFor("crm_activities"))(supabase.from("crm_activities").select("*").eq("kind", "task").is("done_at", null)
+    .order("due_at", { ascending: true, nullsFirst: false }).limit(50));
   return (data ?? []) as Activity[];
 }
 
 // Configure-stages overrides (empty means the built-in guidance).
 export async function getStageConfig(): Promise<StageConfig> {
   const supabase = await createClient();
+  const scope = await crmScope();
+  if (!scope.staff) {
+    const { data } = await supabase.from("workspace_crm_settings").select("stages").eq("workspace_id", scope.workspaceId).maybeSingle();
+    return parseStageConfig(data?.stages);
+  }
   const { data } = await supabase.from("platform_settings").select("value").eq("key", "crm_stages").maybeSingle();
   return parseStageConfig(data?.value);
 }

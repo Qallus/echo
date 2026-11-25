@@ -1,12 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateCrm as revalidatePath } from "@/lib/crm/scope";
 import { adminAudit } from "@/lib/admin/audit";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { email, ref, text, type Result } from "@/lib/crm/validate";
 import { getUser, isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { EMPTY_TOTALS, LINK_TYPES, normalizeDesign, slugify, type Card, type CardAnalytics, type CardStatus, type LeadStatus } from "@/lib/cards/types";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // Business cards. Staff with crm.view manage their own cards; crm.manage
 // manages everyone's (enforced by RLS).
@@ -52,7 +54,7 @@ export async function saveCard(card: Card): Promise<Result> {
   const supabase = await createClient();
   const isNew = !card.id;
   const res = isNew
-    ? await supabase.from("business_cards").insert(row).select("id").single()
+    ? await supabase.from("business_cards").insert({ ...row, ...(await scopeStamp()) }).select("id").single()
     : isUuid(card.id) ? await supabase.from("business_cards").update(row).eq("id", card.id).select("id").single() : null;
   if (!res) return { error: "Not found." };
   if (res.error) {

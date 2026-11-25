@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminPage } from "@/components/admin/admin-ui";
 import { NfcWriterPage } from "./writer";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { getCard } from "@/lib/cards/data";
 import { cardName, cardPath } from "@/lib/cards/types";
 import { isUuid } from "@/lib/data";

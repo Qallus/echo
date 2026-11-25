@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PlanWorkspace } from "@/components/admin/plans/plan-workspace";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff, listCompanies } from "@/lib/crm/data";
 import { isUuid } from "@/lib/data";
 import { getPlan } from "@/lib/plans/data";

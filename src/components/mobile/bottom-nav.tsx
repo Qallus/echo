@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 // Sticky bottom app bar on phones. The destinations slide sideways when they
 // don't all fit; the record button stays pinned on the right.
-export function BottomNav({ workspaces, phone = false, liveAgent = false }: { workspaces: Workspace[]; /** Has a Redial line: show Phone. */ phone?: boolean; liveAgent?: boolean }) {
+export function BottomNav({ workspaces, phone = false, liveAgent = false, crmReady = false }: { workspaces: Workspace[]; /** Has a Redial line: show Phone. */ phone?: boolean; liveAgent?: boolean; crmReady?: boolean }) {
   const [features, setFeatures] = useState(false);
   const pathname = usePathname();
   const recorder = useRecorder();
@@ -101,7 +101,7 @@ export function BottomNav({ workspaces, phone = false, liveAgent = false }: { wo
           </DropdownMenu>
         </div>
       </div>
-      <FeatureMenu open={features} onOpenChange={setFeatures} line={phone} liveAgent={liveAgent} />
+      <FeatureMenu open={features} onOpenChange={setFeatures} line={phone} liveAgent={liveAgent} crmReady={crmReady} />
     </nav>
   );
 }

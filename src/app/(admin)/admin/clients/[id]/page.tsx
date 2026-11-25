@@ -9,7 +9,8 @@ import { AddContactButton, AddDealButton, CompanyActions } from "@/components/ad
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff, getCompany, listActivities, listCompanies, listContacts, listDeals } from "@/lib/crm/data";
 import { COMPANY_STATUSES, contactName, ownerName } from "@/lib/crm/types";
 import { isUuid } from "@/lib/data";

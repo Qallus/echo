@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { scopeFor } from "@/lib/crm/scope";
 import { EMPTY_TOTALS, normalizeDesign, normalizeLinks, type Card, type CardLead, type CardStats } from "./types";
 
 // Business card reads for the admin (RLS: crm.view).
@@ -22,13 +23,13 @@ export function rowToCard(r: Row): Card {
 
 export async function listCards(): Promise<Card[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("business_cards").select("*").order("full_name");
+  const { data } = await (await scopeFor("business_cards"))(supabase.from("business_cards").select("*").order("full_name"));
   return (data ?? []).map(rowToCard);
 }
 
 export async function getCard(id: string): Promise<Card | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("business_cards").select("*").eq("id", id).maybeSingle();
+  const { data } = await (await scopeFor("business_cards"))(supabase.from("business_cards").select("*").eq("id", id)).maybeSingle();
   return data ? rowToCard(data) : null;
 }
 

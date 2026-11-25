@@ -12,7 +12,9 @@ import {
 export type Feature = {
   group: string; title: string; href: string; icon: LucideIcon;
   what: string; personal: string; business: string;
-  soon?: boolean; needsLine?: boolean; liveAgent?: boolean; keywords?: string;
+  soon?: boolean; needsLine?: boolean;
+  /** Workspace CRM feature: coming soon until its database update has run. */
+  crm?: boolean; liveAgent?: boolean; keywords?: string;
 };
 
 export const FEATURE_GROUPS = ["Start", "Communication", "Contacts", "Record", "Schedule", "Manage", "Marketing", "File Manager", "Agents", "Build", "Account"] as const;
@@ -85,16 +87,16 @@ export const FEATURES: Feature[] = [
     personal: "Keep the number everyone already has.", business: "Keep the number on your cards and website." },
 
   // Contacts
-  { group: "Contacts", title: "Contacts", href: "/contacts", icon: Contact, soon: true,
+  { group: "Contacts", title: "Contacts", href: "/contacts", icon: Contact, crm: true,
     what: "Everyone you talk to, with calls, texts, recordings and notes on each person.",
     personal: "Doctors, contractors and family in one place.", business: "Your customer list with every call attached." },
-  { group: "Contacts", title: "Leads", href: "/leads", icon: UserPlus, soon: true,
+  { group: "Contacts", title: "Leads", href: "/leads", icon: UserPlus, crm: true,
     what: "People who might become customers, with a status and next step.",
     personal: "Track people you're getting quotes from.", business: "Follow up on every inquiry until it's won or lost." },
-  { group: "Contacts", title: "Prospects", href: "/prospects", icon: Target, soon: true,
+  { group: "Contacts", title: "Prospects", href: "/prospects", icon: Target, crm: true,
     what: "Find businesses to reach out to, check their numbers, and add them as leads.",
     personal: "Find local services to compare.", business: "Build a call list of businesses in your area." },
-  { group: "Contacts", title: "Clients", href: "/clients", icon: Handshake, soon: true,
+  { group: "Contacts", title: "Clients", href: "/clients", icon: Handshake, crm: true,
     what: "Your customers, with deals, calls and recordings together.",
     personal: "Keep track of who you work for.", business: "Everything about each customer on one page." },
 
@@ -115,18 +117,18 @@ export const FEATURES: Feature[] = [
     personal: "See Redial events on your phone's calendar.", business: "Keep the team calendar in step with Google." },
 
   // Manage
-  { group: "Manage", title: "Pipeline", href: "/pipeline", icon: KanbanSquare, soon: true,
+  { group: "Manage", title: "Pipeline", href: "/pipeline", icon: KanbanSquare, crm: true,
     what: "Deals from first call to closed, on a board you drag across.",
     personal: "Track a big purchase or project.", business: "See every open deal and its value." },
-  { group: "Manage", title: "Plans", href: "/plans", icon: ListChecks, soon: true,
+  { group: "Manage", title: "Plans", href: "/plans", icon: ListChecks, crm: true,
     what: "Plans with checklists and due dates, shared with your team.",
     personal: "A moving or wedding checklist.", business: "Project plans and follow-up tasks from calls." },
-  { group: "Manage", title: "Workspace docs", href: "/docs", icon: FileText, soon: true,
+  { group: "Manage", title: "Workspace docs", href: "/docs", icon: FileText, crm: true,
     what: "Shared notes and documents with comments.",
     personal: "Household notes in one place.", business: "Team procedures and call scripts." },
 
   // Marketing
-  { group: "Marketing", title: "Digital Business Cards", href: "/cards", icon: IdCard, soon: true, keywords: "qr card",
+  { group: "Marketing", title: "Digital Business Cards", href: "/cards", icon: IdCard, crm: true, keywords: "qr card",
     what: "A digital business card shared by link or QR; people who save it become leads.",
     personal: "Share your contact details in one tap.", business: "Every rep gets a card; new contacts flow into Leads." },
 
@@ -183,6 +185,7 @@ export const FEATURES: Feature[] = [
     what: "Your plan, minutes used and payments. Orders has your receipts.", personal: "See minutes used.", business: "Upgrade the team plan." },
 ];
 
-export function visibleFeatures(who: { line: boolean; liveAgent: boolean }) {
-  return FEATURES.filter((f) => (!f.needsLine || who.line) && (!(f.href === "/setup") || !who.line));
+export function visibleFeatures(who: { line: boolean; liveAgent: boolean; crmReady?: boolean }) {
+  return FEATURES.filter((f) => (!f.needsLine || who.line) && (!(f.href === "/setup") || !who.line))
+    .map((f) => (f.crm && !who.crmReady ? { ...f, soon: true } : f));
 }

@@ -10,6 +10,7 @@ import { OPEN_STAGES, STAGES, type DealStage } from "@/lib/crm/deals";
 import { siteUrl, toE164 } from "@/lib/notify/senders";
 import { secret } from "@/lib/secrets";
 import { isSafeWebhookUrl, matches, type Context, type Rule, type RuleAction } from "./rules";
+import { staffFilter } from "@/lib/schema-ready";
 
 // Runs automation rules (service role, from /api/cron/comms). Database
 // triggers queue runs for CRM, booking and inbox events; queueTimedRules adds
@@ -35,11 +36,11 @@ export async function queueTimedRules(db: SupabaseClient) {
   for (const r of rules ?? []) {
     const runAt = new Date(Date.now() + r.delay_minutes * 60_000).toISOString();
     if (r.trigger === "next_step_overdue") {
-      const { data } = await db.from("crm_deals").select("id, contact_id, next_step_due").in("stage", OPEN_STAGES).lt("next_step_due", today).limit(500);
+      const { data } = await (await staffFilter("crm_deals", db))(db.from("crm_deals").select("id, contact_id, next_step_due").in("stage", OPEN_STAGES).lt("next_step_due", today).limit(500));
       for (const d of data ?? []) rows.push({ rule_id: r.id, deal_id: d.id, contact_id: d.contact_id, run_key: `next_step_overdue:${d.id}:${d.next_step_due}`, run_at: runAt });
     } else {
       const cutoff = new Date(Date.now() - r.stalled_days * 86400_000).toISOString();
-      const { data } = await db.from("crm_deals").select("id, contact_id, updated_at").in("stage", OPEN_STAGES).lt("updated_at", cutoff).limit(500);
+      const { data } = await (await staffFilter("crm_deals", db))(db.from("crm_deals").select("id, contact_id, updated_at").in("stage", OPEN_STAGES).lt("updated_at", cutoff).limit(500));
       for (const d of data ?? []) {
         const { count } = await db.from("crm_activities").select("id", { count: "exact", head: true }).eq("deal_id", d.id).gt("occurred_at", cutoff);
         if (!count) rows.push({ rule_id: r.id, deal_id: d.id, contact_id: d.contact_id, run_key: `deal_stalled:${d.id}:${d.updated_at.slice(0, 10)}`, run_at: runAt });

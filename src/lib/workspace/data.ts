@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { scopeFor, scopeStamp, workspaceCrmReady } from "@/lib/crm/scope";
 
 // Workspace reads (RLS: team docs for staff with crm.view, private docs for
 // their author only).
@@ -15,7 +16,7 @@ const META = "id, title, icon, parent_id, visibility, pinned, created_by, update
 
 export async function listWorkspaceDocs(search?: string): Promise<WorkspaceDocMeta[]> {
   const supabase = await createClient();
-  let q = supabase.from("workspace_docs").select(META).order("updated_at", { ascending: false }).limit(1000);
+  let q = (await scopeFor("workspace_docs"))(supabase.from("workspace_docs").select(META).order("updated_at", { ascending: false }).limit(1000));
   const term = search?.trim().replace(/[%_,()]/g, " ").slice(0, 100);
   if (term) q = q.or(`title.ilike.%${term}%,content_text.ilike.%${term}%`);
   const { data } = await q;
@@ -24,7 +25,10 @@ export async function listWorkspaceDocs(search?: string): Promise<WorkspaceDocMe
 
 export async function getWorkspaceDoc(id: string): Promise<WorkspaceDoc | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("workspace_docs").select(`${META}, content, company_id, deal_id`).eq("id", id).maybeSingle();
+  const stamp = await scopeStamp();
+  const base = supabase.from("workspace_docs").select(`${META}, content, company_id, deal_id`).eq("id", id);
+  const staffOnly = !stamp.workspace_id && (await workspaceCrmReady());
+  const { data } = await (stamp.workspace_id ? base.eq("workspace_id", stamp.workspace_id) : staffOnly ? base.is("workspace_id", null) : base).maybeSingle();
   return (data as WorkspaceDoc | null) ?? null;
 }
 

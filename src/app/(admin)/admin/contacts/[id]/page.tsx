@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ContactRecord } from "@/components/admin/crm/contact-record";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff, getContact, listActivities, listCompanies, listDeals } from "@/lib/crm/data";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";

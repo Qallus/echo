@@ -8,6 +8,7 @@ import { isBookingStatus, parseAvailability, slugify, type Availability, type Bo
 import { email, ref, refresh, text, uuids, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
+import { staffFilter } from "@/lib/schema-ready";
 
 // Bookings in the admin (crm.manage, audited).
 
@@ -77,7 +78,7 @@ export async function saveBooking(id: string | null, input: {
   const supabase = await createClient();
 
   let contactId = ref(input.contact_id);
-  if (!contactId && mail) contactId = (await supabase.from("crm_contacts").select("id").eq("email", mail).limit(1).maybeSingle()).data?.id ?? null;
+  if (!contactId && mail) contactId = (await (await staffFilter("crm_contacts", supabase))(supabase.from("crm_contacts").select("id").eq("email", mail).limit(1)).maybeSingle()).data?.id ?? null;
   const typeId = ref(input.type_id);
   const typeName = typeId ? (await supabase.from("booking_types").select("name").eq("id", typeId).maybeSingle()).data?.name : null;
   const row = {
@@ -185,7 +186,7 @@ export async function addRegistration(eventId: string, input: { name: string; em
   const mail = email(input.email);
   if (!isUuid(eventId) || !name || !mail) return { error: "Enter a name and a valid email." };
   const supabase = await createClient();
-  const contactId = (await supabase.from("crm_contacts").select("id").eq("email", mail).limit(1).maybeSingle()).data?.id ?? null;
+  const contactId = (await (await staffFilter("crm_contacts", supabase))(supabase.from("crm_contacts").select("id").eq("email", mail).limit(1)).maybeSingle()).data?.id ?? null;
   const { error } = await supabase.from("event_registrations").insert({
     event_id: eventId, name, email: mail, phone: text(input.phone, 40), company: text(input.company, 200), guests: int(input.guests, 1, 20, 1), contact_id: contactId,
   });

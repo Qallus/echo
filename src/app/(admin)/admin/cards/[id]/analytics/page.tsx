@@ -4,7 +4,7 @@ import { ArrowLeft, Eye } from "lucide-react";
 import { AdminPage } from "@/components/admin/admin-ui";
 import { CardAnalyticsView } from "@/components/admin/cards/card-analytics";
 import { Button } from "@/components/ui/button";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { getCard } from "@/lib/cards/data";
 import { cardName, cardPath } from "@/lib/cards/types";
 import { isUuid } from "@/lib/data";

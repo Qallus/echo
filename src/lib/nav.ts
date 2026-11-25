@@ -12,6 +12,8 @@ import {
 export type NavItem = {
   key: string; href: string; label: string; icon: LucideIcon;
   exact?: boolean; soon?: boolean;
+  /** Workspace CRM page: "soon" until its database update has run. */
+  crm?: boolean;
   /** Its ?tab= is the page's default, so a bare link to the page counts too. */
   defaultTab?: boolean;
   /** Only with a Redial line (callsUnread !== null). */
@@ -42,10 +44,10 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "contacts", label: "Contacts", items: [
-      { key: "contacts", href: "/contacts", label: "Contacts", icon: Contact, soon: true },
-      { key: "leads", href: "/leads", label: "Leads", icon: UserPlus, soon: true },
-      { key: "prospects", href: "/prospects", label: "Prospects", icon: Target, soon: true },
-      { key: "clients", href: "/clients", label: "Clients", icon: Handshake, soon: true },
+      { key: "contacts", href: "/contacts", label: "Contacts", icon: Contact, crm: true },
+      { key: "leads", href: "/leads", label: "Leads", icon: UserPlus, crm: true },
+      { key: "prospects", href: "/prospects", label: "Prospects", icon: Target, crm: true },
+      { key: "clients", href: "/clients", label: "Clients", icon: Handshake, crm: true },
     ],
   },
   // The New recording button sits here (between Contacts and Schedule).
@@ -57,14 +59,14 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "manage", label: "Manage", items: [
-      { key: "pipeline", href: "/pipeline", label: "Pipeline", icon: KanbanSquare, soon: true },
-      { key: "plans", href: "/plans", label: "Plans", icon: ListChecks, soon: true },
-      { key: "docs", href: "/docs", label: "Workspace", icon: FileText, soon: true },
+      { key: "pipeline", href: "/pipeline", label: "Pipeline", icon: KanbanSquare, crm: true },
+      { key: "plans", href: "/plans", label: "Plans", icon: ListChecks, crm: true },
+      { key: "docs", href: "/docs", label: "Workspace", icon: FileText, crm: true },
     ],
   },
   {
     id: "marketing", label: "Marketing", items: [
-      { key: "cards", href: "/cards", label: "Digital Business Cards", icon: IdCard, soon: true },
+      { key: "cards", href: "/cards", label: "Digital Business Cards", icon: IdCard, crm: true },
     ],
   },
   {

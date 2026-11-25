@@ -4,6 +4,7 @@ import { queueAutomations } from "@/lib/comms/automations";
 import { effectiveProvider, PROVIDERS, TALK_TRACKS, type Provider } from "./carriers";
 import { lookupsFor } from "./data";
 import { scoreProspect } from "./score";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // Prospects -> CRM leads, carrying everything over:
 // - every matching field (business, contact person, email, phone and
@@ -31,8 +32,9 @@ type Row = {
 export type ConvertResult = { contactIds: string[]; created: number; linked: number; skippedDnc: number; error?: string; byProspect: Map<string, string> };
 
 export async function prospectsToLeads(db: SupabaseClient, ids: string[]): Promise<ConvertResult> {
+  const ws = (await scopeStamp()).workspace_id ?? null; // this workspace's list, or staff's (null)
   const out: ConvertResult = { contactIds: [], created: 0, linked: 0, skippedDnc: 0, byProspect: new Map() };
-  const { data, error } = await db.from("prospects").select("*").is("workspace_id", null).in("id", ids);
+  const { data, error } = await db.from("prospects").select("*").filter("workspace_id", ws ? "eq" : "is", ws ?? "null").in("id", ids);
   if (error) return { ...out, error: error.message };
   const rows = (data ?? []) as Row[];
   const lookups = await lookupsFor(db, rows.map((r) => r.phone_e164));
@@ -87,7 +89,7 @@ export async function prospectsToLeads(db: SupabaseClient, ids: string[]): Promi
     }
 
     const { data: made, error: e } = await db.from("crm_contacts")
-      .insert({ ...fields(p, provider), role: "lead", lead_status: "new", tags, notes, details }).select("id").single();
+      .insert({ ...fields(p, provider), ...(await scopeStamp()), role: "lead", lead_status: "new", tags, notes, details }).select("id").single();
     if (e || !made) return { ...out, error: e?.message ?? "Couldn't create the lead." };
     out.created++;
     out.byProspect.set(p.id, made.id);

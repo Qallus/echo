@@ -15,6 +15,9 @@ const MARKETING = ["/", "/pricing", "/compatibility", "/redial/business", "/home
 // Refreshes the auth session cookie on every request and sends signed-out
 // visitors to /login. API routes check auth themselves and return 401.
 export async function updateSession(request: NextRequest) {
+  // The page path, for code that serves both dashboards (lib/crm/scope.ts).
+  // Server actions post to their page, so they see the same path.
+  request.headers.set("x-redial-path", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

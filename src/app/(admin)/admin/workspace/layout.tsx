@@ -1,5 +1,5 @@
 import { WorkspaceNav } from "@/components/admin/workspace/workspace-nav";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { listWorkspaceDocs } from "@/lib/workspace/data";
 
 // Workspace: shared pages with a page tree beside them.

@@ -1,6 +1,7 @@
 import { AdminPage } from "@/components/admin/admin-ui";
 import { ClientsList, type ClientRow } from "@/components/admin/crm/clients-list";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff, listCompanies, listContacts, listDeals } from "@/lib/crm/data";
 import { OPEN_STAGES } from "@/lib/crm/types";
 
@@ -22,7 +23,7 @@ export default async function ClientsPage() {
     };
   });
   return (
-    <AdminPage title="Clients" description="Companies Qallus sells to or works with.">
+    <AdminPage title="Clients" description="Companies you sell to or work with.">
       <ClientsList clients={rows} staff={people} readOnly={!can(staff, "crm.manage")} />
     </AdminPage>
   );

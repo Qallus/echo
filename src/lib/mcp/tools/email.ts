@@ -12,6 +12,7 @@ import { loadOrganization, orgMergeValues } from "@/lib/settings/organization";
 import type { McpContext } from "../auth";
 import { defineTool, ToolError } from "../audit";
 import { check, found, id, limitArg } from "./shared";
+import { staffFilter } from "@/lib/schema-ready";
 
 // Email for Echo staff (Super Admin → Communications → Email), registered
 // only for staff with comms.view. Writes need comms.manage, and the database
@@ -163,7 +164,7 @@ export function registerEmailTools(server: McpServer, ctx: McpContext, permissio
   }, async () => {
     const [aud, tags] = await Promise.all([
       ctx.supabase.from("email_audiences").select("id, name, description, definition").order("name"),
-      ctx.supabase.from("crm_contacts").select("tags").not("tags", "eq", "{}").limit(2000),
+      (await staffFilter("crm_contacts", ctx.supabase))(ctx.supabase.from("crm_contacts").select("tags").not("tags", "eq", "{}").limit(2000)),
     ]);
     check(aud.error);
     const known = [...new Set((tags.data ?? []).flatMap((r) => r.tags as string[]))].sort();

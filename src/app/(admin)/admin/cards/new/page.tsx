@@ -1,5 +1,6 @@
 import { CardBuilder } from "@/components/admin/cards/card-builder";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { newCard } from "@/lib/cards/types";
 import { crmStaff } from "@/lib/crm/data";
 import { getUser } from "@/lib/data";

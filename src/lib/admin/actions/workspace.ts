@@ -1,12 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateCrm as revalidatePath } from "@/lib/crm/scope";
 import { adminAudit } from "@/lib/admin/audit";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { ref, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { TEMPLATES } from "@/lib/workspace/templates";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // Workspace docs. Staff with crm.view write their own and private docs;
 // editing someone else's team doc needs crm.manage or projects.manage (RLS).
@@ -18,6 +19,7 @@ export async function createWorkspaceDoc(input: { template?: string; parent_id?:
   const tpl = TEMPLATES.find((x) => x.id === input.template) ?? TEMPLATES[0];
   const supabase = await createClient();
   const { data, error } = await supabase.from("workspace_docs").insert({
+    ...(await scopeStamp()),
     title: tpl.title, icon: tpl.icon, content: tpl.content, parent_id: ref(input.parent_id),
     visibility: input.visibility === "private" ? "private" : "team",
   }).select("id").single();
@@ -76,7 +78,7 @@ export async function duplicateWorkspaceDoc(id: string): Promise<Result> {
   const supabase = await createClient();
   const { data: src } = await supabase.from("workspace_docs").select("title, icon, content, content_text, parent_id, visibility").eq("id", id).maybeSingle();
   if (!src) return { error: "Not found." };
-  const { data, error } = await supabase.from("workspace_docs").insert({ ...src, title: `${src.title} (copy)`.slice(0, 200) }).select("id").single();
+  const { data, error } = await supabase.from("workspace_docs").insert({ ...src, ...(await scopeStamp()), title: `${src.title} (copy)`.slice(0, 200) }).select("id").single();
   if (error) return { error: error.message };
   revalidatePath("/admin/workspace", "layout");
   return { ok: "Duplicated.", id: data.id };

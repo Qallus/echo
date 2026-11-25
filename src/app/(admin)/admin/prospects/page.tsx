@@ -1,7 +1,8 @@
 import { ShieldAlert } from "lucide-react";
 import { AdminPage } from "@/components/admin/admin-ui";
 import { StatRow, StatTile } from "@/components/admin/crm/crm-kit";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { listProspects } from "@/lib/prospects/data";
 import { mapCarrier } from "@/lib/prospects/carriers";
 import { loadProspecting } from "@/lib/prospects/settings";

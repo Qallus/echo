@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { contactRecipients, sendToRecipients, templateBody, type Recipient } from "./send";
 import { siteUrl } from "@/lib/notify/senders";
+import { staffFilter } from "@/lib/schema-ready";
 
 // Email automations. CRM actions queue runs as the signed-in staff member;
 // /api/cron/comms (every 5 minutes) finds time-based ones and sends
@@ -48,11 +49,11 @@ export async function queueTimed(db: SupabaseClient) {
   const rows: Record<string, unknown>[] = [];
   for (const a of autos) {
     if (a.trigger === "next_step_overdue") {
-      const { data } = await db.from("crm_deals").select("id, next_step_due").in("stage", open).lt("next_step_due", today).limit(500);
+      const { data } = await (await staffFilter("crm_deals", db))(db.from("crm_deals").select("id, next_step_due").in("stage", open).lt("next_step_due", today).limit(500));
       for (const d of data ?? []) rows.push({ automation_id: a.id, deal_id: d.id, run_key: `overdue:${d.id}:${d.next_step_due}` });
     } else {
       const cutoff = new Date(Date.now() - a.stalled_days * 86400_000).toISOString();
-      const { data } = await db.from("crm_deals").select("id, updated_at").in("stage", open).lt("updated_at", cutoff).limit(500);
+      const { data } = await (await staffFilter("crm_deals", db))(db.from("crm_deals").select("id, updated_at").in("stage", open).lt("updated_at", cutoff).limit(500));
       for (const d of data ?? []) {
         const { count } = await db.from("crm_activities").select("id", { count: "exact", head: true }).eq("deal_id", d.id).gt("occurred_at", cutoff);
         if (!count) rows.push({ automation_id: a.id, deal_id: d.id, run_key: `stalled:${d.id}:${d.updated_at.slice(0, 10)}` });

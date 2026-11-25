@@ -1,8 +1,9 @@
 import { ComingSoon } from "@/components/shell/coming-soon";
 
-export const metadata = { title: "Pipeline · Redial" };
+// Shown until the workspace CRM SQL has been run.
+export const soonMetadata = { title: "Pipeline · Redial" };
 
-export default function Page() {
+export default function Soon() {
   return (
     <ComingSoon
       title="Pipeline"

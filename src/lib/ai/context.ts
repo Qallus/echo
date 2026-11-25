@@ -6,6 +6,7 @@ import { namedLines } from "@/lib/speakers";
 import { DASH_ENTRIES } from "@/lib/dashboard-search";
 import { visibleFeatures } from "@/lib/features";
 import { getStaff } from "@/lib/admin/guard";
+import { workspaceCrmReady } from "@/lib/crm/scope";
 import { callsBadge } from "@/lib/redial/data";
 import { hasLiveAgentProfile } from "@/lib/live-agents/agent-data";
 
@@ -22,9 +23,9 @@ Be concise. Use Markdown for lists and headings when it helps. When drafting ema
 // What this person can use in Redial, for "what can I do" questions. Staff
 // (MFA-verified) also get the Admin dashboard sections their role allows.
 async function featureCatalog(): Promise<string> {
-  const [calls, liveAgent, staff] = await Promise.all([callsBadge(), hasLiveAgentProfile(), getStaff()]);
+  const [calls, liveAgent, staff, crmReady] = await Promise.all([callsBadge(), hasLiveAgentProfile(), getStaff(), workspaceCrmReady()]);
   const line = calls !== null;
-  const user = visibleFeatures({ line, liveAgent })
+  const user = visibleFeatures({ line, liveAgent, crmReady })
     .map((f) => `- [${f.group}] ${f.title} (${f.href})${f.soon ? " [coming soon]" : ""}: ${f.what} Personal: ${f.personal} Business: ${f.business}`);
   const perms = staff?.mfaVerified ? staff.permissions : [];
   const admin = DASH_ENTRIES.filter((e) => e.cat === "admin" && (!e.permission || perms.includes(e.permission as never)))

@@ -6,6 +6,7 @@ import { STAGES, isStage, type DealStage } from "./deals";
 import { contactName } from "./types";
 import { text, uuids, type Result } from "./validate";
 import { isUuid } from "@/lib/data";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // CRM changes shared by the dashboard's server actions and the MCP tools.
 // They take the caller's client (RLS checks crm.manage) and write the admin
@@ -54,7 +55,8 @@ export async function contactsToDeals(supabase: SupabaseClient, contactIds: stri
   });
   let dealIds: string[] = [];
   if (rows.length) {
-    const { data, error } = await supabase.from("crm_deals").insert(rows).select("id");
+    const stamp = await scopeStamp();
+    const { data, error } = await supabase.from("crm_deals").insert(rows.map((r) => ({ ...r, ...stamp }))).select("id");
     if (error) return { error: error.message };
     dealIds = (data ?? []).map((d) => d.id);
     const promote = fresh.filter((c) => c.role === "contact" || c.role === "lead").map((c) => c.id);

@@ -4,6 +4,7 @@ import { adminAudit } from "@/lib/admin/audit";
 import { queueAutomations } from "@/lib/comms/automations";
 import type { ContactAddress, Labeled } from "./types";
 import { date, email, list, text, type Result } from "./validate";
+import { scopeFor, scopeStamp, workspaceCrmReady } from "@/lib/crm/scope";
 
 // CSV, phone and MCP import. Matches clients by name (creating missing ones)
 // and keeps unmapped fields in `details`. People already in Echo (same email
@@ -66,7 +67,8 @@ export async function importContactRows(
   supabase: SupabaseClient, rows: ImportRow[], role: "contact" | "lead" = "contact", onDuplicate: "skip" | "fill" = "skip",
 ): Promise<ImportResult> {
   const input = (Array.isArray(rows) ? rows : []).slice(0, 2000);
-  const { data: people } = await supabase.from("crm_contacts").select("id, email, phone").limit(20000);
+  const stamp = await scopeStamp();
+  const { data: people } = await (await scopeFor("crm_contacts"))(supabase.from("crm_contacts").select("id, email, phone").limit(20000));
   const byEmail = new Map<string, Existing>(), byPhone = new Map<string, Existing>();
   for (const p of (people ?? []) as Existing[]) {
     if (p.email) byEmail.set(p.email.toLowerCase(), p);
@@ -76,11 +78,13 @@ export async function importContactRows(
   const names = [...new Set(input.map((r) => text(r.company, 200)).filter((n): n is string => Boolean(n)))];
   const companyIds = new Map<string, string>();
   if (names.length) {
-    const { data: found } = await supabase.from("crm_companies").select("id, name").in("name", names);
+    const base = supabase.from("crm_companies").select("id, name").in("name", names);
+    const staffOnly = !stamp.workspace_id && (await workspaceCrmReady());
+    const { data: found } = await (stamp.workspace_id ? base.eq("workspace_id", stamp.workspace_id) : staffOnly ? base.is("workspace_id", null) : base);
     for (const c of found ?? []) companyIds.set(c.name.toLowerCase(), c.id);
     const missing = names.filter((n) => !companyIds.has(n.toLowerCase()));
     if (missing.length) {
-      const { data: made } = await supabase.from("crm_companies").insert(missing.map((name) => ({ name }))).select("id, name");
+      const { data: made } = await supabase.from("crm_companies").insert(missing.map((name) => ({ name, ...stamp }))).select("id, name");
       for (const c of made ?? []) companyIds.set(c.name.toLowerCase(), c.id);
     }
   }
@@ -114,8 +118,8 @@ export async function importContactRows(
   }
 
   if (out.length) {
-    let res = await supabase.from("crm_contacts").insert(out).select("id");
-    if (missingColumn(res.error)) res = await supabase.from("crm_contacts").insert(out.map(plain)).select("id");
+    let res = await supabase.from("crm_contacts").insert(out.map((o) => ({ ...o, ...stamp }))).select("id");
+    if (missingColumn(res.error)) res = await supabase.from("crm_contacts").insert(out.map(plain).map((o) => ({ ...o, ...stamp }))).select("id");
     if (res.error) return { error: res.error.message };
     if (role === "lead") await queueAutomations(supabase, "lead_created", (res.data ?? []).map((c) => ({ contactId: c.id })));
   }

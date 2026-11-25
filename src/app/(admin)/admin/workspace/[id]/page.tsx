@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { DocView } from "@/components/admin/workspace/doc-view";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff } from "@/lib/crm/data";
 import { getUser, isUuid } from "@/lib/data";
 import { getWorkspaceDoc, listWorkspaceComments, listWorkspaceDocs } from "@/lib/workspace/data";

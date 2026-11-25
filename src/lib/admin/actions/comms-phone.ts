@@ -9,6 +9,7 @@ import { e164, phoneNumber, twilioSms } from "@/lib/comms/twilio";
 import { ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
+import { staffFilter } from "@/lib/schema-ready";
 
 // Texts and calls from the admin (comms.manage, audited without message text).
 
@@ -30,7 +31,7 @@ export async function sendText(input: { to: string; body: string; contactId?: st
   let companyId: string | null = null;
   if (!contactId) {
     const digits = to.replace(/\D/g, "").slice(-10);
-    const { data } = await supabase.from("crm_contacts").select("id, company_id, phone").ilike("phone", `%${digits.slice(-4)}%`).limit(200);
+    const { data } = await (await staffFilter("crm_contacts", supabase))(supabase.from("crm_contacts").select("id, company_id, phone").ilike("phone", `%${digits.slice(-4)}%`).limit(200));
     const match = (data ?? []).find((c) => (c.phone ?? "").replace(/\D/g, "").slice(-10) === digits);
     contactId = match?.id ?? null;
     companyId = match?.company_id ?? null;

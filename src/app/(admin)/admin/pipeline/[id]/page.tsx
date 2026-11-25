@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { OpportunityWorkspace } from "@/components/admin/crm/opportunity-workspace";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { crmStaff, dealHistory, getContact, getDeal, getStageConfig, listActivities } from "@/lib/crm/data";
 import { isUuid } from "@/lib/data";
 

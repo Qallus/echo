@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CardBuilder } from "@/components/admin/cards/card-builder";
-import { can, requireStaff } from "@/lib/admin/guard";
+import { can } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { getCard } from "@/lib/cards/data";
 import { crmStaff } from "@/lib/crm/data";
 import { getUser, isUuid } from "@/lib/data";

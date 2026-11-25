@@ -5,12 +5,13 @@ import { adminAudit } from "@/lib/admin/audit";
 import { queueAutomations } from "@/lib/comms/automations";
 import { geocode } from "@/lib/crm/geocode";
 import { moveDealStage } from "@/lib/crm/ops";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff, crmScope } from "@/lib/crm/scope";
 import { STAGES } from "@/lib/crm/deals";
 import { contactPlace, isActivityKind, isCompanyStatus, isContactKind, isContactRole, isLeadStatus, isStage, type ActivityKind, type CompanyStatus, type ContactRole, type DealStage, type LeadStatus } from "@/lib/crm/types";
 import { cents, date, email, list, ref, refresh, text, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // CRM writes (crm.manage). RLS checks the permission again; every change is
 // written to the admin audit log (names and fields, never note text).
@@ -38,9 +39,10 @@ export async function saveCompany(id: string | null, input: CompanyInput): Promi
     address: text(input.address, 400), notes: text(input.notes, 10000), tags: list(input.tags), owner_id: ref(input.owner_id),
   };
   const supabase = await createClient();
+  const stamp = await scopeStamp();
   const write = (r: typeof row) => (id
     ? supabase.from("crm_companies").update(r).eq("id", id).select("id").single()
-    : supabase.from("crm_companies").insert(r).select("id").single());
+    : supabase.from("crm_companies").insert({ ...r, ...stamp }).select("id").single());
   let { data, error } = await write(row);
   // Logo column not added yet (migration 20261116180000): save everything else.
   if (error && /logo/.test(error.message) && "logo" in row) {
@@ -143,11 +145,11 @@ export async function saveContact(id: string | null, input: ContactInput): Promi
   const supabase = await createClient();
   const { data, error } = id
     ? await supabase.from("crm_contacts").update(row).eq("id", id).select("id").single()
-    : await supabase.from("crm_contacts").insert(row).select("id").single();
+    : await supabase.from("crm_contacts").insert({ ...row, ...(await scopeStamp()) }).select("id").single();
   if (error) return { error: missingColumn(error.message) ? MISSING_COLUMNS : error.message };
   const name = [row.first_name, row.last_name].filter(Boolean).join(" ");
   await adminAudit(supabase, id ? "crm.contact.update" : "crm.contact.create", { type: "crm_contact", id: data.id }, { name, kind });
-  if (!id && row.role === "lead") await queueAutomations(supabase, "lead_created", [{ contactId: data.id }]);
+  if (!id && row.role === "lead" && (await crmScope()).staff) await queueAutomations(supabase, "lead_created", [{ contactId: data.id }]);
   const place = contactPlace(row);
   if (place) after(() => placeContacts(supabase, [{ id: data.id, place }]));
   refresh();
@@ -193,9 +195,9 @@ export async function saveDeal(id: string | null, input: DealInput): Promise<Res
   const supabase = await createClient();
   const { data, error } = id
     ? await supabase.from("crm_deals").update(row).eq("id", id).select("id").single()
-    : await supabase.from("crm_deals").insert(row).select("id").single();
+    : await supabase.from("crm_deals").insert({ ...row, ...(await scopeStamp()) }).select("id").single();
   if (error) return { error: error.message };
-  if (!id) await queueAutomations(supabase, "added_to_pipeline", [{ dealId: data.id }]);
+  if (!id && (await crmScope()).staff) await queueAutomations(supabase, "added_to_pipeline", [{ dealId: data.id }]);
   await adminAudit(supabase, id ? "crm.deal.update" : "crm.deal.create", { type: "crm_deal", id: data.id },
     { title, stage: row.stage, value_cents: row.value_cents });
   refresh();
@@ -239,7 +241,7 @@ export async function addActivity(input: {
   };
   if (!row.company_id && !row.contact_id && !row.deal_id) return { error: "Not attached to a record." };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("crm_activities").insert(row).select("id").single();
+  const { data, error } = await supabase.from("crm_activities").insert({ ...row, ...(await scopeStamp()) }).select("id").single();
   if (error) return { error: error.message };
   await adminAudit(supabase, "crm.activity.create", { type: "crm_activity", id: data.id },
     { kind, company_id: row.company_id, contact_id: row.contact_id, deal_id: row.deal_id });

@@ -1,12 +1,13 @@
 "use server";
 
 import { adminAudit } from "@/lib/admin/audit";
-import { requireStaff } from "@/lib/admin/guard";
+import { crmGuard as requireStaff } from "@/lib/crm/scope";
 import { isActivityKind, isContactRole, isContactStatus, isLeadStatus, type LeadStatus } from "@/lib/crm/types";
 import { email, list, ref, refresh, text, uuids, type Result } from "@/lib/crm/validate";
 import { isUuid } from "@/lib/data";
 import { importContactRows, type ImportRow } from "@/lib/crm/ops";
 import { createClient } from "@/lib/supabase/server";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // Contacts and leads: inline edits, bulk actions, CSV import, and activity
 // logged by hand (crm.manage, audited).
@@ -96,7 +97,7 @@ export async function logActivity(input: {
   if (!row.body && !row.subject) return { error: "Add a few words about what happened." };
   if (!row.company_id && !row.contact_id && !row.deal_id) return { error: "Not attached to a record." };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("crm_activities").insert(row).select("id").single();
+  const { data, error } = await supabase.from("crm_activities").insert({ ...row, ...(await scopeStamp()) }).select("id").single();
   if (error) return { error: error.message };
   await adminAudit(supabase, "crm.activity.create", { type: "crm_activity", id: data.id }, { kind, deal_id: row.deal_id, contact_id: row.contact_id });
   refresh();

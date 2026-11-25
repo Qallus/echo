@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { scopeFor } from "@/lib/crm/scope";
 import type { Plan, PlanGroup, PlanSummary, PlanTask } from "./types";
 
 // Plan reads for the admin (RLS: crm.view).
@@ -7,7 +8,7 @@ import type { Plan, PlanGroup, PlanSummary, PlanTask } from "./types";
 export async function listPlans(): Promise<PlanSummary[]> {
   const supabase = await createClient();
   const [{ data: plans }, { data: tasks }] = await Promise.all([
-    supabase.from("plans").select("*, company:crm_companies(id, name)").order("updated_at", { ascending: false }),
+    scopeFor("plans").then((f) => f(supabase.from("plans").select("*, company:crm_companies(id, name)").order("updated_at", { ascending: false }))),
     supabase.from("plan_tasks").select("plan_id, status, due_date"),
   ]);
   const today = new Date().toLocaleDateString("en-CA");
@@ -21,7 +22,7 @@ export async function listPlans(): Promise<PlanSummary[]> {
 export async function getPlan(id: string): Promise<{ plan: Plan; groups: PlanGroup[]; tasks: PlanTask[] } | null> {
   const supabase = await createClient();
   const [{ data: plan }, { data: groups }, { data: tasks }] = await Promise.all([
-    supabase.from("plans").select("*, company:crm_companies(id, name)").eq("id", id).maybeSingle(),
+    scopeFor("plans").then((f) => f(supabase.from("plans").select("*, company:crm_companies(id, name)").eq("id", id)).maybeSingle()),
     supabase.from("plan_groups").select("*").eq("plan_id", id).order("position"),
     supabase.from("plan_tasks").select("*").eq("plan_id", id).order("position"),
   ]);

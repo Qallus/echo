@@ -12,10 +12,10 @@ const norm = (s: string) => s.toLowerCase();
 
 // "All features": every feature in one slide-out (side sheet on desktop,
 // bottom sheet on phones), grouped like the sidebar, with search.
-export function FeatureMenu({ open, onOpenChange, line, liveAgent }: { open: boolean; onOpenChange: (o: boolean) => void; line: boolean; liveAgent: boolean }) {
+export function FeatureMenu({ open, onOpenChange, line, liveAgent, crmReady = false }: { open: boolean; onOpenChange: (o: boolean) => void; line: boolean; liveAgent: boolean; crmReady?: boolean }) {
   const [q, setQ] = useState("");
   const words = norm(q).split(/\s+/).filter(Boolean);
-  const list = visibleFeatures({ line, liveAgent }).filter((f) => {
+  const list = visibleFeatures({ line, liveAgent, crmReady }).filter((f) => {
     const text = norm(`${f.title} ${f.what} ${f.group} ${f.keywords ?? ""}`);
     return words.every((w) => text.includes(w));
   });

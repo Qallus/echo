@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminAudit } from "@/lib/admin/audit";
 import { date, ref, text, type Result } from "@/lib/crm/validate";
 import { PLAN_TEMPLATES } from "./templates";
+import { scopeStamp } from "@/lib/crm/scope";
 
 // A new plan from a template: its groups and tasks, with due dates counted
 // from the start date. Shared by Admin -> Plans and the MCP (the caller
@@ -19,6 +20,7 @@ export async function createPlanFromTemplate(supabase: SupabaseClient, input: Ne
   const start = date(input.start_date) ?? new Date().toLocaleDateString("en-CA");
   const maxDue = Math.max(0, ...tpl.tasks.map((t) => t.due ?? 0));
   const { data: plan, error } = await supabase.from("plans").insert({
+    ...(await scopeStamp()),
     name, description: text(input.description, 5000) ?? tpl.description, color: text(input.color, 20) ?? "slate", company_id: ref(input.company_id),
     deal_id: ref(input.deal_id), owner_id: ref(input.owner_id), start_date: start, due_date: maxDue ? addDays(start, maxDue) : null,
   }).select("id").single();

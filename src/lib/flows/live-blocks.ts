@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { twilioSms } from "@/lib/comms/twilio";
 import { sendEmail, siteUrl, toE164 } from "@/lib/notify/senders";
 import { render, type Vars } from "./eval";
+import { columnReady } from "@/lib/schema-ready";
 
 // The Call Tree blocks that reach outside the call: CRM lookup and update,
 // text and email, and dial by name. They run in the call runner with the
@@ -26,8 +27,10 @@ const last10 = (n: string) => n.replace(/\D/g, "").slice(-10);
 export async function crmLookup(db: Db, ownerId: string, from: string) {
   const digits = last10(from);
   if (digits.length < 10 || !(await canUseCrm(db, ownerId))) return null;
-  const { data } = await db.from("crm_contacts").select("id, first_name, last_name, email, phone, role, company_id, company:crm_companies(name)")
+  const q = db.from("crm_contacts").select("id, first_name, last_name, email, phone, role, company_id, company:crm_companies(name)")
     .ilike("phone", `%${digits.slice(-4)}%`).limit(200);
+  // Staff CRM only (customer workspace contacts stay in their workspace).
+  const { data } = await ((await columnReady("crm_contacts", "workspace_id", db)) ? q.is("workspace_id", null) : q);
   const hit = (data ?? []).find((c) => last10(c.phone ?? "") === digits);
   if (!hit) return null;
   const company = (hit.company as unknown as { name: string } | null)?.name ?? "";
