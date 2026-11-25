@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { FeatureMenu } from "@/components/shell/feature-menu";
 import { AudioWaveform, Briefcase, Headset, LayoutGrid, Lock, Mic, Phone, Plus, Upload } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRecorder } from "@/components/recorder/recorder-provider";
@@ -12,7 +13,8 @@ import { cn } from "@/lib/utils";
 
 // Sticky bottom app bar on phones. The destinations slide sideways when they
 // don't all fit; the record button stays pinned on the right.
-export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace[]; /** Has a Redial line: show Phone. */ phone?: boolean }) {
+export function BottomNav({ workspaces, phone = false, liveAgent = false }: { workspaces: Workspace[]; /** Has a Redial line: show Phone. */ phone?: boolean; liveAgent?: boolean }) {
+  const [features, setFeatures] = useState(false);
   const pathname = usePathname();
   const recorder = useRecorder();
   const scroller = useRef<HTMLDivElement>(null);
@@ -37,7 +39,6 @@ export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace
       icon: w.isPersonal ? Lock : Briefcase,
     })),
     { href: "/agents", label: "Agents", icon: Headset },
-    { href: "/explore", label: "Features", icon: LayoutGrid },
     pick("settings"),
   ];
   const isActive = (href: string) => {
@@ -76,6 +77,11 @@ export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace
               </Link>
             );
           })}
+          <button type="button" onClick={() => setFeatures(true)} aria-haspopup="dialog"
+            className="flex w-[4.5rem] shrink-0 snap-start flex-col items-center justify-center gap-1 text-[11px] text-muted-foreground">
+            <span className="flex h-7 w-12 items-center justify-center rounded-full"><LayoutGrid className="size-5" /></span>
+            <span className="max-w-full truncate px-1">Features</span>
+          </button>
           <span className="w-6 shrink-0" />
         </div>
 
@@ -95,6 +101,7 @@ export function BottomNav({ workspaces, phone = false }: { workspaces: Workspace
           </DropdownMenu>
         </div>
       </div>
+      <FeatureMenu open={features} onOpenChange={setFeatures} line={phone} liveAgent={liveAgent} />
     </nav>
   );
 }

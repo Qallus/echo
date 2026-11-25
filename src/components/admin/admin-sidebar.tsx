@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Bot, BotMessageSquare, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, Headset, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, Radar, Settings, SquareKanban, UserRound, Users, Smartphone, Phone, Share2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Bot, BotMessageSquare, ChartColumn, PhoneCall, FileChartColumn, Workflow, Building2, CalendarDays, FolderOpen, Headset, IdCard, ListChecks, NotebookPen, UsersRound, Contact, CreditCard, LayoutDashboard, LogOut, Magnet, Radar, Settings, SquareKanban, UserRound, Users, Smartphone, Phone, Share2 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar,
@@ -21,6 +21,7 @@ export const ADMIN_NAV: { label: string; items: Item[] }[] = [
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view", exact: true },
       { href: "/admin/analytics", label: "Analytics", icon: ChartColumn, permission: "analytics.view" },
+      { href: "/ask", label: "Ask Echo", icon: Sparkles },
       { href: "/admin/communications", label: "Communications", icon: Phone, permission: "comms.view" },
       { href: "/admin/social", label: "Social", icon: Share2, permission: "social.manage" },
       { href: "/admin/bookings", label: "Bookings", icon: CalendarDays, permission: "crm.view" },

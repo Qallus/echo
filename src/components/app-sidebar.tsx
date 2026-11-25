@@ -16,6 +16,7 @@ import { isRecordingDrag, readDraggedIds } from "@/lib/dnd";
 import { isActive, NAV_BOTTOM, NAV_GROUPS, NAV_TOP, showItem, type NavGroup, type NavItem } from "@/lib/nav";
 import { useRecorder } from "@/components/recorder/recorder-provider";
 import { SidebarAccount, SidebarBrand } from "@/components/shell/shell";
+import { FeatureMenu } from "@/components/shell/feature-menu";
 import type { Folder as FolderT, Recording, Workspace } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -87,6 +88,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
   const { isMobile, state } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
   const [openState, setOpen] = useOpenState();
+  const [features, setFeatures] = useState(false);
   const who = { line: callsUnread !== null, liveAgent };
   const badge: Record<string, number | undefined> = { dialpad: callsUnread || undefined, notifications: me.unread || undefined };
 
@@ -207,7 +209,11 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
         <SidebarGroup className="py-1">
           <SidebarMenu>
             {NAV_TOP.map((i) => <NavLink key={i.key} item={i} />)}
-            <NavLink item={{ key: "features", href: "/explore", label: "All features", icon: LayoutGrid, exact: true }} />
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="All features" onClick={() => setFeatures(true)} aria-haspopup="dialog">
+                <LayoutGrid /><span>All features</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
         {NAV_GROUPS.slice(0, contactsAt + 1).map(renderGroup)}
@@ -227,6 +233,7 @@ export function AppSidebar({ me, workspaces, recordings, folders, superAdmin, ca
         <Button variant="outline" className="w-full" nativeButton={false} render={<Link href="/team" />}><Users /> Invite teammates</Button>
       </SidebarFooter>
       <SidebarRail />
+      <FeatureMenu open={features} onOpenChange={setFeatures} line={who.line} liveAgent={liveAgent} />
     </Sidebar>
   );
 }

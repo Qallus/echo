@@ -1,57 +1,52 @@
 import Link from "next/link";
-import {
-  Bot, Briefcase, FileAudio, LayoutTemplate, MessageSquareText, Mic, Phone, Plug, Share2, Sparkles, Workflow,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { hasLiveAgentProfile } from "@/lib/live-agents/agent-data";
+import { callsBadge } from "@/lib/redial/data";
+import { FEATURE_GROUPS, visibleFeatures } from "@/lib/features";
 
 export const metadata = { title: "Explore · Redial" };
 
-type Feature = { icon: typeof Mic; title: string; desc: string; href?: string; live: boolean };
-
-const FEATURES: Feature[] = [
-  { icon: Mic, title: "Record meetings and calls", desc: "Record in the browser with notes and flags, or pop the panel out over Zoom and Meet.", live: true },
-  { icon: FileAudio, title: "Upload audio", desc: "Drop audio files anywhere in Redial.", live: true },
-  { icon: MessageSquareText, title: "Transcription", desc: "Speaker-labelled transcripts, started automatically after every recording.", live: true },
-  { icon: Sparkles, title: "Ask Echo", desc: "Ask Claude, ChatGPT, Grok or Kimi about one recording or your whole library.", href: "/ask", live: true },
-  { icon: Briefcase, title: "Business and Personal", desc: "Share recordings with your team, keep others private, move between them.", href: "/team", live: true },
-  { icon: Plug, title: "Claude connector (MCP)", desc: "Work with your recordings and backlog from Claude on your phone or in Claude Code.", href: "/developer", live: true },
-  { icon: LayoutTemplate, title: "Summaries and templates", desc: "Overviews, decisions and action items, structured by template.", href: "/templates", live: false },
-  { icon: Share2, title: "Share", desc: "Share a recording by link or invite, choosing audio, transcript, highlights and summary.", live: false },
-  { icon: Workflow, title: "AutoFlow", desc: "Rules that summarize, file and route new recordings automatically.", live: false },
-  { icon: Bot, title: "AI agents", desc: "Agents that act on every call: follow-ups, tasks and CRM updates.", live: false },
-  { icon: Phone, title: "Phone calls and SMS", desc: "Record and send from your Redial phone numbers.", live: false },
-];
-
-export default function ExplorePage() {
+// Every feature, what it does, and how you'd use it at home and at work.
+// Same list as the All features slide-out and Ask Echo (lib/features.ts).
+export default async function ExplorePage() {
+  const [calls, liveAgent] = await Promise.all([callsBadge(), hasLiveAgentProfile()]);
+  const list = visibleFeatures({ line: calls !== null, liveAgent });
   return (
-    <div className="w-full space-y-10 py-10 px-4 sm:px-6 lg:px-8 2xl:px-10">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
-        <p className="text-sm text-muted-foreground">What Redial does today, and what&apos;s coming.</p>
+    <div className="w-full space-y-8 px-4 py-6 sm:px-6 lg:px-8 2xl:px-10">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Explore</h1>
+          <p className="text-sm text-muted-foreground">Everything Redial does, and how to use it for your personal life and your business.</p>
+        </div>
+        <Button variant="outline" nativeButton={false} render={<Link href="/ask" />}><Sparkles /> Ask Echo how</Button>
       </div>
-      {[true, false].map((live) => (
-        <section key={String(live)} className="space-y-4">
-          <h2 className="text-xl font-semibold">{live ? "Available now" : "Coming next"}</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.filter((f) => f.live === live).map(({ icon: Icon, title, desc, href }) => {
-              const card = (
-                <Card className={href ? "h-full transition-colors hover:bg-muted/50" : "h-full"}>
-                  <CardHeader>
-                    <div className="mb-2 flex items-center justify-between">
-                      <Icon className="size-5" />
-                      {!live && <Badge variant="outline">Coming</Badge>}
-                    </div>
-                    <CardTitle>{title}</CardTitle>
-                    <CardDescription>{desc}</CardDescription>
-                  </CardHeader>
-                </Card>
-              );
-              return href ? <Link key={title} href={href}>{card}</Link> : <div key={title}>{card}</div>;
-            })}
-          </div>
-        </section>
-      ))}
+      {FEATURE_GROUPS.map((g) => {
+        const items = list.filter((f) => f.group === g);
+        if (!items.length) return null;
+        return (
+          <section key={g} className="space-y-3">
+            <h2 className="text-lg font-semibold">{g}</h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {items.map(({ title, href, icon: Icon, what, personal, business, soon }) => (
+                <Link key={title} href={href} className="flex flex-col gap-2 rounded-2xl border bg-card p-4 transition-colors hover:bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <span className="grid size-9 place-items-center rounded-lg bg-muted"><Icon className="size-4" /></span>
+                    {soon && <Badge variant="outline">Coming soon</Badge>}
+                  </div>
+                  <h3 className="font-semibold">{title}</h3>
+                  <p className="text-sm text-muted-foreground">{what}</p>
+                  <dl className="mt-auto space-y-1 pt-1 text-xs">
+                    <div><dt className="inline font-medium">Personal: </dt><dd className="inline text-muted-foreground">{personal}</dd></div>
+                    <div><dt className="inline font-medium">Business: </dt><dd className="inline text-muted-foreground">{business}</dd></div>
+                  </dl>
+                </Link>
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
