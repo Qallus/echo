@@ -1,7 +1,7 @@
 import {
   Archive, AudioWaveform, Bell, Bot, Briefcase, CalendarDays, CalendarSync, Compass, Contact, CreditCard, FileText, Handshake, Headphones, Headset,
   IdCard, KanbanSquare, LayoutTemplate, ListChecks, Lock, Mail, MessageSquareText, MessagesSquare, Mic, Phone, PhoneForwarded, Plug, ArrowRightLeft,
-  ScanEye, Search, Settings, ShieldCheck, Smartphone, Sparkles, Target, Upload, UserCircle, UserPlus, Users, Workflow, ListFilter, BookUser, ListTodo,
+  ScanEye, Search, ListOrdered, Plus, Settings, ShieldCheck, Smartphone, Sparkles, Target, Upload, UserCircle, UserPlus, Users, Workflow, ListFilter, BookUser, ListTodo,
   type LucideIcon,
 } from "lucide-react";
 
@@ -71,6 +71,15 @@ export const FEATURES: Feature[] = [
   { group: "Communication", title: "Desk phones and apps", href: "/calls/phones", icon: Smartphone, needsLine: true, keywords: "grandstream sip device",
     what: "Desk phones and apps on your line, set up by QR or auto-provisioning, with E911.",
     personal: "Ring a home desk phone too.", business: "Desk phones for the office on the same number." },
+  { group: "Communication", title: "Phone number manager", href: "/calls/numbers", icon: ListOrdered, keywords: "numbers lines",
+    what: "All your Redial numbers, where their calls go, and numbers you're moving to Redial.",
+    personal: "See your private number and its screening.", business: "Every line the team uses in one list." },
+  { group: "Communication", title: "Add another number", href: "/calls/numbers/new", icon: Plus, keywords: "buy number area code",
+    what: "Pick another Redial number by area code, city or a word to spell.",
+    personal: "A separate number for selling things online.", business: "A line for each location, team or campaign." },
+  { group: "Communication", title: "Desk and mobile phones", href: "/phones", icon: Smartphone, keywords: "buy phone hardware shop",
+    what: "Buy desk phones and mobiles that work with Redial out of the box.",
+    personal: "A cordless home phone on your Redial number.", business: "Desk phones for the office, set up automatically." },
   { group: "Communication", title: "Keep your number", href: "/calls/port", icon: ArrowRightLeft, keywords: "port transfer",
     what: "Move your existing number to Redial.",
     personal: "Keep the number everyone already has.", business: "Keep the number on your cards and website." },
