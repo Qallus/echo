@@ -153,12 +153,18 @@ export const FEATURES: Feature[] = [
   { group: "Agents", title: "Search Live Agents", href: "/agents", icon: Search, keywords: "hire receptionist person",
     what: "Browse vetted people who answer your calls when your AI hands off. Hear voices, compare skills and rates.",
     personal: "Someone to answer while you travel.", business: "Overflow and after-hours coverage by real people." },
-  { group: "Agents", title: "My Live Agents", href: "/hiring", icon: Headset, keywords: "hiring offers booked",
-    what: "The agents you hired, open offers and booked work.",
+  { group: "Agents", title: "My Live Agents", href: "/agents/mine", icon: Headset, keywords: "hired agents",
+    what: "The Live Agents you hired, in list, table, cards, map and calendar views, with Message on each.",
+    personal: "See who's covering your line.", business: "Everyone on your team's coverage, where they are and when they start." },
+  { group: "Agents", title: "Hiring", href: "/hiring", icon: Headset, keywords: "hiring offers booked",
+    what: "Open offers, booked work and past jobs with Live Agents.",
     personal: "See who's covering your line.", business: "Manage shifts, offers and past work." },
   { group: "Agents", title: "Messages", href: "/messages", icon: MessagesSquare,
     what: "Private conversations with Live Agents and businesses. Contact details stay hidden.",
     personal: "Talk to the agent you booked.", business: "Brief agents and send offers." },
+  { group: "Agents", title: "My clients (Agent Desk)", href: "/agent-desk/clients", icon: Headphones, liveAgent: true, keywords: "businesses agent",
+    what: "For Live Agents: the businesses you work for, with Message on each.",
+    personal: "Keep track of who you answer calls for.", business: "Agents on your team see their clients here." },
   { group: "Agents", title: "Agent Desk", href: "/agent-desk", icon: Headphones, keywords: "become agent earn",
     what: "Work as a Live Agent: your profile, availability, offers and earnings. Or build a profile to become one.",
     personal: "Earn money answering calls from home.", business: "Your team members can work as agents too." },
@@ -186,6 +192,6 @@ export const FEATURES: Feature[] = [
 ];
 
 export function visibleFeatures(who: { line: boolean; liveAgent: boolean; crmReady?: boolean }) {
-  return FEATURES.filter((f) => (!f.needsLine || who.line) && (!(f.href === "/setup") || !who.line))
+  return FEATURES.filter((f) => (!f.needsLine || who.line) && (!(f.href === "/setup") || !who.line) && (!f.liveAgent || who.liveAgent))
     .map((f) => (f.crm && !who.crmReady ? { ...f, soon: true } : f));
 }

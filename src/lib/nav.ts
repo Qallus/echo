@@ -79,7 +79,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "agents", label: "Agents", items: [
       { key: "agents", href: "/agents", label: "Search Live Agents", icon: Search, exact: true },
-      { key: "my-agents", href: "/hiring", label: "My Live Agents", icon: Headset },
+      { key: "my-agents", href: "/agents/mine", label: "My Live Agents", icon: Headset },
       { key: "ai-agents", href: "/agents/ai", label: "AI Agents", icon: Bot },
     ],
   },
@@ -120,9 +120,11 @@ export function isActive(href: string, pathname: string, search: URLSearchParams
 // Section tabs shown on top of related pages (Agents, Developer).
 export const AGENT_TABS = (liveAgent: boolean) => [
   { href: "/agents", label: "Search Live Agents", exact: true },
-  { href: "/hiring", label: "My Live Agents" },
+  { href: "/agents/mine", label: "My Live Agents" },
+  { href: "/hiring", label: "Hiring" },
   { href: "/messages", label: "Messages" },
-  { href: "/agent-desk", label: liveAgent ? "Agent Desk" : "Become an agent" },
+  { href: "/agent-desk", label: liveAgent ? "Agent Desk" : "Become an agent", exact: true },
+  ...(liveAgent ? [{ href: "/agent-desk/clients", label: "My clients" }] : []),
   { href: "/agents/ai", label: "AI Agents" },
 ];
 export const DEVELOPER_TABS = [

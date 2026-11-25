@@ -57,6 +57,12 @@ const allLive = cache(async (): Promise<LiveAgent[] | null> => {
     .map((r) => toAgent({ ...r, live_agent_voice_samples: (r.live_agent_voice_samples ?? []).filter((v) => v.status === "approved") }));
 });
 
+// Live profiles by id (for the agents a business has hired).
+export async function agentsByIds(ids: string[]): Promise<LiveAgent[]> {
+  const want = new Set(ids);
+  return ((await allLive()) ?? []).filter((a) => want.has(a.id));
+}
+
 export const listSkills = cache(async (): Promise<Skill[]> => {
   const supabase = await createClient();
   const { data } = await supabase.from("live_agent_skills").select("slug, label, icon, category").order("sort");
