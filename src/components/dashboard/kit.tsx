@@ -49,7 +49,7 @@ export function Spark({ points, color = SKY, field = "a" }: { points: DayPoint[]
   if (!points.some((p) => p[field] > 0)) return null;
   const id = `spark-${field}-${color.replace(/\W/g, "")}`;
   return (
-    <div className="pointer-events-none -mx-1 mt-2 h-10" aria-hidden>
+    <div className="pointer-events-none -mx-1 mt-auto h-12 shrink-0 pt-2" aria-hidden>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={points} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
           <defs>
@@ -79,8 +79,9 @@ export function Stat({ label, icon: Icon, value, count, hint, href, spark, chips
       <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
       <div className="mt-0.5 min-h-4">{count ? <Change count={count} /> : hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}</div>
       {chips && chips.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {chips.map((c) => <span key={c.label} className="rounded-full bg-muted px-2 py-0.5 text-[11px] tabular-nums">{c.label} {c.value}</span>)}
+        // One row; slides sideways when the chips don't fit the card.
+        <div className="-mx-4 mt-2 flex snap-x gap-1 overflow-x-auto overscroll-x-contain px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {chips.map((c) => <span key={c.label} className="shrink-0 snap-start rounded-full bg-muted px-2 py-0.5 text-[11px] whitespace-nowrap tabular-nums">{c.label} {c.value}</span>)}
         </div>
       )}
       {spark}
