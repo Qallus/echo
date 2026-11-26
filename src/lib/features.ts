@@ -67,7 +67,7 @@ export const FEATURES: Feature[] = [
   { group: "Communication", title: "Call Tree", href: "/call-tree", icon: Workflow, keywords: "ivr menu hours extensions",
     what: "Greetings, menus, business hours, extensions and AI steps for where each call goes.",
     personal: "A simple greeting and voicemail.", business: "\"Press 1 for sales\", after-hours messages and routing." },
-  { group: "Communication", title: "Library (Recording Studio)", href: "/studio?tab=library", icon: AudioWaveform,
+  { group: "Communication", title: "Greetings (Greeting Studio)", href: "/studio?tab=library", icon: AudioWaveform, keywords: "library recording studio voice files",
     what: "Your greetings, prompts and voice files, ready to use in your call tree.",
     personal: "Keep a few greetings for different times.", business: "Holiday, after-hours and on-hold messages in one place." },
   { group: "Communication", title: "Desk phones and apps", href: "/calls/phones", icon: Smartphone, needsLine: true, keywords: "grandstream sip device",

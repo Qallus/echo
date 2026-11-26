@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Phone, PhoneIncoming, Workflow } from "lucide-react";
+import { AudioWaveform, Phone, PhoneIncoming, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CallsView } from "@/components/redial/calls-view";
 import { can, getStaff } from "@/lib/admin/guard";
@@ -38,6 +38,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
         <div className="flex flex-wrap gap-2">
           {line.access.owner && <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/calls/phones" />}><Phone /> Phones</Button>}
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/call-tree" />}><Workflow /> Call Tree</Button>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/studio?tab=studio" />}><AudioWaveform /> Greeting Studio</Button>
         </div>
         {lines.length > 1 && (
           <nav aria-label="Lines" className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">

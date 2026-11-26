@@ -11,7 +11,9 @@ import { FEATURE_GROUPS, visibleFeatures } from "@/lib/features";
 const norm = (s: string) => s.toLowerCase();
 
 // "All features": every feature in one slide-out (side sheet on desktop,
-// bottom sheet on phones), grouped like the sidebar, with search.
+// bottom sheet on phones), grouped like the sidebar, with search. Columns
+// follow the panel's own width (container queries): drag it wider for a
+// third column, narrower for one.
 export function FeatureMenu({ open, onOpenChange, line, liveAgent, crmReady = false }: { open: boolean; onOpenChange: (o: boolean) => void; line: boolean; liveAgent: boolean; crmReady?: boolean }) {
   const [q, setQ] = useState("");
   const words = norm(q).split(/\s+/).filter(Boolean);
@@ -22,7 +24,7 @@ export function FeatureMenu({ open, onOpenChange, line, liveAgent, crmReady = fa
   const close = () => { onOpenChange(false); setQ(""); };
 
   return (
-    <ResponsivePanel open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())} id="feature-menu" defaultWidth={560} fullHeight
+    <ResponsivePanel open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())} id="feature-menu" defaultWidth={560} fullHeight bodyClassName="@container"
       title="All features" description="Everything Redial can do, and where to find it.">
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -35,7 +37,7 @@ export function FeatureMenu({ open, onOpenChange, line, liveAgent, crmReady = fa
         return (
           <section key={g} className="space-y-2">
             <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{g}</h3>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 @md:grid-cols-2 @2xl:grid-cols-3">
               {items.map(({ title, href, icon: Icon, what, soon }) => (
                 <Link key={title} href={href} onClick={close}
                   className="flex gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-ring">
